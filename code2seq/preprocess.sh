@@ -22,7 +22,7 @@
 #   step and set this value to the number of cores.
 # PYTHON - python3 interpreter alias.
 
-DATASET_NAME=really_final_constantless
+DATASET_NAME=$1
 MAX_DATA_CONTEXTS=1000
 MAX_CONTEXTS=10
 SUBTOKEN_VOCAB_SIZE=1
@@ -36,9 +36,9 @@ PYTHON=python3
 
 
 
-TRAIN_DATA_FILE=../datasets/cfg_overfitting_test/ady_constantless_train_output.txt
-VAL_DATA_FILE=../datasets/cfg_overfitting_test/ady_constantless_val_output.txt
-TEST_DATA_FILE=../datasets/cfg_overfitting_test/ady_constantless_test_output.txt
+TRAIN_DATA_FILE=../datasets/${DATASET_NAME}/${DATASET_NAME}_train_output.txt
+VAL_DATA_FILE=../datasets//${DATASET_NAME}/${DATASET_NAME}_val_output.txt
+TEST_DATA_FILE=../datasets/${DATASET_NAME}/${DATASET_NAME}_test_output.txt
 
 
 #TRAIN_DATA_FILE=/home/redaigbaria/sec_proj/datasets/cfg_overfitting_test/constantless_val_output.txt

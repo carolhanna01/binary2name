@@ -23,6 +23,9 @@ if __name__ == '__main__':
     parser.add_argument('--predict', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--seed', type=int, default=239)
+    parser.add_argument('-max_path_len', type=int, default=733)
+    parser.add_argument('--vocab_max', type=int, default=234)
+
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -32,6 +35,9 @@ if __name__ == '__main__':
         config = Config.get_debug_config(args)
     else:
         config = Config.get_default_config(args)
+    
+    config.MAX_PATH_LENGTH = args.max_path_len
+    config.TARGET_VOCAB_MAX_SIZE = args.vocab_max
 
     model = Model(config)
     print('Created model')

@@ -370,7 +370,7 @@ def gen_shared_name(func_hist, funcs):
     return shared_funcs
 
 
-def generate_output(dataset_path):
+def generate_output(dataset_path, dataset_name):
     """
     this is the experimentation code at the last experiments, we tried to add to the test/val sets only functions that
     have a name part the appeared at least 3 times in the dataset, later we tried to remove from the label the name parts
@@ -387,9 +387,9 @@ def generate_output(dataset_path):
     import numpy as np
     np.random.seed(42)
     np.random.shuffle(binaries)
-    train_output = open(os.path.join(dataset_path, "output_without_constraints_train.txt"), "w")
-    test_output = open(os.path.join(dataset_path, "output_without_constraints_test.txt"), "w")
-    val_output = open(os.path.join(dataset_path, "output_without_constraints_val.txt"), "w")
+    train_output = open(os.path.join(dataset_path, dataset_name + "_train_output.txt"), "w")
+    test_output = open(os.path.join(dataset_path, dataset_name + "_test_output.txt"), "w")
+    val_output = open(os.path.join(dataset_path, dataset_name + "_val_output.txt"), "w")
     mapper = dict()
     all_funcs = set()
     for i, entry in enumerate(binaries):
@@ -480,12 +480,14 @@ def main():
     parser = argparse.ArgumentParser()
     # we did this in order to parallelize the analysis process
     parser.add_argument("--binary_idx", type=int, required=True)
+    parser.add_argument("--dataset", type=str, required=True)
     args = parser.parse_args()
     binaries = os.listdir("coreutils_bins")
     binaries.sort()
     binaries = [f"coreutils_bins/{binary}" for binary in binaries]
-    generate_dataset([binaries[args.binary_idx]], "output_without_contraints")
+    generate_dataset([binaries[args.binary_idx]], args.dataset)
     print("successfully exited")
+    generate_output("datasets/" + args.dataset, args.dataset)
 
 
 def trim_long_lines(file_path):
@@ -514,10 +516,10 @@ def trim_long_lines(file_path):
 
 
 if __name__ == '__main__':
-    #main()
+    main()
     # cut long lines
     # trim_long_lines("datasets/cfg_overfitting_test/collective_output.txt")
-    generate_output("datasets/output_without_contraints")
+
     # remove_failed_pkls("datasets/cfg_overfitting_test")
     # exit()
     # main()
