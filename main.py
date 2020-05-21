@@ -298,11 +298,11 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             processsed_code = "|".join(list(filter(None, map(block_to_ins, blocks))))
             var_map, relified_consts = varify_cons(exec_path.solver.constraints, var_map=var_map, counters=counters)
             relified_consts = "|".join(relified_consts)
-            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code}|CONS|{relified_consts},DUM\n"
+            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code},DUM\n"
             found_constants = set(re.findall(r"0[xX][0-9a-fA-F]+", line))
             for constant in found_constants:
                 if constant not in constants_mapper:
-                    constants_mapper[constant] = f"const_{next(constants_counter)}"
+                    constants_mapper[constant] = f"const"
 
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
                 line = line.replace(constant, replacement)
@@ -387,9 +387,9 @@ def generate_output(dataset_path):
     import numpy as np
     np.random.seed(42)
     np.random.shuffle(binaries)
-    train_output = open(os.path.join(dataset_path, "ady_constantless_train_output.txt"), "w")
-    test_output = open(os.path.join(dataset_path, "ady_constantless_test_output.txt"), "w")
-    val_output = open(os.path.join(dataset_path, "ady_constantless_val_output.txt"), "w")
+    train_output = open(os.path.join(dataset_path, "output_without_constraints_train.txt"), "w")
+    test_output = open(os.path.join(dataset_path, "output_without_constraints_test.txt"), "w")
+    val_output = open(os.path.join(dataset_path, "output_without_constraints_val.txt"), "w")
     mapper = dict()
     all_funcs = set()
     for i, entry in enumerate(binaries):
@@ -405,6 +405,13 @@ def generate_output(dataset_path):
 
     well_named_funcs = set()
     popular_names = filter(lambda x: len(x[1]) >= 3, mapper.items())
+    
+    count_func_names = open(os.path.join(dataset_path, "count_func_names.txt"), "w")
+    for name, name_funcs in mapper.items():
+        line= name + " " + str(len(name_funcs)) + "\n"
+        count_func_names.write(line)
+    
+
     names_hists = {name: {'free': len(name_funcs), 'train': 0, 'val': 0, 'test': 0} for name, name_funcs in popular_names}
     for partial in map(lambda x: x[1], filter(lambda x: len(x[1]) >= 3, mapper.items())):
         well_named_funcs.update(partial)
@@ -477,7 +484,7 @@ def main():
     binaries = os.listdir("coreutils_bins")
     binaries.sort()
     binaries = [f"coreutils_bins/{binary}" for binary in binaries]
-    generate_dataset([binaries[args.binary_idx]], "cfg_overfitting_test")
+    generate_dataset([binaries[args.binary_idx]], "output_without_contraints")
     print("successfully exited")
 
 
@@ -507,10 +514,10 @@ def trim_long_lines(file_path):
 
 
 if __name__ == '__main__':
-    main()
+    #main()
     # cut long lines
     # trim_long_lines("datasets/cfg_overfitting_test/collective_output.txt")
-    # generate_output("datasets/cfg_overfitting_test")
+    generate_output("datasets/output_without_contraints")
     # remove_failed_pkls("datasets/cfg_overfitting_test")
     # exit()
     # main()
