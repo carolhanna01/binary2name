@@ -23,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--predict', action='store_true')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--seed', type=int, default=239)
-    parser.add_argument('-max_path_len', type=int, default=733)
+    parser.add_argument('--max_path_len', type=int, default=733)
     parser.add_argument('--vocab_max', type=int, default=234)
 
     args = parser.parse_args()
