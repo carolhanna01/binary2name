@@ -127,7 +127,7 @@ def varify_cons(cons, var_map=None, counters=None, max_depth=8):
 #remove the Numbers from the function names + tokenize the function name.
 def tokenize_function_name(function_name):
     name = "".join([i for i in function_name if not i.isdigit()])
-    return "|".join(function_name.split("_"))
+    return "|".join(name.split("_"))
 
 
 
@@ -190,12 +190,12 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             processsed_code = "|".join(list(filter(None, map(block_to_ins, blocks))))
             var_map, relified_consts = varify_cons(exec_path.solver.constraints, var_map=var_map, counters=counters)
             relified_consts = "|".join(relified_consts)
-            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code}|CONS|"
+            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code}"
             found_constants = set(re.findall(r"0[xX][0-9a-fA-F]+", line))
             for constant in found_constants:
                 if constant not in constants_mapper:
                     constants_mapper[constant] = f"const"
-            line += f"{relified_consts},DUM\n"
+            line += f",DUM\n"
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
                 line = line.replace(constant, replacement)
             if len(line) <= 3000:
