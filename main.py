@@ -140,17 +140,18 @@ def remove_consecutive_pipes(s1):
 
 def con_to_str(con, replace_strs=[', ', ' ', '(', ')'], max_depth=8):
     repr = con.shallow_repr(max_depth=max_depth, details=con.MID_REPR).replace('{UNINITIALIZED}', '')
+    repr=re.sub("Extract\([0-9]+\, [0-9]+\,","",repr)
     for r_str in replace_strs:
         repr = repr.replace(r_str, '|')
 
     return remove_consecutive_pipes(repr) + "\t"
 
 
-def gen_new_name(old_name, counters):
+def gen_new_name(old_name):
     if re.match(r"mem", old_name):
-        return 'mem_%d' % next(counters['mem'])
+        return 'mem_%s' % old_name.split('_')[2]
     if re.match(r"fake_ret_value", old_name):
-        return 'ret_%d' % next(counters['ret'])
+        return 'ret'
     if re.match(r"reg", old_name):
         return re.sub("(_[0-9]+)+", '', old_name)
     if re.match(r"unconstrained_ret", old_name):
@@ -162,27 +163,48 @@ def varify_cons(cons, var_map=None, counters=None, max_depth=8):
     """
     abstract away constants from the constraints
     """
-    counters = {'mem': itertools.count(), 'ret': itertools.count()} if counters is None else counters
+    #counters = {'mem': itertools.count(), 'ret': itertools.count()} if counters is None else counters
     var_map = {} if var_map is None else var_map
     new_cons = []
+    var_map['Extract'] = ""
 
+    m = None
     for con in cons:
         if con.concrete:
             continue
         for v in con.leaf_asts():
-            if v.cache_key not in var_map and v.op in { 'BVS', 'BoolS', 'FPS' }:
-                new_name = gen_new_name(v.args[0], counters=counters)
+            if v.op in { 'BVS', 'BoolS', 'FPS' }:
+                new_name = gen_new_name(v.args[0])
+                if re.match(r"mem", new_name):
+                    if m is None :
+                        m = int(new_name.split('_')[1])
+                    else:
+                        m = min(m,int(new_name.split('_')[1]))
                 var_map[v.cache_key] = v._rename(new_name)
         new_cons.append(con_to_str(con.replace_dict(var_map), max_depth=max_depth))
+    final_cons = []
+    if m is not None:
+        for con in new_cons :
+            split = con.split("|")
+            for i,s in enumerate(split):
+                if re.match(r"mem", s):
+                    new_s = 'mem_%d' % (int(s.split('_')[1]) -m)
+                    con = con.replace(s,new_s)
+            final_cons.append(con)
+    else:
+        final_cons = new_cons
+    return var_map, final_cons
 
-    return var_map, new_cons
 
 
+#remove the Numbers from the function names + tokenize the function name.
 def tokenize_function_name(function_name):
+    name = "".join([i for i in function_name if not i.isdigit()])
     return "|".join(function_name.split("_"))
 
 
 def generate_dataset(train_binaries, dataset_name):
+    print("generate data_set")
     dataset_dir = f"datasets/{dataset_name}"
     os.makedirs(dataset_dir, exist_ok=True)
     analysed_funcs = get_analysed_funcs(dataset_dir)
@@ -191,6 +213,7 @@ def generate_dataset(train_binaries, dataset_name):
 
 
 def analyse_binary(analysed_funcs, binary_name, dataset_dir):
+    print("analyse_binary")
     excluded = {'main', 'usage', 'exit'}.union(analysed_funcs)
     proj = angr.Project(binary_name, auto_load_libs=False)
     cfg = proj.analyses.CFGFast()
@@ -286,6 +309,7 @@ def get_analysed_funcs(dataset_path):
 
 
 def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name):
+    print("start sm_To_output")
     counters = {'mem': itertools.count(), 'ret': itertools.count()}
     var_map = {}
     skipped_lines = 0
@@ -298,15 +322,16 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             processsed_code = "|".join(list(filter(None, map(block_to_ins, blocks))))
             var_map, relified_consts = varify_cons(exec_path.solver.constraints, var_map=var_map, counters=counters)
             relified_consts = "|".join(relified_consts)
-            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code},DUM\n"
+            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code}|CONS|"
             found_constants = set(re.findall(r"0[xX][0-9a-fA-F]+", line))
             for constant in found_constants:
                 if constant not in constants_mapper:
                     constants_mapper[constant] = f"const"
-
+            line += f"{relified_consts},DUM\n"
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
                 line = line.replace(constant, replacement)
             if len(line) <= 3000:
+                print("********************{0}".format(line))
                 output_file.write(line)
             else:
                 skipped_lines += 1
@@ -483,10 +508,11 @@ def main():
     parser.add_argument("--dataset", type=str, required=True)
     args = parser.parse_args()
     binaries = os.listdir("coreutils_bins")
+    #print("Hi , main after args")
     binaries.sort()
     binaries = [f"coreutils_bins/{binary}" for binary in binaries]
     generate_dataset([binaries[args.binary_idx]], args.dataset)
-    print("successfully exited")
+    #print("successfully exited")
     generate_output("datasets/" + args.dataset, args.dataset)
 
 
