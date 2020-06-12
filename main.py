@@ -62,6 +62,7 @@ def block_to_ins(block: angr.block.Block):
 
 
 def remove_consecutive_pipes(s1):
+    s1 = re.sub("(\|(\s)+\|)", "|", s1)
     return re.sub("(\|)+", "|", s1)
 
 
@@ -198,6 +199,7 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             line += f",DUM\n"
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
                 line = line.replace(constant, replacement)
+            line = remove_consecutive_pipes(line)
             if len(line) <= 3000:
                 print("********************{0}".format(line))
                 output_file.write(line)
