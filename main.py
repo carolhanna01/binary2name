@@ -15,59 +15,8 @@ bases_dict = dict()
 replacement_dict = dict()
 start_time = 0
 
-def address_breakfun(state):
-    exit(1)
-    # if not state.inspect.address_concretization_add_constraints:
-    #     return
-    if state.inspect.address_concretization_result is None:
-        return
 
-    # if len(state.inspect.address_concretization_expr.args) == 1:
-    #     bases.add()
-    # print(state.inspect.address_concretization_expr.op)
-    # print(f"{hex(state.inspect.address_concretization_result[0])}")
-    # print(f"{state.inspect.address_concretization_expr}")
-    expr = state.inspect.address_concretization_expr
-    # if expr.depth > 2:
-    #     raise Exception("should consider a new approach, your assumption is wrong!!")
-    if expr.depth == 1:
-        if expr.op != "BVS":
-            raise Exception("AAAAAA!!!")
-        if state.solver.eval(expr) in bases_dict:
-            return
-        # new var is declared
-        var_name = f"var_{len(bases_dict)}"
-        bases_dict[state.inspect.address_concretization_result[0]] = var_name
-        replacement_dict[state.inspect.address_concretization_result[0]] = f"{var_name}(0)"
-    else:
-        # depth is 2 (either a new symbolic-var is being declared or offset calc)
-        if expr.op != "__add__":
-            print(f"found new op: {expr.op}")
-            return
-        children = list(expr.args)
-        # assert len(children) < 3
-        if len(children) > 2:
-            print("warning, an expression with more than 2 children is being relativised")
-        if len(children) == 1:
-            if state.solver.eval(expr) in bases_dict:
-                return
-            # new var is declared
-            var_name = f"var_{len(bases_dict)}"
-            bases_dict[state.inspect.address_concretization_result[0]] = var_name
-            replacement_dict[state.inspect.address_concretization_result[0]] = f"{var_name}(0)"
-        else:
-            base = None
-            offset = None
-            for c in children:
-                if not c.concrete:
-                    base = state.solver.eval(c)
-                else:
-                    offset = state.solver.eval(c)
-            if base not in bases_dict:
-                return
-            replacement_dict[state.inspect.address_concretization_result[0]] = f"{bases_dict[base]}({offset})"
-
-
+        
 def time_limit_check(smgr):
     global start_time
     minutes_limit = 1
@@ -82,9 +31,6 @@ def analyze_func(proj, fun, cfg):
     call_state = proj.factory.call_state(fun.addr, add_options={
         'CALLLESS': True, 'NO_SYMBOLIC_SYSCALL_RESOLUTION': True
     })
-    # dropped the relativization in the last moment due to time consedirations, and we think that the address_breakfun
-    # need to be checked again...
-    # call_state.inspect.b('address_concretization', when=angr.BP_AFTER, action=address_breakfun)
     sm = proj.factory.simulation_manager(call_state)
     sm.use_technique(angr.exploration_techniques.LoopSeer(cfg=cfg, bound=2))
     global start_time
@@ -111,27 +57,8 @@ def block_to_ins(block: angr.block.Block):
         operands = [i.strip().replace("[","").replace("]", "") for i in operands if i != ""]
         parsed_ins = [ins.mnemonic] + list(filter(None, operands))
         result.append("|".join(parsed_ins).replace(" ", "|") + "|\t")
-        # result.append(f"{ins.mnemonic}|{operands[0]}|{operands[1]}".replace(" ", "|"))
     return "|".join(result)
 
-
-def cons_to_triple(constraint):
-    if constraint.concrete:
-        return ""
-    # if len(constraint.args) == 1:
-    #     return f'{constraint.op}|{cons_to_triple(constraint.args[0])}'
-    # arg1 = f'{constraint.args[0]}'
-    # arg2 = f'{constraint.args[1]}'
-    args = list(filter(None, map(str, constraint.args)))
-    triple = [constraint.op] + args
-    return "|".join(triple).replace(" ", "|") + "\t"
-    # return f'{constraint.op}|{arg1.replace(" ", "|")}|{arg2.replace(" ", "|")}'
-
-
-def relify(constraints):
-    for k, v in replacement_dict.items():
-        constraints = re.sub(f"(0x|mem_){format(k, 'x')}[_0-9]*", v, constraints)
-    return constraints.replace('{UNINITIALIZED}', '')
 
 
 def remove_consecutive_pipes(s1):
@@ -203,8 +130,12 @@ def tokenize_function_name(function_name):
     return "|".join(function_name.split("_"))
 
 
+<<<<<<< Updated upstream
 def generate_dataset(train_binaries, dataset_name):
     print("generate data_set")
+=======
+def generate_dataset(train_binaries, dataset_name): #keep
+>>>>>>> Stashed changes
     dataset_dir = f"datasets/{dataset_name}"
     os.makedirs(dataset_dir, exist_ok=True)
     analysed_funcs = get_analysed_funcs(dataset_dir)
@@ -212,8 +143,12 @@ def generate_dataset(train_binaries, dataset_name):
         analysed_funcs = analyse_binary(analysed_funcs, binary, dataset_dir)
 
 
+<<<<<<< Updated upstream
 def analyse_binary(analysed_funcs, binary_name, dataset_dir):
     print("analyse_binary")
+=======
+def analyse_binary(analysed_funcs, binary_name, dataset_dir): #keep
+>>>>>>> Stashed changes
     excluded = {'main', 'usage', 'exit'}.union(analysed_funcs)
     proj = angr.Project(binary_name, auto_load_libs=False)
     cfg = proj.analyses.CFGFast()
@@ -228,15 +163,9 @@ def analyse_binary(analysed_funcs, binary_name, dataset_dir):
             continue
         print(f"analyzing {binary_name}/{test_func.name}")
         output = open(os.path.join(binary_dir, f"{test_func.name}"), "w")
-        # bases_dict.clear()
-        # replacement_dict.clear()
         analysed_funcs.add(test_func.name)
         try:
             sm: angr.sim_manager.SimulationManager = analyze_func(proj, test_func, cfg)
-            # we first tried to save the analysis results as a pickle file, but some pickle dumps failed..
-            # sm_file = open(os.path.join(binary_dir, f"{test_func.name}.pkl"), "wb")
-            # pickle.dump(sm, sm_file)
-            # sm_file.close()
             sm_to_output(sm, output, test_func.name)
         except Exception as e:
             logging.error(str(e))
@@ -245,60 +174,8 @@ def analyse_binary(analysed_funcs, binary_name, dataset_dir):
     return analysed_funcs
 
 
-def get_functions_histogram():
-    """
-        in order to exclude coreutils-library functions from analysis
-    """
-    binaries = os.listdir("coreutils_bins")
-    binaries.sort()
-    binaries = [f"coreutils_bins/{binary}" for binary in binaries][50:70]
-    hist = dict()
-    for binary in binaries:
-        proj = angr.Project(binary, auto_load_libs=False)
-        proj.analyses.CFGFast()
-        binary = os.path.basename(binary)
-        funcs = get_cfg_funcs(proj, binary, {'main', 'usage', 'exit'})
-        for func in funcs:
-            hist[func.name] = hist.get(func.name, 0) + 1
 
-    json.dump(hist, open("functions_histogram.json", "w"))
-    b = list(hist.items())
-    b.sort(key=lambda x: x[1], reverse=True)
-    print(b)
-
-
-def remove_failed_pkls(dataset_path):
-    binaries = os.scandir(dataset_path)
-    failed_funcs = []
-    for entry in binaries:
-        funcs = glob(f"{entry.path}/*.pkl")
-        for func in funcs:
-            with open(func, "rb") as f:
-                try:
-                    sm = pickle.load(f)
-                    print(f"{func} have {sm}")
-                except:
-                    print(f"{func} failed")
-                    failed_funcs.append(func)
-
-    for failed_func in failed_funcs:
-        os.remove(failed_func)
-    print(set(failed_funcs))
-
-
-def remove_duplicate_funcs(dataset_path):
-    binaries = os.scandir(dataset_path)
-    analysed_funcs = set()
-    for entry in binaries:
-        funcs = list(glob(f"{entry.path}/*"))
-        current_binary_funcs = list(map(lambda x: x[:-len(".pkl")] if x.endswith(".pkl") else x, map(os.path.basename, funcs)))
-        for i, func in enumerate(funcs):
-            if current_binary_funcs[i] in analysed_funcs:
-                os.remove(func)
-        analysed_funcs.update(current_binary_funcs)
-
-
-def get_analysed_funcs(dataset_path):
+def get_analysed_funcs(dataset_path): #keep
     binaries = os.scandir(dataset_path)
     analysed_funcs = set()
     for entry in binaries:
@@ -309,7 +186,6 @@ def get_analysed_funcs(dataset_path):
 
 
 def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name):
-    print("start sm_To_output")
     counters = {'mem': itertools.count(), 'ret': itertools.count()}
     var_map = {}
     skipped_lines = 0
@@ -350,7 +226,7 @@ def update_hist(func_hist, name_parts, set):
     return func_hist
 
 
-def set_decide(func_hist, name_parts, global_counters):
+def set_decide(func_hist, name_parts, global_counters): #keep
     """
     here we tried to devide the inputs between the train/val/test sets such that there is more shared names between the
     sets
@@ -395,7 +271,7 @@ def gen_shared_name(func_hist, funcs):
     return shared_funcs
 
 
-def generate_output(dataset_path, dataset_name):
+def generate_output(dataset_path, dataset_name): #keep
     """
     this is the experimentation code at the last experiments, we tried to add to the test/val sets only functions that
     have a name part the appeared at least 3 times in the dataset, later we tried to remove from the label the name parts
@@ -449,10 +325,6 @@ def generate_output(dataset_path, dataset_name):
 
     global_counters = {'train': 0, 'val': 0, 'test': 0}
     for i, func in enumerate(well_named_funcs):
-        # if i == 100:
-        #     output = val_output
-        # if i == 250:
-        #     output = train_output
         func_name_parts = func_name_extractor(func).split("_")
         print_name = gen_shared_name(names_hists, func_name_parts)
         names_hists, dest = set_decide(names_hists, print_name, global_counters)
@@ -482,20 +354,6 @@ def generate_output(dataset_path, dataset_name):
                     line[0] = print_name
                     line = " ".join(line)
                     output.write(line)
-    # what is left add to train
-    # output = train_output
-    # for func in all_funcs:
-    #     if func.endswith(".pkl"):
-    #         with open(func, "rb") as f:
-    #             try:
-    #                 sm = pickle.load(f)
-    #                 sm_to_output(sm, output, func_name_extractor(func))
-    #             except Exception as e:
-    #                 print(e)
-    #                 print(f"{func} failed")
-    #     else:
-    #         with open(func, "r") as f:
-    #             output.write(f.read())
     train_output.close()
     test_output.close()
     val_output.close()
@@ -543,41 +401,3 @@ def trim_long_lines(file_path):
 
 if __name__ == '__main__':
     main()
-    # cut long lines
-    # trim_long_lines("datasets/cfg_overfitting_test/collective_output.txt")
-
-    # remove_failed_pkls("datasets/cfg_overfitting_test")
-    # exit()
-    # main()
-    # A test to detremine wether to use CFGFast or EmulatedCFG for finding functions in the binary... it turns out
-    # should use CFGFast, but remove all undefined symbols that it adds (starts with sub_xxx)
-    # binaries = ['core_utils_bins/ls']
-    # for bin in binaries:
-    #     proj = angr.Project(bin, auto_load_libs=False)
-    #     # efg = proj.analyses.CFGEmulated()
-    #     cfg = proj.analyses.CFGFast()
-    #     cfg_functions = {f.name for f in cfg.kb.functions.values()}
-    #     # efg_functions = {f.name for f in efg.kb.functions.values()}
-    #
-    #     # with open(f"jsons/{os.path.basename(bin)}.json", "w") as f:
-    #     #     json.dump({"cfg": list(cfg_functions), "efg": list(efg_functions),
-    #     #                "diff": list(cfg_functions.symmetric_difference(efg_functions))},
-    #     #               f, indent=4)
-    #     # pickle.dump(efg_functions, open("emulated_ls_test.pkl", "wb"))
-    #     pickle.dump(cfg_functions, open("cfg_ls_test.pkl", "wb"))
-    #     print(f"finished {bin}")
-    # exit()
-    # generate_dataset(binaries[0:20], dataset_name="overfitting_test")
-    # exit()
-    # hist = dict()
-    # p = "dumps"
-    # for name in os.listdir(p):
-    #     funcs = pickle.load(open(f"dumps/{name}", "rb"))
-    #     for f in funcs:
-    #         hist[f.name] = hist.get(f.name, 0) + 1
-    # b = list(hist.items())
-    # b.sort(key=lambda x: x[1], reverse=True)
-    # print(b)
-    # c = 0
-    # for k, v in b:
-    #     c += v
