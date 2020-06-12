@@ -130,12 +130,9 @@ def tokenize_function_name(function_name):
     return "|".join(function_name.split("_"))
 
 
-<<<<<<< Updated upstream
-def generate_dataset(train_binaries, dataset_name):
-    print("generate data_set")
-=======
+
 def generate_dataset(train_binaries, dataset_name): #keep
->>>>>>> Stashed changes
+
     dataset_dir = f"datasets/{dataset_name}"
     os.makedirs(dataset_dir, exist_ok=True)
     analysed_funcs = get_analysed_funcs(dataset_dir)
@@ -143,12 +140,7 @@ def generate_dataset(train_binaries, dataset_name): #keep
         analysed_funcs = analyse_binary(analysed_funcs, binary, dataset_dir)
 
 
-<<<<<<< Updated upstream
-def analyse_binary(analysed_funcs, binary_name, dataset_dir):
-    print("analyse_binary")
-=======
 def analyse_binary(analysed_funcs, binary_name, dataset_dir): #keep
->>>>>>> Stashed changes
     excluded = {'main', 'usage', 'exit'}.union(analysed_funcs)
     proj = angr.Project(binary_name, auto_load_libs=False)
     cfg = proj.analyses.CFGFast()
