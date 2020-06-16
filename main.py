@@ -19,7 +19,7 @@ start_time = 0
         
 def time_limit_check(smgr):
     global start_time
-    minutes_limit = 1
+    minutes_limit = 10
     should_stop = time.time() - start_time > (60 * minutes_limit)
     if should_stop:
         print("stopped exploration")
@@ -177,6 +177,22 @@ def get_analysed_funcs(dataset_path): #keep
 
     return analysed_funcs
 
+def find_target_constants(line):
+    targets_mapper = dict()
+    targets_counter = itertools.count()
+    
+    found_targets = set(re.findall(r"jnb\|0[xX][0-9a-fA-F]+|jnbe\|0[xX][0-9a-fA-F]+|jnc\|0[xX][0-9a-fA-F]+|jne\|0[xX][0-9a-fA-F]+|jng\|0[xX][0-9a-fA-F]+|jnge\|0[xX][0-9a-fA-F]+|jnl\|0[xX][0-9a-fA-F]+|jnle\|0[xX][0-9a-fA-F]+|jno\|0[xX][0-9a-fA-F]+|jnp\|0[xX][0-9a-fA-F]+|jns\|0[xX][0-9a-fA-F]+|jnz\|0[xX][0-9a-fA-F]+|jo\|0[xX][0-9a-fA-F]+|jp\|0[xX][0-9a-fA-F]+|jpe\|0[xX][0-9a-fA-F]+|jpo\|0[xX][0-9a-fA-F]+|js\|0[xX][0-9a-fA-F]+|jz\|0[xX][0-9a-fA-F]+|ja\|0[xX][0-9a-fA-F]+|jae\|0[xX][0-9a-fA-F]+|jb\|0[xX][0-9a-fA-F]+|jbe\|0[xX][0-9a-fA-F]+|jc\|0[xX][0-9a-fA-F]+|je\|0[xX][0-9a-fA-F]+|jz\|0[xX][0-9a-fA-F]+|jg\|0[xX][0-9a-fA-F]+|jge\|0[xX][0-9a-fA-F]+|jl\|0[xX][0-9a-fA-F]+|jle\|0[xX][0-9a-fA-F]+|jna\|0[xX][0-9a-fA-F]+|jnae\|0[xX][0-9a-fA-F]+|jnb\|0[xX][0-9a-fA-F]+|jnbe\|0[xX][0-9a-fA-F]+|jnc\|0[xX][0-9a-fA-F]+|jne\|0[xX][0-9a-fA-F]+|jng\|0[xX][0-9a-fA-F]+|jnge\|0[xX][0-9a-fA-F]+|jnl\|0[xX][0-9a-fA-F]+|jnle\|0[xX][0-9a-fA-F]+|jno\|0[xX][0-9a-fA-F]+|jnp\|0[xX][0-9a-fA-F]+|jns\|0[xX][0-9a-fA-F]+|jnz\|0[xX][0-9a-fA-F]+|jo\|0[xX][0-9a-fA-F]+|jp\|0[xX][0-9a-fA-F]+|jpe\|0[xX][0-9a-fA-F]+|jpo\|0[xX][0-9a-fA-F]+|js\|0[xX][0-9a-fA-F]+|jz\|0[xX][0-9a-fA-F]+ ", line))
+    for target in found_targets:
+        target = re.sub("0[xX][0-9a-fA-F]+|\|", "" , target)
+        line = line.replace(target, "jmp")
+    for target in found_targets:
+        print("removing targets")
+        target = re.sub("[a-z]+\|", "" , target)
+        if target not in targets_mapper:
+            targets_mapper[target] = f"target_{next(targets_counter)}"
+    for target, replacement in sorted(targets_mapper.items(), key=lambda x: len(x[0]), reverse=True):
+                line = line.replace(target, replacement)
+    return line
 
 def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name):
     counters = {'mem': itertools.count(), 'ret': itertools.count()}
@@ -184,6 +200,9 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
     skipped_lines = 0
     constants_mapper = dict()
     constants_counter = itertools.count()
+    pos_constants_mapper = dict()
+    neg_constants_mapper = dict()
+    
     proj = sm._project
     for exec_paths in sm.stashes.values():
         for exec_path in exec_paths:
@@ -191,14 +210,33 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             processsed_code = "|".join(list(filter(None, map(block_to_ins, blocks))))
             var_map, relified_consts = varify_cons(exec_path.solver.constraints, var_map=var_map, counters=counters)
             relified_consts = "|".join(relified_consts)
-            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code}"
-            found_constants = set(re.findall(r"0[xX][0-9a-fA-F]+", line))
+            line = f"{tokenize_function_name(func_name)} DUM,{processsed_code}" 
+            line = re.sub("r[0-9]+", "reg", line)
+            line = re.sub("xmm[0-9]+", "xmm", line)
+            line = find_target_constants(line)
+            found_constants = set(re.findall(r"0[xX][0-9a-fA-F]+|\|[0-9]+\|", line))
+                        
             for constant in found_constants:
+                constant = re.sub("\|", "", constant)
                 if constant not in constants_mapper:
                     constants_mapper[constant] = f"const"
+                line = line.replace(constant, replacement)
+            
+            #pos_constants =  set(re.findall(r"\|\+\|[0-9]+", line))
+            #neg_constants =  set(re.findall(r"\|\-\|[0-9]+", line))
+
+            #for pos_constant in pos_constants:
+            #    pos_constant = re.sub("\|\+\|", "", pos_constant)
+            #    if pos_constant  not in pos_constants_mapper:
+            #        pos_constants_mapper[pos_constant] = f"pos_const"
+            #for neg_constant in neg_constants:
+            #    neg__constant = re.sub("\|\-\|", "", neg_constant)
+            #    if neg_constant not in constants_mapper:
+            #        neg_constants_mapper[neg_constant] = f"neg_const"
+
             line += f",DUM\n"
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
-                line = line.replace(constant, replacement)
+                line = line.replace(constant, replacement)          
             line = remove_consecutive_pipes(line)
             if len(line) <= 3000:
                 print("********************{0}".format(line))
@@ -342,6 +380,7 @@ def generate_output(dataset_path, dataset_name): #keep
                     print(e)
                     print(f"{func} failed")
         else:
+            print("pickle not found")
             with open(func, "r") as f:
                 for line in f:
                     line = line.split(" ")
