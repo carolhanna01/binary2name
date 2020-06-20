@@ -214,7 +214,7 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             line = re.sub("r[0-9]+", "reg", line)
             line = re.sub("xmm[0-9]+", "xmm", line)
             line = find_target_constants(line)
-            line = re.sub(r"\|[0-9]+", "const", line)
+            
             found_constants = set(re.findall(r"0[xX][0-9a-fA-F]+", line))
                         
             for constant in found_constants:
@@ -237,6 +237,7 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
                 line = line.replace(constant, replacement)          
             line = remove_consecutive_pipes(line)
+            line = re.sub(r"\|[0-9]+", "const", line)
             if len(line) <= 3000:
                 print("********************{0}".format(line))
                 output_file.write(line)
