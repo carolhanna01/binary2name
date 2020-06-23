@@ -66,9 +66,10 @@ def remove_consecutive_pipes(s1):
     return re.sub("(\|)+", "|", s1)
 
 
-def con_to_str(con, replace_strs=[', ', ' ', '(', ')'], max_depth=8):
+def con_to_str(con, replace_strs=[', ', ' ', '(', ')','>','<'], max_depth=8):
     repr = con.shallow_repr(max_depth=max_depth, details=con.MID_REPR).replace('{UNINITIALIZED}', '')
     repr=re.sub("Extract\([0-9]+\, [0-9]+\,","",repr)
+    repr=re.sub("<...>","",repr)
     for r_str in replace_strs:
         repr = repr.replace(r_str, '|')
 
@@ -79,7 +80,7 @@ def gen_new_name(old_name):
     if re.match(r"mem", old_name):
         return 'mem_%s' % old_name.split('_')[2]
     if re.match(r"fake_ret_value", old_name):
-        return 'ret'
+        return 'ret_value'
     if re.match(r"reg", old_name):
         return re.sub("(_[0-9]+)+", '', old_name)
     if re.match(r"unconstrained_ret", old_name):
@@ -92,36 +93,51 @@ def varify_cons(cons, var_map=None, counters=None, max_depth=8):
     abstract away constants from the constraints
     """
     #counters = {'mem': itertools.count(), 'ret': itertools.count()} if counters is None else counters
-    var_map = {} if var_map is None else var_map
+    #var_map = {} if var_map is None else var_map
     new_cons = []
     var_map['Extract'] = ""
-
     m = None
+    var_map = {}
     for con in cons:
         if con.concrete:
             continue
+        #var_map = {}
         for v in con.leaf_asts():
             if v.op in { 'BVS', 'BoolS', 'FPS' }:
                 new_name = gen_new_name(v.args[0])
                 if re.match(r"mem", new_name):
-                    if m is None :
+                    if m is None:
+                        var_map["0x"+v.args[0].split('_')[1]]= new_name
                         m = int(new_name.split('_')[1])
                     else:
+                        var_map["0x"+v.args[0].split('_')[1]]= new_name
                         m = min(m,int(new_name.split('_')[1]))
                 var_map[v.cache_key] = v._rename(new_name)
         new_cons.append(con_to_str(con.replace_dict(var_map), max_depth=max_depth))
+    inter_cons = []
+    if m is not None:
+        for con in new_cons:
+            split = con.split("|")
+            for s in split:
+                if re.match(r"0x", s):
+                    if s in var_map:
+                        con = con.replace(s,var_map[s])
+            inter_cons.append(con)
+    new_cons = inter_cons
     final_cons = []
     if m is not None:
         for con in new_cons :
             split = con.split("|")
             for i,s in enumerate(split):
                 if re.match(r"mem", s):
-                    new_s = 'mem_%d' % (int(s.split('_')[1]) -m)
+                    new_s = 'mem_%d' % (int(s.split('_')[1]) - m)
                     con = con.replace(s,new_s)
             final_cons.append(con)
     else:
         final_cons = new_cons
+    print(final_cons)
     return var_map, final_cons
+
 
 
 
@@ -137,7 +153,7 @@ def generate_dataset(train_binaries, dataset_name): #keep
     dataset_dir = f"datasets/{dataset_name}"
     os.makedirs(dataset_dir, exist_ok=True)
     analysed_funcs = get_analysed_funcs(dataset_dir)
-    for binary in train_binaries:
+    for binary in train_binaries:    
         analysed_funcs = analyse_binary(analysed_funcs, binary, dataset_dir)
 
 
@@ -181,6 +197,7 @@ def get_analysed_funcs(dataset_path): #keep
 def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name):
     counters = {'mem': itertools.count(), 'ret': itertools.count()}
     var_map = {}
+    print("sm_to_output")
     skipped_lines = 0
     constants_mapper = dict()
     constants_counter = itertools.count()
@@ -196,12 +213,12 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             for constant in found_constants:
                 if constant not in constants_mapper:
                     constants_mapper[constant] = f"const"
-            line += f",DUM\n"
+            line += f"|CONS|{relified_consts},DUM\n"
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
                 line = line.replace(constant, replacement)
             line = remove_consecutive_pipes(line)
+            print(line)
             if len(line) <= 3000:
-                print("********************{0}".format(line))
                 output_file.write(line)
             else:
                 skipped_lines += 1
@@ -344,9 +361,9 @@ def generate_output(dataset_path, dataset_name): #keep
         else:
             with open(func, "r") as f:
                 for line in f:
-                    line = line.split(" ")
-                    line[0] = print_name
-                    line = " ".join(line)
+                    #line = line.split(" ")
+                    #line[0] = print_name
+                    #line = " ".join(line)
                     output.write(line)
     train_output.close()
     test_output.close()
