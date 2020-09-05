@@ -1,0 +1,114 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class AS_STMT_CURSOR is
+   create:SAME is
+      r::=new;
+      return r;
+   end;
+   
+   preorder!(cur:$AS_NODE):$AS_STMT is
+      -- returns statements in preorder
+      
+      if void(cur) then quit; end;
+	 
+      as:$AS_NODE := cur;
+      typecase as 
+      when AS_STMT_LIST then
+	 loop yield preorder!(as.stmts); end;
+      when AS_DEC_STMT then
+	 yield as;
+      when AS_ASSIGN_STMT then
+	 yield as;	 
+      when AS_IF_STMT then
+	 yield as;
+	 loop yield preorder!(as.then_part); end;
+	 loop yield preorder!(as.else_part); end;	 
+      when AS_LOOP_STMT then
+	 yield as;
+	 loop yield preorder!(as.body) end;
+      when AS_RETURN_STMT then
+	 yield as;
+      when AS_YIELD_STMT then
+	 yield as;
+      when AS_QUIT_STMT then
+	 yield as;
+      when AS_CASE_STMT then 
+	 yield as;
+	 loop yield preorder!(as.when_part); end;
+	 loop yield preorder!(as.else_part); end;	 
+      when AS_CASE_WHEN then
+	 loop yield preorder!(as.then_part); end;
+	 loop yield preorder!(as.next); end;
+      when AS_TYPECASE_STMT then 
+	 yield as;
+	 loop yield preorder!(as.when_part); end;
+	 loop yield preorder!(as.else_part); end;	 	 
+      when AS_TYPECASE_WHEN then
+	 loop yield preorder!(as.then_part); end;
+	 loop yield preorder!(as.next); end;	 
+      when AS_ASSERT_STMT then
+	 yield as;
+      when AS_PROTECT_STMT then
+	 yield as;
+	 loop yield preorder!(as.body); end;
+	 loop yield preorder!(as.when_part); end;
+	 loop yield preorder!(as.else_part); end;	 
+      when AS_PROTECT_WHEN then
+	 loop yield preorder!(as.then_part); end;
+	 loop yield preorder!(as.next); end;	 
+      when AS_PAR_STMT then
+	 yield as;
+	 loop yield preorder!(as.body); end;	 
+      when AS_INTERF_ATTACH_STMT then
+	 yield as;
+      when AS_LOCK_STMT then
+	 yield as;
+	 loop yield preorder!(as.then_part); end;	 	 
+	 loop yield preorder!(as.if_when_part); end;	 	 	 
+	 loop yield preorder!(as.else_part); end;	 	 	 
+      when AS_LOCK_IF_WHEN then
+	 loop yield preorder!(as.then_part); end;	 	 	 
+	 loop yield preorder!(as.next); end;	 	 	 
+      when AS_UNLOCK_STMT then
+	 yield as;
+      when AS_SYNC_STMT then
+	 yield as;
+      when AS_WITH_NEAR_STMT then
+	 yield as;	 
+	 loop yield preorder!(as.near_part); end;
+	 loop yield preorder!(as.else_part); end;
+      when AS_ATTACH_STMT then
+	 yield as;
+      when AS_FORK_STMT then 
+	 yield as;
+	 loop yield preorder!(as.body); end;
+      when AS_RAISE_STMT then
+	 yield as;
+      when AS_EXPR_STMT then
+	 yield as;
+      else
+	 -- these nodes contain no statements
+      end;
+      
+      -- if we are dealing with a statement, process others in
+      -- the same block
+      typecase as
+      when $AS_STMT then
+	 loop yield preorder!(as.next); end;
+      else
+	 -- nothing to do 
+      end;
+   end;
+end;
+

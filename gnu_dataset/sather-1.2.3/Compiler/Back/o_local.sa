@@ -1,0 +1,603 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class OPT_LOCAL_EXPR is
+   attr index:INT;
+   attr is_sometimes_far:BOOL;
+   attr attr_access:INT;
+   attr is_arg:BOOL;
+   attr near_arg:BOOL;
+   readonly attr local:AM_LOCAL_EXPR;
+   create(am:AM_LOCAL_EXPR):SAME is r::=new;r.local:=am;return r; end;
+end;
+
+-- class used to store some information about nearness. Each signature
+-- has such an attribute (see sig.sa). the comments below refer to arguments,
+-- but this includes self (self is the first argument to a function).
+class OPT_LOCAL_CALL is
+   attr consider:ARRAY{INT}; -- list of aruments (indexed by their position in sig)
+			    -- that, if local, should be handled specially by calling
+			    -- the corresponding local version of the routine
+
+   -- for each possible combination of the arguments in consider, we have a list
+   -- of locals that turn to near if some of the arguments are near. The array is
+   -- indexed with a bit pattern, bits turned on in the index indicate taht the
+   -- corresponding argument in consider[] is local.
+   attr near_local:AREF{FLIST{AM_LOCAL_EXPR}};
+
+   -- for each attribute (indexed by their position in sig) we store the number
+   -- of attrbibute accesses in this function
+   attr attr_access:ARRAY{INT};
+
+   -- true if the result of the function is always near (only relevant if the
+   -- return type exists and is not immutable. in the latter case it is also
+   -- alwas near. It is also not used for builtin functions
+   attr is_near:BOOL;
+
+   -- list of attributes that have to near in order for the result to be near too.
+   -- uses the same index as in the signature
+   attr near_depends_on_args:ARRAY{INT};
+
+   create:SAME is return new; end;
+end;
+
+class OPT_LOCAL is
+   include OPT_HELPER;
+
+   check_for_local(func:AM_ROUT_DEF) is
+      if func.is_abstract or func.is_external or func.is_iter or func.sig.is_forked then return; end;
+      if func.sig.is_builtin then
+	 if prog.opt_debug then
+	    #OUT+"RESULT OF LOCAL ANALYSIS for builtin "+func.sig.str+":\n";
+	    #OUT+"Function: is_near="+func.sig.is_near+"   args:"+func.sig.near_depends_on_args.str
+		 +"   access:"+func.sig.attr_access.str+"\n";
+	 end;
+	 return;
+      end;
+
+      -- m maps locals to OPT_LOCAL_EXPR which contains some
+      -- information needed during optimization.
+      m:FMAP{AM_LOCAL_EXPR,OPT_LOCAL_EXPR};
+      ox_table:ARRAY{OPT_LOCAL_EXPR}:=#(1+func.locals.size+func.asize);;
+      ret_ox::=#OPT_LOCAL_EXPR(void);
+      ret_ox.index:=0;
+      ox_table[0]:=ret_ox;
+      top_index::=init_data(func,inout m,ox_table);
+
+      if top_index=0 and void(func.sig.tp) then 
+	 if prog.opt_debug then #OUT+"OPT_LOCAL: nothing to optimize\n"; end;
+	 return; end; -- nothing to optimize
+
+      -- whenever the nearness of a local l1 depends on another local l2
+      -- (because of assignment), we set the corresponding bit dep[l1,l2]
+      -- to true.
+      dep:ARRAY2{BOOL}:=#(top_index+1,top_index+1);
+
+      get_access(func,dep,m,ret_ox);
+      if prog.opt_debug then 
+         #OUT+"dependency before flattening:\n";
+	 loop
+	    i::=dep.size1.times!;
+	    if i<10 then #OUT+" "; end;
+	    #OUT+i+" : ";
+	    AM_OUT::AM_out(ox_table[i].local);#OUT+"\n";
+	 end;
+	 #OUT+"   : ";
+	 loop
+	    i::=dep.size1.times!;
+	    if i<10 then #OUT+" "; end;
+	    #OUT+i+" ";
+	 end;
+	 #OUT+"\n";
+	 loop
+	    i::=dep.size1.times!;
+	    if i<10 then #OUT+" "; end;
+	    #OUT+i+" : ";
+	    loop
+	       j::=dep.size1.times!;
+	       if dep[i,j] then #OUT+" * ";
+	       else #OUT+"   ";
+	       end;
+	    end;
+	    #OUT+"\n";
+	 end;
+      end;
+      flatten_depend_matrix(dep);
+      if prog.opt_debug then 
+         #OUT+"AFTER flattening:\n";
+	 loop
+	    i::=dep.size1.times!;
+	    if i<10 then #OUT+" "; end;
+	    #OUT+i+" : ";
+	    loop
+	       j::=dep.size1.times!;
+	       if dep[i,j] then #OUT+" * ";
+	       else #OUT+"   ";
+	       end;
+	    end;
+	    #OUT+"\n";
+	 end;
+      end;
+      analyze_result(func,dep,m,ox_table,ret_ox);
+      if cs_options.local_call then create_local_call_table(func,dep,m,ox_table); end;
+   end;
+
+   private create_local_call_table(func:AM_ROUT_DEF,dep:ARRAY2{BOOL},m:FMAP{AM_LOCAL_EXPR,OPT_LOCAL_EXPR},ox_table:ARRAY{OPT_LOCAL_EXPR}) is
+      consider:ARRAY{INT}:=#(func.asize);
+      nlocals::=0;
+
+      -- find out which arguments should be checked for nearness
+      loop
+	 i::=func.ind!;
+	 ox::=m.get(func[i].expr);
+	 ignore::=void(ox) or func[i].mode/=MODES::in_mode 
+	          or void(func.sig.attr_access) or func.sig.attr_access[i]<cs_options.local_call_access;
+	 -- an argument that is assigned to from a local which is not always near is ignored
+	 loop until!(ignore);
+	    j::=dep.size2.times!;
+	    ignore:=dep[ox.index,j] and ox.index/=j and ~ox_table[j].is_sometimes_far;
+	 end;
+	 if ~ignore then
+	    consider[nlocals]:=i;
+	    nlocals:=nlocals+1;
+	 end;
+      end;
+
+      -- if none arguments should be checkd, we can stop right here
+      if nlocals=0 then return; end;
+
+      oi::=func.sig.opt_info;
+      oi.consider:=#(nlocals);
+      loop oi.consider.set!(consider.elt!); end;
+      oi.near_local:=#(2.pow(oi.consider.size));
+
+      if prog.opt_debug then 
+         #OUT+"making local calls if args "+oi.consider.str+" are local\n";
+      end;
+      -- find out which locals will be near if some of the arguments are near.
+      -- A local will turn to near if
+      -- * it is not "sometimes_far"
+      -- * it depends on some or all the args that are supposedly near
+      -- * it does not depend on some of the arguments which are not near
+      -- the array near_local is used as
+      loop i::=oi.near_local.aind!;
+	 loop a::=m.get(func[oi.consider.elt!].expr);
+	    if i.aelt! then
+	       a.near_arg:=true;
+	       oi.near_local[i]:=oi.near_local[i].push(a.local);
+	       if prog.opt_debug then 
+	          #OUT+"local argument: ";AM_OUT::AM_out(a.local);#OUT+"\n";
+	       end;
+	    else
+	       a.near_arg:=false;
+	    end;
+	 end;
+	 loop ox::=ox_table.elt!;
+	    if ~void(ox) then
+	       -- ox.local is void for the return value
+	       local_is_near::=~ox.is_sometimes_far and ~ox.is_arg and ~void(ox.local);
+	       loop while!(local_is_near);
+		  j::=dep.size2.times!;
+		  if prog.opt_debug then
+		     #OUT+"comparing against "+j+": dep="+dep[ox.index,j]+"  sometimes_far="+ox_table[j].is_sometimes_far+"  is_arg="+ox_table[j].is_arg+" near_arg="+ox_table[j].near_arg+"\n";
+		  end;
+		  local_is_near:=j=ox.index 
+				 or ~dep[ox.index,j]
+				 or (dep[ox.index,j] and ~ox_table[j].is_sometimes_far and ~ox_table[j].is_arg) 
+		                 or (ox_table[j].is_arg and ox_table[j].near_arg);
+	       end;
+	       if local_is_near then 
+		  oi.near_local[i]:=oi.near_local[i].push(ox.local);
+		  if prog.opt_debug then 
+		     #OUT+"local: ";AM_OUT::AM_out(ox.local);#OUT+"\n";
+		  end;
+	       end;
+	    end;
+	 end;
+	 if prog.opt_debug then
+	    #OUT+"local args: "; loop oi.consider.size.times!;#OUT+i.aelt!+" "; end; #OUT+"\n";
+	    #OUT+"locals: ";loop AM_OUT::AM_out(oi.near_local[i].elt!);#OUT+"\n        ";end;
+	    #OUT+"\n";
+	 end;
+      end;
+         
+   end;
+   
+   private init_data(func:AM_ROUT_DEF,inout m:FMAP{AM_LOCAL_EXPR,OPT_LOCAL_EXPR},ox_table:ARRAY{OPT_LOCAL_EXPR}):INT is
+      top_index::=0;
+      loop -- add all arguments of the function
+         l::=func.elt!.expr;
+	 if ~l.tp.is_immutable then 
+	    ox::=#OPT_LOCAL_EXPR(l);
+	    ox.index:=(top_index+1).up!;
+	    ox.is_arg:=true;
+	    ox_table[ox.index]:=ox;
+	    top_index:=ox.index;
+	    m:=m.insert(l,ox);
+	 end;
+      end;
+      loop -- add all local variables to the map
+	 l::=func.locals.elt!;
+	 if ~l.tp.is_immutable then 
+	    ox::=#OPT_LOCAL_EXPR(l);
+	    ox.index:=(top_index+1).up!;
+	    ox_table[ox.index]:=ox;
+	    top_index:=ox.index;
+	    m:=m.insert(l,ox);
+	 end;
+      end;
+      return top_index;
+   end;
+
+   private flatten_depend_matrix(dep:ARRAY2{BOOL}) is
+      -- uses Warshal's Transitive Closure Algorithm
+      loop k::=dep.size1.times!;
+         loop i::=dep.size1.times!;
+	    loop j::=dep.size1.times!;
+	       if dep[k,i] and dep[j,k] then dep[j,i]:=true; end;
+	    end;
+	 end;
+      end;
+   end;
+
+   private analyze_result(func:AM_ROUT_DEF,dep:ARRAY2{BOOL},m:FMAP{AM_LOCAL_EXPR,OPT_LOCAL_EXPR},ox_table:ARRAY{OPT_LOCAL_EXPR},ret_ox:OPT_LOCAL_EXPR) is
+      -- find out which locals may hold far objects
+      -- or are always near
+      func.sig.opt_info:=#;
+      loop p::=m.pairs!;
+         lc::=p.t1;
+	 ox::=p.t2;
+	 is_far::=ox.is_sometimes_far;
+	 if prog.opt_debug then
+	    #OUT+"working on ";AM_OUT::AM_out(lc);
+	    #OUT+"\n  far="+ox.is_sometimes_far+"   attr_acces:"+ox.attr_access;
+	    #OUT+"\n  lc.is_near="+lc.is_near+"  always="+lc.is_always_near+"\n";
+	 end;
+	 depends_on_arg::=0;
+         loop until!(is_far);
+	    ld::=dep.size1.times!;
+	    if dep[ox.index,ld] then
+	       if ox_table[ld].is_sometimes_far then
+		  if prog.opt_debug then
+		     #OUT+"is_far because of ";AM_OUT::AM_out(ox_table[ld].local);#OUT+"\n";
+		  end;
+	          is_far:=true;
+	       end;
+	       if ox_table[ld].is_arg then
+	          depends_on_arg:=depends_on_arg+1;
+	       end;
+	    end;
+	 end;
+	 if ~is_far then
+	    if depends_on_arg=0 then
+	       if ~ox.is_arg then 
+		  lc.is_always_near:=true;
+	       end;
+	    else
+	       -- add attr access to all args it depends from
+	       -- split up the access  between all of them.
+	       loop
+		  ox2::=m.get(func.elt!.expr);
+		  if ~void(ox2) and dep[ox.index,ox2.index] then
+		     ox2.attr_access:=ox2.attr_access+ox.attr_access/depends_on_arg;
+	          end;
+	       end;
+	    end;
+	 end;
+      end;
+
+      func.sig.attr_access:=#ARRAY{INT}(func.size);
+      loop 
+	 i::=func.sig.attr_access.ind!;
+	 f::=func.elt!;
+	 if ~void(f) then
+	    ox::=m.get(f.expr);
+	    if ~void(ox) then
+	       func.sig.attr_access[i]:=ox.attr_access; 
+	    end;
+	 end;
+      end;
+
+      -- check if the return value is always near or if it depends only
+      -- on the arguments
+      if ~void(func.sig.tp) then
+	 is_far::=false;
+	 depends_on_arg::=0;
+	 if ret_ox.is_sometimes_far then
+	    func.sig.is_near:=false;
+	    func.sig.near_depends_on_args:=void;
+	 else
+	    loop 
+	       ld::=dep.size1.times!;
+	       if dep[0,ld] then
+		  if ox_table[ld].is_sometimes_far then
+		     is_far:=true;
+		  end;
+		  if ox_table[ld].is_arg then
+		     depends_on_arg:=depends_on_arg+1;
+		  end;
+	       end;
+	    end;
+	    if ~is_far then
+	       if depends_on_arg=0 then
+		  func.sig.is_near:=true;
+	       else
+		  a::=#ARRAY{INT}(depends_on_arg);
+		  loop
+		     i::=func.ind!;
+		     l::=func[i].expr;
+		     ox::=m.get(l);
+		     if ~void(ox) and dep[0,ox.index] then
+			a.set!(i);
+		     end;
+		  end;
+		  func.sig.near_depends_on_args:=a;
+	       end;
+	    end;
+	 end;
+      end;
+     
+      if prog.opt_debug then
+         #OUT+"RESULT OF LOCAL ANALYSIS for "+func.sig.str+":\n";
+	 if ~void(func.sig.ret) then #OUT+"Function: is_near="+func.sig.is_near+"   args:"+func.sig.near_depends_on_args.str; end;
+	 #OUT+"   access:"+func.sig.attr_access.str+"\n";
+	 #OUT+"NEAR LOCALS (immutable locals are not shown):\n";
+	 loop
+	    t::=m.pairs!;
+	    lc::=t.t1;
+	    ox::=t.t2;
+	    if lc.is_near then
+	       #OUT+"   - ";
+	       AM_OUT::AM_out(lc);
+	       #OUT+"\n";
+	    end;
+	 end;
+      end;
+   end;
+
+   private get_access(func:AM_ROUT_DEF,dep:ARRAY2{BOOL},m:FMAP{AM_LOCAL_EXPR,OPT_LOCAL_EXPR},ret_ox:OPT_LOCAL_EXPR) is
+      -- calculate number of attribute access for each local
+      -- and which local depend on which other locals.
+      c::=#AM_CURSOR(prog,func.code);
+      wn::=#FLIST{BOOL};
+      loop
+         am::=c.next!;
+	 -- restore is_always_near of all locals inside the with_near_stmt
+	 if c.is_first_stmt_of_with_near_else then
+	    w::=c.get_with_near_stmt;
+	    assert(~void(w));
+	    loop
+	       a::=w.objects.elt!;
+	       typecase a when AM_LOCAL_EXPR then
+		  a.is_always_near:=wn.pop;
+	       else end;
+	    end;
+	 end;
+	 typecase am 
+	 when AM_WITH_NEAR_STMT then
+	    -- make sure that all locals mentioned in with near are treated as near
+	    -- the is_always_neer part for all locals of the with near are
+	    -- stored in a stack and restored later (see code 10 lines above)
+	    loop
+	       a::=am.objects.elt!;
+	       typecase a when AM_LOCAL_EXPR then
+		  wn:=wn.push(a.is_always_near);
+		  a.is_always_near:=true;
+	       else end;
+	    end;
+	    -- invent dummy statement, as we have to make sure that
+	    -- we find out immediatly as soon as we leave the with near.
+	    -- The insertion of the dummt comment statement make the
+	    -- end detection much easier.
+	    dummy::=#AM_COMMENT_STMT(void);
+	    dummy.next:=am.else_part;
+	    am.else_part:=dummy;
+	 when AM_ATTR_EXPR then
+	    ob::=am.ob;
+	    typecase ob when AM_LOCAL_EXPR then
+	       if ~ob.tp.is_immutable then
+		  ox::=m.get(ob);
+		  if prog.opt_debug then
+		     #OUT+"attr access for ";AM_OUT::AM_out(ob);#OUT+"\n";
+		  end;
+		  ox.attr_access:=ox.attr_access+1+c.loops*5;
+	       end;
+	    else end;
+	 when AM_ROUT_CALL_EXPR then
+	    if am.fun.tp=TP_BUILTIN::sys and am.fun.name.str="inlined_C" then
+	       -- mark all locals and args used in inlined_C as being far and
+	       -- dependent on each other.
+	       -- This is necessary as we have no way to find out what is really
+	       -- going on inside the inlined_C
+	       ex::=am[1].expr;
+	       typecase ex
+	       when AM_STR_CONST then work_on_inlined_C(m,dep,ex.bval);
+	       else end; -- inlined_C has to be str, error will be caught in cgen.sa
+	    else
+	       loop
+		  i::=am.ind!;
+		  ob::=am[i];
+		  l::=ob.expr;
+		  typecase l when AM_LOCAL_EXPR then
+		     if ~l.tp.is_immutable then
+			ox::=m.get(l);
+			if ~void(am.fun.attr_access) then 
+			   ox.attr_access:=ox.attr_access+am.fun.attr_access[i]*(1+c.loops*5);
+			   if prog.opt_debug then
+			      #OUT+"rout attr access "+am.fun.attr_access[i]+" for ";AM_OUT::AM_out(l);#OUT+"\n";
+			   end;
+			end;
+			if ob.mode/=MODES::in_mode then
+			   if prog.opt_debug then
+			      #OUT+"is_sometimes_far: ";AM_OUT::AM_out(l);#OUT+"\n";
+			   end;
+			   ox.is_sometimes_far:=true;
+			end;
+		     end;
+		  else end;
+	       end;
+	    end;
+	 when AM_ITER_CALL_EXPR then
+	    loop
+	       i::=am.ind!;
+	       ob::=am[i];
+	       l::=ob.expr;
+	       typecase l when AM_LOCAL_EXPR then
+		  if ~l.tp.is_immutable then
+		     ox::=m.get(l);
+		     if ~void(am.fun.attr_access) then 
+			ox.attr_access:=ox.attr_access+am.fun.attr_access[i]*(1+c.loops*5);
+			if prog.opt_debug then
+			   #OUT+"rout attr access "+am.fun.attr_access[i]+" for ";AM_OUT::AM_out(l);#OUT+"\n";
+			end;
+		     end;
+		     if ob.mode/=MODES::in_mode then
+			ox.is_sometimes_far:=true;
+			if prog.opt_debug then
+			   #OUT+"is_sometimes_far: ";AM_OUT::AM_out(l);#OUT+"\n";
+			end;
+		     end;
+	          end;
+	       else end;
+	    end;
+	 when AM_PREFETCH_STMT then -- same code as for AM_ASSIGN_STMT
+	    if prog.opt_debug then
+	       #OUT+"working on prefetch statement ["+SYS::id(am)+"]\n";
+	    end;
+	    if ~am.src.tp.is_immutable then
+	       l1::=am.dest;
+	       typecase l1 when AM_LOCAL_EXPR then
+		  if ~am.src.is_near then
+		     ox::=m.get(l1);
+		     dpon::=am.src.near_depends_on;
+		     if ~void(dpon) then
+			loop
+			   if prog.opt_debug then
+			      d::=dpon.elt!;
+			      #OUT+"  depends on ";AM_OUT::AM_out(d);#OUT+"\n";
+			   end;
+			   m1::=m.get(l1);
+			   m2::=m.get(dpon.elt!);
+			   if ~void(m1) and ~void(m2) then
+			      dep[m.get(l1).index,m.get(dpon.elt!).index]:=true;
+			   end;
+			end;
+		     else 
+			if prog.opt_debug then
+			   #OUT+"sometimes far for ";AM_OUT::AM_out(l1);#OUT+"\n";
+			end;
+			ox.is_sometimes_far:=true;
+		     end;
+		  end;
+	       else end
+	    end;
+	 when AM_ASSIGN_STMT then -- same code as for AM_PREFETCH_STMT
+	    if prog.opt_debug then
+	       #OUT+"working on assign statement ["+SYS::id(am)+"]\n";
+	    end;
+	    if ~am.src.tp.is_immutable then
+	       l1::=am.dest;
+	       typecase l1 when AM_LOCAL_EXPR then
+		  if ~am.src.is_near then
+		     ox::=m.get(l1);
+		     dpon::=am.src.near_depends_on;
+		     if ~void(dpon) then
+			loop
+			   if prog.opt_debug then
+			      d::=dpon.elt!;
+			      #OUT+"  depends on ";AM_OUT::AM_out(d);#OUT+"\n";
+			   end;
+			   m1::=m.get(l1);
+			   m2::=m.get(dpon.elt!);
+			   if ~void(m1) and ~void(m2) then
+			      dep[m.get(l1).index,m.get(dpon.elt!).index]:=true;
+			   end;
+			end;
+		     else 
+			if prog.opt_debug then
+			   #OUT+"sometimes far for ";AM_OUT::AM_out(l1);#OUT+"\n";
+			end;
+			ox.is_sometimes_far:=true;
+		     end;
+		  end;
+	       else end
+	    end;
+	 when AM_RETURN_STMT then
+	    if ~void(am.val) then
+	       dpon::=am.val.near_depends_on;
+	       if ~am.val.is_near and void(dpon) then
+	          ret_ox.is_sometimes_far:=true;
+		  if prog.opt_debug then
+		     #OUT+"return is sometimes far\n";
+		  end;
+	       elsif ~void(dpon) then
+		  loop
+		     if prog.opt_debug then
+			d::=dpon.elt!;
+			#OUT+"  return depends on ";AM_OUT::AM_out(d);#OUT+"\n";
+		     end;
+		     dep[ret_ox.index,m.get(dpon.elt!).index]:=true;
+		  end;
+	       end;
+	    end;
+         else end;
+      end;
+   end;
+
+   private work_on_inlined_C(m:FMAP{AM_LOCAL_EXPR,OPT_LOCAL_EXPR},dep:ARRAY2{BOOL},str:STR)
+   is
+      if void(str) then return; end;
+      i::=0;
+      used:FLIST{INT};
+      loop while!(i<str.size);
+	 if str[i]='#' then
+	    if i+1<str.size and str[i+1]='#' then
+	       i:=i+1;
+	    else
+	       var::="";
+	       loop
+		  while!(i+1<str.size and (str[i+1].is_alphanum or str[i+1]='_'));
+		  i:=i+1;
+		  var:=var+str[i];
+	       end;
+	       -- there could be several locals with the same name,
+	       -- so we have to go through all elements
+	       loop
+	          p::=m.pairs!;
+		  if p.t1.name.str=var then
+		     if prog.opt_debug then
+			#OUT+"inlined_C: touching ";AM_OUT::AM_out(p.t1);#OUT+"\n";
+		     end;
+		     p.t2.is_sometimes_far:=true;
+		     p.t2.attr_access:=p.t2.attr_access+1;
+		     used:=used.push(p.t2.index);
+		  end;
+	       end;
+	    end;
+	 end;
+	 i:=i+1;
+      end;
+      if ~void(used) then
+	 -- make all locals used in the inlined_C dependent on the
+	 -- first of used, and make the first one dependant on all others.
+	 -- flatten_depend_matrix will take care of the rest
+	 loop 
+	    dep[used[0],used.elt!]:=true; 
+	    dep[used.elt!,used[0]]:=true; 
+	 end;
+      end;
+   end;
+
+end;
+
+-- vim:sw=3:nosmartindent

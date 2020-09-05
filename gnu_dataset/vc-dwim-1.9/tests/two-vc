@@ -1,0 +1,37 @@
+#!/bin/sh
+# Fail if two ChangeLog files use different version control systems.
+
+. "${srcdir=.}/init.sh"; path_prepend_ ..
+print_ver_ vc-dwim
+
+require_git_
+require_cvs_
+
+mkdir -p c/sub/CVS g || framework_failure_
+touch c/sub/f g/f || framework_failure_
+cat <<EOF > g/ChangeLog || framework_failure_
+2006-09-04  Jim Meyering  <jim@meyering.net>
+
+	* f: X.
+EOF
+cp g/ChangeLog c/sub || framework_failure_
+
+(cd g && git init > /dev/null)           || framework_failure_
+(cd g && git add . > /dev/null)          || framework_failure_
+(cd g && git commit -m m . ) > /dev/null || framework_failure_
+mv c/sub g || framework_failure_
+
+fail=0
+
+cd g
+vc-dwim ChangeLog sub/ChangeLog 2> out && fail=1
+
+cat <<\EOF > exp || fail=1
+vc-dwim: ChangeLog files are managed by more than one version-control system:
+  ChangeLog: git
+  sub/ChangeLog: cvs
+EOF
+
+compare exp out || fail=1
+
+Exit $fail

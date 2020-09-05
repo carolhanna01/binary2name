@@ -1,0 +1,386 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- fstr.sa: Buffers for efficiently constructing strings.
+-- Jan6/96 Incorporated Erik's diffs
+-------------------------------------------------------------------
+class FSTR < $IS_LT{FSTR}, $HASH, $STR is
+    -- Buffers for efficiently constructing strings by repeated
+    -- concatenation using amortized doubling.
+   include COMPARABLE;
+   include FLIST{CHAR} 
+	 asize->asize,loc->loc; -- Needs to be public for some uses.
+    -- Some useful features are:
+    -- size:INT  The current string size.
+    -- create(n:INT):SAME  A buffer of initial size `n'.
+    -- copy:SAME  A copy of self.
+    -- aget(ind:INT):CHAR  The character `ind'.
+    -- aset(ind:INT, c:CHAR)  Set character `ind' to `c'.
+    -- is_eq(l:SAME):BOOL  True if self equals l as strings.
+    -- is_empty:BOOL  True if self is the empty string.
+    -- clear  Make self represent the empty string.
+    -- elt!:CHAR  The characters in self.
+    -- elt!(beg:INT):CHAR  Characters starting at `beg'.
+    -- elt!(beg,num:INT):CHAR  `num' chars beginning at `beg'.
+    -- elt!(beg,num,step:INT):CHAR  `num' chars beginning at `beg',
+    --    stepping by `step'.
+    -- ind!:INT  The indices of the buffer.
+    -- contains(c:CHAR):BOOL  True if self contains `c'.
+    -- to_reverse  Reverse the order of the characters.
+    
+    create:SAME is
+	-- A new buffer.
+	return new(16) end;
+
+    create(sz:INT):SAME pre sz>=0 is
+	-- A new buffer of size `sz'.
+	if sz=0 then return void
+	else return new(sz)
+	end;
+    end;
+    
+    acopy(s:STR) is
+	builtin FSTR_ACOPY_STR;
+    end;
+
+    acopy(f:FSTR) pre asize>=f.asize is
+	builtin FSTR_ACOPY_FSTR;
+    end;
+
+    acopyn(s:STR,n:INT) pre n <= s.length is
+	builtin FSTR_ACOPYN_STR_INT;
+    end;
+
+    acopyn(s:FSTR,n:INT) pre n <= s.length is
+	builtin FSTR_ACOPYN_FSTR_INT;
+    end;
+    
+    create(s:STR):SAME is
+	-- added by MBK to make STR::fstr:FSTR faster
+	if void(s) then
+	    return create;
+	else
+	    l ::= s.length;
+	    r:SAME;
+	    if l=0 then r:=new(1);  -- Can't have FSTR with no buffer!
+	    else r:=new(l);
+	    end;
+	    r.loc := l;
+	    r.acopyn(s,l); -- this puppy should be macroized into memcpy
+	    return r;
+	end;
+    end;
+    
+    length:INT is
+	-- The number of characters in self. Another name for `size'.
+	return size end;
+    
+    push(c:CHAR):SAME is
+	-- Add a new character to the end of self and return it.
+	-- If self is void, create a new list. Usage: `l:=l.push(e)'.
+	-- This routine needs to go fast too, which is the reason behind
+	-- the "l" temporary. Modified by MBK.
+	r:SAME;
+	l:INT;
+	if void(self) then r:=create; l := 0;
+	elsif loc<asize then r:=self; l := r.loc; -- normal path
+	else 
+	    r:=new(2*asize);
+	    l := loc; 
+	    r.loc:=l+1;
+	    r.acopyn(self,l);
+	    SYS::destroy(self);   -- The old one should never be used now.
+	end;
+	r.loc:=l+1;
+	r[l]:=c;
+	return r;
+    end;
+    
+    str:STR is
+	-- A string version of self.
+	return STR::from_fstr(self) end;
+
+    clear is
+	-- Set self to the empty string. Retain the array.
+	-- Self may be void.
+	if ~void(self) then loc:=0 end end;
+
+    acopy(beg:INT,src:STR) is
+        builtin FSTR_ACOPY_INT_STR;
+    end;
+
+    acopy(beg:INT,src:FSTR) is
+        builtin FSTR_ACOPY_INT_FSTR;
+    end;
+
+   -- The plus routines in FSTR are overloaded individually
+   -- instead of using a single plus($STR).  This is done for
+   -- speed; when the compiler does specialization on arguments
+   -- other than self, this can be simplified.
+
+    plus(s:STR):SAME 
+    -- Append the string `s' to self and return it.  modified by MBK
+    -- et al to make it go fast.  Called by compiler frequently.
+
+    -- post result.str = initial(self.str) + s
+    is
+	r:SAME;
+	l ::= s.length;
+	if void(self) then
+	    r:=create(2*l);
+	elsif (loc + l < asize) then
+	    r:=self;
+	else
+	    r :=new(2*(asize+l));
+	    r.loc := loc;
+	    r.acopy(self);
+	    SYS::destroy(self);   -- The old one should never be used now.
+	end;
+	if (l = 0) then return r; end;
+	r.loc := r.loc + l;
+	r.acopy(r.loc-l,s);		-- This one is MACROIZED to a memcpy.
+	--      r::=self; loop r:=r.push(s.elt!) end; return r end;
+	return r;
+    end;
+    
+    plus(s:SAME):SAME
+    -- Append `s' to self and return it.
+    --post result.str = initial(self.str) + initial(s.str) 
+    is
+	r:SAME;
+	l ::= s.length;
+	if void(self) then
+	    r:=create(2*l);
+	elsif (loc + l < asize) then
+	    r:=self;
+	else
+	    r :=new(2*(asize+l));
+	    r.loc := loc;
+	    r.acopy(self);
+	    SYS::destroy(self);   -- The old one should never be used now.
+	end;
+	if (l = 0) then return r; end;
+	r.loc := r.loc + l;
+	r.acopy(r.loc-l,s);		-- This one is MACROIZED to a memcpy.
+	--      r::=self; loop r:=r.push(s.elt!) end; return r end;
+	return r;
+    end;
+
+    plus(b:BOOL):SAME is 
+	-- Append `b' to self and return it.  
+	if b then return self + "true"
+	else return self + "false" end end;   
+    
+    plus(c:CHAR):SAME is 
+	-- Append `c' to self and return it. 
+	return push(c) end;
+    
+    plus(i:INT):SAME is 
+	-- Append `i' to self and return it.
+	return i.str_in(self) end;
+    
+    plus(f:FLT):SAME is 
+	-- Append `f' to self and return it.
+	return (self + (f.str)) end;
+    --  OLD, better version, does not work as yet    return f.str_in(self) end;   
+
+    private is_eq_helper(s:SAME,i:INT):BOOL is
+	builtin FSTR_MEMCMP_FSTR_INT;
+    end;
+
+    private is_eq_helper(s:STR,i:INT):BOOL is
+	builtin FSTR_MEMCMP_STR_INT;
+    end;
+    
+    is_eq(s:SAME):BOOL
+    -- True if `s' equals self. Either may be void. MBK.
+	post result = (initial(self).str.is_eq(s.str)) is
+	s1,s2:INT;
+	if void(self) then s1 := -1; else s1 := loc; end;
+	if void(s) then s2 := -1; else s2 := s.loc; end;
+	-- -1 is an otherwise illegal value.
+	-- We thus distinguish 'void' from 0 length FSTR.
+	if s1 /= s2 then return false end; 
+	return is_eq_helper(s,s1); -- MACROized.
+    end;
+    
+    is_eq(s:STR):BOOL is
+	-- so you can say `` if FSTR = "blabitty blah blah blah" '' 
+	s1,s2:INT;
+	if void(self) then s1 := -1; else s1 := loc; end;
+	if void(s) then s2 := -1; else s2 := s.size; end;
+	-- -1 is an otherwise illegal value.
+	-- We thus distinguish 'void' from 0 length FSTR.
+	if s1 /= s2 then return false end; 
+	return is_eq_helper(s,s1); -- MACROized.
+    end;
+    
+   --   is_eq(s:SAME):BOOL is
+   --      -- True if `s' equals self. Either may be void.
+   --      if s.size/=size then return false end;
+   --      loop if elt!/=s.elt! then return false end end; 
+   --      return true end;
+
+    is_lt(s:SAME):BOOL is
+	-- True if self is lexicographically before `s'.
+	-- Void is before everything else.
+	if size=0 then
+	    if s.size/=0 then return true else return false end end;
+	if s.size=0 then return false end;
+	loop c::=elt!; sc::=s.elt!;
+	    if sc<c then return false
+	    elsif c.is_lt(sc) then return true end end;
+	if size<s.size then return true 
+	else return false end end;
+    
+    hash:INT is
+	-- Keep It Simple, Stupid.
+	if void(self) then return 0 end;
+	if (length = 0) then return 0 end;
+	
+	i::= length-1;
+	r:INT:=532415.mplus([i].int);
+	-- 532415 = 'A' * (2^13-1)
+	i := i-1;
+	loop while!(i>=0);
+	    r := (r.mtimes(1664525)).mplus(1013904223).mplus([i].int); 	 
+	    i := i-1
+	end;
+	return r;
+    end;
+
+    hash0:INT is
+	-- An inexpensive to compute hash function of self.
+	-- Gives an INT with rightmost 24 bits.   Also gives
+	-- lousy hash functions.
+	-- Void gives 0.
+	r::=0;
+	loop i::=ind!; r:=r.bxor([i].int.lshift(i.band(15))) end;
+	return r end;
+
+    thumbprint:STR is
+	-- Compute a representation to use in place of the whole text.
+	-- The probability that two thumbprints are the same for two
+	-- different FSTRs should be vanishingly small.  This is a
+	-- little more paranoid than the hash function.
+	
+	return size.str+':'+hash+':'+hash0;
+    end;
+
+    append_file(nm:STR):SAME is
+	-- Open the file named `nm' in the current directory, append
+	-- its contents to self, close the file, and return the new
+	-- buffer. Do nothing if the file cannot be opened.
+	fd::=RUNTIME::rt_file_open(nm);
+	if fd<0 then return self end;
+	sz::=RUNTIME::rt_file_size(fd);
+	if sz=0 then return self end;
+	r:SAME;
+	bst:INT;
+	if void(self) then 
+	    r:=new(sz); bst:=0; r.loc:=sz; 
+	elsif sz<=asize-loc then 
+	    r:=self; bst:=loc; r.loc:=loc+sz;
+	else
+	    r:=new((2*asize).max(loc+sz)); bst:=loc;
+	    r.acopy(self); r.loc:=loc+sz; end;
+	RUNTIME::rt_file_in_fstr(fd,r,0,sz,bst);
+	RUNTIME::rt_file_close(fd);
+	return r end;
+
+    append_file_range(nm:STR,st,sz:INT):SAME is
+	-- Open the file named `nm' in the current directory, append
+	-- at most `sz' characters starting at `st' to self (only as 
+	-- many as are there), close the file, and return the new buffer. 
+	-- Do nothing if the file cannot be opened. 
+	fd::=RUNTIME::rt_file_open(nm);
+	if fd<0 then return self end;
+	fsz::=RUNTIME::rt_file_size(fd);
+	if fsz=0 then return self end;
+	asz::=(fsz-st).min(sz);	-- Actual size of range.
+	r:SAME;
+	bst:INT;
+	if void(self) then 
+	    r:=new(asz); bst:=0; r.loc:=asz; 
+	elsif asz<=asize-loc then 
+	    r:=self; bst:=loc; r.loc:=loc+asz;
+	else
+	    r:=new((2*asize).max(loc+asz)); bst:=loc;
+	    r.acopy(self); r.loc:=loc+asz; end;
+	RUNTIME::rt_file_in_fstr(fd,r,st,asz,bst);
+	RUNTIME::rt_file_close(fd);
+	return r end;
+
+    is_upper:BOOL is
+	-- True if each alphabetic character of self is upper case.
+	-- Self may be void.
+	loop if elt!.is_upper.not then return false end end; 
+	return true end;
+
+    is_lower:BOOL is
+	-- True if each alphabetic character of self is lower case.
+	-- Self may be void.
+	loop if elt!.is_lower.not then return false end end; 
+	return true end;  
+    
+    head(i:INT):SAME 
+    -- The first `i' characters of self.
+    -- Self may be void if i=0.
+	pre i.is_bet(0,size) is
+	if void(self) or i = 0 then return void end;
+	r::=new(i); 
+	r.loc := i; 
+	r.acopyn(self,i); 
+	return r;
+    end;
+
+    tail(i:INT):SAME 
+    -- The last `i' characters of self.
+    -- Self may be void if i=0.
+	pre i.is_bet(0,size) post result.size = i is
+	if void(self) then return self end;
+	r::=#SAME(i); 
+	r.loc := i;
+	r.acopy(0,i,size-i,self); 
+	return r;
+    end;
+    
+    substring(beg,num:INT):SAME 
+    -- The substring with `num' charcters whose first character has 
+    -- index `beg'. Self may be void if beg=0 and num=0.
+	pre num>=0 and beg.is_bet(0,size-num) post result.size = num is
+	if void(self) then return void end;
+	r::=#SAME(num); 
+	r.loc:=num; 
+	r.acopy(0,num,beg,self); 
+	return r;
+    end;
+
+    separate!(s:SAME):FSTR is
+	-- On the first iteration just outputs `s', on successive 
+	-- iterations it outputs self followed by `s'. Useful for 
+	-- forming lists, 
+	-- Eg: loop #OUT + ", ".fstr.separate!(a.elt!) end;
+	-- incorporated Erik's fixes
+      yield s; 
+      loop num ::= size+s.size; f ::= #SAME(num); f.loc := num;
+	 f.acopy(self); f.acopy(size,s);
+	 yield f;
+      end;
+	-- old version: loop yield self.copy + s; end;
+    end;
+
+end; -- class FSTR
+
+-------------------------------------------------------------------
+

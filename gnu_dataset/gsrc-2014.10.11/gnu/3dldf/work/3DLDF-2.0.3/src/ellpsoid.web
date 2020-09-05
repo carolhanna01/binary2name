@@ -1,0 +1,3448 @@
+@q ellpsoid.web @>
+
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Ellipsoids.@>
+@** Ellipsoids\quad ({\tt ellpsoid\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2003.11.07.}  
+Created this file.
+
+\initials{LDF 2004.05.09.}  
+Now including \filename{creatnew.h}.
+
+\initials{LDF 2005.05.26.}
+Replaced the code in this file with ``skeleton'' code.
+\ENDLOG 
+
+\immediate\write\functexifile{File:  ellpsoid.web^^J}
+
+@q * (1) Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.05.21.}  
+Now including \filename{pens.web}.
+
+\initials{LDF 2005.12.07.}
+@:BUG FIX@> BUG FIX:  Now including \filename{cuboid.h}.
+\ENDLOG 
+
+@<Include files@>=
+
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++"  
+#include "pictures.h++"  
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++"
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+#include "arc.h++"
+#include "helices.h++"
+#include "origami.h++"
+#include "solids.h++"
+#include "solfaced.h++"
+#include "cuboid.h++"
+#include "polyhed.h++"
+#include "ddchdrn.h++"
+#include "rhtchdrn.h++"
+#include "plyhdslc.h++"
+#include "cones.h++"
+#include "cylinder.h++" 
+ 
+
+@q * (1) Ellipsoid class definition.@>
+@* {\bf Ellipsoid} class definition.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this |class| definition.
+
+\initials{LDF 2005.10.31.}
+Added the |real| data members |axis_x|, |axis_y|, and |axis_z|,
+the |unsigned shorts| |divisions_x|, |divisions_y|, and
+|divisions_z|, the |static const real DEFAULT_AXIS|, and the 
+|static const unsigned short DEFAULT_DIVISIONS|.
+
+\initials{LDF 2005.10.31.}
+Added the |static const unsigned shorts| |ELLIPSOID_NULL_TYPE| and
+|NORMAL_TYPE|.
+
+\initials{LDF 2005.10.31.}
+Added |unsigned short type|.
+
+\initials{LDF 2005.10.31.}
+Added |unsigned int ellipse_point_count|
+and |static const unsigned int DEFAULT_ELLIPSE_POINT_COUNT|.
+
+\initials{LDF 2005.10.31.}
+Replaced |static const unsigned short DEFAULT_DIVISIONS|.
+with |DEFAULT_DIVISIONS_X|, |DEFAULT_DIVISIONS_Y|, and
+|DEFAULT_DIVISIONS_Z|.
+
+\initials{LDF 2005.10.31.}
+Added |vector<Ellipse*> main_ellipses|.
+\ENDLOG
+
+@<Define |class Ellipsoid|@>=
+
+class Ellipsoid : public Solid
+{
+
+   protected:
+   
+      real axis_x;
+      real axis_y;
+      real axis_z;
+
+      unsigned short type;
+
+      unsigned short divisions_x;
+      unsigned short divisions_y;
+      unsigned short divisions_z;
+  
+      unsigned int ellipse_point_count;
+
+      vector<Ellipse*> main_ellipses;
+
+   public:
+
+      static const real DEFAULT_AXIS;
+      static const unsigned short DEFAULT_DIVISIONS_X;
+      static const unsigned short DEFAULT_DIVISIONS_Y;
+      static const unsigned short DEFAULT_DIVISIONS_Z;
+      static const unsigned short ELLIPSOID_NULL_TYPE;
+      static const unsigned short NORMAL_TYPE;
+
+      static const unsigned int DEFAULT_ELLIPSE_POINT_COUNT;
+
+  @<Declare |Ellipsoid| functions@>@;
+};
+
+@q ** (2) Static member variable definitions.@>
+@*1 Static member variable definitions.
+\initials{LDF 2005.10.31.}
+
+\LOG
+\initials{LDF 2005.10.31.}
+Added this section with assignments to |DEFAULT_AXIS| 
+and |DEFAULT_DIVISIONS|.
+
+\initials{LDF 2005.10.31.}
+Now setting the |static const unsigned shorts| |ELLIPSOID_NULL_TYPE| and
+|NORMAL_TYPE|.
+
+\initials{LDF 2005.10.31.}
+Now setting the |static const unsigned int DEFAULT_ELLIPSE_POINT_COUNT|.
+
+\initials{LDF 2005.10.31.}
+Replaced |static const unsigned short DEFAULT_DIVISIONS|.
+with |DEFAULT_DIVISIONS_X|, |DEFAULT_DIVISIONS_Y|, and
+|DEFAULT_DIVISIONS_Z|.
+\ENDLOG
+
+@q *** (3) Code.@> 
+
+@<Define |static| |class Ellipsoid| data members@>=
+
+   const real           Ellipsoid::DEFAULT_AXIS         =  1;  
+   const unsigned short Ellipsoid::DEFAULT_DIVISIONS_X  =  8;
+   const unsigned short Ellipsoid::DEFAULT_DIVISIONS_Y  =  8;
+   const unsigned short Ellipsoid::DEFAULT_DIVISIONS_Z  =  2;
+
+   const unsigned short Ellipsoid::ELLIPSOID_NULL_TYPE   = 0;
+   const unsigned short Ellipsoid::NORMAL_TYPE = 1;
+
+   const unsigned int Ellipsoid::DEFAULT_ELLIPSE_POINT_COUNT = 64;
+
+@q * (1) Constructors and setting functions.@>
+@* Constructors and setting functions.@>
+\initials{LDF 2005.05.26.}
+
+@q ** (2) Default constructor.  No arguments.@>
+@*1 Default constructor. No arguments.
+@^\cfunc{Ellipsoid}{Ellipsoid}@>
+\cfunctexi{Ellipsoid}{Ellipsoid}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.31.}
+Now setting |type = ELLIPSOID_NULL_TYPE|,
+|center| to the origin, |axis_x = axis_y = axis_z = 0|, 
+and |divisions_x = divisions_y = divisions_z = 0|.
+
+\initials{LDF 2005.10.31.}
+Now setting |ellipse_point_count = 0|.
+
+\initials{LDF 2005.10.31.}
+Now setting |center = INVALID_POINT|.
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<Declare |Ellipsoid| functions@>=
+Ellipsoid(void);
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Ellipsoid| functions@>= 
+Ellipsoid::Ellipsoid(void)
+{
+
+   shape_type = ELLIPSOID_TYPE;
+   type = ELLIPSOID_NULL_TYPE;
+   center = INVALID_POINT;
+   axis_x = axis_y = axis_z = 0;
+   divisions_x = divisions_y = divisions_z = 0;
+  
+   ellipse_point_count = 0;
+
+   return;
+
+}
+
+@q ** (2) Setting function.@> 
+@*1 Setting function.
+\initials{LDF 2005.10.31.}
+
+\LOG
+\initials{LDF 2005.10.31.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.  @>
+
+@<Declare |Ellipsoid| functions@>=
+int
+set(Ellipsoid_Set_Option_Struct* options = 0, Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.  @>
+
+@
+@<Define |Ellipsoid| functions@>= 
+int
+Ellipsoid::set(Ellipsoid_Set_Option_Struct* options, Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+ 
+@q ***** (5)@> 
+
+
+    center.set(0, 0, 0);
+
+
+   if (options)
+      {
+          type = options->type;
+
+          axis_x = options->axis_x;
+          axis_y = options->axis_y;
+          axis_z = options->axis_z;
+
+          divisions_x = options->divisions_x;
+          divisions_y = options->divisions_y;
+          divisions_z = options->divisions_z;
+
+          ellipse_point_count = options->ellipse_point_count;
+
+   }  /* |if (options)|  */
+
+@q ***** (5)@> 
+
+    else /* |!options|  */
+       {
+           type = NORMAL_TYPE;
+           axis_x = axis_y = axis_z = DEFAULT_AXIS;
+           divisions_x = DEFAULT_DIVISIONS_X;
+           divisions_y = DEFAULT_DIVISIONS_Y;
+           divisions_z = DEFAULT_DIVISIONS_Z;
+           ellipse_point_count = DEFAULT_ELLIPSE_POINT_COUNT;
+       }
+     /* |else| (|!options|)  */
+
+
+@q **** (4) Make sure divisions are even.@> 
+@ Make sure divisions are even.
+\initials{LDF 2005.10.31.}
+
+@<Define |Ellipsoid| functions@>=
+
+   if (divisions_x > 0 && (divisions_x % 2))
+      {
+         divisions_x += 1;
+      }
+
+   if (divisions_y > 0 && (divisions_y % 2))
+      {
+         divisions_y += 1;
+      }
+
+
+   if (divisions_z > 0 && (divisions_z % 2))
+      {
+         divisions_z += 1;
+      }
+
+@q **** (4) Generate |Ellipses| in the major planes.@> 
+@ Generate |Ellipses| in the major planes.
+\initials{LDF 2005.10.31.}
+
+@<Define |Ellipsoid| functions@>= 
+
+   Ellipse* e = 0;
+
+   Point origin(0, 0, 0);
+
+   Ellipse x_z_ellipse(origin, axis_x, axis_z, 0, 0, 0,  ellipse_point_count);
+   Ellipse x_y_ellipse(origin, axis_x, axis_y, 90, 0, 0, ellipse_point_count);
+   Ellipse z_y_ellipse(origin, axis_y, axis_z, 0, 0, 90, ellipse_point_count);
+  
+   e = create_new<Ellipse>(x_z_ellipse);
+   main_ellipses.push_back(e);
+
+   e = create_new<Ellipse>(x_y_ellipse);
+   main_ellipses.push_back(e);
+
+   e = create_new<Ellipse>(z_y_ellipse);
+   main_ellipses.push_back(e);
+ 
+   if (divisions_y > 0) /* x-z plane  */
+      {
+          e = create_new<Ellipse>(x_z_ellipse);
+          ellipses.push_back(e);
+      } 
+
+   if (divisions_z > 0) /* x-y plane  */
+      {
+          e = create_new<Ellipse>(x_y_ellipse);
+          ellipses.push_back(e);
+      }
+
+   if (divisions_x > 0) /* z-y plane  */
+      {
+          e = create_new<Ellipse>(z_y_ellipse);
+          ellipses.push_back(e);
+      }
+ 
+@q **** (4) Generate |Ellipses| along axes.@> 
+@ Generate |Ellipses| along the axes.
+\initials{LDF 2005.10.31.}
+
+@<Define |Ellipsoid| functions@>=
+
+   int i;
+   Point x_pt;
+   Point y_pt;
+   Point z_pt;
+
+   real temp_axis_h;
+   real temp_axis_v;
+
+   Bool_Point_Pair bpp;
+
+   Path* ppath;
+
+   unsigned short temp_divisions;
+
+   real distance;
+
+@q ***** (5) Generate |Ellipses| along the x-axis.@> 
+@ Generate |Ellipses| along the x-axis.
+\initials{LDF 2005.10.31.}
+
+@<Define |Ellipsoid| functions@>=
+
+
+   temp_divisions = divisions_x / 2;
+
+   distance = axis_x / (2 * temp_divisions);
+
+   for (i = temp_divisions - 1; i > 0; --i)
+      {
+          x_pt.set(i * distance, 0, 0);
+          z_pt.set(i * distance, 0, 1);
+          y_pt.set(i * distance, 1, 0);
+
+          bpp = x_z_ellipse.intersection_points(x_pt, z_pt);
+
+          temp_axis_h = (bpp.first.pt - bpp.second.pt).magnitude();
+
+#if 0 
+          ppath = create_new<Path>(0);
+          ppath->set(bpp.first.pt, bpp.second.pt);
+          paths.push_back(ppath); 
+#endif 
+
+          bpp = x_y_ellipse.intersection_points(x_pt, y_pt);
+
+          temp_axis_v = (bpp.first.pt - bpp.second.pt).magnitude();
+
+#if 0 
+          ppath = create_new<Path>(0);
+          ppath->set(bpp.first.pt, bpp.second.pt);
+          paths.push_back(ppath); 
+#endif 
+
+          e = create_new<Ellipse>(0);
+          e->set(x_pt, temp_axis_v, temp_axis_h, 0, 0, 90, ellipse_point_count);
+          ellipses.push_back(e);
+
+          e = create_new<Ellipse>(0);
+          e->set(-x_pt, temp_axis_v, temp_axis_h, 0, 0, 90, ellipse_point_count);
+          ellipses.push_back(e);
+
+      }  /* |for|  */
+
+
+@q ***** (5) Generate |Ellipses| along the y-axis.@> 
+@ Generate |Ellipses| along the y-axis.
+\initials{LDF 2005.10.31.}
+
+@<Define |Ellipsoid| functions@>=
+
+
+   temp_divisions = divisions_y / 2;
+
+   distance = axis_y / (2 * temp_divisions);
+
+   for (i = temp_divisions - 1; i > 0; --i)
+      {
+          x_pt.set(1, i * distance, 0);
+          y_pt.set(0, i * distance, 0);
+          z_pt.set(0, i * distance, 1);
+
+          bpp = x_y_ellipse.intersection_points(y_pt, x_pt);
+
+          temp_axis_h = (bpp.first.pt - bpp.second.pt).magnitude();
+
+#if 0 
+          ppath = create_new<Path>(0);
+          ppath->set(bpp.first.pt, bpp.second.pt);
+          paths.push_back(ppath); 
+#endif 
+          bpp = z_y_ellipse.intersection_points(y_pt, z_pt);
+
+          temp_axis_v = (bpp.first.pt - bpp.second.pt).magnitude();
+
+
+#if 0 
+          ppath = create_new<Path>(0);
+          ppath->set(bpp.first.pt, bpp.second.pt);
+          paths.push_back(ppath); 
+#endif 
+
+          e = create_new<Ellipse>(0);
+          e->set(y_pt, temp_axis_h, temp_axis_v, 0, 0, 0, ellipse_point_count);
+          ellipses.push_back(e);
+
+          e = create_new<Ellipse>(0);
+          e->set(-y_pt, temp_axis_h, temp_axis_v, 0, 0, 0, ellipse_point_count);
+          ellipses.push_back(e);
+
+      }  /* |for|  */
+
+
+
+@q ***** (5) Generate |Ellipses| along the z-axis.@> 
+@ Generate |Ellipses| along the z-axis.
+\initials{LDF 2005.10.31.}
+
+@<Define |Ellipsoid| functions@>=
+
+
+
+   temp_divisions = divisions_z / 2;
+
+   distance = axis_z / (2 * temp_divisions);
+
+
+   for (i = temp_divisions - 1; i > 0; --i)
+      {
+          x_pt.set(1, 0, i * distance);
+          y_pt.set(0, 1, i * distance);
+          z_pt.set(0, 0, i * distance);
+
+          bpp = x_z_ellipse.intersection_points(z_pt, x_pt);
+
+          temp_axis_h = (bpp.first.pt - bpp.second.pt).magnitude();
+
+#if 0 
+          ppath = create_new<Path>(0);
+          ppath->set(bpp.first.pt, bpp.second.pt);
+          paths.push_back(ppath); 
+#endif 
+       
+          bpp = z_y_ellipse.intersection_points(y_pt, z_pt);
+
+          temp_axis_v = (bpp.first.pt - bpp.second.pt).magnitude();
+
+#if 0
+          ppath = create_new<Path>(0);
+          ppath->set(bpp.first.pt, bpp.second.pt);
+          paths.push_back(ppath); 
+#endif
+
+          e = create_new<Ellipse>(0);
+          e->set(z_pt, temp_axis_h, temp_axis_v, 90, 0, 0, ellipse_point_count);
+          ellipses.push_back(e);
+
+          e = create_new<Ellipse>(0);
+          e->set(-z_pt, temp_axis_h, temp_axis_v, 90, 0, 0, ellipse_point_count);
+          ellipses.push_back(e);
+
+      }  /* |for|  */
+
+@q **** (4).@> 
+@
+@<Define |Ellipsoid| functions@>= 
+
+   if (options && options->center)
+      {
+          shift(*(options->center));
+          delete options->center;
+          options->center = 0;
+      }   
+
+   return 0;
+
+}  /* End of |Ellipsoid::set()| definition.  */
+
+@q * (1) Destructor.@> 
+@* Destructor.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.31.}
+Now deleting the |Ellipses*| on |vector<Ellipse*> main_ellipses| and
+calling |clear()| on the latter.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+virtual
+~Ellipsoid(void);
+
+@q *** (3) Definition.  @>
+
+@
+@<Define |Ellipsoid| functions@>= 
+Ellipsoid::~Ellipsoid(void)
+{
+   for (vector<Ellipse*>::iterator iter = main_ellipses.begin();
+        iter != main_ellipses.end();  
+        ++iter)
+       {
+          delete *iter;
+          *iter = 0;
+       }
+
+   main_ellipses.clear();    
+
+   return;
+}
+
+@q * (1) Pseudo-constructor for dynamic allocation.@>
+@* Pseudo-constructor for dynamic allocation.
+
+@q ** (2) Pointer argument.@>
+@*1 Pointer argument.
+@^\cfunc{Ellipsoid}{create\_new\_ellipsoid}@>
+\cfunctexi{Ellipsoid}{create\_new\_ellipsoid}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Ellipsoid|@>=
+Ellipsoid* 
+create_new(const Ellipsoid* c, Scanner_Node scanner_node);
+
+@q ** (2) Reference argument.@>
+@*1 Reference argument.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Ellipsoid|@>=
+Ellipsoid* 
+create_new(const Ellipsoid& c, Scanner_Node scanner_node);
+
+
+@q * (1) Assignment.@> 
+@* Assignment.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Assignment from a |Ellipsoid|.@> 
+@*1 Assignment from a |Ellipsoid|.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.31.}
+Changed the way |center| is set to account for the fact that I've
+removed |Point* Ellipsoid::center|.  I'm now using |Point Solid::center| 
+instead.
+
+\initials{LDF 2005.10.31.}
+Added code for setting the |reals| |axis_x|, |axis_y|, and |axis_z|.
+
+\initials{LDF 2005.10.31.}
+Added code for setting the |unsigned shorts|
+|divisions_x|, |divisions_y|, and |divisions_z|.
+
+\initials{LDF 2005.10.31.}
+Now setting |type|.
+
+\initials{LDF 2005.10.31.}
+Now setting |ellipse_point_count|.
+
+\initials{LDF 2005.10.31.}
+Now discarding the |Ellipses| on |main_ellipses|, if any, and
+copying |e.main_ellipses()|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+virtual
+Ellipsoid&
+operator=(const Ellipsoid& c);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+
+Ellipsoid&
+Ellipsoid::operator=(const Ellipsoid& e)
+{
+    if (this == &e) /* Make sure it's not self-assignment. */
+       return *this;
+
+     type = e.type;
+
+     center = e.center;
+     axis_x = e.axis_x;
+     axis_y = e.axis_y;
+     axis_z = e.axis_z;
+
+     divisions_x = e.divisions_x;
+     divisions_y = e.divisions_y;
+     divisions_z = e.divisions_z;
+
+     ellipse_point_count = e.ellipse_point_count;
+
+     for (vector<Ellipse*>::iterator iter = main_ellipses.begin();
+          iter != main_ellipses.end();  
+          ++iter)
+       {
+          delete *iter;
+          *iter = 0;
+       }
+
+      main_ellipses.clear();
+
+
+      for (vector<Ellipse*>::const_iterator iter = e.main_ellipses.begin();
+           iter != e.main_ellipses.end();  
+           ++iter)
+        {
+           main_ellipses.push_back(create_new<Ellipse>(*iter));                    
+        }
+
+     Solid::operator=(e);
+
+     return *this;
+
+}  /* End of |Ellipsoid::operator=(const Ellipsoid& h)| definition.  */
+
+@q * (1) Returning elements and information.@>
+@* Returning elements and information.
+
+@q ** (2) Get |Shape| type.@> 
+@*1 Get {\bf Shape} type.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+virtual 
+inline
+unsigned short 
+get_shape_type(void) const
+{
+   return ELLIPSOID_TYPE;
+}
+
+
+@q ** (2) Size.@> 
+@*1 Size.
+
+\LOG
+\initials{LDF 2005.11.02.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+virtual 
+unsigned int
+size(void);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+unsigned int
+Ellipsoid::size(void)
+{
+   return ellipses.size();
+}
+
+@q ** (2) Location.@> 
+@*1 Location.
+\initials{LDF 2005.12.07.}
+
+Return values:\hfil\break
+\item{0}: |Point| lies on the surface of the |Ellipsoid|.
+%
+\item{1}: |Point| lies within the |Ellipsoid|.
+%
+\item{-1}: |Point| lies outside the |Ellipsoid|.
+%
+\item{-2}: |Ellipsoid::standardize()| failed to put the |Ellipsoid| 
+into standard position.\hfil\break 
+\initials{LDF 2005.12.09.}
+
+\LOG
+\initials{LDF 2005.12.07.}
+Added this function.
+
+\initials{LDF 2005.12.09.}
+Changed return value from |real| to |Signed_Byte|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+Signed_Byte
+location(Point p, Scanner_Node scanner_node = 0, bool no_transform = false) const;
+
+
+@q *** (3) Definition.@> 
+@
+@<Define |Ellipsoid| functions@>=
+Signed_Byte
+Ellipsoid::location(Point p, Scanner_Node scanner_node, bool no_transform) const
+{
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+    
+    Transform* t = 0;
+
+    if (!no_transform)
+          t = standardize(scanner_node);
+
+@q **** (4)@> 
+
+    if (!no_transform && t == 0)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::location()':"
+                     << endl 
+                     << "`Ellipsoid::standardize()' failed, returning 0."
+                     << endl 
+                     << "Can't determine location of the `Point' with respect to "
+                     << "the `Ellipsoid'."
+                     << endl 
+                     << "Exiting function unsuccessfully with return value `-2'.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           return -2;
+
+       }  /* |if (!no_transform && t == 0)|  */
+   
+
+@q **** (4)@> 
+
+     if (!no_transform && !t->is_identity())
+        p *= *t;
+
+     delete t;
+     t = 0;
+
+     real x = p.get_x();
+     real y = p.get_y();
+     real z = p.get_z();
+
+     real xx = x * x;
+     real yy = y * y;
+     real zz = z * z;
+
+     real a = axis_x / 2;
+     real b = axis_y / 2;
+     real c = axis_z / 2;
+
+     real aa = a * a;
+     real bb = b * b;
+     real cc = c * c;
+
+     real r = xx/aa + yy/bb + zz/cc;
+
+     if (fabs(r - 1) <= Shape::DEFAULT_TOLERANCE) 
+        return 0;
+     else if (r < 1)
+        return 1;
+     else return -1;
+
+}  /* End of |Ellipsoid::location()| definition.  */
+
+@q * (1) Predicates.@> 
+@* Predicates.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Is ellipsoidal.@>
+@*1 Is ellipsoidal.
+
+@q *** (3) |Solid| version.@> 
+@*2 {\bf Solid} version.
+@^\cfunc{Solid}{is\_ellipsoidal}@>
+\cfunctexi{Solid}{is\_ellipsoidal}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.  It is declared in \filename{solids.web}.
+It currently has a dummy definition and returns |false|.
+\ENDLOG
+
+@q **** (4) Definition.@> 
+  
+@
+@<Define |Solid| functions@>=
+bool
+Solid::is_ellipsoidal(Scanner_Node scanner_node) const
+{
+
+@q ***** (5) Preliminaries.@> 
+
+  bool DEBUG = true; /* |false|  */
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+  if (scanner_node)
+     scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                   &error_stop_value,
+                                                   &warning_stop_value);
+
+@q ***** (5)@>  
+  
+   return false;
+
+} /* End of |Solid::is_ellipsoidal()| definition.  */
+
+@q * (1) Transformations.@>
+@* Transformations. 
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) Multiplication by a |Transform| with assignment.@>
+@*2 Multiplication by a |Transform| with assignment.
+@^\cofunc{Ellipsoid}{*=}@>
+\cofunctexi{Ellipsoid}{*=}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.31.}
+Now transforming the |Ellipses| on |vector<Ellipse*> main_ellipses|.
+\ENDLOG 
+
+@<Declare |Ellipsoid| functions@>=
+virtual
+Transform
+operator*=(const Transform& t);
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform
+Ellipsoid::operator*=(const Transform& t)
+{
+   for (vector<Ellipse*>::iterator iter = main_ellipses.begin();
+        iter != main_ellipses.end();  
+        ++iter)
+      (**iter) *= t;
+ 
+   return Solid::operator*=(t);
+}
+
+
+@q ** (2) Rotatation around the main axes.@>
+@*1 Rotation  around the main axes. 
+@^\cfunc{Ellipsoid}{rotate}@>
+\cfunctexi{Ellipsoid}{rotate}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+virtual
+Transform 
+rotate(const real x, const real y = 0, const real z = 0);
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform 
+Ellipsoid::rotate(const real x, const real y, const real z)
+{
+  Transform t;
+  t.rotate(x, y, z);
+  return operator*=(t);
+}
+
+@q ** (2) Scale. @>
+@*1 Scale. 
+@^\cfunc{Ellipsoid}{scale}@>
+\cfunctexi{Ellipsoid}{scale}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+virtual
+Transform 
+scale(real x, real y = 1, real z = 1);
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform 
+Ellipsoid::scale(real x, real y, real z)
+{
+   Transform t;
+   t.scale(x, y, z);
+   return operator*=(t);
+}
+
+@q ** (2) Shear.@>
+@*1 Shear. 
+@^\cfunc{Ellipsoid}{shear}@>
+\cfunctexi{Ellipsoid}{shear}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+
+@<Declare |Ellipsoid| functions@>=
+
+virtual
+Transform 
+shear(real xy, real xz = 0, real yx = 0, real yz = 0, 
+      real zx = 0, real zy = 0);
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform 
+Ellipsoid::shear(real xy, real xz, real yx, real yz, 
+      real zx, real zy)
+{
+  Transform t;
+  t.shear(xy, xz, yx, yz, zx, zy);
+  return operator*=(t);
+
+}
+
+@q ** (2) Shift.@>
+@*1 Shift. 
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) |real| arguments.@>
+@*2 {\bf real} arguments. 
+@^\cfunc{Ellipsoid}{shift}@>
+\cfunctexi{Ellipsoid}{shift}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+virtual
+Transform 
+shift(real xx, real yy = 0, real zz = 0);
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform
+Ellipsoid::shift(real xx, real yy, real zz)
+{
+  Transform t;
+  t.shift(xx, yy, zz);
+  return operator*=(t);
+}
+
+
+@q *** (3) Point argument.@>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Ellipsoid}{shift}@>
+\cfunctexi{Ellipsoid}{shift}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+virtual
+Transform 
+shift(const Point& p);
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform 
+Ellipsoid::shift(const Point& p)
+{
+  return shift(p.get_x(), p.get_y(), p.get_z());
+}
+
+
+@q ** (2) Shift times. @>
+@*1 Shift times. 
+\initials{LDF 2005.05.26.}
+
+@q *** (3) real arguments. @>
+
+@*2 {\bf real} arguments. 
+@^\cfunc{Ellipsoid}{shift\_times}@>
+\cfunctexi{Ellipsoid}{shift\_times}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.  It's commented-out, because 
+|Solid::shift_times()| currently doesn't exist.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+
+#if 0 
+
+virtual
+void 
+shift_times(real x, real y = 1, real z = 1);
+
+#endif 
+
+@
+@<Define |Ellipsoid| functions@>=
+
+#if 0 
+void 
+Ellipsoid::shift_times(real x, real y, real z)
+{
+
+    Solid::shift_times(x, y, z);
+  
+    return;
+}
+#endif 
+
+@q *** (3) Point argument. @>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Ellipsoid}{shift\_times}@>
+\cfunctexi{Ellipsoid}{shift\_times}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+It's commented-out, because 
+|Solid::shift_times()| currently doesn't exist.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+#if 0 
+virtual
+void
+shift_times(const Point& p);
+#endif 
+
+@
+@<Define |Ellipsoid| functions@>=
+#if 0 
+void
+Ellipsoid::shift_times(const Point& p)
+{
+  return shift_times(p.get_x(), p.get_y(), p.get_z());
+}
+#endif 
+
+@q ** (2) Rotatation around an arbitrary axis.@>
+@*1 Rotatation around an arbitrary axis. 
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Point arguments.@>
+
+@*2 {\bf Point} arguments.
+@^\cfunc{Ellipsoid}{rotate}@>
+\cfunctexi{Ellipsoid}{rotate}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+
+virtual
+Transform 
+rotate(const Point& p0, const Point& p1, const real angle = 180);
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform 
+Ellipsoid::rotate(const Point& p0, const Point& p1, const real angle)
+{
+  Transform t;
+  t.rotate(p0, p1, angle);
+  return operator*=(t);
+}
+
+@q *** (3) Path argument.@>
+
+@*2 {\bf Path} arguments.
+@^\cfunc{Ellipsoid}{rotate}@>
+\cfunctexi{Ellipsoid}{rotate}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Ellipsoid| functions@>=
+
+virtual
+Transform 
+rotate(const Path& p, const real angle = 180);
+
+@
+@<Define |Ellipsoid| functions@>=
+
+Transform 
+Ellipsoid::rotate(const Path& p, const real angle)
+{
+   if (!p.is_linear())
+     {
+        return INVALID_TRANSFORM;
+     }
+
+   return rotate(p.get_point(0),
+                 p.get_last_point(), angle);  
+}   
+
+@q ** (2) Standardize.@> 
+@*1 Standardize.
+\initials{LDF 2005.12.07.}
+
+\LOG
+\initials{LDF 2005.12.07.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+Transform* 
+standardize(Scanner_Node scanner_node = 0) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+Transform* 
+Ellipsoid::standardize(Scanner_Node scanner_node) const
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+    if (axis_x <= 0 || axis_y <= 0 || axis_z <= 0)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::standardize()':"
+                     << endl 
+                     << "One of the axes has length <= 0.  "
+                     << "Can't place `Ellipsoid' in standard position."
+                     << endl 
+                     << "Exiting function with return value `(Transform*) 0'.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           return 0;
+
+       }  /* |if (axis_x <= 0 || axis_y <= 0 || axis_z <= 0)|  */
+
+@q **** (4)@> 
+
+    if (main_ellipses.size() < 3)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::standardize()':"
+                     << endl 
+                     << "`main_ellipses.size()' < 3.  "
+                     << "Can't place `Ellipsoid' in standard position."
+                     << endl 
+                     << "Exiting function with return value `(Transform*) 0'.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           return 0;
+
+       }  /* |if (axis_x <= 0 || axis_y <= 0 || axis_z <= 0)|  */
+    
+
+@q **** (4)@> 
+
+    size_t ctr = ellipse_point_count / 4;
+
+    Point x = main_ellipses[0]->get_point(0);
+    Point y = main_ellipses[1]->get_point(ctr);
+    Point z = main_ellipses[2]->get_point(ctr);
+
+    Transform* t = create_new<Transform>(0);
+
+    x *= y *= z *= t->align_with_axis(center, y, 'y');
+
+    real angle = x.angle(Point(1, 0, 0));
+   
+    x *= y *= z *= t->rotate(0, angle);
+
+    angle = x.angle(Point(1, 0, 0));
+
+
+    if (fabs(angle) > Shape::DEFAULT_TOLERANCE)
+       {
+           x *= y *= z *= t->rotate(0, -2 * angle);
+       }
+
+
+@q **** (4)@> 
+
+    if (fabs(angle) > Shape::DEFAULT_TOLERANCE)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::standardize()':"
+                     << endl 
+                     << "Failed to place `Ellipsoid' in standard position."
+                     << endl 
+                     << "Deleting `Transform* t' and "
+                     << "exiting function with return value `(Transform*) 0'.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           delete t;
+           t = 0;
+
+           return 0;
+
+       }   /* |if (fabs(angle) > Shape::DEFAULT_TOLERANCE)|  */
+
+@q **** (4)@> 
+
+    return t;
+
+}  /* End of |Ellipsoid::standardize()| definition.  */
+
+@q * (1) Intersections.@> 
+@* Intersections.
+\initials{LDF 2005.10.31.}
+
+\LOG
+\initials{LDF 2005.10.31.}
+Added this section.
+\ENDLOG
+
+@q ** (2) |Path*| argument.@> 
+@*1 {\bf Path} pointer argument.
+\initials{LDF 2005.11.01.}
+
+\LOG
+\initials{LDF 2005.11.01.}
+Added this function.
+
+\initials{LDF 2005.12.09.}
+Finished this function.
+
+\initials{LDF 2005.12.11.}
+Added optional |Transform* use_transform| and |save_transform| arguments, both with
+the default 0.  
+
+\initials{LDF 2005.12.12.}
+@:BUG FIX@> BUG FIX:  Made |Transform* use_transform| argument |const|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+Pointer_Vector<Bool_Point>*
+intersection_points(Path* p, 
+                    Scanner_Node scanner_node = 0, 
+                    const Transform* use_transform = 0,
+                    Transform* save_transform = 0) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+Pointer_Vector<Bool_Point>*
+Ellipsoid::intersection_points(Path* p, 
+                               Scanner_Node scanner_node,
+                               const Transform* use_transform,
+                               Transform* save_transform) const 
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+    if (!p)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::intersection_points()':"
+                     << endl 
+                     << "`Path* p' is null.  Exiting function unsuccessfully "
+                     << "with return value `(Pointer_Vector<Point>*) 0'.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           return 0;
+
+       }  /* |if (!p)|  */
+
+@q **** (4)@> 
+
+    if (!p->is_linear())
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::intersection_points()':"
+                     << endl 
+                     << "The `Path' `*p' is non-linear.  Can't handle this case yet."
+                     << endl 
+                     << "Exiting function unsuccessfully "
+                     << "with return value `(Pointer_Vector<Point>*) 0'.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           return 0;
+
+       }  /* |if (!p->is_linear())|  */
+
+     Cuboid* c = out_cuboid(scanner_node);
+
+     Pointer_Vector<Bool_Point>* bpv = c->intersection_points(*p, scanner_node);
+
+     if (bpv == static_cast<Pointer_Vector<Bool_Point>*>(0) || bpv->ctr < 2)
+        {
+           delete c;
+           delete bpv;
+           return 0;
+        }
+
+
+@q **** (4)@> 
+
+    Path q(bpv->v[0]->pt, bpv->v[1]->pt);
+
+    bpv->clear();
+
+    Transform* t = 0;
+
+    if (use_transform)
+       {
+           create_new<Transform>(use_transform);
+       }
+ 
+    if (!t)
+       t = standardize(scanner_node);
+
+    if (t == 0)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::intersection_points()':"
+                     << endl 
+                     << "`Ellipsoid::standardize()' failed, returning 0.  "
+                     << "Can't find intersection points."
+                     << endl 
+                     << "Exiting function unsuccessfully "
+                     << "with return value `(Pointer_Vector<Point>*) 0'.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           return 0;
+
+
+       }  /* |if (t == 0)|  */
+
+     if (save_transform)
+        *save_transform = *t;
+
+     if (!t->is_identity())
+        {
+            q *= *t;
+        }
+    
+
+@q **** (4)@> 
+    
+     Point curr_pt;
+     Point in_pt;
+     Point out_pt;
+     Point start_pt;
+     Point end_pt;
+     Signed_Byte curr_location;
+
+     real step_value = .05;
+
+     int i;
+
+     Bool_Point* bp = 0;
+
+     start_pt = q.get_point(0);
+     end_pt   = q.get_last_point();
+
+     bool first_pass = true;
+
+     A:
+
+     curr_pt = start_pt;
+     curr_location = location(curr_pt, scanner_node, true);
+
+
+     if (curr_location == 0)
+        goto B;
+
+     out_pt = curr_pt;
+
+
+     for (i = 1; i * step_value < 1; ++i)
+        {
+            curr_pt = start_pt.mediate(end_pt, i * step_value);
+            curr_location = location(curr_pt, scanner_node, true);
+            
+            if (curr_location == -1)
+               continue; 
+
+            else if (curr_location == 0)
+                {
+          B:
+
+#if 0 
+                   cerr << "Found a point." << endl;
+#endif 
+
+                    bp = new Bool_Point;
+                    bp->pt = curr_pt;
+                    bp->pt *= t->inverse();
+                    bp->b = bp->pt.is_on_segment(*p).first;
+#if 0 
+                    cerr << "bp->b == " << bp->b << endl;
+#endif 
+                    *bpv += bp;
+
+                    if (bpv->ctr >= 2)    
+                       {
+                           delete t;
+                           delete c;
+                           t = 0;
+                           c = 0;
+                           return bpv;
+                       }
+
+                    else
+                       {
+                           C:
+                           first_pass = false;
+                           start_pt = q.get_last_point();
+                           end_pt   = q.get_point(0);
+                           goto A;
+
+                       }
+
+                }  /* |if (curr_location == 0)|  */
+
+             else if (curr_location == 1)
+                 {
+#if 0 
+                     cerr << "Starting to  bisect." << endl;
+#endif 
+                     in_pt = curr_pt;
+
+                     for(;;)
+                        {
+#if 0 
+                            cerr << "Bisecting." << endl;
+#endif 
+                            curr_pt = in_pt.mediate(out_pt);
+                            curr_location = location(curr_pt, scanner_node, true);
+                            if (curr_location == 0)
+                               goto B;
+                            else if (curr_location == 1)
+                               in_pt = curr_pt;
+                            else if (curr_location == -1)
+                               out_pt = curr_pt;
+
+                        }  /* Inner |for|  */  
+
+                 }
+
+        }  /* Outer |for|  */
+
+     if (first_pass)
+        {
+            first_pass = false;
+            goto C;
+        }
+
+
+
+     else
+        return bpv;
+
+}  /* End of |Ellipsoid::intersection(const Path&, [etc.])| definition.  */
+
+
+@q ** (2) |Plane| reference argument.@> 
+@*1 {\bf Plane} reference argument.
+\initials{LDF 2005.10.31.}
+
+\LOG
+\initials{LDF 2005.10.31.}
+Added this function.
+
+\initials{LDF 2005.12.15.}
+Finished writing this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+
+Ellipse* 
+intersection(const Plane& q, Scanner_Node scanner_node = 0) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+
+#define TESTING 0 /* 1 */
+
+Ellipse* 
+Ellipsoid::intersection(const Plane& q, Scanner_Node scanner_node) const 
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = true; /* |false| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+
+    if (center == INVALID_POINT || q == INVALID_PLANE)
+
+        {
+ 
+            cerr_strm << thread_name << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                      << endl 
+                      << "`Ellipsoid' and/or `Plane' is invalid.  "
+                      << "Exiting function unsuccessfully with return value 0.";
+
+            log_message(cerr_strm);
+            cerr_message(cerr_strm, error_stop_value);
+            cerr_strm.str("");
+
+            return 0;
+
+        }  /* |if (center == INVALID_POINT || q == INVALID_PLANE)|  */
+
+
+@q **** (4)@> 
+
+    Pointer_Vector<Path>* pv = new  Pointer_Vector<Path>;
+    Path* new_path = 0;
+
+    Transform* t = create_new<Transform>(0);
+
+    Cuboid* c = out_cuboid(scanner_node, 0, t);  /* |t| is |save_transform| argument.  */
+
+    if (!c)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                     << endl 
+                     << "`Ellipsoid::out_cuboid()' failed, returning 0."
+                     << endl 
+                     << "Exiting function unsuccessfully with return value 0.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           delete t;
+           t = 0;  
+
+           return 0;
+                 
+       }  /* |if (!c)|  */
+
+@q **** (4)@> 
+
+      Polygon* polygon = c->intersection(q, false, scanner_node);
+
+      if (!polygon)
+         { 
+
+              cerr_strm << thread_name << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                        << endl 
+                        << "`Cuboid::intersection()' failed, returning 0."
+                        << endl 
+                        << "Exiting function unsuccessfully with return value 0.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete t;
+              t = 0;  
+
+              delete c; 
+              c = 0;
+
+              return 0;
+
+         }  /* |if (!polygon)|  */
+
+
+@q **** (4)@> 
+
+       Point mid_pt[6];
+       Point polygon_center;
+
+       Point vertex[6];
+
+       size_t polygon_size = polygon->size();
+
+#if TESTING 
+       cerr << "polygon_size == " << polygon_size << endl;
+#endif 
+
+@q **** (4)@> 
+
+       if (polygon_size < 3)
+          {
+              cerr_strm << thread_name << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                        << endl 
+                        << "`polygon_size ' == " << polygon_size 
+                        << endl 
+                        << "This shouldn't happen.  `polygon_size' should be"
+                        << "> 3."  
+                        << endl 
+                        << "Exiting function unsuccessfully with return value 0.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete t;
+              t = 0;  
+
+              delete c; 
+              c = 0;
+
+#if TESTING 
+             *pv += polygon;
+             return pv;
+#endif 
+
+
+              delete polygon;
+              polygon = 0;
+
+              return 0;
+              
+          }  /* |if (polygon_size < 3)|  */
+
+
+@q **** (4)@> 
+
+@q **** (4)@> 
+
+       int i;
+
+       if (polygon_size >= 3 && polygon_size <= 6)
+           {
+
+               for (i = 0; i < polygon_size; ++i)
+                  vertex[i] = polygon->get_point(i);
+
+               for (i = 0; i < polygon_size; ++i)
+                  mid_pt[i] = vertex[i].mediate(vertex[(i + 1) % polygon_size]);
+           }
+
+       else if (polygon_size < 3 || polygon_size > 6)
+          {
+               cerr_strm << thread_name << "ERROR!  "
+                         << "In `Ellipsoid::intersection(Plane, [etc.])':"
+                        << endl 
+                        << "`polygon_size ' == " << polygon_size << ".  "
+                        << "`polygon_size' < 3 or > 6.  Can't handle these cases." 
+                        << endl
+                        << "Exiting function with return value 0.";
+
+               log_message(cerr_strm);
+               cerr_message(cerr_strm, error_stop_value);
+               cerr_strm.str("");
+
+               delete t;
+               t = 0;  
+
+               delete c; 
+               c = 0;
+
+
+#if TESTING 
+             *pv += polygon;
+             return pv;
+#endif 
+
+               delete polygon;
+               polygon = 0;
+
+               return 0;
+
+          }  /* |else if (polygon_size < 3)|  */
+      
+@q **** (4)@> 
+
+       Path isect_path[7];
+ 
+       Pointer_Vector<Bool_Point>* bpv = 0;
+
+       Point ellipse_center;
+       Point in_pt;
+       Point out_pt;
+
+@q **** (4) The first line, approximately drawn through the center of |polygon|.@> 
+
+@ The first line, approximately drawn through the center of |polygon|.
+@<Define |Ellipsoid| functions@>=
+
+
+       if (polygon_size == 3)
+          {
+             isect_path[0].set(mid_pt[0], vertex[2]);
+          }
+       else if (polygon_size == 4)
+          {
+              isect_path[0].set(mid_pt[3], mid_pt[1]);
+          }
+       else if (polygon_size == 5)
+          {
+               isect_path[0].set(vertex[0], mid_pt[2]);
+          }
+       else if (polygon_size == 6)
+          {
+               isect_path[0].set(mid_pt[0], mid_pt[3]);
+          }
+
+
+       bpv = intersection_points(&(isect_path[0]), scanner_node, t, 0);
+
+
+@q ***** (5)@> 
+
+                if (!bpv || bpv->ctr == 0)
+                   {
+                       cerr_strm << thread_name 
+                                 << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                                 << endl 
+                                 << "`Ellipsoid::intersection_points()' failed, "
+                                 << "returning 0 or an empty `Pointer_Vector<Bool_Point>'."
+                                 << endl 
+                                 << "Exiting function unsuccessfully with return value 0.";
+
+                        log_message(cerr_strm);
+                        cerr_message(cerr_strm, error_stop_value);
+                        cerr_strm.str("");
+
+                        delete t;
+                        t = 0;    
+
+                        delete c; 
+                        c = 0;
+
+#if TESTING 
+             *pv += polygon;
+
+             new_path = create_new<Path>(isect_path[0]);
+             *pv += new_path;
+
+             return pv;
+#endif 
+
+
+                        delete polygon;
+                        polygon = 0;
+
+                        return 0;   
+
+                   }  /* |if (!bpv || bpv->ctr == 0)|  */
+
+
+
+                isect_path[0].set(bpv->v[0]->pt, bpv->v[1]->pt);
+      
+                bpv->clear();
+                delete bpv;
+                bpv = 0;
+#if TESTING 
+#if DEBUG_COMPILE
+                if (DEBUG)
+                   {         
+                        cerr << "location of isect_path[0].get_point(0): "
+                             << (int) location(isect_path[0].get_point(0)) << endl
+                             << "location of isect_path[0].get_last_point(): "
+                             << (int) location(isect_path[0].get_last_point()) << endl;
+
+      }  /* |if (DEBUG)|  */
+#endif /* |DEBUG_COMPILE|  */@; 
+#endif 
+
+@q **** (4) Two lines perpendicular to |isect_path[0]|.@> 
+
+@ Two lines perpendicular to |isect_path[0]|.
+\initials{LDF 2005.12.15.}
+
+@<Define |Ellipsoid| functions@>=
+
+                Point temp_pt[3];
+                Path  temp_path;
+                Bool_Point bp;
+
+                if (polygon_size == 3)
+                   { 
+
+                       isect_path[1].set(vertex[0], vertex[1]);
+                       isect_path[2].set(vertex[0], vertex[1]);
+
+                       temp_pt[0] = isect_path[0].get_point(0);
+                       temp_pt[1] = vertex[0].mediate(vertex[1]);
+                       temp_pt[2] = isect_path[0].get_last_point();
+
+                       isect_path[1].shift(temp_pt[0] - temp_pt[1]);
+                       isect_path[2].shift(temp_pt[0] - temp_pt[1]);
+                       
+
+                       isect_path[1].shift(.3333 * (temp_pt[2] - temp_pt[0]));
+                       isect_path[2].shift(.6667 * (temp_pt[2] - temp_pt[0]));
+
+                   }
+
+                else if (polygon_size == 4)
+                   {
+                       isect_path[1].set(vertex[0], vertex[3]);
+                       isect_path[2].set(vertex[0], vertex[3]);
+
+                       temp_pt[0] = isect_path[0].get_point(0);
+                       temp_pt[1] = vertex[0].mediate(vertex[3]);
+                       temp_pt[2] = isect_path[0].get_last_point();
+
+                       isect_path[1].shift(temp_pt[0] - temp_pt[1]);
+                       isect_path[2].shift(temp_pt[0] - temp_pt[1]);
+                       
+
+                       isect_path[1].shift(.3333 * (temp_pt[2] - temp_pt[0]));
+                       isect_path[2].shift(.6667 * (temp_pt[2] - temp_pt[0]));
+
+                   }
+
+                else if (polygon_size == 5)
+                   {
+                       isect_path[1].set(mid_pt[1], mid_pt[3]);
+                       isect_path[2].set(mid_pt[1], mid_pt[3]);
+
+                       temp_pt[0] = isect_path[0].get_point(0);
+                       temp_pt[1] = mid_pt[1].mediate(mid_pt[3]);
+                       temp_pt[2] = isect_path[0].get_last_point();
+
+                       isect_path[1].shift(temp_pt[0] - temp_pt[1]);
+                       isect_path[2].shift(temp_pt[0] - temp_pt[1]);
+                       
+                       isect_path[1].shift(.3333 * (temp_pt[2] - temp_pt[0]));
+                       isect_path[2].shift(.6667 * (temp_pt[2] - temp_pt[0]));
+
+                   }
+
+                else if (polygon_size == 6)
+                   {
+                       isect_path[1].set(vertex[5], vertex[2]);
+                       isect_path[2].set(vertex[5], vertex[2]);
+
+                       temp_pt[0] = isect_path[0].get_point(0);
+                       temp_pt[1] = vertex[5].mediate(vertex[2]);
+                       temp_pt[2] = isect_path[0].get_last_point();
+
+                       isect_path[1].shift(temp_pt[0] - temp_pt[1]);
+                       isect_path[2].shift(temp_pt[0] - temp_pt[1]);
+                       
+                       isect_path[1].shift(.3333 * (temp_pt[2] - temp_pt[0]));
+                       isect_path[2].shift(.6667 * (temp_pt[2] - temp_pt[0]));
+
+
+                   }  /* |else if (polygon_size == 6)|  */
+
+
+                bpv = intersection_points(&(isect_path[1]), scanner_node, t, 0);
+
+@q ***** (5)@> 
+
+
+                if (!bpv || bpv->ctr == 0)
+                   {
+
+                       cerr_strm << thread_name 
+                                 << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                                 << endl 
+                                 << "`Ellipsoid::intersection_points()' failed, "
+                                 << "returning 0 or an empty `Pointer_Vector<Bool_Point>'."
+                                 << endl 
+                                 << "Exiting function unsuccessfully with return value 0.";
+
+                        log_message(cerr_strm);
+                        cerr_message(cerr_strm, error_stop_value);
+                        cerr_strm.str("");
+
+                        delete t;
+                        t = 0;    
+
+                        delete c; 
+                        c = 0;
+
+#if TESTING 
+             *pv += polygon;
+
+             new_path = create_new<Path>(isect_path[0]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[1]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[2]);
+             *pv += new_path;
+
+             return pv;
+#endif 
+
+
+                        delete polygon;
+                        polygon = 0;
+
+                        return 0;   
+
+                   }  /* |if (!bpv || bpv->ctr == 0)|  */
+
+
+                isect_path[1].set(bpv->v[0]->pt, bpv->v[1]->pt);
+
+      
+                bpv->clear();
+                delete bpv;
+                bpv = 0;
+                
+#if TESTING 
+                cerr << "location of isect_path[1].get_point(0): "
+                     << (int) location(isect_path[1].get_point(0)) << endl
+                     << "location of isect_path[1].get_last_point(): "
+                     << (int) location(isect_path[1].get_last_point()) << endl;
+#endif 
+
+@q ***** (5)@> 
+
+
+
+
+                bpv = intersection_points(&(isect_path[2]), scanner_node, t, 0);
+
+
+@q ***** (5)@> 
+
+                if (!bpv || bpv->ctr == 0)
+                   {
+
+                       cerr_strm << thread_name 
+                                 << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                                 << endl 
+                                 << "`Ellipsoid::intersection_points()' failed, "
+                                 << "returning 0 or an empty `Pointer_Vector<Bool_Point>'."
+                                 << endl 
+                                 << "Exiting function unsuccessfully with return value 0.";
+
+                        log_message(cerr_strm);
+                        cerr_message(cerr_strm, error_stop_value);
+                        cerr_strm.str("");
+
+#if TESTING 
+
+             *pv += polygon;
+
+             new_path = create_new<Path>(isect_path[0]);
+             *pv += new_path;
+
+
+             new_path = create_new<Path>(isect_path[1]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[2]);
+             *pv += new_path;
+             
+
+             return pv;
+#endif 
+
+
+                        delete t;
+                        t = 0;    
+
+                        delete c; 
+                        c = 0;
+
+                        delete polygon;
+                        polygon = 0;
+
+                        return 0;   
+
+                   }  /* |if (!bpv || bpv->ctr == 0)|  */
+
+
+@q ***** (5)@> 
+
+                isect_path[2].set(bpv->v[0]->pt, bpv->v[1]->pt);
+      
+                bpv->clear();
+                delete bpv;
+                bpv = 0;
+
+#if TESTING
+                cerr << "location of isect_path[2].get_point(0): "
+                     << (int) location(isect_path[2].get_point(0)) << endl
+                     << "location of isect_path[2].get_last_point(): "
+                     << (int) location(isect_path[2].get_last_point()) << endl;
+#endif 
+
+
+@q ***** (5)@> 
+
+                temp_pt[0] = isect_path[1].get_point(0).mediate(
+                                 isect_path[1].get_last_point());
+
+                temp_pt[1] = isect_path[2].get_point(0).mediate(
+                                 isect_path[2].get_last_point());
+
+
+                isect_path[3].set(temp_pt[0], temp_pt[1]);
+
+
+                bpv = intersection_points(&(isect_path[3]), scanner_node, t, 0);
+
+@q ***** (5)@> 
+
+                if (!bpv || bpv->ctr == 0)
+                   {
+
+                       cerr_strm << thread_name 
+                                 << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                                 << endl 
+                                 << "Failed to find `ellipse_center':  "
+                                 << "`Ellipsoid::intersection_points()' failed, "
+                                 << "returning 0 or an empty `Pointer_Vector<Bool_Point>'."
+                                 << endl
+                                 << "Exiting function unsuccessfully with return value 0.";
+
+                        log_message(cerr_strm);
+                        cerr_message(cerr_strm, error_stop_value);
+                        cerr_strm.str("");
+
+#if TESTING 
+
+             *pv += polygon;
+
+             new_path = create_new<Path>(isect_path[0]);
+             *pv += new_path;
+
+
+             new_path = create_new<Path>(isect_path[1]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[2]);
+             *pv += new_path;
+
+
+             new_path = create_new<Path>(isect_path[3]);
+             *pv += new_path;
+             
+             return pv;
+#endif 
+
+
+                        delete t;
+                        t = 0;    
+
+                        delete c; 
+                        c = 0;
+
+                        delete polygon;
+                        polygon = 0;
+
+                        return 0;   
+
+                   }  /* |if (!bpv || bpv->ctr == 0)|  */
+
+
+@q ***** (5)@> 
+
+                isect_path[3].set(bpv->v[0]->pt, bpv->v[1]->pt);
+      
+                bpv->clear();
+                delete bpv;
+                bpv = 0;
+
+
+#if TESTING
+                cerr << "location of isect_path[3].get_point(0): "
+                     << (int) location(isect_path[3].get_point(0)) << endl
+                     << "location of isect_path[3].get_last_point(): "
+                     << (int) location(isect_path[3].get_last_point()) << endl;
+
+#endif 
+
+
+                ellipse_center = isect_path[3].get_point(0).mediate(
+                                    isect_path[3].get_last_point());
+
+@q ***** (5)@> 
+
+
+@q **** (4)@> 
+
+                Point normal;
+                Point normal_save;
+                Point ellipse_center_save;
+
+                Signed_Byte curr_location;
+                Point curr_pt;
+                Point save_pt;
+
+       
+                real step_value = 5;
+                real save_step_value = step_value;
+                real curr_rotation_value;
+
+
+                Unsigned_Byte isect_ctr = 0;
+                Point isect_pt[4];
+              
+                Signed_Byte direction = 1;
+                bool bisecting = false;
+
+                Signed_Byte save_location;
+
+
+                real angle;
+
+
+                normal = q.normal;
+                normal.shift(ellipse_center);
+
+                normal_save = normal;
+                ellipse_center_save = ellipse_center;
+
+
+                in_pt = ellipse_center.mediate(isect_path[2].get_point(0), .875);
+
+                normal *= ellipse_center *= in_pt *= *t;
+
+#undef TESTING
+#define TESTING 0
+
+            C:
+
+     
+                save_pt = curr_pt = in_pt;
+
+
+@q **** (4)@> 
+
+            B:
+
+                for (int i = 1; i < 360.0 / save_step_value; ++i)
+                   {
+                       save_location = 1;
+
+                       step_value = i * save_step_value;
+
+                       angle = direction * step_value;
+
+#if TESTING 
+                       cerr << "At beginning of loop:  angle == " << angle << endl;
+#endif 
+
+                       curr_pt = save_pt; 
+
+                       curr_pt.rotate(ellipse_center, normal, angle);
+
+                       A:
+
+                       curr_location = location(curr_pt, scanner_node, true);
+#if TESTING 
+                       cerr << "curr_location == " << (int) curr_location << endl;
+#endif 
+    
+@q ***** (5)@> 
+
+                       if (curr_location == 0)
+                          {
+#if TESTING 
+                               cerr << "curr_location == 0." << endl;
+#endif 
+
+                               isect_pt[isect_ctr++] = curr_pt;
+
+                               if (isect_ctr == 4)
+                                  {
+#if TESTING 
+                                      cerr << "Found fourth point.  Breaking." << endl;
+#endif 
+                                      break;
+                                  }
+
+                               curr_rotation_value = save_step_value;
+                               bisecting = false;
+                                 
+                               if (isect_ctr == 1)
+                                   {
+#if TESTING 
+                                      cerr << "Found first point." << endl;
+#endif 
+                                      curr_pt = in_pt = save_pt;
+                                      direction = -1;
+                                      goto B;
+                                           
+                                   }
+                               else if (isect_ctr == 2)
+                                   {
+#if TESTING 
+                                      cerr << "Found second point." << endl;
+#endif 
+                                      save_pt.rotate(ellipse_center, normal, 180);
+                                      curr_pt = in_pt = save_pt;
+
+                                      direction = 1;
+                                      goto B;
+
+                                   }
+                               else if (isect_ctr == 3)
+                                   {
+#if TESTING 
+                                      cerr << "Found third point." << endl;
+#endif 
+                                      curr_pt = in_pt = save_pt;
+                                      direction = -1;
+                                      goto B;
+                                   }
+
+@q ****** (6)@> 
+                          }  /* |if (curr_location == 0)|  */
+                                              
+@q ***** (5)@>
+
+                       else if (curr_location == 1 && !bisecting)
+                          {
+#if TESTING 
+                              cerr << "`curr_location' == 1 and `bisecting' == `false'.  "
+                                   << "continuing." << endl;
+#endif 
+      
+                              continue;
+                          }
+
+@q ***** (5)@> 
+ 
+                      else if (curr_location == 1 && bisecting)
+                         {
+#if TESTING 
+                              cerr << "`curr_location' == 1 and `bisecting' == `true'.  "
+                                   << "Bisecting." << endl;
+#endif 
+
+
+
+                              in_pt = curr_pt;
+                              if (save_location < 0)
+                                  {
+                                     curr_rotation_value /= 2;
+                                     direction *= -1;
+                                  }
+
+                              save_location = curr_location;
+
+                              angle = direction * curr_rotation_value;
+#if TESTING 
+                              cerr << "angle == " << angle << endl;
+#endif 
+
+                              curr_pt.rotate(ellipse_center, 
+                                             normal, 
+                                             angle);
+                              goto A;
+
+                         }
+
+@q ***** (5)@> 
+
+                       else if  (curr_location == -1)
+                          {
+
+
+                              if (!bisecting)
+                                 {
+                                     bisecting = true;
+                                     curr_rotation_value = step_value;
+#if TESTING 
+                                     cerr << "`curr_location' == -1 and `bisecting' == `false'.  "
+                                          << "Starting to bisect." << endl;
+#endif 
+                                 }
+
+                              else 
+#if TESTING 
+                                 cerr << "`curr_location' == -1 and `bisecting' == `true'.  "
+                                      << "Bisecting." << endl;
+#endif 
+
+
+                              out_pt = curr_pt;
+
+                              if (save_location > 0)
+                                 {
+                                     curr_rotation_value /= 2;
+                                     direction *= -1;
+                                 }
+
+                              save_location = curr_location;
+
+                              angle = direction * curr_rotation_value;
+#if TESTING 
+                              cerr << "angle == " << angle << endl;
+#endif 
+
+                              curr_pt.rotate(ellipse_center, 
+                                             normal, 
+                                             angle);
+                              goto A;
+                               
+                          }
+ 
+
+@q ***** (5)@> 
+                       
+                   }  /* |for|  */
+
+#define TESTING 0
+
+@q **** (4)@> 
+
+#if TESTING 
+       cerr << "isect_ctr == " << (int) isect_ctr << endl;
+#endif 
+
+       if (isect_ctr < 4)
+          {
+              cerr_strm << thread_name 
+                        << "ERROR!  In `Ellipsoid::intersection(Plane, [etc.])':"
+                        << endl 
+                        << "Failed to find 4 points on the ellipse."
+                        << endl 
+                        << "Exiting function unsuccessfully with return value 0.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete t;
+              t = 0;    
+
+              delete c; 
+              c = 0;
+
+#if TESTING 
+
+             *pv += polygon;
+
+             new_path = create_new<Path>(isect_path[0]);
+             *pv += new_path;
+
+
+             new_path = create_new<Path>(isect_path[1]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[2]);
+             *pv += new_path;
+             
+             new_path = create_new<Path>(isect_path[3]);
+             *pv += new_path;
+
+             return pv;
+#endif 
+
+
+
+              delete polygon;
+              polygon = 0;
+
+
+
+
+              return 0;   
+
+          }  /* |if (isect_ctr < 4)|  */
+
+@q **** (4)@> 
+
+
+       Transform t_inverse = t->inverse();
+ 
+
+       for (int i = 0; i < 4; ++i)
+          {
+             isect_pt[i] *= t_inverse;
+
+#if TESTING 
+             cerr << "location of isect_pt[" << i << "] == "
+                  << (int) location(isect_pt[i]) << endl;
+
+             cerr << "isect_pt[" << i << "].is_on_plane(q) == " 
+                  << isect_pt[i].is_on_plane(q) << endl;
+#endif 
+
+
+          }  /* |for|  */
+
+       ellipse_center = ellipse_center_save;
+       normal = normal_save;
+
+       isect_path[4].set("--", 
+                         true, 
+                         &isect_pt[0], 
+                         &isect_pt[3], 
+                         &isect_pt[2],
+                         &isect_pt[1], 
+                         static_cast<Point*>(0));  
+ 
+#if TESTING 
+       isect_path[4].show("isect_path[4]:");
+#endif 
+
+
+       Point axis_h_pt[2];
+       Point axis_v_pt[2];
+
+       axis_h_pt[0] = isect_pt[0].mediate(isect_pt[1]);
+       axis_h_pt[1] = isect_pt[2].mediate(isect_pt[3]);
+
+
+       isect_path[5].set(axis_h_pt[0], axis_h_pt[1]);
+
+
+       bpv = intersection_points(&(isect_path[5]), scanner_node, t, 0);
+
+       axis_h_pt[0] = bpv->v[0]->pt;
+       axis_h_pt[1] = bpv->v[1]->pt;
+
+       bpv->clear();
+       delete bpv;
+       bpv = 0;
+
+
+@q **** (4)@>
+
+       axis_v_pt[0] = isect_pt[0].mediate(isect_pt[3]);
+       axis_v_pt[1] = isect_pt[1].mediate(isect_pt[2]);
+
+       isect_path[6].set(axis_v_pt[0], axis_v_pt[1]);
+      
+       bpv = intersection_points(&(isect_path[6]), scanner_node, t, 0);
+
+       axis_v_pt[0] = bpv->v[0]->pt;
+       axis_v_pt[1] = bpv->v[1]->pt;
+
+
+       bpv->clear();
+       delete bpv;
+       bpv = 0;
+
+
+@q **** (4) Make the longer axis the horizontal one.@> 
+
+       real axis_h_mag = (axis_h_pt[0] - axis_h_pt[1]).magnitude();
+       real axis_v_mag = (axis_v_pt[0] - axis_v_pt[1]).magnitude();
+
+       if (axis_h_mag < axis_v_mag)
+          {
+             temp_pt[0] = axis_h_pt[0];
+             temp_pt[1] = axis_h_pt[1];
+
+             axis_h_pt[0] = axis_v_pt[0];
+             axis_h_pt[1] = axis_v_pt[1];
+
+             axis_v_pt[0] = temp_pt[0];
+             axis_v_pt[1] = temp_pt[1];
+
+             real temp_real = axis_h_mag;
+             axis_h_mag = axis_v_mag;
+             axis_v_mag = temp_real;
+
+          }  /* |if (axis_h_mag < axis_v_mag)|  */
+
+
+       isect_path[5].set(axis_h_pt[0], axis_h_pt[1]); 
+       isect_path[6].set(axis_v_pt[0], axis_v_pt[1]); 
+
+@q **** (4)@> 
+
+       Point temp_center;
+
+
+
+       normal = isect_path[4].get_normal(); 
+
+       temp_center = axis_h_pt[0].mediate(axis_h_pt[1]);
+       normal.shift(temp_center);
+
+@q **** (4) Recalculate |axis_v_pt[0]|, |axis_v_pt[1]|, and |axis_v_mag|.@> 
+
+       axis_v_pt[0] = temp_center.mediate(axis_h_pt[0], 1.5);
+       axis_v_pt[0].rotate(temp_center, normal, 90);
+       isect_path[6].set(temp_center, axis_v_pt[1]);
+ 
+       bpv = intersection_points(&(isect_path[6]), scanner_node, t, 0);
+
+       axis_v_pt[0] = bpv->v[0]->pt;
+       axis_v_pt[1] = bpv->v[1]->pt;
+
+       bpv->clear();
+       delete bpv;
+       bpv = 0;
+
+       axis_v_mag = (axis_v_pt[0] - axis_v_pt[1]).magnitude();
+
+@q **** (4)@> 
+
+       curr_rotation_value = 360.0 / ellipse_point_count;
+
+
+       save_pt = temp_center.mediate(axis_h_pt[0], 1.5);
+
+
+       vector<Point> vp0;
+       vector<Point> vp1;
+       Ellipse* e;
+       Path ellipse_path;
+
+       for (i = 0; i < ellipse_point_count / 2; ++i) 
+          {
+             temp_pt[0] = save_pt;
+             temp_pt[0].rotate(temp_center, normal, i * curr_rotation_value);
+
+             temp_path.set(temp_center, temp_pt[0]);
+
+             bpv = intersection_points(&temp_path, scanner_node, t, 0);
+
+
+             if (!bpv || bpv->ctr == 0)
+                {
+                   goto FINISH_UP;
+                }
+
+
+             if (bpv->v[0]->pt.is_on_segment(temp_path).first)
+                {
+                   vp0.push_back(bpv->v[0]->pt);
+                   vp1.push_back(bpv->v[1]->pt);
+                }
+             else
+                {
+                   vp1.push_back(bpv->v[0]->pt);
+                   vp0.push_back(bpv->v[1]->pt);
+                }
+
+             bpv->clear();
+             delete bpv;
+             bpv = 0;
+
+          }  /* |for|  */
+
+
+        for(vector<Point>::iterator iter = vp0.begin();
+            iter != vp0.end();  ++iter)
+           ellipse_path += *iter;
+            
+
+        for(vector<Point>::iterator iter = vp1.begin();
+            iter != vp1.end();  ++iter)
+           ellipse_path += *iter;
+
+        vp0.clear();
+        vp1.clear();
+
+
+@q **** (4)@> 
+
+        axis_h_mag 
+           = (  ellipse_path.get_point(0) 
+              - ellipse_path.get_point(ellipse_point_count / 2)).magnitude();
+
+        axis_v_mag 
+           = (  ellipse_path.get_point(ellipse_point_count / 4) 
+              - ellipse_path.get_point(3 * ellipse_point_count / 4)).magnitude();
+
+        temp_center 
+           = ellipse_path.get_point(0).mediate(
+                ellipse_path.get_point(ellipse_point_count / 2));
+
+        e = new Ellipse(temp_center, 
+                        axis_h_mag, 
+                        axis_v_mag, 
+                        ellipse_path,
+                        scanner_node);
+      
+
+
+
+   FINISH_UP:
+
+             pv = new Pointer_Vector<Path>;
+
+
+#if TESTING 
+             *pv += polygon;
+
+             new_path = create_new<Path>(isect_path[0]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[1]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[2]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[3]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[4]);
+             *pv += new_path;
+
+             new_path = create_new<Path>(isect_path[5]);
+             *pv += new_path;
+
+
+             new_path = create_new<Path>(isect_path[6]);
+             *pv += new_path;
+
+             *pv += e;
+
+
+       delete t;
+       t = 0;
+
+       delete c;
+       c = 0;
+
+       return pv;
+#else
+
+@q **** (4)@> 
+@
+\LOG
+\initials{LDF 2005.12.16.}
+@:BUG FIX@> BUG FIX:  Now deleting pointers before returning.
+\ENDLOG
+
+@<Define |Ellipsoid| functions@>=
+
+       delete pv;
+       delete new_path;
+       delete t;
+       delete c;
+       delete polygon;
+       delete bpv;
+
+       return e;
+
+#endif 
+
+   
+
+@q **** (4)@> 
+
+}  /* End of |Ellipsoid::intersection(const Plane&, [etc.])| definition.  */
+
+#undef TESTING
+
+
+@q * (1) Show.@> 
+@* Show.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.31.}
+Now showing |center|.
+
+\initials{LDF 2005.10.31.}
+Now showing |axis_x|, |axis_y|, |axis_y|, |divisions_x|, |divisions_y|, and
+|divisions_z|.
+
+\initials{LDF 2005.10.31.}
+Now showing |type|.
+
+\initials{LDF 2005.10.31.}
+Now outputting |text|.  
+No longer calling |Solid::show()|.  Added explicit code for showing the 
+|Ellipses| on |ellipses|.
+
+\initials{LDF 2005.10.31.}
+Now showing |ellipse_point_count|.
+\ENDLOG
+
+@q ** (2) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+
+virtual 
+void 
+show(string text = "", 
+     char coords = 'w',
+     const bool do_persp = true, 
+     const bool do_apply = true,
+     Focus* f = 0, 
+     const unsigned short proj = 0,
+     const real factor = 1) const;
+
+
+@q ** (2) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+void 
+Ellipsoid::show(string text, char coords,
+            const bool do_persp, const bool do_apply,
+            Focus* f, const unsigned short proj,
+            const real factor) const
+
+{
+    if (text == "")
+       text = "Ellipsoid";
+
+    cerr << text << endl;
+
+    if (type == ELLIPSOID_NULL_TYPE)
+       cerr << "type == " << "ELLIPSOID_NULL_TYPE";
+    else if (type == NORMAL_TYPE)
+       cerr << "type == " << "NORMAL_TYPE";
+    else 
+       cerr << "ERROR!  In `Ellipsoid::show()':"
+            << "`Ellipsoid' has invalid type:  " 
+            << type;
+
+    cerr << endl;
+
+    center.show("center:", coords, do_persp, do_apply, f, proj, factor);   
+
+    cerr << "axis_x == " << axis_x
+         << endl
+         << "axis_y == " << axis_y
+         << endl
+         << "axis_z == " << axis_z
+         << endl
+         << "divisions_x == " << divisions_x
+         << endl
+         << "divisions_y == " << divisions_y
+         << endl
+         << "divisions_z == " << divisions_z
+         << endl
+         << "ellipse_point_count == " << ellipse_point_count
+         << endl;
+
+    for (vector<Ellipse*>::const_iterator iter = ellipses.begin();
+         iter != ellipses.end();
+         ++iter)
+       {
+           (*iter)->show("Ellipse", coords, do_persp, do_apply,
+                         f, proj, factor);
+       }
+
+    return;
+
+} /* End of |Ellipsoid::show()| definition.  */
+
+@q * (1) |Cuboids|.@> 
+@* {\bf Cuboids}.
+\initials{LDF 2005.12.07.}
+
+\LOG
+\initials{LDF 2005.12.07.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Inscribed |Cuboid|.@> 
+@*1 Inscribed {\bf Cuboid}.
+\initials{LDF 2005.12.07.}
+
+\LOG
+\initials{LDF 2005.12.07.}
+Added this function.  It currently has a dummy definition,
+and returns 0 immediately.  Finding the inscribed cuboid of an ellipsoid
+is more difficult than I thought.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+
+Cuboid*
+in_cuboid(Scanner_Node scanner_node = 0) const;
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+Cuboid*
+Ellipsoid::in_cuboid(Scanner_Node scanner_node) const
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+   return 0;
+
+}  /* End of |Ellipsoid::in_cuboid()| definition.  */
+
+@q ** (2) Enclosing |Cuboid|.@> 
+@*1 Enclosing {\bf Cuboid}.
+\initials{LDF 2005.12.07.}
+
+\LOG
+\initials{LDF 2005.12.07.}
+Added this function.
+
+\initials{LDF 2005.12.11.}
+Added optional |Transform* use_transform| and |save_transform| arguments, both with
+the default 0.  
+
+\initials{LDF 2005.12.12.}
+@:BUG FIX@> BUG FIX:  Made |Transform* use_transform| argument |const|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Ellipsoid| functions@>=
+
+Cuboid*
+out_cuboid(Scanner_Node scanner_node = 0, 
+           const Transform* use_transform  = 0, 
+           Transform* save_transform = 0) const;
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Ellipsoid| functions@>=
+Cuboid*
+Ellipsoid::out_cuboid(Scanner_Node scanner_node,
+                      const Transform* use_transform, 
+                      Transform* save_transform) const
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+    Transform* t = 0;
+
+    if (use_transform)
+       {
+           t = create_new<Transform>(use_transform);
+       }
+
+
+    if (!t)
+       t = standardize(scanner_node);
+  
+    if (t == 0)
+       {
+           cerr_strm << thread_name << "ERROR!  In `Ellipsoid::out_cuboid()':"
+                     << endl
+                     << "`Ellipsoid::standardize()' returned 0.  "
+                     << "Can't create enclosing `Cuboid'."
+                     << endl 
+                     << "Exiting function with return value 0.";
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm, error_stop_value);
+           cerr_strm.str("");
+
+           return 0;
+
+       }  /* |if (t == 0)|  */
+
+    if (save_transform)
+       *save_transform = *t;
+
+    Cuboid c(ORIGIN, axis_x, axis_y, axis_z);
+
+    if (!t->is_identity())
+       c *= t->inverse();
+ 
+    delete t;
+    t = 0;
+
+    return create_new<Cuboid>(c);
+
+}  /* End of |Ellipsoid::out_cuboid()| definition.  */
+
+@q * (1) Ellipsoid_Set_Option_Struct.@> 
+@* {\bf Ellipsoid\_Set\_Option\_Struct}.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Struct definition.@> 
+@*1 Struct definition.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this |struct| definition.
+
+\initials{LDF 2005.10.31.}
+Added the |real| data members |axis_x|, |axis_y|, and |axis_z|.
+
+\initials{LDF 2005.10.31.}
+Added the |unsigned short| data members 
+|divisions_x|, |divisions_y|, and |divisions_z|.
+
+\initials{LDF 2005.10.31.}
+Added |unsigned int ellipse_point_count|.
+\ENDLOG
+
+@<Define |struct Ellipsoid_Set_Option_Struct|@>=
+
+struct
+Ellipsoid_Set_Option_Struct
+{
+   Point* center;
+   unsigned short type;
+   real axis_x;
+   real axis_y;
+   real axis_z;
+
+   unsigned short divisions_x;
+   unsigned short divisions_y;
+   unsigned short divisions_z;
+
+   unsigned int ellipse_point_count;
+
+   @<Declare |Ellipsoid_Set_Option_Struct| functions@>@;
+
+};
+
+@q ** (2) |Ellipsoid_Set_Option_Struct| functions.@> 
+@*1 {\bf Ellipsoid\_Set\_Option\_Struct} functions.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) Constructors.  @>
+@*2 Constructors.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Default constructor.@>   
+@*3 Default constructor.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.31.}
+Now setting |axis_x = axis_y = axis_z = Ellipsoid::DEFAULT_AXIS|.
+
+\initials{LDF 2005.10.31.}
+Now setting 
+|type = Ellipsoid::NORMAL_TYPE| and 
+|divisions_x = divisions_y = divisions_z = Ellipsoid::DEFAULT_DIVISIONS|.
+
+\initials{LDF 2005.10.31.}
+Now setting 
+|ellipse_point_count = Ellipsoid::DEFAULT_ELLIPSE_POINT_COUNT|.
+
+\initials{LDF 2005.10.31.}
+Now setting |divisions_x = Ellipsoid::DEFAULT_DIVISIONS_X|,
+|divisions_y = Ellipsoid::DEFAULT_DIVISIONS_Y|,
+and |divisions_z = Ellipsoid::DEFAULT_DIVISIONS_Z|.
+\ENDLOG
+
+@q ***** (5) Declaration.@>  
+
+@<Declare |Ellipsoid_Set_Option_Struct| functions@>=
+
+Ellipsoid_Set_Option_Struct(void);
+
+@q ***** (5) Definition.@>  
+
+@
+@<Define |Ellipsoid_Set_Option_Struct| functions@>=
+
+Ellipsoid_Set_Option_Struct::Ellipsoid_Set_Option_Struct(void) 
+{
+    center           = 0;
+    type             = Ellipsoid::NORMAL_TYPE;
+    axis_x = axis_y = axis_z = Ellipsoid::DEFAULT_AXIS;
+    divisions_x = Ellipsoid::DEFAULT_DIVISIONS_X;
+    divisions_y = Ellipsoid::DEFAULT_DIVISIONS_Y;
+    divisions_z = Ellipsoid::DEFAULT_DIVISIONS_Z;
+    ellipse_point_count = Ellipsoid::DEFAULT_ELLIPSE_POINT_COUNT;
+}
+
+@q *** (3) Destructor.@> 
+@*2 Destructor.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Ellipsoid_Set_Option_Struct| functions@>=
+
+~Ellipsoid_Set_Option_Struct(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Ellipsoid_Set_Option_Struct| functions@>=
+
+Ellipsoid_Set_Option_Struct::~Ellipsoid_Set_Option_Struct(void) 
+{
+    delete center;
+
+    return;
+}
+
+@q *** (3) Clear.@> 
+@*2 Clear.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.31.}
+Now setting 
+|type = Ellipsoid::ELLIPSOID_NULL_TYPE|,
+|axis_x = axis_y = axis_z = 0|,
+and
+|divisions_x = divisions_y = divisions_z = 0|.
+
+\initials{LDF 2005.10.31.}
+Now setting |ellipse_point_count = 0|.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Ellipsoid_Set_Option_Struct| functions@>=
+
+int 
+clear(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Ellipsoid_Set_Option_Struct| functions@>=
+
+int
+Ellipsoid_Set_Option_Struct::clear(void) 
+{
+    delete center;
+    center = 0;
+
+    type = Ellipsoid::ELLIPSOID_NULL_TYPE;
+
+    axis_x = axis_y = axis_z = 0;
+    divisions_x = divisions_y = divisions_z = 0;
+
+    ellipse_point_count = 0;
+
+    return 0;
+
+}  /* End of |Ellipsoid_Set_Option_Struct::clear()| definition.  */
+
+
+@q * (1) Putting Ellipsoid together. @>
+@* Putting {\bf Ellipsoid} together.
+
+\immediate\write\functexifile{^^JEnd of file:  ellpsoid.web^^J}
+
+@q ** (2) This is what's compiled.@> 
+
+This is what's compiled.
+
+\LOG
+Now including |@<Define |static| |class Ellipsoid| data members@>|.
+\ENDLOG 
+
+@c
+@<Include files@>@;
+@<Define |class Ellipsoid|@>@;
+@<Define |static| |class Ellipsoid| data members@>@;
+@<Define |struct Ellipsoid_Set_Option_Struct|@>@;
+@<Define |Ellipsoid| functions@>@;
+@<Define |Ellipsoid_Set_Option_Struct| functions@>@;
+@<Declare non-member template functions for |Ellipsoid|@>@;
+@<Define |Solid| functions@>@;
+
+@q ** (2) This is what's written to "ellpsoid.h".@> 
+
+@ This is what's written to \filename{ellpsoid.h}.
+
+@(ellpsoid.h@>=
+@<Define |class Ellipsoid|@>@;
+@<Define |struct Ellipsoid_Set_Option_Struct|@>@;
+@<Declare non-member template functions for |Ellipsoid|@>@;
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 80))    @>
+
+
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q run-mp-on-file:"persp.mp" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

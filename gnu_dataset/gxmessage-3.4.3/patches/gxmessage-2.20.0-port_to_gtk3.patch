@@ -1,0 +1,79 @@
+diff -Naur gxmessage-2.20.0/configure.in gxmessage-2.20.0gtk3/configure.in
+--- gxmessage-2.20.0/configure.in	2012-02-25 04:04:44.000000000 +0000
++++ gxmessage-2.20.0gtk3/configure.in	2013-08-18 20:53:50.000000000 +0100
+@@ -40,7 +40,7 @@
+ AC_SUBST(PACKAGE_CFLAGS)
+ AC_SUBST(PACKAGE_LIBS)
+ 
+-PKG_CHECK_MODULES(PACKAGE, gtk+-2.0 >= 2.20.0)
++PKG_CHECK_MODULES(PACKAGE, gtk+-3.0 >= 3.0.0)
+ 
+ AC_OUTPUT([
+ doc/Makefile
+diff -Naur gxmessage-2.20.0/gxmessage.c gxmessage-2.20.0gtk3/gxmessage.c
+--- gxmessage-2.20.0/gxmessage.c	2012-02-25 13:25:43.000000000 +0000
++++ gxmessage-2.20.0gtk3/gxmessage.c	2013-08-18 20:52:24.000000000 +0100
+@@ -357,7 +357,7 @@
+ gboolean
+ cb_key_press (GtkWidget *w, GdkEventKey *event, gpointer data)
+ {
+-	if (gx.allow_escape && (event->keyval == GDK_Escape)) {
++	if (gx.allow_escape && (event->keyval == GDK_KEY_Escape)) {
+ 		gtk_main_quit ();
+ 	}
+ 	return FALSE;
+@@ -496,10 +496,10 @@
+ 	/* window contents */
+ 	gtk_container_set_border_width (GTK_CONTAINER(window), 12);
+ 
+-	vbox = gtk_vbox_new (FALSE, 12);
++	vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 12);
+ 	gtk_container_add (GTK_CONTAINER(window), vbox);
+ 
+-	vbox2 = gtk_vbox_new (FALSE, 0);
++	vbox2 = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
+ 	gtk_box_pack_start (GTK_BOX(vbox), vbox2, TRUE, TRUE, 0);
+ 	gtk_container_set_border_width (GTK_CONTAINER(vbox2), 0);
+ 
+@@ -565,7 +565,7 @@
+ 
+ 		button = button_first (gx.button_list);
+ 
+-		btn_box = gtk_hbutton_box_new ();
++		btn_box = gtk_button_box_new (GTK_ORIENTATION_HORIZONTAL);
+ 		gtk_button_box_set_layout (GTK_BUTTON_BOX(btn_box),
+ 		                           GTK_BUTTONBOX_END);
+ 		gtk_box_set_spacing (GTK_BOX(btn_box), 6);
+@@ -624,7 +624,7 @@
+ 		gtk_widget_modify_font (dummy,
+ 		    gtk_widget_get_style (message_widget)->font_desc);
+ 		gtk_container_add (GTK_CONTAINER(vbox), dummy);
+-		gtk_widget_size_request (dummy, &size_req);
++		gtk_widget_get_preferred_size (dummy, &size_req, NULL);
+ 		gtk_widget_destroy (dummy);
+ 		/* ~50 pixels for borders and scrollbar space */
+ 		win_w = size_req.width + 50;
+@@ -634,12 +634,12 @@
+ 	}
+ 
+ 	if (gx.entry_str != NULL) {
+-		gtk_widget_size_request (gx.entry_widget, &size_req);
++		gtk_widget_get_preferred_size (gx.entry_widget, &size_req, NULL);
+ 		win_h = win_h + size_req.height + 12;
+ 	}
+ 
+ 	if (gx.do_buttons) {
+-		gtk_widget_size_request (btn, &size_req);
++		gtk_widget_get_preferred_size (btn, &size_req, NULL);
+ 		win_h = win_h + size_req.height + 12;
+ 	}
+ 
+@@ -658,7 +658,7 @@
+ 
+ 	/* begin timeout */
+ 	if (gx.timeout != 0) {
+-		gx.timeout_id = g_timeout_add (1000, (GtkFunction)cb_timeout,
++		gx.timeout_id = g_timeout_add (1000, (GSourceFunc)cb_timeout,
+ 		                               &gx.timeout);
+ 	}
+ }

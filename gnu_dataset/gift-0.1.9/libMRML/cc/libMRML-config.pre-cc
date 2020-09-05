@@ -1,0 +1,127 @@
+/* -*- mode: c++ -*- 
+*/
+/* 
+
+    GIFT, a flexible content based image retrieval system.
+    Copyright (C) 1998, 1999, 2000, 2001, 2002, CUI University of Geneva
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+*/
+#include <cstdio>     /* for printf */
+#include <stdlib.h>    /* for exit */
+#include <getopt.h>
+
+# 27 "libMRML-config.pre-cc" 
+
+int main (int argc, char **argv) {
+  int lDigitOptionIndex = 0;
+  bool lFirst=true;
+  while (1) {
+    int this_option_optind = optind ? optind : 1;
+#ifdef HAVE_GETOPT_LONG
+    int option_index = 0;
+    static struct option long_options[] = {
+      {"cxxflags", 0, 0, 0},
+      {"ldflags", 0, 0, 0},
+      {"libs", 0, 0, 0},
+      {"includes", 0, 0, 0},
+      {"gift-mysql-dir", 0, 0, 0},
+      {"gift-plugin-dir", 0, 0, 0},
+      {"help", 0, 0, 0},
+      {0, 0, 0, 0}
+    };
+    char lC = getopt_long (argc, argv, "cLlimph",
+		     long_options, &option_index);
+    #warning GNU getopt long used
+#else
+    #warning no getopt long present
+
+    int lI = getopt (argc, argv, "cLlimph");
+    char lC=char(lI);
+#endif
+
+
+    if (lC == -1)
+      break;
+
+    if(!lFirst){
+      printf(" ");
+    }
+
+#ifdef HAVE_GETOPT_LONG
+    switch (lC) {
+    case 0: 
+      switch(option_index) {
+      case 0: lC='c'; break;
+      case 1: lC='L'; break;
+      case 2: lC='l'; break;
+      case 3: lC='i'; break;
+      case 4: lC='p'; break;
+      default: lC='h';
+      }
+      break;
+    }
+#endif
+
+    switch (lC) {
+    case 'c':
+      printf("%CXXFLAGS%");
+      lFirst=false; break;
+    case 'l':
+      printf("%LIBS%");
+      lFirst=false; break;
+    case 'L':
+      printf("%LDFLAGS% -L%libdir%");
+      lFirst=false; break;
+    case 'i':
+      printf("%INCLUDES%");
+      lFirst=false; break;
+    case 'm':
+      printf("%GIFT_MYSQL_DIR%");
+      lFirst=false; break;
+    case 'p':
+      printf("%libdir%");
+      lFirst=false; break;
+    default:
+#ifdef HAVE_GETOPT_LONG
+      puts("gift-config [-c] [--cxxflags] [-l] [--ldflags] [--plugin-dir]");
+      puts("Gives back the flags you need to give to your ");
+      puts("C++ compiler (--cxxflags or -c, for short) and/or");
+      puts("Linker       (--ldflags, or -l for short) ");
+      puts("Where gift expects its plugins \n"\
+	   "             (--plugin-dir, or -p for short) ");
+      puts("MySQL directory");
+      puts("             (--gift-mysql-dir, or -m for short) for successfully");
+      puts("compiling extensions to the GNU Image Finding Tool");
+#else
+      puts("gift-config [-c] [-l]");
+      puts("Gives back the flags you need to give to your ");
+      puts("C++ compiler (-c, for short) and/or");
+      puts("Linker       (-l for short) ");
+      puts("Where gift expects its plugins \n"\
+	   "             (-p for short) ");
+      puts("MySQL directory");
+      puts("             (-m for short) for successfully");
+      puts("compiling extensions to the GNU Image Finding Tool");
+#endif
+    }
+  }
+
+
+  exit (0);
+}
+
+

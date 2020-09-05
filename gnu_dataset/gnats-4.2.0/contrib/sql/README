@@ -1,0 +1,206 @@
+
+Overview
+
+GNATS data can be extracted and uploaded into a relational
+database.  The advantages for doing this include
+
+  1.  Interfacing the problem report information with other
+      information, e.g., a customer database
+
+  2.  Take advantage of report writers to generate production
+      reports or more sophisticated report generation 
+      capabilities not present in GNATS
+
+  3.  Perform complex queries available in SQL but not 
+      supported in GNATS
+
+This directory includes a set of scripts that interfaces
+GNATS to an Informix relational database application.  
+There are four types of script in the current directory:
+
+   Ignats.*     Unix shell scripts
+   *.sql       SQL (Structured Query Language) scripts,
+   *.ace       Informix report generator source code
+   *.4gl       Informix 4GL source code
+
+A sample set of crontab entries has also been providedi in the
+file crontab.  An index to the files is provided in the file fileList.
+
+This code is unsupported, and is provided only as an example of
+how you could use GNATS in conjunction with a relational
+database management system (rdbms).
+
+
+Application Structure
+
+In this example, GNATS is main working database for the
+developers.  Extracted data are upload daily into the relational
+database for generation of management reports, overview
+statistics, and special queries.  Once the database has
+been created, most of the interactions are driven by
+shell scripts scheduled through the Unix cron utility.
+
+Two Unix system users are assumed: "manager", who creates
+the database, and "staff", who receives some of the output
+reports via email.
+
+See the GNATS and Informix manuals for more details on the
+specifics of the software.
+
+
+Database Creation
+
+The main database consists of 5 tables, one for the problem reports 
+and one each for the severity, priority, class, and state codes.
+An additional table is used to hold a history of weekly summary 
+statistics.
+
+The 3 script files used to create these tables, their indices,
+and access permissions, are as follows.
+
+  crGNATS.sql
+  crCodes.sql
+  crHist.sql
+
+Permissions are set to read/write permission for the creator,
+"manager", and read only for the rest of the world.  These scripts 
+are run manually once to create the database, and are not in the 
+cron table.
+
+Two additional tables can be created to hold previous week's
+data in order to report on which problem reports have been
+updated in the last week.  These tables are created in 
+
+  crOGNATS.sql
+
+with the same access permissions.
+
+
+Scheduled Activities and Reports
+
+Regular activities and reports by scheduled through cron.
+(See appendix A.)
+
+Daily:
+
+1.  Extract data from GNATS by running query-pr.
+
+2.  Upload data in database
+
+3.  Calculate the age of each problem report at the time
+    of the upload.
+
+4.  Report on the problem reports that are of severity
+    "critical" that have not yet been fixed, i.e., in
+    either the "open" or "analyzed" states.
+
+Weekly:
+
+1.  Manage the buffering of data from the last 2 weeks.
+
+2.  Generate summary statistics on the number of problem
+    reports in each of the known states, and store
+    into history table.
+
+3.  Generate the following management reports:
+
+    - summary statistics on the problem reports in each
+      of the known states for the last two weeks
+
+    - list of problem reports that have changed state 
+      in the past week
+
+    - list of new problem reports for the past week
+
+    - list of problem reports that are still not closed
+
+    - list of change requests that are still not closed
+
+    - statistics on "critical" and "serious" problem 
+      reports that have not been fixed, grouped by
+      customer
+
+    - statistics on "critical" and "serious" problem 
+      reports that have not been fixed, grouped by
+      responsible person
+
+4.  Generate customer-specific lists of problem reports
+
+Monthly:
+
+1.  Generate historical record of the problem report
+    statistics, in absolute counts and as a percentage of
+    total problem reports.
+
+
+Additional Scripts
+
+A number of additional SQL scripts and report scripts
+not scheduled through cron are provided as examples.
+These can be customized to your specific needs.
+
+
+Customization and Use
+
+The scripts mentioned above have been tested on a Sun 4
+workstation running Sun OS 4.1.x and Informix SE 5.x and
+Informix ISQL 4.1.  You will need an Informix Development 
+licence to compile and use the report generator sources.
+
+Shell scripts should be reviewed for the correct pathnames
+where programs and reports are to be located.  Some of the
+scripts send email, or use parameterized reports that need
+local customization.
+
+The SQL scripts should be easily portable to other relational
+database systems supporting SQL.  Informix report generator
+sources are not portable, but can serve as examples for
+report generators from other database vendors.
+
+
+
+
+APPENDIX A
+
+
+--------------------------------------------------------------------------
+Shell script      Informix Program*   Informix Script
+--------------------------------------------------------------------------
+
+Daily:
+
+  Ignats.setup       query-pr --sql 
+                    isql engdb          loadGNATS.sql
+                    fglgo               calc_age
+
+  Ignats.summdy      isql engdb          cat_rev.sql
+
+
+Weekly:
+  
+  Ignats.summwk      fglgo               summ_wk.4gl
+                    isql engdb          cust_rev.sql 
+                    isql engdb          engr_rev.sql 
+
+  Ignats.wkbuffs     isql engdb          loadOGNATS.sql
+
+  Ignats.wkchng      sacego              wk_delta
+                    sacego              wk_open
+                    sacego              wk_st_chng
+                    sacego              open 
+                    sacego              enhreq
+  
+  Ignats.cust        sacego              bcust (custname)
+
+
+Monthly:
+
+  Ignats.summmn      sacego              history
+                    sacego              historyPC
+
+--------------------------------------------------------------------------
+
+
+* isql - SQL interpreter
+  sacego - report generator
+  fglgo - 4GL

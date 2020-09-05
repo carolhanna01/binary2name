@@ -1,0 +1,1 @@
+../swstructlib/src/swstruct/swsvendor.h

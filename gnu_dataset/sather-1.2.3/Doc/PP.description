@@ -1,0 +1,163 @@
+How to create different versions of a class out of one file
+-----------------------------------------------------------
+
+Goals:
+      -	create a Sather class out of a pSather class by 
+	removing all psather constructs (the future Sather compiler
+	will be able to use the pSathter constructs in Sather
+	by ignoring most of them or use them in an appropriate way)
+
+      -	create a non reentrant pSather class out of a
+        reentrant pSather class to create more efficient
+	versions of classes
+
+      -	create a Sather module file out of the pSather module file.
+
+All changes discussed below are done by pattern matching only,
+there is no syntax analysis done at all. All of them are described
+in form of sed patterns.
+
+
+Creating the non reentrant class ouf of a reeantrant class
+----------------------------------------------------------
+
+- general changes:
+	s/^.*-- NR:/\1      /
+  this has the effect of changing all lines of the form
+  	-- NR: some_special_code_for_the_NR_case();
+  with
+  	       some_special_code_for_the_NR_case();
+  without changing the indentation.
+  Additionally, it allows to write 
+  	parloop      --NR: loop
+	   i::=chunk!;
+	do@i	     --NR: 
+	   some_code;
+	end;
+  The reentrant class will use the left part of the --NR:,
+  while the non reentrant version will use the right part.
+
+- the following patterns are deleted for the NR version:
+	s/^[ \t*lock visitor then.*//    	-- removes lock lines
+	s/^[ \t*lock mutator then.*//    	-- removes lock lines
+	s/end;*[ \t]*-- lock visitor.*//        -- meant to remove the end of above locks.
+	s/end;*[ \t]*-- lock mutator.*//        -- meant to remove the end of above locks.
+	s/include VISITOR_MUTATOR;*//
+	s/[^ \t]*init_visitor_mutator;*//
+
+the class name is not changed automatically (this could be done,
+but at the same time the dependency rules have to be changed
+too, and this is much harder). A typical class definition looks as follows:
+
+	class A_STACK{T} < $STACK{T}, $REENTRANT is  --NR:
+	-- NR: class NR_A_STACK{T} < $NR_STACK{T} is
+
+
+Creating the Sather class out of a pSather class
+------------------------------------------------
+- general changes:
+	s/^.*-- S://
+  This has the same effect as above. Lines with a 
+  --S: will have the first part deleted.
+  Actually, it uses a slightly more complicated pattern, which
+  ensures that the indentation is most of the time correct. If 
+  something other than spaces or tabs precede the --S:, the part
+  after "--S: *" will start at the same possition as the first non 
+  space character before --S:, otherwise the part after --S:
+  will start at the same postion as it did before the replacement.
+  Example:
+  	--S: some_code
+  is replaced by
+              some_code
+  but
+  	some_ps_code --S: some_code
+  is replaced by
+        some_code
+
+- currently, the following patterns are deleted for Sather
+  (but if a future Sather compiler knows how to handle them
+  they will no longer be deleted):
+
+  	s/^[ \t]*lock.*then//
+	s/end;*[\t ]*--lock.*//
+	s/include VISITOR_MUTATOR;*//
+	s/[^ \t]*init_visitor_mutator;*//
+
+
+Creating a Sather module out of a pSather module
+------------------------------------------------
+
+- general changes:
+	s/^.*-- S:/\1     /
+  This has the same effect as above. Lines with a 
+  --S: will have the first part deleted.
+
+
+
+File name convetions
+--------------------
+
+The pSather library is stored in $SATHER_HOME/pLibrary, while the Sather
+library is stored in $SATHER_HOME/Library.  Non reentrant Sather/pSather 
+files start with "nr_". All the original files are stored in 
+$SATHER_HOME/pLibrary and the Sather version is then created
+at installation time. Only files that are not used in pSather
+are directly stored in the $SATHER_HOME/Library hierarchy. Currently
+only two such files exist, namely the definition of some classes
+used only in pSather, but which have to exist during compilation time
+of Sather programs.
+
+
+Preprocessor
+------------
+
+saprep [-nr] [-nrs] dir file [file ...]
+
+Without options, saprep generates for each file the
+the Sather file and stores it in "dir", with -nr it generates the non 
+reentrant version for pSather only. -nrs creates first
+the non reentrant pSather version of the file and then
+the sather versions (normal and non reentrant one).
+
+
+PP
+--
+
+Each library directory gets a script file named PP  which is responsible
+to generate the different files. This script file looks as follows:
+
+	#!/bin/sh
+	DIR=
+	LINKS=""
+	CREATE_SATHER=""
+	CREATE_NR_SATHER="" 
+	CREATE_NR_PSATHER=""
+
+	. $SATHER_HOME/Bin/PP
+
+The first five variables define how to create which files for Sather and 
+pSather: 
+
+DIR:	the directory where this script is stored, relativ to 
+	pLibrary. The scriptfile in pLibrary/Containers would set DIR
+	to DIR=Containers
+
+LINKS:	is a list of all files that are the same in the Sather and pSather 
+	Library. Most of the files in the base module are in this category.
+
+CREATE_SATHER:	lists all files for which a saprep Sather copy has to be made
+		for the Sather libraries.
+
+CREATE_NR_SATHER:  lists all files for which a sather copy and a non reentrant
+		   copy have to be made (with saprep).
+
+CREATE_NR_PSATHER: lists all files for which a non reentrant copy has to be
+		   made for pSather (no files for Sather will be created).
+
+If there are subdirectories with other PP script, they should called
+recursively with
+
+	cd Socket; ./PP; cd ..
+	
+
+

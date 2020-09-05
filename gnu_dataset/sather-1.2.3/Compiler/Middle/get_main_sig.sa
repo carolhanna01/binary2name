@@ -1,0 +1,53 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class GET_MAIN_SIG < $GET_MAIN_SIG is
+   -- This phase determines the signature of main.
+
+   include CS_COMPONENT;
+
+   attr main_sig:SIG;		-- The signature of `main'.
+   
+   create(p:PROG):SAME is
+      r::=new; r.prog:=p; return r end;
+   
+   get_main_sig(nm:STR) is
+      -- Get the signature of the main routine in the class named `nm'
+      -- and put it in `main_sig'.
+      as::=prog.parse.tree_for(#IDENT(nm),0);
+      err_loc(as);
+      if void(as) then
+	 err("There is no type " + nm + " for main."); return end;
+      mt::=prog.tp_tbl.tp_class_for(#IDENT(nm),void);
+      im:IMPL := mt.impl;
+      ifc:IFC:=mt.ifc; if void(ifc) then return end;
+      msig,omsig:SIG;
+      loop msig:=ifc.sigs.get_query!(IDENT_BUILTIN::main_ident);
+	 if ~void(omsig) then
+	    err("There may only be one `main' routine in the main class."); 
+	    return end;
+	 omsig:=msig end;
+      if void(msig) then 
+	 err("No routine named `main' in " + ifc.tp.str + ".");
+	 return end;
+      if ~void(msig.args) then
+	 if msig.args.size/=1 or msig.args[0].tp/=TP_BUILTIN::arr_of_str
+	    then err("The signature of main: " + msig.str +
+	 " doesn't have legal arguments."); return end;
+      elsif ~void(msig.ret) and msig.ret/=TP_BUILTIN::int then
+	 err("The signature of main: " + msig.str +
+	 " doesn't have a legal return type."); return end;
+      if prog.show_main then #OUT + "Main sig=" + msig.str + "\n" end;
+      main_sig:=msig end;
+   
+end;

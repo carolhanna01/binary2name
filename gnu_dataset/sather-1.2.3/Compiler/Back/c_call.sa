@@ -1,0 +1,511 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1996 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- author: Boris Vaysman
+-- date:   7-28-96
+
+partial class C_CALL is
+   -- This class implements sather->c and c->sather calls
+   -- Conformance to C parameter passing convention is ensured
+   -- here. sather->sather calls (regardless of whether it happens
+   -- inside or outside external C classes use Sather parameter
+   -- passing convention and are handled elsewhere.
+   
+   -- a bunch of stubs provided by CGEN
+   
+   private stub code_c:CODE_FILE;
+   private stub runtime_error(s:STR);
+   private stub dec_local(t:$TP):STR;
+   private stub dec_local_comment(t:$TP,com:STR):STR;
+   private stub dec_local_object(t:$TP):STR;
+   private stub ndefer(s:STR);
+   private stub need_caller_copy_out(ce:$AM_CALL_EXPR): BOOL; 
+   private stub mangler:MANGLE;   
+   private stub mang(ob:$OB):STR;
+   private stub emit_expr(arg:$AM_EXPR):STR;
+   private stub in; 
+   private stub move_out; 
+
+   private emit_c_call(ext_call:AM_EXT_CALL_EXPR):STR is
+      res_arg:STR;  -- argument that holds the return value
+      res:STR;      -- return value
+      arg_list:ARRAY{STR}; 
+      -- a list of C args
+      final_arg_list:ARRAY{STR};
+      -- different from arg_list  in the presence of out/inout args. 
+      -- Need to ensure value/result semantics in the caller coder, so 
+      -- some copying will take place
+      type_list:ARRAY{STR};
+      -- a list of C typese correposnding to arg_list 
+      need_copy:BOOL; 
+      -- true if the caller must ensure value/result semantics for 
+      -- out/inout arguments
+   
+      -- create a list of C arguments
+      emit_c_args(ext_call, out arg_list, out type_list);
+      need_copy := need_caller_copy_out(ext_call);
+
+      -- handle out/inout args if necessary
+      -- The caller must ensure the value/result sematics as we can't
+      -- change the external code
+      if need_copy then
+	 final_arg_list:=c_caller_copy_in(ext_call, arg_list);
+      else
+	 final_arg_list := arg_list;
+      end;
+      
+      extern:STR:="extern ";
+      if ~void(ext_call.tp) then 
+	 -- C function returns something
+	 extern:=extern.append(mang(ext_call.tp)," ");
+      else
+	 extern:=extern.append("void ");
+      end;
+      
+      res := bind_c_name(ext_call.nm.str);
+      mangler.force_mangle(ext_call.fun, res, void);
+      
+      extern := extern.append(res, "(");
+      res:=res.append("(");
+
+      arg_pos:INT := 0;
+      loop 
+	 i::=1.upto!(ext_call.size-1);
+	 if ext_call[i].mode.is_out_inout then
+	    res:=res.append("&",final_arg_list[arg_pos]);
+	    extern:=extern.append(type_list[arg_pos],"*");	    
+	 else
+	    res:=res.append(final_arg_list[arg_pos]);
+	    extern:=extern.append(type_list[arg_pos]);
+	 end;
+	 if arg_pos<final_arg_list.size-1 then
+	    extern:=extern.append(", ");
+	    res:=res.append(", ");
+	 end;
+	 arg_pos := arg_pos + 1;
+      end;
+      
+      extern:=extern.append(");\n");
+      res := res.append(")");      
+      -- do not emit prototypes for features in runtime. They should
+      -- be in the system header files.
+      if ~ext_call.ext_tp.is_builtin then
+	 code_c.uses_extern(extern);
+      end;
+      
+      if need_copy then 
+	 if ~void(ext_call.tp) then
+	    tmp_ret::=dec_local(ext_call.tp);
+	    ndefer(tmp_ret.append("=",res,";"));
+	    res := tmp_ret;
+	 else
+	    ndefer(res+";");
+	    res := void;  -- nothing to return;
+	 end;
+	 c_caller_copy_out(ext_call, arg_list, final_arg_list);
+      end;
+      return res;
+   end;
+   -------------------------------------------------------------------------- 
+   
+   bind_c_name(name:STR):STR is
+      res:STR;
+      res := name;
+      
+      -- May need to add this stuff at some point
+--      if c_bind_func then
+--	 res := BIND_C::bind_name(res);
+--      end;
+      return res;
+   end;
+   -------------------------------------------------------------------------- 
+      
+   private emit_c_args(ext_call:AM_EXT_CALL_EXPR, out arg_list:ARRAY{STR}, 
+		       out type_list:ARRAY{STR}) is
+      -- At this point, all arguments must have C_* types. The front/middle
+      -- ends should take care of this.
+      -- Args are generated in a pretty straightforward fashion.
+      -- (There is _no_ implicit self argument)
+      
+      num_args:INT := ext_call.size-1;  -- no self argumemt
+      arg_list := #ARRAY{STR}(num_args);
+      type_list := #ARRAY{STR}(num_args);
+      
+      arg_pos:INT := 0;
+      if ext_call.asize>1 then
+	 loop i::=1.upto!(ext_call.asize-1);
+	    arg_list[arg_pos] := emit_c_call_arg(ext_call[i]);
+	    tp ::= ext_call[i].expr.tp;
+	    type_list[arg_pos] := c_type_for_arg(tp);
+	    arg_pos := arg_pos + 1;
+	 end;
+      end;
+   end;
+--------------------------------------------------------------------------
+   
+   private emit_c_call_arg(a:AM_CALL_ARG):STR is
+      res:STR;
+      se: STR;
+      
+      se := emit_expr(a.expr);
+      aexpr ::= a.expr;
+      amode ::= a.mode;
+      atp ::= aexpr.tp;
+      
+      case amode 
+      when MODES::in_mode then
+	 if atp.is_immutable then
+	    -- handle "immutable" types
+	    res := se;
+	 else
+	    res := se;
+	 end;
+      when MODES::out_mode, MODES::inout_mode then
+	 -- Do not do anything special for now
+	 res := se;
+      end; -- "once" should not find its way here
+      return res;
+   end;	 
+
+   --------------------------------------------------------------------------
+   
+   c_type_for_arg(tp:$TP):STR is
+      -- return the C type for the protype of the argument with tp Sather type
+	 return mang(tp);
+   end;
+   --------------------------------------------------------------------------
+
+   private c_caller_copy_in(ext_call:AM_EXT_CALL_EXPR,  
+			    arg_list:ARRAY{STR}):ARRAY{STR} is
+      -- copy evaluated out/inout args to temporaries to ensure
+      -- value/result semantics (We can't do this in the callee
+      -- as we have to no access to its code (external)
+      final_arg_list:ARRAY{STR}:=#(arg_list.size);
+      
+      arg_pos ::= 0;
+      
+      if ext_call.asize>1 then
+	 loop i::=1.upto!(ext_call.size-1);
+	    if ext_call[i].mode.is_out_inout then
+	       tmp::=dec_local_comment(ext_call[i].expr.tp, "Temporary for "+arg_list[arg_pos]);
+	       ndefer(tmp.append("=",arg_list[arg_pos],";"));
+	       final_arg_list[arg_pos] := tmp;
+	    else
+	       -- nothing special
+	       final_arg_list[arg_pos] := arg_list[arg_pos];
+	    end;
+	    arg_pos := arg_pos + 1;
+	 end;
+      end;
+      return final_arg_list;
+   end;
+
+   
+   private c_caller_copy_out(ext_call:AM_EXT_CALL_EXPR, arg_list:ARRAY{STR}, 
+			     final_arg_list:ARRAY{STR}) is
+      -- Copy things back to the arguments after the call to ensure
+      -- value/result semantics
+
+      arg_pos::=0;
+      loop 
+	 i::=1.upto!(ext_call.size-1);
+	 if ext_call[i].mode.is_out_inout then
+	    -- do copy out
+	    ndefer(arg_list[arg_pos].append("=", final_arg_list[arg_pos],";"));
+	 end;
+	 arg_pos := arg_pos + 1;
+      end;
+   end;
+end;  -- C_CALL
+
+--------------------------------------------------------------------------
+partial class C_ROUTINE is
+   stub ndefer(s:STR);   
+   stub func_name_comment:STR;
+   stub saw_outer_return:BOOL;
+   stub saw_outer_return(v:BOOL);
+   stub mangler:MANGLE;
+   private stub mang(ob:$OB):STR;   
+   private stub mang(ob,ns:$OB):STR;
+   private stub dec_local_for_arg(a:AM_FORMAL_ARG, sig:SIG, s:STR): STR;
+   stub debug:BOOL;
+   stub pretty:BOOL;
+   stub func_tables:BOOL;
+   stub c_type_for_arg(tp:$TP):STR; 
+   private stub comment(f:CODE_FILE,com:STR);
+   private stub bind_c_name(name:STR):STR;
+   private stub manual_unlock:BOOL;
+   private stub pop_exceptions(n:INT);
+   private stub current_am_rout_def:AM_ROUT_DEF;
+   private stub emit_expr(arg:$AM_EXPR):STR;
+   private stub current_sig:SIG;
+   private stub ex_nesting:INT;  
+   private stub current_arg_list:ARRAY{STR};
+   
+   stub func_name_suffix:STR;	-- name used as suffix for functions that 
+                                -- expect some
+			        -- arguments to be near (pSather only)
+   
+   private attr current_c_arg_list:ARRAY{STR};
+   
+   private emit_c_prologue(f:AM_ROUT_DEF) pre ~void(f.sig) is
+      -- emit a prologue for a Sather function that is to conform to
+      -- the C parameter passing convention (these could be called
+      -- from C
+
+      res_arg:STR;  -- arg that holds the return value (if any)
+      arg_list:ARRAY{STR}; 
+      -- a list of C args (could be larger than Sather arg list)
+      final_arg_list:ARRAY{STR};
+      -- different from arg_list  in the presence of out/inout args. 
+      -- Need to ensure value/result semantics in the caller coder, so 
+      -- some copying will take place
+      type_list:ARRAY{STR};
+      -- a list of C types correposnding to arg_list 
+      num_args:INT; -- the number of args
+      has_return:BOOL;
+      
+      saw_outer_return:=false;
+      sig:SIG:=f.sig;
+      
+      newline; newline;
+      code_c+"\n#undef IS_ITER\n#define IS_ITER 0\n";
+
+      comment(code_c,"Definition of "+sig.str+func_name_comment);
+      code_c+'\n';
+
+      rout_index:STR;
+      if func_tables then
+	 rout_index:=PRINT_OB::register(f.sig);
+      end; 
+      if debug then
+	 code_c+"\n#line "
+	       +f.source.line_num_in+" \""+f.source.file_in+"\"\n";
+	 last_lineno:=f.source.line_num_in;
+      elsif pretty then
+	 code_c+"\n/* #line "
+	       +f.source.line_num_in+" \""+f.source.file_in+"\" */\n";
+	 last_lineno:=f.source.line_num_in;
+      end;
+
+      
+      generate_c_args(f, out arg_list, out type_list);
+      has_return := ~void(f.sig.ret); 
+      
+      -- skip the out/inout handling for the moment
+      final_arg_list := arg_list;
+      current_c_arg_list := final_arg_list;
+      
+      if has_return  then  -- generated C returns something
+	 code_c+mang(sig.ret)+' ';
+      else 
+	 code_c+"void ";
+      end;
+      
+      name:STR := bind_c_name(sig.name.str);
+      mangler.force_mangle(sig, name, void);
+      
+      -- the suffix is used to distinguish different versions of the same
+      -- functions (they expect different arguments to be near)
+      code_c+mang(sig)+func_name_suffix+'(';
+
+      code_c.uses_sig(sig);
+      -- out/inout args
+      out_args:BOOL:=false;
+      
+      loop 
+	 arg_str ::= final_arg_list.elt!;
+	 type_str::= type_list.elt!; 
+	 code_c+", ".separate!(type_str+' '+arg_str);
+      end;
+      
+      if func_tables then -- function frame
+	 code_c+", struct _func_frame *prev_func_frame";
+      end;
+      
+	
+      code_c+") {";
+      in;
+      -- Declare/initialize out/inout stuff
+      loop i::=1.upto!(f.asize-1);
+	 e::=f[i];
+	 if e.mode.is_out_inout then
+	    -- declare temporaries playing the role of *arg
+	    init_str:STR;
+	    
+	    if e.mode = MODES::inout_mode then
+	       --declare & initialize the temporary
+	       init_str := "*"+final_arg_list[i-1];
+	    else
+	       init_str := default_init(e.tp);
+	    end;
+	    local::=dec_local_for_arg(e, f.sig, init_str);
+	 end;
+      end;	   
+      
+            -- If PO is on, generate function frame
+      if func_tables then
+	 -- ndefer("void *_local_frame[]={");
+	 -- because of a bug in GCC the above way to define local_frame compiles,
+	 -- but produces buggy code. So we have to count the number of
+	 -- elements first;
+	 ll:FLIST{STR}:=#;
+	 cn::=0;
+	 loop
+	    k::="(void *)&"+mang(f.elt!.expr,sig);
+	    if f.is_external and 1.up!=1 then k:="NULL"; end;
+	    ll:=ll.push(k);
+	    cn:=cn+1;
+	 end;
+	 loop l::=f.locals.elt!;
+	    if ~void(l.name) and l/=f.rres then
+		  l.needs_init:=true;
+	       ll:=ll.push("(void *)&"+mang(l,sig));
+	       cn:=cn+1;
+	    end;
+	 end;
+	 -- Had to rewrite the following to avoid automatic
+	 -- struct and array initialization: native SGI and alpha compilers
+	 -- can't handle this, although it appears to be ANSI
+	 -- Now do field by field assignments
+	 -- Boris, 8/21/96
+	 ndefer("void *_local_frame["+cn+"];");
+	 ndefer("struct _func_frame FF;");
+	 
+	 loop
+	    i::=0.upto!(cn-1);
+	    defer("_local_frame[".append(i.str,"]=",ll.elt!,";"));
+	 end;
+	 defer("FF.func=".append(rout_index,";"));
+	 if f.is_external or sig.is_forked then
+	    defer("FF.prev=NULL;");
+	 else
+	    defer("FF.prev=prev_func_frame;");
+	 end;
+	 defer("FF.args=_local_frame;");
+      end;
+
+      -- We cannot do the following above before doing the -PO
+      -- stuff. We want the rest to be done before, so
+      -- that those locals are initialized BEFORE the function
+      -- frame. This is not critical for iters, as their frame
+      -- is initialized to zero anyway (because its allocated
+      -- on the heap).
+
+      -- now emit local declarations (if an iter, they are on the
+      -- frame and don't need to be declared).
+      if ~void(f.locals) then  
+	 loop 
+	    lv:AM_LOCAL_EXPR:=f.locals.elt!;
+	    assert ~void(lv) and ~void(lv.tp);
+	    code_c.uses_tp(lv.tp); --here
+	    newline;
+	    if lv.is_volatile then code_c+"volatile "; end;
+	    if lv.needs_init or lv.tp.is_immutable then
+	       def:STR:=default_init(lv.tp);
+	       code_c+mang(lv.tp)+' '+mang(lv,sig)+" = "+def+';';
+	    else
+	       code_c+mang(lv.tp)+' '+mang(lv,sig)+';';
+	    end;
+	 end;
+      end;
+
+      if sig.is_forked then	-- unbox the self
+	 newline;
+	 code_c+mang(f[0].expr.tp)+" self;";
+	 ndefer( "self = " + cast(sig.tp,TP_BUILTIN::dollar_ob,"self_to_be",false)+';');
+      end;
+      
+      current_arg_list := final_arg_list;
+   end;
+      
+   
+--------------------------------------------------------------------------
+   private generate_c_args(rout_def:AM_ROUT_DEF, out arg_list:ARRAY{STR}, 
+		     out type_list:ARRAY{STR}) is
+      -- At this point, all arguments must have C_* types. The front/middle
+      -- ends should take care of this 
+      -- Self arg is not generated for C
+      num_args:INT; 
+      sig:SIG := rout_def.sig;      
+      num_args := sig.args.size;
+      arg_list := #ARRAY{STR}(num_args);
+      type_list := #ARRAY{STR}(num_args);
+      
+      arg_pos:INT := 0;
+      
+      if num_args>0 then
+	 loop i::=1.upto!(rout_def.size-1);
+	    arg::=rout_def[i];
+	    arg_name:STR;
+	    le::=arg.expr;
+	    typecase le
+	    when AM_LOCAL_EXPR then
+	       arg_name:=le.name.str;
+	    end;
+	    tp ::= rout_def[i].expr.tp;
+	    type_list[arg_pos] := c_type_for_arg(arg);
+	    if arg.mode.is_out_inout then
+	       -- do not mangle out/inout args
+	       expr::=arg.expr;
+	       lv::= #AM_LOCAL_EXPR(expr.source, expr.name, 
+				    expr.tp, expr.as_type);
+	       arg_list[arg_pos] := mang(lv,sig);
+	    else
+	       arg_list[arg_pos] := mang(arg.expr,sig);
+	    end;
+	    arg_pos := arg_pos + 1;
+	 end;
+      end;
+   end;
+
+   --------------------------------------------------------------------------  
+   private c_type_for_arg(a:AM_FORMAL_ARG):STR is
+      str::=c_type_for_arg(a.tp);
+      if a.mode.is_out_inout then
+	 str := str+"*";
+      end;
+      return str;
+   end;
+   
+   -------------------------------------------------------------------------- 
+   private generate_c_arg_types(sig:SIG):STR is
+      -- generate ',' separate list for types for prototypes
+      res:STR;
+      loop arg::=sig.args.elt!;
+	 res := res+",".separate!(c_type_for_arg(arg));
+      end;
+      return res;
+   end;
+   --------------------------------------------------------------------------  
+   
+   c_func_dec(sig:SIG):STR is
+      -- returns an ANSI C prototype for a function conforming to
+      -- to a C parameter passing convention (for C funcs
+      -- with bodies in external C classes)
+      res:STR;
+      
+      if ~void(sig.ret) then
+	 res := res.append(mang(sig.ret), " ");
+      else
+	 res := res.append("void ");
+      end;
+      
+      res := res.append(sig.name.str);
+      res := bind_c_name(res);
+      res := res.append(func_name_suffix,"(",generate_c_arg_types(sig),");");
+      return res;
+   end;
+end; -- C_ROUTINE
+
+

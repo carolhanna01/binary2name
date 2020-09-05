@@ -1,0 +1,1282 @@
+@q shapes.web @>
+  
+@q * Copyright and License.@>
+
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+
+@q * (0) Shape.@>
+@** {\bf class Shape}\quad ({\tt shapes\PERIOD web}). \hfil
+\initials{LDF Undated.}
+
+\initials{LDF 2002.10.20.}  
+|Shape| is an abstract class.  This means that no
+objects of type |Shape| may be declared.  |Shape| is used as a base
+class for all ``drawable'' classes, e.g., |Point|, |Path|, and
+|Dodecahedron|.  All objects that are put onto a |Picture| must be
+either |Shapes| or |Labels|.
+
+\LOG
+\initials{LDF 2003.11.12.}  
+Removed the version control identifiers from the CWEB
+files for the distribution of 3DLDF 1.1.  They're still used in my
+development versions.
+
+\initials{LDF 2003.12.10.}  
+Put the version control identifiers back
+into my release versions for 3DLDF 1.1.4.  I've already put some of
+them back in, now I'm doing the rest of them.  However, the release
+versions are now in their own RCS repository.
+\ENDLOG 
+
+@q * (1) Include files.@>
+@* Include files.
+
+\LOG
+\initials{LDF 2004.05.09.}  
+Now including \filename{creatnew.h}.
+
+\initials{LDF 2004.05.21.}  
+Now including \filename{pens.web}.
+\ENDLOG 
+
+@<Include files@>=
+
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+
+@q * (1) {\bf Shape} class declaration. @>
+@*  {\bf Shape} class declaration.
+
+@ |class Point| is known when \filename{shapes.c} is compiled, because
+it's declared (but not defined) in\goodbreak \filename{transfor.web}, which is
+processed by \.{cmpl} first.   
+
+@:??@> ?? Apparently, both the return value and the argument types of
+pure virtual functions must be the same, otherwise the derived classes
+will cause compiler errors. Check where this is stated.
+
+\LOG
+\initials{LDF 2003.05.16.}  
+Added declarations of |get_minimum_z| and
+|get_mean_z|.
+
+\initials{LDF 2005.01.24.}
+Added |unsigned short shape_type| and static 
+constants for setting it.
+
+\initials{LDF 2005.03.16.}
+Added |Pointer_Vector<Pen>* pen_vector| and 
+|Pointer_Vector<Dash_Pattern>* dash_pattern_vector|.
+
+\initials{LDF 2005.03.17.}
+Moved |Pointer_Vector<Color>* draw_color_vector| from |class Path|
+to here.  Added |Pointer_Vector<Color>* fill_color_vector|.
+
+\initials{LDF 2005.03.31.}
+Added |unsigned long surface_hiding_ctr|.
+
+\initials{LDF 2005.04.18.}
+Added |unsigned long decomposition_level|.
+\ENDLOG 
+
+@f Shape int
+
+@q ** (2) Declaration. @>
+
+@<Define |Shape| class@>=
+class Shape
+{
+
+
+
+ protected: 
+
+  unsigned short shape_type;
+
+  unsigned long surface_hiding_ctr;
+
+  unsigned long decomposition_level;
+ 
+
+  Pointer_Vector<Color>* draw_color_vector;
+  Pointer_Vector<Color>* fill_color_vector;
+
+
+  Pointer_Vector<Pen>* pen_vector;
+  Pointer_Vector<Dash_Pattern>* dash_pattern_vector;
+
+@q *** (3) Constants for drawing and filling.@> 
+
+@*2 Constants for drawing and filling.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.08.16.}
+Added |static const signed short CLIP_VALUE|.
+\ENDLOG
+
+
+@<Define |Shape| class@>=
+
+  static const signed short DRAWDOT_VALUE;  /* |const| values used for output.  */
+  static const signed short DRAW_VALUE;
+  static const signed short FILL_VALUE;
+  static const signed short FILLDRAW_VALUE;
+  static const signed short UNDRAWDOT_VALUE;
+  static const signed short UNDRAW_VALUE;
+  static const signed short UNFILL_VALUE;  
+  static const signed short UNFILLDRAW_VALUE;
+  static const signed short CLIP_VALUE;
+
+@q *** (3) Constants for setting |shape_type|.@> 
+
+@ Constants for setting |shape_type|.
+\initials{LDF 2005.01.24.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Added this section.
+
+\initials{LDF 2005.01.24.}
+Added |static const unsigned short CUBOID_TYPE|.  I'd forgotten it
+before.
+
+\initials{LDF 2005.03.18.}
+Added |static const unsigned short POLYGON_TYPE|.
+
+\initials{LDF 2005.03.18.}
+Added |static const unsigned short NURB_TYPE|.
+
+\initials{LDF 2005.03.18.}
+Added |static const unsigned short SOLID_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Added |static const unsigned short SOLID_FACED_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Added |static const unsigned short POLYHEDRON_TYPE|.
+
+\initials{LDF 2005.04.01.}
+Added |static const unsigned short POINT_POINTER_VECTOR_TYPE|.
+
+\initials{LDF 2005.04.01.}
+Added |static const unsigned short NULL_TYPE|.
+
+\initials{LDF 2005.05.18.}
+Added |static const unsigned short HELIX_TYPE|.
+
+\initials{LDF 2005.05.21.}
+Changed |NULL_TYPE| to |NULL_SHAPE_TYPE|.
+
+\initials{LDF 2005.05.24.}
+Added the |static const unsigned shorts| |CONE_TYPE|,
+|CYLINDER_TYPE|, |ELLIPSOID_TYPE|, and |SPHERE_TYPE|.
+
+\initials{LDF 2005.11.01.}
+Added the |static const unsigned short| |CONIC_SECTION_TYPE|.
+
+\initials{LDF 2005.11.07.}
+Added the |static const unsigned shorts| |PARABOLA_TYPE|,
+|HYPERBOLA_TYPE|, |PARABOLOID_TYPE|, and |HYPERBOLOID_TYPE|.
+
+\initials{LDF 2006.01.25.}
+Added the |static const unsigned shorts| |ELLIPTICAL_PARABOLOID_TYPE|,
+|HYPERBOLIC_PARABOLOID_TYPE|, |ONE_SHEET_HYPERBOLOID_TYPE|, and 
+|TWO_SHEET_HYPERBOLOID_TYPE|.
+
+\initials{LDF 2006.11.06.}
+Added the |static const unsigned shorts|
+|ELLIPTICAL_CYLINDER_TYPE|,
+|CIRCULAR_CYLINDER_TYPE|,
+|PARABOLIC_CYLINDER_TYPE|, and
+|HYPERBOLIC_CYLINDER_TYPE|.
+
+\initials{LDF 2006.11.08.}
+Added the |static const unsigned shorts| |ELLIPTICAL_CONE_TYPE|,
+|CIRCULAR_CONE_TYPE|, |PARABOLIC_CONE_TYPE|, and 
+|HYPERBOLIC_CONE_TYPE|.
+
+\initials{LDF 2007.10.13.}
+Added the |static const unsigned short| |ARC_TYPE|.
+
+\initials{LDF 2007.10.22.}
+Added the |static const unsigned short| |RHOMBIC_TRIACONTAHEDRON_TYPE|.
+
+\initials{LDF 2009.11.04.}
+Added the |static const unsigned short| |SPHERE_DEVELOPMENT_TYPE|.
+
+\initials{LDF 2009.11.09.}
+Removed the |static const unsigned short| |SPHERE_DEVELOPMENT_TYPE|.  There's no
+need for |class Sphere_Development| to be derived from |Shape|.
+\ENDLOG
+
+@q **** (4) Code.@> 
+
+@<Define |Shape| class@>=
+
+   public:
+
+
+      static map<unsigned short, string> type_name_map;
+
+      static const unsigned short NULL_SHAPE_TYPE;
+      static const unsigned short POINT_TYPE;
+      static const unsigned short POINT_POINTER_VECTOR_TYPE;
+      static const unsigned short NURB_TYPE;
+      static const unsigned short PATH_TYPE;
+      static const unsigned short POLYGON_TYPE;
+      static const unsigned short TRIANGLE_TYPE;
+      static const unsigned short RECTANGLE_TYPE;
+      static const unsigned short REG_POLYGON_TYPE;
+      static const unsigned short CONIC_SECTION_TYPE;
+      static const unsigned short ELLIPSE_TYPE;
+      static const unsigned short CIRCLE_TYPE;
+      static const unsigned short PARABOLA_TYPE;
+      static const unsigned short HYPERBOLA_TYPE;
+      static const unsigned short ARC_TYPE;
+      static const unsigned short HELIX_TYPE;
+      static const unsigned short SOLID_TYPE;
+      static const unsigned short SOLID_FACED_TYPE;
+      static const unsigned short POLYHEDRON_TYPE;
+      static const unsigned short CUBOID_TYPE;
+      static const unsigned short TETRAHEDRON_TYPE;
+      static const unsigned short OCTAHEDRON_TYPE;
+      static const unsigned short DODECAHEDRON_TYPE;
+      static const unsigned short ICOSAHEDRON_TYPE;
+      static const unsigned short TRUNC_OCTAHEDRON_TYPE;
+      static const unsigned short GREAT_RHOMBICOSIDODECAHEDRON_TYPE;
+      static const unsigned short RHOMBIC_TRIACONTAHEDRON_TYPE;
+
+      static const unsigned short CONE_TYPE;
+      static const unsigned short ELLIPTICAL_CONE_TYPE;
+      static const unsigned short CIRCULAR_CONE_TYPE;
+      static const unsigned short PARABOLIC_CONE_TYPE;
+      static const unsigned short HYPERBOLIC_CONE_TYPE;
+
+      static const unsigned short CYLINDER_TYPE;
+      static const unsigned short ELLIPTICAL_CYLINDER_TYPE;
+      static const unsigned short CIRCULAR_CYLINDER_TYPE;
+      static const unsigned short PARABOLIC_CYLINDER_TYPE;
+      static const unsigned short HYPERBOLIC_CYLINDER_TYPE;
+
+      static const unsigned short ELLIPSOID_TYPE;
+      static const unsigned short SPHERE_TYPE;
+
+      static const unsigned short PARABOLOID_TYPE;
+      static const unsigned short ELLIPTICAL_PARABOLOID_TYPE;
+      static const unsigned short HYPERBOLIC_PARABOLOID_TYPE;
+
+      static const unsigned short HYPERBOLOID_TYPE;
+      static const unsigned short ONE_SHEET_HYPERBOLOID_TYPE;
+      static const unsigned short TWO_SHEET_HYPERBOLOID_TYPE;
+
+
+@q *** (3) Constants for testing integrity of form.@> 
+@*2 Constants for testing integrity of form.
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this section with the declaration of |DEFAULT_TOLERANCE|.
+\ENDLOG
+
+@<Define |Shape| class@>=
+
+   static const real DEFAULT_TOLERANCE;
+
+@q *** (3) Constants for surface hiding.@> 
+
+@ Constants for surface hiding.
+\initials{LDF 2005.04.10.}
+
+\LOG
+\initials{LDF 2005.04.10.}
+Added this section with the declaration of 
+|DEFAULT_SELF_DECOMPOSITION_LIMIT|.
+
+\initials{LDF 2005.06.30.}
+Added the |static const unsigned shorts| 
+|WORLD_COORDINATES_VALUE|, 
+|PRE_PROJECTIVE_COORDINATES_VALUE|,
+|PROJECTIVE_COORDINATES_VALUE|,
+|USER_COORDINATES_VALUE|, and |VIEW_COORDINATES_VALUE|.
+\ENDLOG
+
+@<Define |Shape| class@>=
+
+   static const unsigned short DEFAULT_SELF_DECOMPOSITION_LIMIT;
+
+   static const unsigned short WORLD_COORDINATES_VALUE;
+   static const unsigned short PRE_PROJECTIVE_COORDINATES_VALUE;
+   static const unsigned short PROJECTIVE_COORDINATES_VALUE;
+   static const unsigned short USER_COORDINATES_VALUE;
+   static const unsigned short VIEW_COORDINATES_VALUE;
+
+
+@q *** (3) |Shape| function declarations.@> 
+
+@ |Shape| function declarations.  All |Shape| functions are pure
+virtual functions. 
+\initials{LDF Undated.}
+
+I've thought about getting rid of |get_copy| a
+couple of times, and using\break 
+\.{create\_new\_}\<type>||
+instead, but it's not possible:  |get_copy| is used in |Picture|
+functions for objects of types derived from |Shape| where the type is
+not known.  The compiler must resolve to the correct version of
+|get_copy|, so a |virtual Shape| function is needed.  The 
+``\.{create\_new\_}\<type>||''
+functions are not
+|virtual Shape| functions, and can't be, because the names of the
+types are part of the name of the functions.  I could solve this
+problem by renaming |get_copy| |create_new|, but what I wanted to
+do was have a template function |create_new| (or just |create|).
+So far, I haven't been able to get this to work.  So, for the time
+being, I'm leaving things as they are.
+\initials{LDF 2002.10.20.}  
+
+The default arguments to |show| are
+necessary.
+\initials{LDF 2002.10.23.}  
+
+\LOG
+\initials{LDF 2004.05.25.}  
+Added |Scanner_Node| argument to
+|output|. 
+
+\initials{LDF 2004.10.03.}
+Added declaration of |reflect_in|.
+
+\initials{LDF 2004.10.03.}
+Replaced ``|()|'' with ``|(void)|'' in function declarations.
+
+\initials{LDF 2004.10.11.}
+Added declaration of |reflect_off|.  
+It is currently commented-out.  I will comment it in once I've added
+versions for |Point|, |Path|, and |Solid|.
+
+\initials{LDF 2004.10.12.}
+Changed the arguments and return value of |reflect_in|.  
+Following a system update, having |Shape*| as the return value 
+no longer worked.
+
+\initials{LDF 2005.03.18.}
+Added the declaration of the |const| pure virtual function 
+|get_shape_type|.
+
+\initials{LDF 2005.04.09.}
+Added the declaration of the pure virtual function 
+|copy_coords|.
+
+\initials{LDF 2005.04.11.}
+In the declaration of |copy_coords|:  Removed the defaults for the |const char| 
+arguments |from| and |to|.  Added the |Scanner_Node scanner_node| argument with
+the default 0.
+
+\initials{LDF 2005.04.15.}
+In the declaration of |copy_coords|:
+Added the optional argument |bool set_z_to_zero| 
+with the default |false|.
+\ENDLOG 
+
+@q *** (3) public. @>
+
+@<Define |Shape| class@>=
+
+ public: 
+
+  @<Declare static |Shape| functions@>@;
+
+  virtual 
+  int copy_coords(const char from, 
+                  const char to, 
+                  bool set_z_to_zero = false,
+                  Scanner_Node scanner_node = 0) = 0;
+
+  virtual 
+  void show(string text = "", 
+            char coords = 'w',
+            const bool do_persp = true, 
+            const bool do_apply = true,
+            Focus* f = 0, 
+            const unsigned short proj = 0,
+            const real factor = 1) const = 0;
+
+  virtual Shape* get_copy(void) const  = 0;
+
+  virtual void clear(void) = 0;
+  virtual void output(Scanner_Node) = 0;
+  virtual vector<Shape*> extract(const Focus&,
+                                 const unsigned short proj,
+                                 real factor) = 0;
+  virtual Transform rotate(const real, const real, const real) = 0;
+  virtual Transform scale(real, real, real) = 0;
+  virtual Transform shear(real xy, real xz, real yx, real yz, 
+                          real zx, real zy) = 0;
+  virtual Transform shift(real, real, real) = 0;
+  
+  virtual Transform rotate(const Point&, const Point&,
+                                  const real) = 0;
+  virtual Transform operator*=(const Transform&) = 0;
+  virtual void apply_transform(void) = 0;
+
+  virtual int reflect_in(const Plane&,
+                         void*,
+                         const Scanner_Node = 0) const = 0;
+
+
+
+#if 0 
+
+  /* !! START HERE.  LDF 2004.10.11.  Commented this in, once I've
+    defined this function for |Point|, |Path|, and |Solid|.  */@; 
+
+  virtual Shape* reflect_off(const Plane&,
+                             const Point& direction,
+		             const Scanner_Node = 0) const = 0;
+#endif 
+
+  virtual void suppress_output(void) = 0;
+  virtual void unsuppress_output(void) = 0;
+
+  virtual unsigned short get_shape_type(void) const = 0;
+
+@q **** (4) Functions for output.@>      
+@ Functions for output.
+\initials{LDF 2005.03.23.}
+
+\LOG
+\initials{LDF 2005.03.23.}
+Added this section for existing functions.  Added the declaration of
+|enclosing_prisms_intersect|.
+
+\initials{LDF 2005.03.23.}
+Added the declaration of the pure virtual function 
+|Int_Void_Ptr intersection(Shape*)|.
+
+\initials{LDF 2005.03.31.}
+Changed the name of |enclosing_prisms_intersect|
+to |enclosing_cuboids_intersect|.
+
+\initials{LDF 2005.04.01.}
+Changed the return type of |enclosing_cuboids_intersect| 
+from |unsigned short| to |Unsigned_Byte|.
+
+\initials{LDF 2005.03.23.}
+Added optional |Scanner_Node scanner_node| argument to |set_extremes| 
+with default 0.
+
+\initials{LDF 2005.03.23.}
+Changed the return value of |get_extremes| from |const valarray <real>| to 
+|const valarray <real>&|, i.e., I've made it a reference.
+
+\initials{LDF 2005.04.04.}
+Changed the name of |set_extremes| to 
+|set_projective_extremes|.  Changed all references to it without comment.
+
+\initials{LDF 2005.04.04.}
+Changed the name of |get_extremes| to 
+|get_projective_extremes|.  Changed all references to it without comment.
+
+\initials{LDF 2005.04.04.}
+Added declarations for the functions |set_world_extremes| 
+and |get_world_extremes|.
+
+
+\initials{LDF 2005.04.04.}
+Added a |const| version of |enclosing_cuboids_intersect|.
+Added optional |Scanner_Node scanner_node| argument with default 0
+to both versions.
+
+\initials{LDF 2005.04.11.}
+Added the declaration of |projections_intersect|.
+
+\initials{LDF 2005.04.15.}
+Removed the declaration of the |const| version 
+of |enclosing_cuboids_intersect|.
+
+\initials{LDF 2005.04.19.}
+Added the declarations of |get_minimum_x|, 
+|get_maximum_x|, |get_mean_x|, |get_minimum_y|, 
+|get_maximum_y|, and |get_mean_y|.
+
+
+\initials{LDF 2005.06.30.}
+Now declaring |set_pre_projective_extremes| and 
+|get_pre_projective_extremes|.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument to 
+|get_minimum_x|, |get_maximum_x|, |get_mean_x|, |get_minimum_y|,
+|get_maximum_y|, |get_mean_y|, |get_minimum_z|,
+|get_maximum_z|, and |get_mean_z|.
+The default is the |static const unsigned short| 
+|Shape::PROJECTIVE_COORDINATES_VALUE|, which I've added today.
+
+\initials{LDF 2005.06.30.}
+Changed the default argument of  
+|get_minimum_x|, |get_maximum_x|, |get_mean_x|, |get_minimum_y|,
+|get_maximum_y|, |get_mean_y|, |get_minimum_z|,
+|get_maximum_z|, and |get_mean_z| from |Shape::PROJECTIVE_COORDINATES_VALUE|
+to 0.  I got the following error when linking:
+``undefined reference to |Shape::PROJECTIVE_COORDINATES_VALUE|''.
+
+\initials{LDF 2005.06.30.}
+Changed the default argument of  
+|get_minimum_x|, |get_maximum_x|, |get_mean_x|, |get_minimum_y|,
+|get_maximum_y|, |get_mean_y|, |get_minimum_z|,
+|get_maximum_z|, and |get_mean_z| back to 
+|Shape::PROJECTIVE_COORDINATES_VALUE| from 0.  I corrected the errors
+that made this necessary.
+
+\initials{LDF 2005.06.30.}
+Changed the default argument of  
+|get_minimum_x|, |get_maximum_x|, |get_mean_x|, |get_minimum_y|,
+|get_maximum_y|, |get_mean_y|, |get_minimum_z|,
+|get_maximum_z|, and |get_mean_z| from 
+|Shape::PROJECTIVE_COORDINATES_VALUE| to 
+|Shape::PRE_PROJECTIVE_COORDINATES_VALUE|
+\ENDLOG
+
+@<Define |Shape| class@>=  
+
+   virtual bool set_world_extremes(Scanner_Node scanner_node = 0) = 0;
+   virtual bool set_pre_projective_extremes(Scanner_Node scanner_node = 0) = 0;
+   virtual bool set_projective_extremes(Scanner_Node scanner_node = 0) = 0;
+
+
+   virtual const valarray<real>& get_world_extremes(void) const = 0;
+   virtual const valarray<real>& get_pre_projective_extremes(void) const = 0;
+   virtual const valarray<real>& get_projective_extremes(void) const = 0;
+
+   virtual real get_minimum_x(const unsigned short s 
+                              = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                              const = 0;
+
+   virtual real get_maximum_x(const unsigned short s 
+                              = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                              const = 0;
+
+   virtual real get_mean_x(const unsigned short s 
+                           = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                           const = 0;
+
+   virtual real get_minimum_y(const unsigned short s 
+                              = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                              const = 0;
+
+   virtual real get_maximum_y(const unsigned short s 
+                              = Shape::PRE_PROJECTIVE_COORDINATES_VALUE)
+                             const = 0;
+
+   virtual real get_mean_y(const unsigned short s 
+                           = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                          const = 0;
+
+   virtual real get_minimum_z(const unsigned short s 
+                              = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                             const = 0;
+
+   virtual real get_maximum_z(const unsigned short s 
+                              = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                             const = 0;
+
+   virtual real get_mean_z(const unsigned short s 
+                           = Shape::PRE_PROJECTIVE_COORDINATES_VALUE) 
+                          const = 0;
+
+   virtual 
+   Unsigned_Byte 
+   enclosing_cuboids_intersect(Shape* s, 
+                               Scanner_Node scanner_node = 0) = 0;
+
+
+
+   virtual 
+   Int_Void_Ptr 
+   intersection(Shape* s, 
+                Scanner_Node scanner_node = 0) = 0;
+
+
+   virtual 
+   Unsigned_Byte
+   projections_intersect(Shape*,
+                         Scanner_Node scanner_node = 0) = 0;
+
+
+
+
+@q **** (4) Functions for setting |Colors|, |Pens|, and |Dash_Patterns|.@>   
+
+@*3 Functions for setting {\bf Colors}, {\bf Pens}, and {\bf Dash\_Patterns}.
+\initials{LDF 2005.03.17.}
+
+\LOG
+\initials{LDF 2005.03.17.}
+Added this section
+with the declarations of |push_draw_color|,
+|push_fill_color|, and |push_color|.
+
+\initials{LDF 2005.03.18.}
+Added the declaration of |push_dash_pattern|.
+\ENDLOG
+
+@<Define |Shape| class@>=  
+
+
+  virtual int push_draw_color(Color*& c, bool copy = true) = 0;
+  virtual int push_fill_color(Color*& c, bool copy = true) = 0;
+  virtual int push_color(Color*& c, bool copy = true)      = 0;
+   
+  virtual int push_pen(Pen*& p, bool copy = true)          = 0;
+
+  virtual int push_dash_pattern(Dash_Pattern*& d, bool copy = true) = 0;
+
+@q **** (4) Functions for checking types.@>   
+@ Functions for checking types.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this section with the declaration of 
+|is_polygon|.
+
+\initials{LDF 2005.03.31.}
+Added declarations of other functions.  
+
+\initials{LDF 2005.04.04.}
+Made all these functions |const|.
+
+\initials{LDF 2005.05.24.}
+Added declarations of the following pure virtual functions:
+|is_ellipse_slice|, 
+|is_circle_slice|, 
+|is_helix|, 
+|is_helix_slice|, 
+|is_cuboid_slice|, 
+|is_polyhedron_slice|, 
+|is_cone|, 
+|is_cone_slice|, 
+|is_cylinder|, 
+|is_cylinder_slice|, 
+|is_ellipsoid|, 
+|is_ellipsoid_slice|, 
+|is_sphere|, 
+and
+|is_sphere_slice|.
+
+\initials{LDF 2005.11.07.}
+Added declarations of the pure virtual functions
+|is_parabola|, |is_hyperbola|, |is_paraboloid|, and |is_hyperboloid|.
+
+\initials{LDF 2007.10.13.}
+Added declaration of the pure virtual function
+|is_arc_type|.
+
+\initials{LDF 2009.11.04.}
+Added declaration of pure virtual function
+|is_sphere_development|. 
+
+\initials{LDF 2009.11.09.}
+Removed the declaration of the pure virtual function
+|is_sphere_development|.   There's no
+need for |class Sphere_Development| to be derived from |Shape|.
+
+\ENDLOG
+
+@<Define |Shape| class@>=  
+
+   virtual bool is_point(void) const = 0;
+   virtual bool is_nurb(void) const = 0;
+   virtual bool is_path(void) const = 0;
+   virtual bool is_polygon(void) const = 0;
+   virtual bool is_triangle(void) const = 0;
+   virtual bool is_rectangle(void) const = 0;
+   virtual bool is_reg_polygon(void) const = 0;
+   virtual bool is_ellipse(void) const = 0;
+   virtual bool is_ellipse_slice(void) const = 0;
+   virtual bool is_circle(void) const = 0;
+   virtual bool is_circle_slice(void) const = 0;
+   virtual bool is_parabola(void) const = 0;
+   virtual bool is_hyperbola(void) const = 0;
+   virtual bool is_arc_type(void) const = 0;
+   virtual bool is_helix(void) const = 0;
+   virtual bool is_helix_slice(void) const = 0;
+   virtual bool is_solid_faced(void) const = 0;
+   virtual bool is_polyhedron(void) const = 0;
+   virtual bool is_polyhedron_slice(void) const = 0;
+   virtual bool is_cuboid(void) const = 0;
+   virtual bool is_cuboid_slice(void) const = 0;
+   virtual bool is_tetrahedron(void) const = 0;
+   virtual bool is_octahedron(void) const = 0;
+   virtual bool is_dodecahedron(void) const = 0;
+   virtual bool is_icosahedron(void) const = 0;
+   virtual bool is_trunc_octahedron(void) const = 0;
+   virtual bool is_great_rhombicosidodecahedron(void) const = 0;
+   virtual bool is_cone(void) const = 0;
+   virtual bool is_cone_slice(void) const = 0;
+   virtual bool is_cylinder(void) const = 0;
+   virtual bool is_cylinder_slice(void) const = 0;
+   virtual bool is_ellipsoid(void) const = 0;
+   virtual bool is_ellipsoid_slice(void) const = 0;
+   virtual bool is_sphere(void) const = 0;
+   virtual bool is_sphere_slice(void) const = 0;
+   virtual bool is_paraboloid(void) const = 0;
+   virtual bool is_hyperboloid(void) const = 0;
+
+@q **** (4) Functions for checking integrity of form.@>   
+@ Functions for checking integrity of form.
+\initials{LDF 2005.10.26.}
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this section with the declaration of |is_whatever|.
+\ENDLOG
+
+@<Define |Shape| class@>=  
+
+   virtual bool is_whatever(Scanner_Node scanner_node = 0,
+                            real tolerance = Shape::DEFAULT_TOLERANCE) const = 0;
+
+
+@q **** (4) Functions for surface hiding.@>   
+@ Functions for surface hiding.
+\initials{LDF 2005.01.24.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Added this section with the declaration of 
+|decompose(const Path* p)|.
+
+\initials{LDF 2005.01.24.}
+In the declaration of |decompose|:
+Added |unsigned short level| argument with default 0.
+
+\initials{LDF 2005.02.01.}
+Changed the return value of |decompose| from |Pointer_Vector<Shape>*|
+to |Pointer_Vector<Path>*|.  Removed the |unsigned short level|
+argument and the default for the |const Path* p| argument.
+
+\initials{LDF 2005.02.01.}
+Added optional |Scanner_Node scanner_node| argument with default 0.
+
+\initials{LDF 2005.02.01.}
+Made |Path*| argument non-|const|.
+
+\initials{LDF 2005.03.31.}
+Added the declarations of |set_surface_hiding_ctr|,
+|reset_surface_hiding_ctr|, and |get_surface_hiding_ctr|.
+
+\initials{LDF 2005.04.01.}
+Added the declaration of the version of |decompose| that takes a
+|Shape*| argument and returns a |Pointer_Vector<Shape>*|.
+
+\initials{LDF 2005.04.04.}
+Made both versions of |decompose| |const|.  Also made their first 
+arguments |const|, i.e, |Path*| and |Shape*|, respectively.
+
+\initials{LDF 2005.04.05.}
+Made both versions of |decompose| non-|const| again.  
+Also made their first arguments non-|const| again, 
+i.e, |Path*| and |Shape*|, respectively.
+
+\initials{LDF 2005.04.05.}
+@:BUG FIX@> BUG FIX:  Added declaration of |get_surface_hiding_ctr|.
+It was missing before.
+
+\initials{LDF 2005.04.11.}
+Added the declaration of the version of |decompose| that takes an |unsigned short|
+argument.  This version is for self-decomposition.
+
+\initials{LDF 2005.04.13.}
+Removed the declaration of the version of |decompose| that takes 
+an |unsigned short| argument.  I was having trouble with the version for
+|Triangles|, and I want to simplify matters by not having to convert 
+the |Pointer_Vector| return value to a |Pointer_Vector<Shape>|.  
+I may change this back later.
+
+\initials{LDF 2005.04.14.}
+Added the declaration of the version of |decompose| that takes 
+an |unsigned short| argument again.
+
+\initials{LDF 2005.04.18.}
+Added the declarations of |set_decomposition_level|,
+|reset_decomposition_level|, and |get_decomposition_level|.
+\ENDLOG
+
+@<Define |Shape| class@>=  
+
+   virtual 
+   void 
+   set_surface_hiding_ctr(unsigned long u) = 0;
+
+   virtual 
+   unsigned long 
+   get_surface_hiding_ctr(void) = 0;
+
+   virtual 
+   unsigned long 
+   reset_surface_hiding_ctr(unsigned long u = 0) = 0;
+
+
+   virtual 
+   void 
+   set_decomposition_level(unsigned long u) = 0;
+
+   virtual 
+   unsigned long 
+   get_decomposition_level(void) = 0;
+
+   virtual 
+   unsigned long 
+   reset_decomposition_level(unsigned long u = 0) = 0;
+
+   virtual 
+   Pointer_Vector<Path>* decompose(Path* p, 
+                                   Scanner_Node scanner_node = 0) = 0;
+
+   virtual 
+   Pointer_Vector<Shape>* decompose(Shape* s, 
+                                    Scanner_Node scanner_node = 0) = 0;
+ 
+   virtual 
+   Pointer_Vector<Shape>*
+   decompose(const unsigned short limit, 
+             const bool use_rectangles = false,
+             Scanner_Node scanner_node = 0) = 0;
+
+
+};
+
+@q * (1) Static data members. @>
+
+@* Static data members.
+\initials{LDF Undated.}
+
+@q ** (2) |type_name_map|.@> 
+@ |type_name_map|.
+\initials{LDF 2005.04.02.}
+
+\LOG
+\initials{LDF 2005.04.02.}
+Added this section.
+\ENDLOG
+
+@<Define |static| |Shape| member variables@>=
+
+   map<unsigned short, string> Shape::type_name_map;
+
+@q ** (2) Constants for drawing and filling.@> 
+
+@ Constants for drawing and filling.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.08.16.}
+Now setting |CLIP_VALUE|.
+\ENDLOG 
+
+@<Define |static| |Shape| member variables@>=
+
+
+   const signed short Shape::DRAWDOT_VALUE  = 1;
+   const signed short Shape::DRAW_VALUE     = 2;
+   const signed short Shape::FILL_VALUE     = 3;
+   const signed short Shape::FILLDRAW_VALUE = 4;
+   const signed short Shape::CLIP_VALUE     = 5;
+
+   const signed short Shape::UNDRAWDOT_VALUE = -1;
+   const signed short Shape::UNDRAW_VALUE = -2;
+   const signed short Shape::UNFILL_VALUE = -3;
+   const signed short Shape::UNFILLDRAW_VALUE = -4;
+
+
+
+@q ** (2) Constants for |shape_type|.@> 
+@ Constants for |shape_type|.
+\initials{LDF 2005.01.24.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Added this section.
+
+\initials{LDF 2005.01.24.}
+Now setting |CUBOID_TYPE|.  I'd forgotten it before.
+
+\initials{LDF 2005.03.18.}
+Now setting |POLYGON_TYPE|.
+
+\initials{LDF 2005.03.18.}
+Now setting |NURB_TYPE|.
+
+\initials{LDF 2005.03.18.}
+Now setting |SOLID_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Now setting |SOLID_FACED_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Now setting |POLYHEDRON_TYPE|.
+
+\initials{LDF 2005.04.01.}
+Now setting |POINT_POINTER_VECTOR_TYPE|.
+
+\initials{LDF 2005.04.01.}
+Now setting |NULL_TYPE|.
+
+\initials{LDF 2005.05.18.}
+Now setting |HELIX_TYPE|.
+
+\initials{LDF 2005.05.21.}
+Changed |NULL_TYPE| to |NULL_SHAPE_TYPE|.
+
+\initials{LDF 2005.05.24.}
+Now setting |CONE_TYPE|, |CYLINDER_TYPE|, |ELLIPSOID_TYPE|, 
+and |SPHERE_TYPE|.
+
+\initials{LDF 2005.11.01.}
+Now setting |CONIC_SECTION_TYPE|.
+
+
+\initials{LDF 2005.11.07.}
+Now setting |PARABOLA_TYPE|, |HYPERBOLA_TYPE|, |PARABOLOID_TYPE|, 
+and |HYPERBOLOID_TYPE|.
+
+\initials{LDF 2006.01.25.}
+Now setting |ELLIPTICAL_PARABOLOID_TYPE|,
+|HYPERBOLIC_PARABOLOID_TYPE|, |ONE_SHEET_HYPERBOLOID_TYPE|, and 
+|TWO_SHEET_HYPERBOLOID_TYPE|
+
+\initials{LDF 2006.11.06.}
+Now setting 
+|ELLIPTICAL_CYLINDER_TYPE|,
+|CIRCULAR_CYLINDER_TYPE|,
+|PARABOLIC_CYLINDER_TYPE|, and 
+|HYPERBOLIC_CYLINDER_TYPE|.
+
+\initials{LDF 2006.11.08.}
+Now setting |ELLIPTICAL_CONE_TYPE|,
+|CIRCULAR_CONE_TYPE|, |PARABOLIC_CONE_TYPE|, and 
+|HYPERBOLIC_CONE_TYPE|.
+
+\initials{LDF 2007.10.13.}
+Now setting |ARC_TYPE|.
+
+\initials{LDF 2007.10.22.}
+Now setting |RHOMBIC_TRIACONTAHEDRON_TYPE|.
+
+\initials{LDF 2009.11.04.}
+Now setting |SPHERE_DEVELOPMENT_TYPE|.
+
+\initials{LDF 2009.11.09.}
+Removed the code for setting |SPHERE_DEVELOPMENT_TYPE|.
+\ENDLOG
+
+@q *** (3) Code.@>
+
+@<Define |static| |Shape| member variables@>=
+
+   const unsigned short Shape::NULL_SHAPE_TYPE                     =  0;         
+   const unsigned short Shape::POINT_TYPE                          =  1;
+   const unsigned short Shape::POINT_POINTER_VECTOR_TYPE           =  2;
+   const unsigned short Shape::NURB_TYPE                           =  3;
+   const unsigned short Shape::PATH_TYPE                           =  4;
+   const unsigned short Shape::POLYGON_TYPE                        =  5;
+   const unsigned short Shape::TRIANGLE_TYPE                       =  6;
+   const unsigned short Shape::RECTANGLE_TYPE                      =  7;
+   const unsigned short Shape::REG_POLYGON_TYPE                    =  8;
+   const unsigned short Shape::CONIC_SECTION_TYPE                  =  9;
+   const unsigned short Shape::ELLIPSE_TYPE                        = 10;
+   const unsigned short Shape::CIRCLE_TYPE                         = 11;
+   const unsigned short Shape::PARABOLA_TYPE                       = 12;
+   const unsigned short Shape::HYPERBOLA_TYPE                      = 13;
+   const unsigned short Shape::ARC_TYPE                            = 14;
+   const unsigned short Shape::HELIX_TYPE                          = 15;
+   const unsigned short Shape::SOLID_TYPE                          = 16;
+   const unsigned short Shape::SOLID_FACED_TYPE                    = 17;
+   const unsigned short Shape::POLYHEDRON_TYPE                     = 18; 
+   const unsigned short Shape::CUBOID_TYPE                         = 19;
+   const unsigned short Shape::TETRAHEDRON_TYPE                    = 20;
+   const unsigned short Shape::OCTAHEDRON_TYPE                     = 21;
+   const unsigned short Shape::DODECAHEDRON_TYPE                   = 22;
+   const unsigned short Shape::ICOSAHEDRON_TYPE                    = 23;
+   const unsigned short Shape::TRUNC_OCTAHEDRON_TYPE               = 24;
+   const unsigned short Shape::GREAT_RHOMBICOSIDODECAHEDRON_TYPE   = 25;
+   const unsigned short Shape::RHOMBIC_TRIACONTAHEDRON_TYPE        = 26;
+   const unsigned short Shape::CONE_TYPE                           = 27;
+   const unsigned short Shape::ELLIPTICAL_CONE_TYPE                = 28;
+   const unsigned short Shape::CIRCULAR_CONE_TYPE                  = 29;
+   const unsigned short Shape::PARABOLIC_CONE_TYPE                 = 30;
+   const unsigned short Shape::HYPERBOLIC_CONE_TYPE                = 31;
+   const unsigned short Shape::CYLINDER_TYPE                       = 32;
+   const unsigned short Shape::ELLIPTICAL_CYLINDER_TYPE            = 33;
+   const unsigned short Shape::CIRCULAR_CYLINDER_TYPE              = 34;
+   const unsigned short Shape::PARABOLIC_CYLINDER_TYPE             = 35;
+   const unsigned short Shape::HYPERBOLIC_CYLINDER_TYPE            = 36;
+   const unsigned short Shape::ELLIPSOID_TYPE                      = 37;
+   const unsigned short Shape::SPHERE_TYPE                         = 38;
+   const unsigned short Shape::PARABOLOID_TYPE                     = 39;
+   const unsigned short Shape::ELLIPTICAL_PARABOLOID_TYPE          = 40;
+   const unsigned short Shape::HYPERBOLIC_PARABOLOID_TYPE          = 41;
+   const unsigned short Shape::HYPERBOLOID_TYPE                    = 42;
+   const unsigned short Shape::ONE_SHEET_HYPERBOLOID_TYPE          = 43;
+   const unsigned short Shape::TWO_SHEET_HYPERBOLOID_TYPE          = 44;
+                                                                     
+@q ** (2) Constants for testing integrity of form.@> 
+@ Constants for testing integrity of form.
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this section with the assignment to |DEFAULT_TOLERANCE|.
+\ENDLOG
+
+@<Define |static| |Shape| member variables@>=
+
+   const real Shape::DEFAULT_TOLERANCE = .01; /* .1mm  */
+
+@q ** (2) Constants for surface hiding.@> 
+@ Constants for for surface hiding.
+\initials{LDF 2005.04.10.}
+
+\LOG
+\initials{LDF 2005.04.10.}
+Added this section with the assignment to 
+|DEFAULT_SELF_DECOMPOSITION_LIMIT|.
+
+\initials{LDF 2005.06.30.}
+Now assigning to |WORLD_COORDINATES_VALUE|, 
+|PRE_PROJECTIVE_COORDINATES_VALUE|,
+|PROJECTIVE_COORDINATES_VALUE|,
+|USER_COORDINATES_VALUE|, and |VIEW_COORDINATES_VALUE|.
+\ENDLOG
+
+@<Define |static| |Shape| member variables@>=
+
+   const unsigned short Shape::DEFAULT_SELF_DECOMPOSITION_LIMIT  = 10;
+
+   const unsigned short Shape::PRE_PROJECTIVE_COORDINATES_VALUE  = 0;
+   const unsigned short Shape::PROJECTIVE_COORDINATES_VALUE      = 1;
+   const unsigned short Shape::WORLD_COORDINATES_VALUE           = 2;
+   const unsigned short Shape::USER_COORDINATES_VALUE            = 3;
+   const unsigned short Shape::VIEW_COORDINATES_VALUE            = 4;
+
+@q * (1) Static |Shape| functions.@> 
+@* Static {\bf Shape} functions.
+\initials{LDF 2005.04.02.}
+
+\LOG
+\initials{LDF 2005.04.02.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Initialize |type_name_map|.@> 
+@*1 Initialize {\it type\_name\_map}.
+\initials{LDF 2005.04.02.}
+
+\LOG
+\initials{LDF 2005.04.02.}
+Added this function.
+
+\initials{LDF 2005.05.18.}
+Added an entry for |HELIX_TYPE|.
+
+\initials{LDF 2005.05.24.}
+Added entries for |CONE_TYPE|, |CYLINDER_TYPE|, |ELLIPSOID_TYPE|, 
+and |SPHERE_TYPE|.
+
+\initials{LDF 2005.11.01.}
+Added entry for |CONIC_SECTION_TYPE|.
+
+\initials{LDF 2005.11.07.}
+Added entries for |PARABOLA_TYPE|, |HYPERBOLA_TYPE|, 
+|PARABOLOID_TYPE|, and |HYPERBOLOID_TYPE|.
+
+\initials{LDF 2006.01.25.}
+Added entries for |ELLIPTICAL_PARABOLOID_TYPE|,
+|HYPERBOLIC_PARABOLOID_TYPE|, |ONE_SHEET_HYPERBOLOID_TYPE|, and 
+|TWO_SHEET_HYPERBOLOID_TYPE|.
+
+\initials{LDF 2006.11.06.}
+Added entries for 
+|ELLIPTICAL_CYLINDER_TYPE|,
+|CIRCULAR_CYLINDER_TYPE|,
+|PARABOLIC_CYLINDER_TYPE|, and
+|HYPERBOLIC_CYLINDER_TYPE|.
+
+\initials{LDF 2006.11.08.}
+Added entries for |ELLIPTICAL_CONE_TYPE|,
+|CIRCULAR_CONE_TYPE|, |PARABOLIC_CONE_TYPE|, and 
+|HYPERBOLIC_CONE_TYPE|.
+
+\initials{LDF 2007.10.13.}
+Added entry for |ARC_TYPE|.
+
+\initials{LDF 2007.10.22.}
+Added entry for |RHOMBIC_TRIACONTAHEDRON_TYPE|.
+
+\initials{LDF 2009.11.04.}
+Added entry for |SPHERE_DEVELOPMENT_TYPE|.
+
+\initials{LDF 2009.11.09.}
+Removed entry for |SPHERE_DEVELOPMENT_TYPE|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare static |Shape| functions@>=
+
+static 
+int 
+initialize_type_name_map(void);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define static |Shape| functions@>=
+
+int
+Shape::initialize_type_name_map(void)
+{
+   type_name_map[NULL_SHAPE_TYPE] = "NULL_SHAPE_TYPE";
+   type_name_map[POINT_TYPE] = "POINT_TYPE";
+   type_name_map[POINT_POINTER_VECTOR_TYPE] = "POINT_POINTER_VECTOR_TYPE";
+   type_name_map[NURB_TYPE] = "NURB_TYPE";
+   type_name_map[PATH_TYPE] = "PATH_TYPE";
+   type_name_map[POLYGON_TYPE] = "POLYGON_TYPE";
+   type_name_map[TRIANGLE_TYPE] = "TRIANGLE_TYPE";
+   type_name_map[RECTANGLE_TYPE] = "RECTANGLE_TYPE";
+   type_name_map[REG_POLYGON_TYPE] = "REG_POLYGON_TYPE";
+   type_name_map[CONIC_SECTION_TYPE] = "CONIC_SECTION_TYPE";
+   type_name_map[ELLIPSE_TYPE] = "ELLIPSE_TYPE";
+   type_name_map[CIRCLE_TYPE] = "CIRCLE_TYPE";
+   type_name_map[PARABOLA_TYPE] = "PARABOLA_TYPE";
+   type_name_map[HYPERBOLA_TYPE] = "HYPERBOLA_TYPE";
+   type_name_map[ARC_TYPE] = "ARC_TYPE";
+   type_name_map[HELIX_TYPE] = "HELIX_TYPE";
+   type_name_map[SOLID_TYPE] = "SOLID_TYPE";
+   type_name_map[SOLID_FACED_TYPE] = "SOLID_FACED_TYPE";
+   type_name_map[POLYHEDRON_TYPE] = "POLYHEDRON_TYPE"; 
+   type_name_map[CUBOID_TYPE] = "CUBOID_TYPE";
+   type_name_map[TETRAHEDRON_TYPE] = "TETRAHEDRON_TYPE";
+   type_name_map[OCTAHEDRON_TYPE] = "OCTAHEDRON_TYPE";
+   type_name_map[DODECAHEDRON_TYPE] = "DODECAHEDRON_TYPE";
+   type_name_map[ICOSAHEDRON_TYPE] = "ICOSAHEDRON_TYPE";
+   type_name_map[TRUNC_OCTAHEDRON_TYPE] = "TRUNC_OCTAHEDRON_TYPE";
+   type_name_map[GREAT_RHOMBICOSIDODECAHEDRON_TYPE] 
+       = "GREAT_RHOMBICOSIDODECAHEDRON_TYPE";
+   type_name_map[RHOMBIC_TRIACONTAHEDRON_TYPE] = "RHOMBIC_TRIACONTAHEDRON_TYPE";
+
+   type_name_map[CONE_TYPE] = "CONE_TYPE";
+   type_name_map[CYLINDER_TYPE] = "CYLINDER_TYPE";
+   type_name_map[ELLIPTICAL_CYLINDER_TYPE] = "ELLIPTICAL_CYLINDER_TYPE";
+   type_name_map[CIRCULAR_CYLINDER_TYPE] = "CIRCULAR_CYLINDER_TYPE";
+   type_name_map[PARABOLIC_CYLINDER_TYPE] = "PARABOLIC_CYLINDER_TYPE";
+   type_name_map[HYPERBOLIC_CYLINDER_TYPE] = "HYPERBOLIC_CYLINDER_TYPE";
+
+   type_name_map[ELLIPTICAL_CONE_TYPE] = "ELLIPTICAL_CONE_TYPE";
+   type_name_map[CIRCULAR_CONE_TYPE]   = "CIRCULAR_CONE_TYPE";
+   type_name_map[PARABOLIC_CONE_TYPE]  = "PARABOLIC_CONE_TYPE";
+   type_name_map[HYPERBOLIC_CONE_TYPE] = "HYPERBOLIC_CONE_TYPE";
+
+   type_name_map[ELLIPSOID_TYPE] = "ELLIPSOID_TYPE";
+   type_name_map[SPHERE_TYPE] = "SPHERE_TYPE";
+
+   type_name_map[PARABOLOID_TYPE] = "PARABOLOID_TYPE";
+   type_name_map[ELLIPTICAL_PARABOLOID_TYPE] = "ELLIPTICAL_PARABOLOID_TYPE";
+   type_name_map[HYPERBOLIC_PARABOLOID_TYPE] = "HYPERBOLIC_PARABOLOID_TYPE";
+
+   type_name_map[HYPERBOLOID_TYPE] = "HYPERBOLOID_TYPE";
+   type_name_map[ONE_SHEET_HYPERBOLOID_TYPE] = "ONE_SHEET_HYPERBOLOID_TYPE";
+   type_name_map[TWO_SHEET_HYPERBOLOID_TYPE] = "TWO_SHEET_HYPERBOLOID_TYPE";
+
+   return 0;
+
+}
+
+@q * (1) Putting {\bf Shape} together. @>                   
+@* Putting {\bf Shape} together.
+
+@ This is what's compiled.
+@c
+@<Include files@>@;
+@<Define |Shape| class@>@;
+@<Define |static| |Shape| member variables@>@;
+@<Define static |Shape| functions@>@;
+
+@ This is what's written to \filename{shapes.h}.
+@(shapes.h@>=
+@<Define |Shape| class@>@;
+
+
+
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>
+

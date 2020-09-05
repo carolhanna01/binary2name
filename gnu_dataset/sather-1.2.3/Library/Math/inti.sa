@@ -1,0 +1,748 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1993 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class INTI < $IS_LT{INTI}, $STR, $HASH is
+   -- Implementation of arbitrary large integers. An integer x is
+   -- represented by n digits to a base B:
+   --   x = sign * (x[n-1]*B^(n-1) + x[n-2]*B^(n-2) + ... + x[1]*B + x[0])
+   -- The n digits x[i] of x are hold in an array with asize >= n. The
+   -- sign and n are encoded in a private feature len, with the following
+   -- semantics:
+   --   n = |len|, sign = sign(len)
+   -- and the value 0 is represented by len = 0
+   --
+   -- The operations div (/) and mod (%) obey the following rules
+   -- (euclidean definition):
+   --   x = (x/y)*y + x%y   and   0 <= x%y < |y|
+   -- All (non-private) methods are non-destructive, i.e. they do not
+   -- modify their arguments. Thus, INTI behaves like a immutable class.
+   -- Author: Robert Griesemer (gri@icsi.berkeley.edu)
+
+   include COMPARABLE;
+   
+   include AREF{INT};
+   private attr len: INT;
+   private const log2B := 15;
+   private const log10D := 4;
+   private const B := 2 ^ log2B; -- binary base
+   private const D := 10 ^ log10D; -- decimal base; D <= B must hold
+
+   -------------------------------------------------- object creation
+   create:SAME is return #(0) end;
+   
+   create (x: INT): SAME is
+      -- Creates an INTI from x
+      z: SAME;
+      if x.is_nil then -- prevent overflow
+         z := -(#INTI(2) ^ (INT::asize-1))
+      else
+         a ::= x.abs; i ::= 0;
+         z := new(a.highest_bit / log2B + 1);
+         loop while!(a /= 0); z[i] := a%B; a := a/B; i := i+1 end;
+         if x < 0 then z.len := -i else z.len := i end
+      end;
+      return z
+   end;
+   
+   create(x:INTI):SAME is return x end;
+   
+   create(f:FLT):SAME is
+      -- Would be much faster if INTI had set_bit.
+      if f=0.0 then return #(0) end;
+      neg ::= f<0.0;
+      if neg then f := -f end;
+      res ::= #SAME(0);
+      val ::= #SAME(1);
+      t ::= 1.0;
+      loop while!(t<=f); t:=t.scale_by(1); val:=val*#(2) end;
+      loop while!(val.is_non_zero);
+	 if f>=t then f:=f-t; res:=res+val end;
+	 val:=val/#(2); t:=t.scale_by(-1);
+      end; -- loop
+      if f/=0.0 then raise "INTI::create(FLT):INTI: value was not integer" end;
+      if neg then res:=-res end;
+      return res
+   end;
+   
+   create(f:FLTD):SAME is
+      -- Would be much faster if INTI had set_bit.
+      if f=0.0d then return #(0) end;
+      neg ::= f<0.0d;
+      if neg then f := -f end;
+      res ::= #SAME(0);
+      val ::= #SAME(1);
+      t ::= 1.0d;
+      loop while!(t<=f); t:=t.scale_by(1); val:=val*#(2) end;
+      loop while!(val.is_non_zero);
+	 if f>=t then f:=f-t; res:=res+val end;
+	 val:=val/#(2); t:=t.scale_by(-1);
+      end; -- loop
+      if f/=0.0d then raise "INTI::create(FLT):INTI: value was not integer" end;
+      if neg then res:=-res end;
+      return res
+   end;
+
+   --create(f:FLTX):SAME is raise "INTI::create(FLTX):SAME is undefined";end;
+   --create(f:FLTDX):SAME is raise "INTI::create(FLTDX):SAME is undefined" end;
+   --create(f:FLTI):SAME is return f.inti end;
+   
+   create (s: STR, i: INT): SAME pre (0 <= i) and (i < s.length) is
+      -- Creates an INTI of its decimal string
+      -- representation in s starting at index i.
+      -- Returns 0i if no integer is found in s.
+      -- Syntax: [['+' | '-'] {digit}]
+      --
+      z ::= #SAME(0);
+      neg ::= s[i] = '-';
+      if neg or s[i] = '+' then i := i+1 end;
+      d ::= 0; j ::= i;
+      loop while!((i < s.length) and s[i].is_digit);
+         d := d*10 + s[i].digit_value; i := i+1;
+         if i-j = log10D then z := u_times_plus(z, D, d); d := 0; j := i end
+      end;
+      if i-j > 0 then z := u_times_plus(z, 10^(i-j), d) end;
+      if neg then z.len := -z.len end;
+      return z
+   end;
+
+   create (s: STR): SAME is
+      return #(s, 0)
+   end;
+
+   create (s: FSTR, i: INT): SAME pre (0 <= i) and (i < s.length) is
+      -- Creates an INTI of its decimal string
+      -- representation in s starting at index i.
+      -- Returns 0i if no integer is found in s.
+      -- Syntax: [['+' | '-'] {digit}]
+      z ::= #SAME(0);
+      neg ::= s[i] = '-';
+      if neg or s[i] = '+' then i := i+1 end;
+      d ::= 0; j ::= i;
+      loop while!((i < s.length) and s[i].is_digit);
+         d := d*10 + s[i].digit_value; i := i+1;
+         if i-j = log10D then z := u_times_plus(z, D, d); d := 0; j := i end
+      end;
+      if i-j > 0 then z := u_times_plus(z, 10^(i-j), d) end;
+      if neg then z.len := -z.len end;
+      return z
+   end;
+
+   create (s: FSTR): SAME is
+      return #(s, 0)
+   end;
+
+   ----------------------------- private routines (self = void)
+   private u_plus (x, y: SAME): SAME is
+      xl: INT := x.len.abs;
+      yl: INT := y.len.abs;
+      l: INT := xl.min(yl);
+      i: INT := 0;
+      c: INT := 0;
+      z: SAME;
+   --
+      z := new(xl.max(yl) + 1);
+      loop while!(i < l); 
+	 c := c + x[i] + y[i]; z[i] := c%B; c := c/B; i := i+1 
+      end;
+      loop while!(i < xl); c := c + x[i]; z[i] := c%B; c := c/B; i := i+1 end;
+      loop while!(i < yl); c := c + y[i]; z[i] := c%B; c := c/B; i := i+1 end;
+      if c /= 0 then z[i] := c; i := i+1 end;
+      z.len := i;
+      return z
+   end;
+
+   private u_minus (x, y: SAME): SAME is
+      xl: INT := x.len.abs;
+      yl: INT := y.len.abs;
+      i: INT := 0;
+      c: INT := 0;
+      z: SAME;
+   --
+      z := new(xl);
+      loop while!(i < yl);
+	 c := c + x[i] - y[i]; z[i] := c%B; c := c/B; i := i+1 
+      end;
+      loop while!(i < xl); c := c + x[i]; z[i] := c%B; c := c/B; i := i+1 end;
+      loop while!((i > 0) and (z[i-1] = 0)); i := i-1 end;
+      z.len := i;
+      return z
+   end;
+
+   private u_times (x, y: SAME): SAME is
+      xl: INT := x.len.abs;
+      yl: INT := y.len.abs;
+      i, j, k, d, c: INT;
+   --
+      i := xl + yl; z: SAME := new(i);
+      loop while!(i > 0); i := i-1; z[i] := 0 end;
+      loop while!(i < xl); d := x[i];
+         if d /= 0 then j := 0; k := i; c := 0;
+            loop while!(j < yl); c := c + z[k] + d*y[j]; z[k] := c%B; c := c/B; j := j+1; k := k+1 end;
+            if c /= 0 then z[k] := c; k := k+1 end
+         end;
+         i := i+1
+      end;
+      z.len := k;
+      return z
+   end;
+
+   private copy: SAME is
+      i: INT := len.abs;
+      z: SAME := new(i+1); z.len := len;
+      loop while!(i > 0); i := i-1; z[i] := [i] end;
+      return z
+   end;
+
+   private u_div_mod (x, y: SAME): SAME is
+      xl: INT := x.len.abs;
+      yl: INT := y.len.abs;
+      i, j, k, c, d, q, y1, y2: INT;
+   --
+      x := x.copy;
+      if yl = 1 then
+         i := xl-1; c := 0; d := y[0];
+         loop while!(i >= 0); c := c*B + x[i]; x[i+1] := c/d; c := c%d; i := i-1 end;
+         x[0] := c
+      elsif xl >= yl then
+         x[xl] := 0; d := (B/2 - 1) / y[yl-1] + 1;
+         if d /= 1 then
+            y := y.copy; i := 0; c := 0;
+            loop while!(i < xl);
+	       c := c + d*x[i]; x[i] := c%B; c := c/B; i := i+1 
+	    end;
+            x[i] := c; i := 0; c := 0;
+            loop while!(i < yl); 
+	       c := c + d*y[i]; y[i] := c%B; c := c/B; i := i+1 
+	    end;
+            assert c = 0
+         end;
+         y1 := y[yl-1]; y2 := y[yl-2]; i := xl;
+         loop while! (i >= yl);
+            if x[i] /= y1 then q := (x[i]*B + x[i-1]) / y1 else q := B-1 end;
+            loop while!(y2 * q > (x[i]*B + x[i-1] - y1*q)*B + x[i-2]); q := q-1 end;
+            j := i-yl; k := 0; c := 0;
+            loop while!(k < yl); 
+	       c := c + x[j] - q*y[k]; x[j] := c%B; c := c/B; 
+	       j := j+1; k := k+1 
+	    end;
+            if c+x[i] /= 0 then j := i-yl; k := 0; c := 0;
+               loop while!(k < yl); c := c + x[j] + y[k]; x[j] := c%B; c := c/B; j := j+1; k := k+1 end;
+               x[i] := q-1
+            else x[i] := q
+            end;
+            i := i-1
+         end;
+         if d /= 1 then i := yl; c := 0;
+            loop while!(i > 0); i := i-1; c := c*B + x[i]; x[i] := c/d; c := c%d end;
+         end
+      end;
+      return x
+   end;
+
+   private get_u_div (x, y, q: SAME): SAME is
+      i: INT := x.len.abs;
+      yl: INT := y.len.abs;
+      loop while!((i >= yl) and (q[i] = 0)); i := i-1 end;
+      z: SAME := new(i-yl+1); z.len := i-yl+1;
+      loop while!(i >= yl); z[i-yl] := q[i]; i := i-1 end;
+      return z
+   end;
+
+   private get_u_mod (x, y, q: SAME): SAME is
+      i: INT := x.len.abs.min(y.len.abs) - 1;
+      loop while!((i >= 0) and (q[i] = 0)); i := i-1 end;
+      z: SAME := new(i+1); z.len := i+1;
+      loop while!(i >= 0); z[i] := q[i]; i := i-1 end;
+      return z
+   end;
+
+   private u_cmp (x, y: SAME): INT is
+      i: INT := x.len.abs;
+      j: INT := y.len.abs;
+      z: INT;
+      if (i = j) and (i /= 0) then i := i-1;
+         loop while!((i /= 0) and (x[i] = y[i])); i := i-1 end;
+         z := x[i] - y[i]
+      else z := i - j
+      end;
+      return z
+   end;
+
+   private u_times_plus (x: SAME, y, c: INT): SAME
+   pre (0 <= y) and (y < B) and (0 <= c) and (c < B) is
+      xl: INT := x.len.abs;
+      i: INT := 0;
+      z: SAME := new(xl+1);
+      loop while!(i < xl); c := c + x[i]*y; z[i] := c%B; c := c/B; i := i+1 end;
+      if c /= 0 then z[i] := c; i := i+1 end;
+      z.len := i;
+      return z
+   end;
+
+   private u_mod (x: SAME, d: INT): INT pre (1 <= d) and (d < B) is -- x /= 0; x will be modified
+      xl: INT := x.len.abs;
+      i: INT := xl;
+      c: INT := 0;
+      loop while!(i > 0); i := i-1; c := c*B + x[i]; x[i] := c/d; c := c%d end;
+      if x[xl-1] = 0 then x.len := xl-1 end;
+      return c
+   end;
+
+   -------------------------------------------------- binary arithmetics
+
+   plus (y: SAME): SAME is
+      z: SAME;
+      if (len < 0) = (y.len < 0) then z := u_plus(self, y);
+      elsif u_cmp(self, y) < 0 then z := u_minus(y, self); z.len := -z.len
+      else z := u_minus(self, y);
+      end;
+      if len < 0 then z.len := -z.len end;
+      return z
+   end;
+
+   minus (y: SAME): SAME is
+      z: SAME;
+      if (len < 0) /= (y.len < 0) then z := u_plus(self, y);
+      elsif u_cmp(self, y) < 0 then z := u_minus(y, self); z.len := -z.len
+      else z := u_minus(self, y);
+      end;
+      if len < 0 then z.len := -z.len end;
+      return z
+   end;
+
+   times (y: SAME): SAME is
+      z: SAME;
+      if (len = 0) or (y.len = 0) then z := #SAME(0)
+      elsif (len.abs = 1) and (y.len.abs = 1) then z := #SAME([0] * y[0])
+      else
+         if len.abs < y.len.abs then z := u_times(self, y)
+         else z := u_times(y, self)
+         end
+      end;
+      if (len < 0) /= (y.len < 0) then z.len := -z.len end;
+      return z
+   end;
+
+   div (y: SAME): SAME is
+      z: SAME;
+      if len.abs < y.len.abs then z := #SAME(0)
+      else
+         qr: SAME := u_div_mod(self, y);
+         z := get_u_div(self, y, qr);
+         if (len < 0) and (get_u_mod(self, y, qr).len /= 0) 
+	 then z := u_times_plus(z, 1, 1) end;
+         if (len < 0) /= (y.len < 0) then z.len := -z.len end
+      end;
+      return z
+   end;
+
+   mod (y: SAME): SAME is
+      z: SAME;
+      if len.abs < y.len.abs then z := self
+      else
+         z := get_u_mod(self, y, u_div_mod(self, y));
+         if (len < 0) and (z.len /= 0) then z := u_minus(y, z) end
+      end;
+      return z
+   end;
+
+   pow (i: INT): SAME is
+   -- Returns self raised to the power i. Returns 1 for i < 0.
+   --
+      x ::= self; z ::= #SAME(1);
+      loop while!(i > 0);
+         -- z * x^i = self ^ i0
+         if i.is_odd then z := z*x end;
+         x := x.square; i := i/2
+      end;
+      return z
+   end;
+
+   pow (j: SAME): SAME is
+   -- Returns self raised to the power i. Returns 1 for i < 0.
+   --
+      x ::= self; z ::= #SAME(1);
+      i ::= j.int;
+      loop while!(i > 0);
+         -- z * x^i = self ^ i0
+         if i.is_odd then z := z*x end;
+         x := x.square; i := i/2
+      end;
+      return z
+   end;
+
+-------------------------------------------------------------------
+
+   -- find something to hash on.
+   hash:INT is 
+      if asize <= 0 then 
+	 return 289201
+      else
+	 hval ::= 0;
+	 loop i::=asize.times!;
+	    hval:=hval.bxor([i].hash).lrotate(3);
+	 end;
+	 return hval;
+      end;
+   end;
+
+-------------------------------------------------- binary relations
+
+   cmp (y: SAME): INT is
+   -- Returns a value with the property x rel y = (x.cmp(y) rel 0),
+   -- where rel stands for one of the relations =, /=, <, <=, > or >=.
+   --
+      if (len = 0) then return -y.len
+      elsif (len < 0) /= (y.len < 0) then return len
+      elsif len < 0 then return u_cmp(y, self)
+      else return u_cmp(self, y)
+      end
+   end;
+
+   is_eq(y: SAME): BOOL is return SYS::ob_eq(self, y) or (cmp(y) = 0) end;
+   is_lt (y: SAME): BOOL is return cmp(y) < 0 end;
+
+-------------------------------------------------- unary predicates
+
+   is_even: BOOL is assert B.is_even; return (len = 0) or [0].is_even end;
+   is_odd: BOOL is assert B.is_even; return (len /= 0) and [0].is_odd end;
+   is_pos: BOOL is return len > 0 end;
+   is_neg: BOOL is return len < 0 end;
+   is_zero: BOOL is return len = 0 end;
+   is_non_pos: BOOL is return len <= 0 end;
+   is_non_neg: BOOL is return len >= 0 end;
+   is_non_zero: BOOL is return len /= 0 end;
+
+-------------------------------------------------- ternary predicates
+   
+   is_between(l,u:SAME):BOOL is
+      -- True if self between l and u.
+      return (l<=self and self<=u) or (u<=self and self<=l) end;
+
+   is_within(tolerance,val:SAME):BOOL is
+      return (self-val).abs<=tolerance;
+   end;
+
+-------------------------------------------------- unary functions
+
+   int: INT is
+      i ::= len.abs; z ::= 0;
+      loop while!(i > 0); i := i-1; z := z*B + [i] end;
+      if len < 0 then z := -z end;
+      return z
+   end;
+
+   inti: INTI is return self end;
+
+   flt: FLT is
+      i ::= len.abs; z ::= 0.0;
+      loop while!(i > 0); i := i-1; z := z*B.flt + [i].flt end;
+      if len < 0 then z := -z end;
+      return z
+   end;
+
+   fltd: FLTD is
+      i ::= len.abs; z ::= 0.0d;
+      loop while!(i > 0); i := i-1; z := z*B.fltd + [i].fltd end;
+      if len < 0 then z := -z end;
+      return z
+   end;
+
+--   fltx: FLTX is
+--      i ::= len.abs; z ::= #FLTX(0.0);
+--      loop while!(i > 0); i := i-1; z := z*B.fltx + [i].fltx end;
+--      if len < 0 then z := -z end;
+--      return z
+--   end;
+
+--   fltdx: FLTDX is
+--      i ::= len.abs; z ::= #FLTDX(0.0);
+--      loop while!(i > 0); i := i-1; z := z*B.fltdx + [i].fltdx end;
+--      if len < 0 then z := -z end;
+--      return z
+--   end;
+
+--   flti: FLTI is
+--      i ::= len.abs; z ::= #FLTI(0.0);
+--      loop while!(i > 0); i := i-1; z := z*B.flti + [i].flti end;
+--      if len < 0 then z := -z end;
+--      return z
+--   end;
+
+   abs: SAME is
+      if len < 0 then z ::= copy; z.len := -len; return z
+      else return self
+      end
+   end;
+
+   negate: SAME is
+      if len /= 0 then z ::= copy; z.len := -len; return z
+      else return self
+      end
+   end;
+
+   sign: INT is return len.sign end;
+   square: SAME is return self * self end;
+   cube: SAME is return self * self * self end;
+
+   log2: INT is
+   -- Returns the largest n with 2^n <= self for self > 0 (logarithmus dualis).
+   --
+      assert len > 0;
+      return (len-1)*log2B + [len-1].highest_bit
+   end;
+   
+   exp2: SAME is
+      -- 2^self
+      -- self is INTI because of conflict with INT::exp2:INT
+      return #SAME(2).pow(self)
+   end;
+   
+   exp10: SAME is
+      -- 10^self
+      return #SAME(10).pow(self)
+   end;
+   
+   sqrt: SAME is
+      -- square root of self.
+      -- Iteration algorithm: x[0]:=self; x[n+1]:=(x+a/x)/2
+      -- We stop when the value is constant or oscillating.
+      -- A routine "INTI::div(INT):INTI" could speed this up.
+      if len=0 then return #SAME(0) end;
+      if len<0 then raise "INTI::sqrt: Argument is negative" end;
+      x::=self; two::=#SAME(2); x0:SAME;
+      loop x0:=x; x:=(x+self/x)/two; until!(x>=x0); end;
+      return x0
+   end;
+
+   private mul (a, b: INT): SAME is
+      m: INT;
+      if a < b then m := (a+b)/2; return mul(a, m) * mul(m+1, b)
+      else return #SAME(a)
+      end
+   end;
+
+   factorial: SAME is return mul(1, self.int) end;
+   
+   is_prime:BOOL is
+      -- True if self is a prime number.
+      -- Replace by a faster algorithm.
+      if #SAME(2).evenly_divides(self) then return false end;
+      loop d::=#SAME(3).step!((self.sqrt+#SAME(2))/#SAME(2), #SAME(2));
+	 if d.evenly_divides(self) then return false end end; 
+      return true end;
+
+-------------------------------------------------- binary functions
+
+   max (y: SAME): SAME is
+      if cmp(y) > 0 then return self else return y end
+   end;
+
+   min (y: SAME): SAME is
+      if cmp(y) < 0 then return self else return y end
+   end;
+
+   at_least(x:SAME):SAME is
+      -- Same as `max(x)'.
+      return self.max(x) end;
+
+   at_most(x:SAME):SAME is
+      -- Same as `min(x)'.
+      return self.min(x) end;
+   
+   evenly_divides(i:SAME):BOOL is
+      -- True if self evenly divides `i'.
+      return (i%self).len=0 end;
+
+   next_multiple_of(i:SAME):SAME 
+      -- The smallest value greater than or equal to self which is a 
+      -- multiple of `i'. 
+      pre i.len>0 is
+      return ((self+i-#SAME(1))/i)*i end;
+   
+   gcd(i:SAME):SAME is
+      -- The greatest common divisor of self and `i'.
+      -- The result is non-negative and `x.gcd(0)=x.abs'.
+      -- Uses Euclidean algorithm. Geddes, et. al. p. 34.
+      c::=abs; d::=i.abs;
+      loop until!(d.len=0); r::=c.mod(d); c:=d; d:=r end; 
+      return c end;
+
+   extended_gcd(i:SAME, out self_factor, out i_factor: SAME): SAME is
+      -- The three parts of the return value `g', `g1', and `g2' are such
+      -- that `g' is the greatest common divisor of self and `i' and
+      -- `g1*self+g2*i=g'.
+      -- Uses the extended Euclidean algorithm. Geddes, et. al. p. 36.
+      c::=abs; d::=i.abs;
+      c1::=#SAME(1); d1::=#SAME(0); c2::=#SAME(0); d2::=#SAME(1);
+      loop until!(d.len=0);
+	 q::=c/d; r::=c-q*d; r1::=c1-q*d1; r2::=c2-q*d2;
+	 c:=d; c1:=d1; c2:=d2; d:=r; d1:=r1; d2:=r2 end;
+      self_factor := c1/(abs*c.abs);
+      i_factor := c1/(abs*c.abs);
+      return c.abs;
+   end;
+   
+   lcm(i:SAME):SAME is
+      -- The least common multiple of self and `i'.
+      -- Geddes, et. al. p. 28.      
+      return (self*i).abs/gcd(i) end;
+      
+   is_relatively_prime_to(i:SAME):BOOL is
+      -- True if self is relatively prime to `i'.
+      return gcd(i)=#SAME(1) end;
+   
+-------------------------------------------------- boolean algebra
+   
+   bnot:SAME is raise "INTI::bnot:SAME not implemented" end;
+   band(a:SAME):SAME is raise "INTI::band(SAME):SAME not implemented" end;
+   bor(a:SAME):SAME is raise "INTI::bor(SAME):SAME not implemented" end;
+   bxor(a:SAME):SAME is raise "INTI::bxor(SAME):SAME not implemented" end;
+   bnand(a:SAME):SAME is raise "INTI::bnand(SAME):SAME not implemented" end;
+   bnor(a:SAME):SAME is raise "INTI::bnor(SAME):SAME not implemented" end;
+   beqv(a:SAME):SAME is raise "INTI::beqv(SAME):SAME not implemented" end;
+   boole(a:SAME,b:INT):SAME is raise "INTI::boole(SAME,INT):SAME not implemented" end;
+   bcount:INT is raise "INTI::bcount:INT not implemented" end;
+   
+   lshift(a:INT):SAME is raise "INTI::lshift(INT):SAME not implemented" end;
+   rshift(a:INT):SAME is raise "INTI::rshift(INT):SAME not implemented" end;
+   urshift(a:INT):SAME is raise "INTI::urshift(INT):SAME not implemented" end;
+   lrotate(a:INT):SAME is raise "INTI::lrotate(INT):SAME not implemented" end;
+   rrotate(a:INT):SAME is raise "INTI::rrotate(INT):SAME not implemented" end;
+   
+   bit(a:INT):BOOL is raise "INTI::bit(INT):BOOL not implemented" end;
+   set_bit(a:INT,c:BOOL):SAME is raise "INTI::set_bit(INT,BOOL):SAME not implemented" end;
+   set_bit(a:INT):SAME is raise "INTI::set_bit(INT):SAME not implemented" end;
+   unset_bit(a:INT):SAME is raise "INTI::unset_bit(INT):SAME not implemented" end;
+   lowest_bit:INT is raise "INTI::lowest_bit:INT not implemented" end;
+   highest_bit:INT is raise "INTI::highest_bit:INT not implemented" end;
+   is_exp2:BOOL is raise "INTI::is_exp2:BOOL not implemented" end;
+   next_exp2:SAME is raise "INTI::next_exp2:SAME not implemented" end;
+   low_bits(a:INT):SAME is raise "INTI::low_bits(INT):SAME not implemented" end;
+   high_bits(a:INT):SAME is raise "INTI::high_bits(INT):SAME not implemented" end;
+   
+-------------------------------------------------- iterators
+   
+   
+   times!  
+      -- Yields self times without returning anything.
+      pre self>=#SAME(0) is 
+      i::=self; 
+      loop until!(i<=#SAME(0)); yield; i:=i-#SAME(1) end end;
+   
+   times!:SAME 
+      -- Yield successive integers from 0 up to self-1.
+      pre self>=#SAME(0) is r:SAME;
+      loop until!(r>=self); yield r; r:=r+#SAME(1) end end;
+
+   for!(once i:SAME):SAME 
+      -- Yields `i' successive integers starting with self.
+      pre i>=#SAME(0) is 
+      r::=self; e::=self+i;
+      loop until!(r>=e); yield r; r:=r+#SAME(1) end end;      
+
+   up!:SAME is
+      -- Yield successive integers from self up.
+      r::=self;
+      loop yield r; r:=r+#SAME(1) end end;
+      
+   upto!(once i:SAME):SAME is
+      -- Yield successive integers from self to `i' inclusive.
+      r::=self; 
+      loop until!(r>i); yield r; r:=r+#SAME(1) end end;
+      
+   downto!(once i:SAME):SAME is
+      -- Yield successive integers from self down to `i' inclusive.
+      r::=self; 
+      loop until!(r<i); yield r; r:=r-#SAME(1) end end;
+   
+   step!(once num,once step:SAME):SAME 
+      -- Yield `num' integers starting with self and stepping by `step'.
+      pre num>=#SAME(0) is 
+      r::=self; last::=self+(num-#SAME(1))*step;
+      if step>#SAME(0) then 
+	 loop until!(r>last); yield r; r:=r+step end
+      elsif step<#SAME(0) then 
+	 loop until!(r<last); yield r; r:=r+step end
+      else 
+	 loop num.times!; yield r end end end;
+
+   sum!(i:SAME):SAME is
+      -- Yields the sum of all previous values of `i'.
+      r:SAME; loop r:=r+i; yield r end end;
+
+   product!(i:SAME):SAME is
+      -- Yields the product of all previous values of `i'.
+      r::=#SAME(1); loop r:=r*i; yield r end end;   
+   
+-------------------------------------------------- output
+
+   private append_int (s: FSTR, x, n: INT): FSTR pre x >= 0 is
+   -- Append a decimal version of x to s using at most n digits
+   -- (filled up with 0's) and return s.
+   --
+      i ::= s.length;
+      loop s := s + (x%10).digit_char; x := x/10; n := n-1; until!(x = 0) end;
+      loop while!(n > 0); s := s + '0'; n := n-1 end;
+      j ::= s.length-1;
+      loop while!(i < j); ch ::= s[i]; s[i] := s[j]; s[j] := ch; i := i+1; j := j-1 end;
+      return s
+   end;
+
+   str_in (s: FSTR, n, b: INT, f: CHAR): FSTR pre b.is_bet(2, 16) is
+   -- Append a string representation of self to s using at least n digits
+   -- to the base b and return s. If less then n digits are used for the
+   -- representation of self (including its sign), the remaining left_most
+   -- positions are filled with character f.
+   --
+      x ::= copy; i ::= s.length;
+      loop s := s + u_mod(x, b).digit_char; n := n-1; until!(x.len = 0) end;
+      if self.len < 0 then s := s + '-'; n := n-1 end;
+      loop while!(n > 0); s := s + f; n := n-1 end;
+      j ::= s.length-1;
+      loop while!(i < j); ch ::= s[i]; s[i] := s[j]; s[j] := ch; i := i+1; j := j-1 end;
+      return s
+   end;
+
+   str_in (s: FSTR): FSTR is
+   -- Append a decimal string version of self to s and return s.
+   --
+      if len = 0 then return s + '0'
+      else
+         if len < 0 then s := s + '-' end;
+         if len.abs = 1 then return [0].str_in(s)
+         else
+            -- compute output in reverse order in
+            -- chunks of log10D decimal digits
+            -- and append it in correct order to s
+            x ::= copy; -- working copy
+            d: FLIST{INT}; -- working buffer
+            loop d := d.push(u_mod(x, D)); until!(x.len = 0) end;
+            s := d.pop.str_in(s);
+            loop while!(d.size > 0); s := d.pop.str_in(s, log10D, 10, '0') end;
+            return s
+         end
+      end
+   end;
+
+   private shared buf: FSTR; -- Buffer for string output.   
+   
+   str: STR is
+      -- A decimal string version of self.
+      buf.clear; buf := str_in(buf); return buf.str
+   end;
+   
+
+
+end
+

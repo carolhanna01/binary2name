@@ -1,0 +1,269 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Matthew B. Kennel <mbk@caffeine.engr.utk.edu>
+
+-------------------------------------------------------------------
+partial class VEC{ET<$REAL_NUMBER{ET}} is
+   -- Partial becauseit requires VECTOR_LENGTH_MIXIN's to complete itself
+   -- We cannot subtype this generic from $VEC{ET,SAME}, though
+   -- instantiations of this type should be subtyped from the proper
+   -- abstract.  c.f. 'mat.sa'. 
+   -- 
+   -- This is a pure Sather implementation of the basic vector class.
+   -- "length" and dot product operations will NOT be implemented here,
+   -- but in auxiliary 'partial' (non-instantiable) classes that are
+   -- designed for only implementation inheritance. 
+   -- A concrete vector class of floating point numbers then would inherit
+   -- from this class, and the auxiliary 'length' implementation suitable for
+   -- it, and then subtype from the proper generics. 
+   -- Finally, for some element types, such as floating point numbers, there
+   -- will be implementations that may over-ride some of the implementaitons
+   -- in this class and replace them with BLAS calls. 
+   -- 
+   -- What is the difference between a VEC and an ARRAY?
+   -- An ARRAY is more a full-featured container class; a VEC is intended
+   -- as the target space of a linear operator, which might be its associated
+   -- matrix for instance.  Therefore ARRAY has features for sorting
+   -- and many copying iters, which may not all make sense in a VEC context.
+   -- For instance anything which changes the size of an ARRAY is not 
+   -- appropriate for VEC. 
+   
+   include AREF{ET};
+
+   element_zero:ET is return ET::zero; end; 
+   element_one:ET is return ET::one; end; 
+
+   dim:INT is return asize end; 
+   
+   same_size(arg:SAME):BOOL is
+      if void(arg) or void(self) then return false;
+      elsif arg.asize /= asize then return false;
+      else return true;
+      end;
+   end;
+   
+   is_eq(arg:SAME):BOOL pre same_size(arg) is
+      loop
+	 if aelt! /= arg.aelt! then return false; end;
+      end;
+      return true; 
+   end;
+   
+   create(sz:INT):SAME is
+      res ::= new(sz); return res; 
+   end;
+   
+   create(arg:SAME):SAME pre ~void(arg) is
+      res ::= new(arg.asize); return res;
+   end;
+
+   create(arg:ARRAY{ET}):SAME pre ~void(arg) is
+      res ::= new(arg.asize); loop res.aset!(arg.elt!); end; 
+      return(res);
+   end;
+   
+   str:STR is
+      -- Return a string representing the vector
+      -- Eg. |0,1|
+      res ::= #FSTR+"|";
+      loop res := res + aelt!(0,dim-1).str + ","; end;
+      res := res + [dim-1].str + "|"; 
+      return(res.str);
+   end;
+
+   array:ARRAY{ET} pre ~void(self) is
+      res ::= #ARRAY{ET}(dim);
+      loop res.set!(aelt!) end;
+   end;
+   
+   copy:SAME pre ~void(self) is
+      res ::= create(asize);
+      res.acopy(self); -- should be built in fast routine
+      return res; 
+   end;
+   
+   inplace_contents(arg:SAME) pre same_size(arg) is
+      self.acopy(arg);
+   end; 
+   
+   inplace_contents_subspace(destbeg,n,srcbeg:INT,arg:SAME) pre
+	 ~void(self) and ~void(arg) and n >= 0 and
+	 destbeg.is_bet(0,asize-1) and
+	 n.is_bet(0,asize-destbeg) and n <= arg.asize - srcbeg (* whew *)
+	    is
+      acopy(destbeg,n,srcbeg,arg); -- should be built-in fast routine.
+   end;
+	 
+   inplace_contents_from_function(function:ROUT{INT}:ET) pre ~void(self) is
+      loop idx ::= asize.times!; [idx] := function.call(idx); end; 
+   end;
+   
+   inplace_elements(arg:ET) pre ~void(self) is
+      loop aset!(arg); end; 
+   end;
+   
+   inplace_unit_vector(i:INT) pre ~void(self) and i.is_bet(0,asize-1) is
+      loop idx ::= asize.times!;
+	 if idx = i then [i] := element_one;
+	 else [i] := element_zero; 
+	 end;
+      end;
+   end;
+
+   times(s:ET):SAME pre ~void(self) is
+      res ::= new(asize);
+      loop i ::= asize.times!; res[i] := [i]*s; end;
+      return res;
+   end;
+   
+   scaled_by(s:ET):SAME is return times(s); end; 
+   
+   inplace_scaled_by(s:ET) pre ~void(self) is
+      loop i ::= asize.times!; [i] := [i]*s; end; 
+   end;
+   
+   plus(arg:SAME):SAME is 
+      res ::= new(asize); res.inplace_arg_plus_arg(self,arg);
+      return res; 
+   end;
+   
+   plus_arg(arg:SAME):SAME is return plus(arg); end;
+   
+   minus(arg:SAME):SAME is res ::= new(asize); 
+      res.inplace_arg_minus_arg(self,arg); return res 
+   end;
+   
+   minus_arg(arg:SAME):SAME is return minus(arg); end; 
+   
+   inplace_plus_arg(arg:SAME) pre same_size(arg) is
+      loop i ::= asize.times!; [i] := [i] + arg[i]; end; 
+   end;
+   
+   inplace_minus_arg(arg:SAME) pre same_size(arg) is
+      loop i ::= asize.times!; [i] := [i] - arg[i]; end; 
+   end;
+   
+   inplace_arg_plus_arg(arg1,arg2:SAME) pre same_size(arg1) and 
+	 arg1.same_size(arg2) is
+      loop i ::= asize.times!; [i] := arg1[i] + arg2[i]; end; 
+   end; 
+   
+   inplace_arg_minus_arg(arg1,arg2:SAME) pre same_size(arg1) and
+	 arg1.same_size(arg2) is
+      loop i ::= asize.times!; [i] := arg1[i] - arg2[i]; end; 
+   end; 
+
+   plus_scaled_arg(s:ET,arg:SAME):SAME pre same_size(arg) is
+      res ::= new(asize); res.inplace_arg_plus_scaled_arg(self,s,arg); 
+      return res;
+   end;
+
+   inplace_plus_scaled_arg(s:ET,arg:SAME) pre same_size(arg) is
+      loop i ::= asize.times!; [i] := [i] + s*arg[i]; end; 
+   end;
+
+   inplace_arg_plus_scaled_arg(arg1:SAME,s:ET,arg2:SAME) pre same_size(arg1)
+	    and arg1.same_size(arg2) is 
+      loop i ::= asize.times!; [i] := arg1[i] + s*arg2[i]; end; 
+   end;
+   
+   inplace_swapped(arg:SAME) pre same_size(arg) is
+      loop i ::= asize.times!;
+	 tmp ::= [i]; [i] := arg[i]; arg[i] := tmp;
+      end;
+   end;
+   
+end;
+-----------------------------------------------------------------------
+partial class VEC_LENGTH_MIXIN{ET<$REAL_NUMBER{ET},VT<$VEC{ET,VEC}} is
+-- 
+-- NOTE most of the these definitions are NOT good for complex numbers.
+--
+   include VEC{ET};
+   
+   length_zero:ET is return ET::zero; end;
+   length_one:ET is return ET::one; end;
+
+   dot(arg:SAME):ET pre same_size(arg) is 
+      res::= element_zero; 
+      loop i ::= asize.times!; res := res + [i]*arg[i]; end; 
+      return res;
+   end;
+   
+   angle_with(arg:SAME):ET is 
+      return cosine_angle_with(arg).acos; 
+   end;
+   
+   cosine_angle_with(arg:SAME):ET pre same_size(arg) is
+      -- cos theta = a dot b / |a|*|b|
+      return dot(arg) / (length * arg.length);
+   end;
+   
+   length_squared:ET is return dot(self); end;
+   
+   length:ET is return length_squared.sqrt; end; 
+   
+   distance_to_squared(arg:SAME):ET pre same_size(arg) is
+      -- we could implement in terms of other functions but I will
+      -- hand-write for speed. 
+      res ::= length_zero;
+      loop i ::= asize.times!; t ::= [i]-arg[i];
+	 res := res + t*t;
+      end;
+      return res;
+   end;
+
+   distance_to(arg:SAME):ET is return distance_to_squared(arg).sqrt; end;
+   
+   bounded_distance_to_squared(arg:SAME,sbnd:ET):ET
+      pre same_size(arg) is
+      -- we could implement in terms of other functions but I will
+      -- hand-write for speed. 
+      res ::= length_zero;
+      loop i ::= asize.times!; t ::= [i]-arg[i];
+	 res := res + t*t;
+	 if res > sbnd then return length_one.negate; end;
+      end;
+      return res;
+   end;
+
+   inplace_normalized is inplace_scaled_by(length_one / length); end;
+   
+end;
+-----------------------------------------------------------------
+class VEC < $VEC{FLT,VEC,FLT} is
+   -- Concrete instantiation of a standard vector
+   include VEC_LENGTH_MIXIN{FLT,SAME};
+   const element_zero:FLT := 0.0;
+   const element_one:FLT := 1.0;   
+   const length_zero:FLT := 0.0;
+   const length_one:FLT := 1.0;   
+   
+   max_value: FLT is
+      max: FLT := FLT::minval;
+      loop i ::= asize.times!; 
+	 if [i] > max then max := [i]; end;
+      end;
+      return max;
+   end;
+   
+end;
+-----------------------------------------------------------------
+
+
+
+
+
+
+

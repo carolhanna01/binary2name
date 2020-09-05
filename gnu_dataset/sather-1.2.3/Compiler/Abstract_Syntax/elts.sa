@@ -1,0 +1,129 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- $AS_CLASS_ELT: Supertype of class element nodes.
+-- AS_CLASS_ELT: Implementation to be included by $AS_CLASS_ELT nodes.
+-- AS_CONST_DEF, AS_SHARED_DEF, AS_ATTR_DEF, AS_ROUT_DEF, 
+-- AS_INCLUDE_CLAUSE 
+--
+-- Single classes sometimes represent several productions.
+-- Whenever a comment says "if any" that means that "void" is a possible
+-- value and it indicates the the component was not present.
+-- 
+-------------------------------------------------------------------
+abstract class $AS_CLASS_ELT < $AS_NODE, $NEXT{$AS_CLASS_ELT} is
+   -- A supertype of all elements of the body of a class.
+
+   is_private(b:BOOL);		-- Set the private status.
+   is_private:BOOL;		-- Retrieve the private status.
+end;
+   
+-------------------------------------------------------------------
+class AS_CLASS_ELT < $AS_CLASS_ELT is
+   -- A supertype of all elements of the body of a class.
+   include AS_NODE;
+   include NEXT{$AS_CLASS_ELT};
+
+   attr is_private:BOOL;	-- True if declared private.
+end;
+   
+-------------------------------------------------------------------
+class AS_CONST_DEF < $AS_CLASS_ELT is
+   -- Definition of constant attributes.
+   include AS_CLASS_ELT;
+   
+   attr name:IDENT;		-- The name of the constant.
+   attr tp:AS_TYPE_SPEC;	-- Type declaration, if any.
+      -- If none, it is an INT.
+   attr init:$AS_EXPR;		-- Initialization expression.
+end;
+
+-------------------------------------------------------------------
+class AS_SHARED_DEF < $AS_CLASS_ELT is
+   -- Definition of shared attributes. Parser should make one of these
+   -- for each element in a list like "shared a,b,c:INT".
+   include AS_CLASS_ELT;
+   
+   attr is_readonly:BOOL;	-- True if declared readonly.
+   attr name:IDENT;		-- Name of the shared.
+   attr tp:AS_TYPE_SPEC;	-- Type declaration.
+   attr init:$AS_EXPR;		-- Initialization expression, if any.
+end;
+   
+-------------------------------------------------------------------
+class AS_ATTR_DEF < $AS_CLASS_ELT is
+   -- Definition of object attributes. Parser should make one of these
+   -- for each element in a list like "a,b,c:INT".
+   include AS_CLASS_ELT;
+   
+   attr is_readonly:BOOL;	-- True if declared readonly.
+   attr name:IDENT;		-- Name of the attribute.
+   attr tp:AS_TYPE_SPEC;	-- Type declaration.
+end;
+
+-------------------------------------------------------------------
+class AS_ROUT_DEF < $AS_CLASS_ELT is
+   -- Definition of a routine.
+   include AS_CLASS_ELT;
+
+   attr is_abstract:BOOL;	-- True if has no body.
+   attr name:IDENT;		-- Name of the routine.
+   attr args_dec:AS_ARG_DEC;	-- Arguments, if any.
+   attr ret_dec:AS_TYPE_SPEC;	-- Return type, if any.
+   attr pre_e:$AS_EXPR;		-- The "pre" clause, if any.
+   attr post_e:$AS_EXPR;	-- The "post" clause, if any.
+   attr body:AS_STMT_LIST;	-- The statements, if any.
+   attr is_builtin:BOOL;	-- true if builtin
+   attr builtin_name:IDENT;	-- name of the builtin function in CONFIG
+
+   --pSather:
+   attr is_fork_routine : BOOL; -- this routine implements the body of a fork
+   attr is_par_routine : BOOL;  -- this routine implements the body of a par
+   attr is_attach_routine : BOOL; -- ... an attach
+end;
+
+-------------------------------------------------------------------
+class AS_ARG_DEC < $AS_NODE is
+   -- Declaration of routine and iter arguments. Parser should make
+   -- one of these for each arg in a list like "a,b,c:INT".
+   include AS_NODE;
+   include NEXT{SAME};			-- Other args, if any.
+   
+   attr name:IDENT;		-- The name of the argument.
+   attr tp:AS_TYPE_SPEC;	-- The type.
+   attr is_hot:BOOL;		-- True if declared "hot".   
+   attr mode:AS_ARG_MODE;       -- mode specifier
+end;
+
+-------------------------------------------------------------------
+class AS_INCLUDE_CLAUSE < $AS_CLASS_ELT is
+   -- An inheritance clause. Parser should make one of these for each
+   -- element of the list, if more than one.
+   include AS_CLASS_ELT;
+   
+   attr tp:AS_TYPE_SPEC;	-- The type to include from.
+   attr mods:AS_FEAT_MOD;	-- The feature modification list.
+end;
+   
+-------------------------------------------------------------------
+class AS_FEAT_MOD < $AS_NODE is
+   -- A modification to a feature of an included class.
+   include AS_NODE;
+   include NEXT{SAME};			-- Next mod in list.
+   
+   attr name:IDENT;		-- Name of modified feature.
+   attr is_private:BOOL;	-- True if now private.
+   attr is_readonly:BOOL;	-- True if now readonly.   
+   attr new_name:IDENT;		-- New name for the feature, if any.
+end;
+   

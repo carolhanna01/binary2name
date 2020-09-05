@@ -1,0 +1,1470 @@
+-----------------------------------------------------------------
+GNU Sather 1.2.3 - Jul 7, 2007 - Michael R. Taylor
+
+* Made INT 32-bit even on 64-bit systems
+* Changed license to (GPLv3/LGPLv3) or later
+
+-----------------------------------------------------------------
+GNU Sather 1.2.1 - Oct 25, 1999 - Norbert Nemec
+
+* Merged in the Win32 port
+* Merged in some parts of a pSather->Linux port (untested yet)
+* Changed targets in the main Makefile (internally)
+* Made boot compilation easier to port
+* Applied some patches for the mathematical library
+* Changed to Tcl/Tk 8.0
+* Changed names of binaries
+
+-----------------------------------------------------------------
+GNU Sather 1.2.0 - Oct 13, 1999 - Norbert Nemec
+
+* Only minor changes, last fixes for the release
+
+-----------------------------------------------------------------
+GNU Sather prerelease 4 - Sept 14, 1999 - Norbert Nemec
+
+* Added the platform "linux/lwp" and did much debugging and
+  some restructuring of the build process
+
+-----------------------------------------------------------------
+Transition from ICSI to GNU - July 26, 1999 - Norbert Nemec
+
+* Replaced all the headers
+* Removed System/Common/GC/ - the Boehm GC is distributed as
+  separate (original) package, now.
+* Reworked many of the small documentation files
+* Many bugfixes
+* Added debian/ subdirectory
+* Removed many unneeded binary files from the source package
+
+-----------------------------------------------------------------
+Version 1.2 Beta X - 7/1/99
+
+Changing the license from SLGPL (Sather Library General Public
+License) to GPL/LGPL (GNU (Library) General Pubic License)
+
+This is only a intermediate step for a last version officially
+published by ISCI under the new license, needed so the project can
+continue under the GNU/FSF as GNU Sather.
+
+Basically, all I've done was to replace all occurrances of the term
+SATHER LIBRARY GENERAL PUBLIC LICENSE and all referrances to the file
+Doc/License to:
+- GNU LIBRARY GENERAL PUBLIC LICENSE and Doc/LGPL in Library/ pLibrary/ and System/
+- GNU GENERAL PUBLIC LICENSE and Doc/GPL Everywhere else
+
+-----------------------------------------------------------------
+Version 1.2 Beta 2/24/98
+This is a summary of the Sather 1.2 Beta (relative to Sather 1.1).
+There were no language changes. Most work was concerned with the 
+parallel runtime which has been completely reimplemented. In short,
+these are the new features:
+
+	- a new high-performance portable threaded Sather runtime 
+	  (based on Active Threads). The new runtime delivers orders
+	  of magnitude higher performance than most commercial thread
+	  systems on thread and synchronization benchmarks.
+
+	- a distributed implementation of synchronization object
+	  management. This resulted in substantially higher Sather
+	  synchronization performance on SMPs and distributed 
+	  NOW platforms.
+
+	- further library work
+
+	- bug fixes
+
+	- integration with Boehm's GC version 4.12
+	
+	- updates to the installation documentation. Many thanks
+	  to all contributors.		
+
+Parallel Runtime (Boris Weissman)
+=================================
+
+-----------------------------------------------------------
+| Platform|  single   |    SMP    |  CLUMPS   |  CLUMPS   |
+|         | processor |           | (Myrinet) | (TCP/IP)  |
+-----------------------------------------------------------
+| SPARC,  |           |           |           |           |
+| Solaris |    X      |     X     |     X     |     X     |
+| Threads |           |           |           |           |
+-----------------------------------------------------------
+| SPARC,  |           |           |           |           |
+| Active  |    X      |     X     |     X     |           |
+| Threads |           |           |           |           |
+-----------------------------------------------------------
+|   x86,  |           |           |           |           |
+|   AT,   |    X      |     X     |           |           |
+| Solaris |           |           |           |           |
+-----------------------------------------------------------
+|DEC ALPHA|           |           |           |           |
+|   AT,   |    X      |           |           |           |
+|   OSF   |           |           |           |           |
+-----------------------------------------------------------
+|HPPA 1.x |           |           |           |           |
+|   AT,   |    X      |           |           |           |
+|  HP-UX  |           |           |           |           |
+-----------------------------------------------------------
+
+Notes: CLUMPS = clusters of SMPs
+       AT     = Active Threads
+       *      ALPHA and HPPA SMP ports can be done easily
+
+Parallel platform names that can be used as compilation options:
+-solaris_at/sparc_smp         based on Active Threads
+-solaris_at/sparc_myrinet     based on Active Threads and Berkeley LAM
+-solaris/smp                  based on Solaris Threads
+-solaris/myrinet              based on Solaris Threads and Berkeley LAM
+-solaris_at/i386_smp          x386 and higher, Active Threads and Solaris
+-hpux_at/hppa_smp             HPPA 1.x, Active Threads and HPUX
+-osf_at/axp_smp               DEC ALPHA AXP, Sctive Threads and OSF
+
+When one of these options are used, the compiler generates code for and 
+and uses the specified parallel runtime version. 
+
+Lock Management (Jurgen Quittek)
+=================================
+Until version 1.2, Sather used centralized synchronization object 
+ management with a designated manager thread running on node 0 (even on 
+distributed platforms). The current lock manager is fully distributed. 
+All synchronization requests are handled in the context of the calling
+thread thus eliminating unnecessary context switches and communication
+overhead. Communication is necessary only when remote synchronization
+objects are acquired. This achieves significant performamce gains.
+For instance, acquiring and releasing a local MUTEX now takes 0.7us
+- Sather 1.1 needed 40us (on 4cpu 50Mhz SS10). Similarly, on a Myrinet
+connected NOW of the same SS10s, acquring and realeasing a remote MUTEX
+has been improved from 2000us to 220us.
+
+ 
+Libraries (Ben Gomes)
+=====================
+In addition to bug fixes, several changes have been made to the
+container classes to take advantage of the new overloading rules for
+maps, multimaps, sets and bags. Readonly abstractions have been placed
+over the mutable and immutable abstractions. Some other math classes
+have been submitted which will be made available separately at a later
+date.
+
+Browser
+========
+The browser still uses Tcl v.7.5 and Tk v 4.0. Patches have
+been submitted (thanks to Oscar Bosman) and are available for 
+Tcl 7.6 and Tk4.2. However, we haven't ported the browser to Tcl/Tk v8
+yet. 
+
+
+
+Version 1.1
+-----------------------------------------------------------------
+
+This is a summary of Sather 1.1 new features (relative to Sather 1.0.8) 
+See individual entries for two beta releases and a 1.1 release for 
+details, bug fixes, etc. The 1.1 compiler also supports an (almost) 
+automatic conversion from Sather 1.0 to Sather 1.1 syntax (described in
+Doc/convert_to_1.1.html)
+
+
+New language features:
+======================
+	Partial classes and stubs
+	External interface to a superset Fortran 77 (ANSI X3.9-1978)
+	External interface to ANSI C (ANSI X3.159-1989)
+	   (the new Programming Manual has details)
+	Iterator closures (e.g. bound iterators) 
+	   by Arno Jacobsen, inspired by M. Ernst's proposal
+	New overloading rules allowing overloading of abstract arguments
+	   (See the the Programming Manual for details)
+	Type inferencing for closure creation expressions
+	SAME is resolved late during inclusion (Holger Klawitter)
+	SAME is restricted to the class bodies
+	SAME is a valid return type in abstract classes
+	type checking of parametrized classes (type bounds on parameters)
+						(Holger Klawitter)
+	
+
+Documentation
+==============
+	A new Sather Programming manual with lots of examples 
+	(more textbook like), see Doc/Programming-manual.ps or
+	http://www.icsi.berkeley.edu/~sather/Documentation/LanguageDescription/webmaker/index.html
+	Updates to Sather 1.1 spec. Check out Doc/Sather-1.1.ps
+	New Gui documentation (Doc/Gui)
+	Changes in the installation procedure (Doc/Installation.*)	
+	New debugging documentation (Doc/Debugging*)
+	Check out anything else you find in Doc ;-)
+
+Web Pages
+=========
+        The web pages have been completely reorganized and beautified. (Holg
+er)
+        Check out the new pages at http://www.icsi.berkeley.edu/~sather
+        There is a new html based library browser at:
+                http://www.icsi.berkeley.edu/~sather/Documentation/Library/L
+ibraryBrowser/index.html
+        You can convert your own libraries into pages like these.
+        A new who's who page at:
+                http://www.icsi.berkeley.edu/~sather/whoswho.html
+        We consider Sather to be a genuine co-operation between folks
+        on the net and the group at ICSI. Send us information about 
+        yourself and what you use Sather for, and I'll add it to this page!
+        (To save us some work, it would help us if you sent us an addition 
+        in the same format as used by other entries on that page).
+
+
+Syntax changes
+==============
+	"type" becomes "abstract class"
+	"value" classes become "immutable" classes
+	Once arguments in iter definitions are marked with "once" rather
+	than hot arguments.
+	Routine closure creation expressions are changed from #ROUT(..) to
+	bind(..). bind() is used for both routines and iterators.
+
+	Please, see Doc/convert_to_1.1.html for conversion to 1.1 procedure
+
+Library changes/additions
+=========================
+	The Library structure has changed. There are two separate
+	Library directories, one for Sather and one for pSather.
+	The Sather directory consists mostly of links to the 
+	pSather directory (hard links if possible, soft links
+	otherwise).
+
+        Huge changes in the vector and matrix classes (Matt Kennel, Ben),
+        including new abstractions. These are major changes to the
+        naming structure, but the new libraries are really much
+        nicer.
+
+	A new interpretaion of object equalities with corresponding 
+	library and compiler changes. (Ben Gomes, David Stoutamire)
+
+        Including the class COMPARE{T} permits comparisons between
+        elements of type T. Including the class COMPARABLE permits
+        comparisons of the object itself. 
+
+	Support for formatted output (Holger Klawitter)
+	New regular expression library (Holger Klawitter)
+	Reflection (Claudio Fleiner)
+	   this new feature is not intended to be used in 
+	   production code, but for debugging only. We are currently
+	   discussing if and how such features could be a part of the
+           Sather language.
+	   Check out System/Reflection/reflection.sa for more information.
+	   Use option -reflect during compilation.
+
+        Object Storage (Ben)    
+            This new feature is experimental. Check out the code in
+             System/Reflection/store.sa
+            It works for simple objects, where restoring the object
+            does not depend on pointer values being preserved (thus,
+            it won't work for the standard MAP/BAG/SET classes).
+
+	Many bug fixes courtesy of Erik Schnetter.
+
+Installation/Configuration 
+==========================
+	* CONFIG (Claudio Fleiner)
+	  The CONFIG file has completly changed. It includes
+	  now not only configuration options for the compiler, but also
+	  the builtin functions and iter. 
+	* Platforms (Claudio Fleiner)
+	  The System directory has been restructured. Check the runtime_spec
+	  in Doc/ for more information about the changes.
+
+	* make optional must be run in order to use the -gui, -dual_gui and
+	  -debug_graphical compiler options
+
+Debugging (Claudio Fleiner, Ben Gomes)
+======================================
+	A Sather program prints out a stack trace if a fatal error 
+	   happens (works only with certain compilation option, check
+	   the Debugging Documentation.
+	Graphical data browser. This requires you  to "make optional"
+        to install the dual process gui.
+	A utility that allows to print function frames  while debugging
+	   a program
+	For details check Doc/Debugging.html
+
+Compiler Optimizations
+======================
+	mechansim does the same job more efficient and better.
+	Many optimizations options for pSather have been added.
+	Check out the man page. (Claudio Fleiner)
+	A bunch of new parallel optimizations (Claudio Fleiner).
+	Checkout the man pages.
+
+Browser (Ben Gomes)
+===================
+	The browser directories have been reorganized, and the Sather and tcl
+	   code separated out.
+	The browser now depends on System/Platforms/gui/XTclTkPaths.module 
+	   for it's X paths and on the Tcl code in 
+	   System/Platforms/gui/TclCode/startup.tcl and the files it reads
+	The TkKit directories have been reorganized and flattenned out.
+
+GUI (Ben Gomes,  David Bailey, Matthias Earnst and Holger Klawitter)
+=====================================================================
+	Gui has been moved into pLibrary/System/Gui and DualGui. When using 
+	   the Gui, the "-gui -solaris" or "-gui -unix" option must be used.
+	   When using the dual process gui, "-dualgui -solaris" or "-dualgui 
+	   -unix". When using the dual process gui, "-dualgui -solaris" or 
+	   "-dualgui -unix"
+	The dual process gui now requires you to run a "make" in 
+	   System/Platforms/dualgui. This should install the server end. The 
+	   Dual process gui is now an appendage of the "standard" single 
+	   process version and depends on Platforms/gui as well as on 
+	   pLibrary/System/Gui. Check the X flags in 
+	   Platforms/gui/XTclTkPaths.module 
+
+	Check out the documentation at:
+              http://www.icsi.berkeley.edu/~sather/Documentation/Gui/index.html
+
+
+Runtime (Claudio Fleiner)
+=========================
+	The runtime and the builtin functions have been recoded
+	in a completely different way.  builtin is now a keyword
+	in Sather. Errors of the form "function suchandsuch not defined"
+	indicate that we forgot to add some builtin function. Please 
+	send a bug report to bug-sather@gnu.org.
+	For more information, check out Doc/runtime_spec
+
+pSather (Claudio Fleiner)
+=========================
+	pSather runs now on multiprocessor Solaris stations,
+	Solarisstations connected through Ethernet or Myrinet,
+	and on the Meiko CS-2.	
+	The runtime has been completely rewritten.
+	Sather optimizations now work for pSather as well
+
+1.1 Compiler options
+====================
+	In general, all options are partioned into optimization, checking,
+	debugging, and other.  These start with "-O_", "-chk_", "-debug_" and
+	just "-" respectively.  "-O", "-chk" and "-debug" are options by
+	themselves which do the most common or useful thing.
+
+Sather 1.0 command line options:	Sather 1.1 command line options:
+
+   -when, -no_when <classes>		-chk_when, -chk_no_when <classes>
+   -arith, -no_arith <classes>		-chk_arith, -chk_no_arith <classes>
+   -bounds, -no_bounds <classes>        -chk_bounds, -chk_no_bounds <classes>
+   -pre, -no_pre <classes>		-chk_pre, -chk_no_pre <classes>
+   -post, -no_post <classes>		-chk_post, -chk_no_post <classes>
+   -assert, -no_assert <classes>	-chk_assert, -chk_no_assert <classes>
+   -invariant, -no_invariant <classes>	-chk_invariant,
+					   -chk_no_invariant <classes>
+   -return, -no_return <classes>	-chk_return, -chk_no_return <classes>
+   -check, -no_check <classes>		-chk_all, -chk_no_all <classes>
+   -destroy, -no_destroy		-chk_destroy, -chk_no_destroy
+   -psather_chk, -no_psather_chk	-chk_psather, -chk_no_psather
+					New: "-chk" same as "-chk_all all"
+					     "-chk_no" same as "-chk_no_all all"
+
+   -optimize				eliminated
+   -O					same
+   -O_verbose				same
+   -fast				-O_fast
+   -hoist_const, -no_hoist_const	-O_hoist_const, -O_no_hoist_const
+   -cse, -no_cse			-O_cse, -O_no_cse
+   -hoist_iter_init,                    -O_-hoist_iter_init,
+      -no_hoist_iter_init                  -O_no_hoist_iter_init
+   -inline, -no_inline			-O_inline, -O_no_inline
+   -inline_routine <num>		-O_inline_routine_thresh <num>
+   -inline_iters <num>			-O_inline_iter_thresh <num>
+   -move_while, -no_move_while		-O_move_while, -O_no_move_while
+   -side_effects, -no_side_effects      -O_side_effects, -O_no_side_effects
+   -O_debug				same
+   -side_debug				-O_debug_side_effects
+   -cse_debug				-O_debug_cse
+
+   -main <class>			same
+   -o <file>				same
+   -output_C				same
+   -pretty				same
+   -verbose				same
+   -prolix				same
+   -only_parse				same
+   -only_check				same
+   -only_C				same
+   -only_reachable			same
+   -has <file> <classes>		same
+   -external <class> <files>		same
+   -end					same
+   -C_flag <flags>                      same
+					New: "-V", "-version", "-V1.0",
+					     "-convert", "-convert_all"
+
+					
+   -deterministic, -debug, -g, -PO, -POG   becomes:
+
+       -debug_deterministic		same as '-deterministic' before
+       -debug_source			same as '-debug' before
+       -debug       			same as '-debug -PO' before
+       -debug_graphical			same as '-debug -POG' before
+       -debug_C               		same as '-C_flag -g' before
+       -debug -debug_C       		same as '-PO -C_flag -g' before
+       -debug_graphical -debug_C       	same as '-POG -C_flag -g' before
+       -debug_no_backtrace		new: avoids keeping the bactrace info
+					(significantly reduces the executable)
+
+   New pSather Optimization Options
+	-O_cache			-O_post_write
+	-O_cache_size			-O_parloops
+	-O_cache_slot_size		-O_local
+	-O_prefetch			-O_local_call
+	-O_loop_prefetch		-O_local_call_access
+	-O_specul_prefetch		-O_local_call_dynamic
+	-O_prefetch_weight		-O_local_call_dynamic_access
+	-O_remote_call			-O_remote_call_create
+	-O_remote_call_access		-O_yields_in_locks
+	-O_no_yields_in_locks		-O_locks_on_stack
+	-O_no_locks_on_stack
+-----------------------------------------------------------------
+
+Environment variables:
+========================
+
+   SATHER_HOME
+   SATHER_LIBRARY
+   PSATHER_LIBRARY			Use SATHER_LIBRARY instead
+   START_GDB				SATHER_START_GDB
+   CLUSTERS				SATHER_NODES
+
+Configuration variables:
+=========================
+   see Doc/runtime_spec for details
+	VERSION				CC_DEBUG_FLAG
+	PLATFORMS			CC_O_FLAG		
+	DEFAULT_PLATFORM		CC_OPTIMIZE_FLAG
+	THREADS				CC_PROLIX_FLAG
+	DISTRIBUTED			POLLING 
+	TRACE				ATOMIC_CLASSES
+	LIBRARY				BUILTIN_CLASSES 
+	C_COMPILER			REFERNCE_FREE
+	CC_OPTIONS			MAKE_VERBOSE_FLAG
+	LINK_OPTIONS			FORTRAN_APPEND_UNDERSCORE
+	MAKE_COMMAND			FROTRAN_PREFIX_UNDERSCORE
+	OBJECT_EXT			FORTRAN_BIND_FUNC
+	LIB_EXT
+	SHELL_SEP
+	EXEC_OPTION
+	NULL_SEGFAULTS		
+	SEPARATE_POINTERS
+
+
+
+
+
+-----------------------------------------------------------------
+Version 1.1 8/30/96
+
+pSather optimizations
+=======================
+	- lots of parallel optimizations due to Claudio Fleiner. Check
+	  out the man pages.
+
+Log
+===
+Fixed creating closures of external C routines
+Fixed name clashing between external C symbols and Sather symbolic
+   string names
+Made Boot compiler use CC from Makefile rather than the one in CONFIG
+Included some fixes for NetBSD-1.2_BETA provided by Alistair G. Crooks,
+   azcb0@sde.uts.amdahl.com.
+A bunch of fixes (due to  G.Isenmann) for IRIX 5.3 (native cpp doesn't 
+   understand -H, some compiler warning flags. Also some fixes that will
+   allow (hopefully) to use -debug with a native IRIX C compiler (it is
+   not quite ANSI it turns out)
+Changed code generating to allow compilation of -debug with the native 
+  alpha C compiler (it doesn't seem to be able to handle initializations
+  of automatic structs and arrays, similar to cc on SGIs.
+Added GNU regular expression C library to the distribution (Holger Klawitter)
+  This should ease porting of  regular expression classes.
+Removed -lsocket from Linux platform.
+Removed <alloca.h> from System/Debug/print.c. It is not needed, plus breaks
+  under HPUX.
+Fixed Tk_DoOneEvent to return a boolean indicating whether more events are 
+waiting to be processed (Matt Brand)
+Made attribute fp in Library/IO/file.sa to be readonly instead of private.
+Fixed an exception handling bug. If the exception could not be handled by
+   the most recent entered protect, cs would crash. This has been fixed,
+   and now the excpetion is forwarded to the second most recent entered
+   protect, etc. (Arno Jacobsen pointed out the error)
+Fixed a partial class/stub bug - incorrect conflicts were sometimes reported
+   between stubs and attributes in the including class.
+Fixed an unboxing bug: incorrect code was sometimes generated when both
+  value and reference classes subtyped from the same abstract class.
+  Thanks to Mark H. Wilkinson for reporting the bug and submitting a short
+  code exmaple.
+Fixed some parloop bugs.
+Disable constant return values for code generated fo native ULTRIX cc
+
+-----------------------------------------------------------------
+Version 1.1 beta 2 8/11/96
+
+New language features:
+======================
+	- External interface to a superset Fortran 77
+	- External interface to ANSI C
+	- a facility for type checking parametrized classes (type bounds
+	  on parameters)
+
+Library
+========
+	-- New regular expression classes
+Documentation
+==============
+	- Added a new Sather manual with lots of examples (more textbook like)
+
+Log
+===
+Deleted <alloca.h> from print.c - wasn't necessary and faild under HPUX
+Made fp in file.sa readonly instead of private
+Fixed a bug: FLT::hypot built-in implementation was missing an ergument
+Fixed a bug: finally fixed value arrays so that "include AVAL" works
+  properly (for the first time!)
+Added various fixes for FreeBSD (thanks to  Mats Lofkvist)
+Removed regular expression tests from standard tests - evidently uses
+  Solaris specific libraries
+disabled generation of AM representation and code generation 
+for these things when checking is off:
+generated C:            reduced by 25K lines
+resulting executable:   reduced by 55K
+fixed lots of installtion problems for Linux and others
+Added prototypes for infinity(void) and signaling_nan(int) for platforms
+for which these are defined. These functions return doubles, so prototypes
+are necessary indeed.
+
+Fixed a bug: code for the wrong overloaded functions was _sometimes_
+generated. This was a genuine bug, but we could not catch it locally
+- it just did the "right thing" for us. However, on other systems
+signatures in SIG_TBL occupy different relative positions (WHY?) so
+the bug was very obvious.
+
+Fixed a bug: incorrect code was generated to compare immutable
+classes with no attributes. This has been corrected and objects
+of such classes are considered equal if they have the same type.
+Disallowed partial classes as type parameters. Turned off
+"instantiation of partial class" error reporting for type parameters
+during unreachable code check stage. We can still do type checking for
+ unreachable code and do not sacrifice anything as complete code will always 
+have concrete classes as parametrizations
+It used to create Makefiles with all files depending on the Makefile.  
+This often recompiles all files because the Makefile changes.  I removed 
+this dependency and introduced new files 'COMPILE_OPTIONS' and 
+'LINK_OPTIONS'.  The object files and the executable now depend on these 
+files.  This saves some recompilations.
+Erik Shnetter's fix: cs now outputs trailing '\n' and timing information
+even in the presence of errors.
+Changed an error message to say a sensible thing when a stub is used in 
+a concrete class.
+Fixed a bug: cs dumped core if in a closure creation expression the number
+of unbound args was not equal to the number of arguments in a corresponding
+closure type (ROUT or ITER). An appropriate error message is printed now.
+Fixed a bug: C external string names sometimes would shadow the names
+of out/inout arguments - a combination of a Sather and gcc bugs
+Implemented creation of closures of routines in external classes
+Implemented passing array arguments to closures created for external routines
+Allowed out arguments in signatures of abstracts classes to be SAME
+  it was allowed for return values a while back.
+Defined dummy signaling_nan and infinity for sgi, linux.
+
+-----------------------------------------------------------------
+Version 1.1 beta 1 6/2/96
+
+New language features:
+======================
+	Partial classes and stubs
+	New overloading rules allowing overloading of abstract arguments
+	Iterator closures (e.g. bound iterators) 
+	   by Arno Jacobsen, inspired by M. Ernst's proposal
+	   it is not yet possible to bind existing closures
+	Type inferencing for closure creation expressions
+	SAME is resolved late during inclusion (Holger Klawitter)
+	SAME is restricted to the class bodies
+	SAME is a valid return type in abstract classes
+
+Syntax changes
+==============
+	"type" becomes "abstract class"
+	"value" classes become "immutable" classes
+	Once arguments in iter definitions are marked with "once" rather
+	than hot arguments.
+	Routine closure creation expressions are changed from #ROUT(..) to
+	bin(..). bind() is used for both routines and iterators.
+
+	Please, see Doc/convert_to_1.1.html for conversion to 1.1 procedure
+
+Library changes/additions
+=========================
+	The Library structure has changed. There are two separate
+	Library directories, one for Sather and one for pSather.
+	The Sather directory consists mostly of links to the 
+	pSather directory (hard links if possible, soft links
+	otherwise).
+
+	A new interpretaion of object equalities with corresponding 
+	library and compiler changes. (Ben Gomes, David Stoutamire)
+
+	Support for formatted output (Holger Klawitter)
+	Reflection (Claudio Fleiner)
+	   this new feature is not intended to be used in 
+	   production code, but for debugging only. We are currently
+	   discussing if and how such features could be a part of the
+           Sather language.
+	   Check out System/Reflection/reflection.sa for more information.
+	   Use option -reflect during compilation.
+
+	Many bug fixes courtesy of Erik Schnetter.
+
+Runtime (Claudio Fleiner)
+=========================
+	The runtime and the builtin functions have been recoded
+	in a completely different way.  builtin is now a keyword
+	in Sather. Errors of the form "function suchandsuch not defined"
+	indicate that we forgot to add some builtin function. Please 
+	send a bug report to bug-sather@gnu.org.
+	For more information, check out Doc/runtime_spec
+
+Installation/Configuration 
+==========================
+	* CONFIG (Claudio Fleiner)
+	  The CONFIG file has completly changed. It includes
+	  now not only configuration options for the compiler, but also
+	  the builtin functions and iter. 
+	* Platforms (Claudio Fleiner)
+	  The System directory has been restructured. Check the runtime_spec
+	  in Doc/ for more information about the changes.
+
+
+Debugging (Claudio Fleiner, Ben Gomes)
+======================================
+	A Sather program prints out a stack trace if a fatal error 
+	   happens (works only with certain compilation option, check
+	   the Debugging Documentation.
+	Graphical data browser
+	A utility that allows to print function frames  while debugging
+	   a program
+	For details check Doc/Debugging.html
+
+pSather (Claudio Fleiner)
+=========================
+	pSather runs now on multiprocessor Solaris stations,
+	Solarisstations connected through Ethernet or Myrinet,
+	and on the Meiko CS-2.	
+	The runtime has been completely rewritten.
+	Sather optimizations now work for pSather as well
+
+Compiler Optimizations
+======================
+	-replace_iters has been removed, as the new builtin
+	mechansim does the same job more efficient and better.
+	Several optimizations options for pSather have been added.
+	Check out the man page. (Claudio Fleiner)
+
+Browser (Ben Gomes)
+===================
+	The browser directories have been reorganized, and the Sather and tcl
+	   code separated out.
+	The browser now depends on System/Platforms/gui/XTclTkPaths.module 
+	   for it's X paths and on the Tcl code in 
+	   System/Platforms/gui/TclCode/startup.tcl and the files it reads
+	The TkKit directories have been reorganized and flattenned out.
+
+GUI (Ben Gomes)
+===============
+	Gui has been moved into pLibrary/System/Gui and DualGui. When using 
+	   the Gui, the "-gui -solaris" or "-gui -unix" option must be used.
+	   When using the dual process gui, "-dualgui -solaris" or "-dualgui 
+	   -unix". When using the dual process gui, "-dualgui -solaris" or 
+	   "-dualgui -unix"
+	The dual process gui now requires you to run a "make" in 
+	   System/Platforms/dualgui. This should install the server end. The 
+	   Dual process gui is now an appendage of the "standard" single 
+	   process version and depends on Platforms/gui as well as on 
+	   pLibrary/System/Gui. Check the X flags in 
+	   Platforms/gui/XTclTkPaths.module 
+
+Sather 1.1 Spec Update
+======================
+	Check out Doc/Sather-1.1.ps
+
+
+1.1 Compiler options
+====================
+	In general, all options are partioned into optimization, checking,
+	debugging, and other.  These start with "-O_", "-chk_", "-debug_" and
+	just "-" respectively.  "-O", "-chk" and "-debug" are options by
+	themselves which do the most common or useful thing.
+
+Sather 1.0 command line options:	Sather 1.1 command line options:
+
+   -when, -no_when <classes>		-chk_when, -chk_no_when <classes>
+   -arith, -no_arith <classes>		-chk_arith, -chk_no_arith <classes>
+   -bounds, -no_bounds <classes>        -chk_bounds, -chk_no_bounds <classes>
+   -pre, -no_pre <classes>		-chk_pre, -chk_no_pre <classes>
+   -post, -no_post <classes>		-chk_post, -chk_no_post <classes>
+   -assert, -no_assert <classes>	-chk_assert, -chk_no_assert <classes>
+   -invariant, -no_invariant <classes>	-chk_invariant,
+					   -chk_no_invariant <classes>
+   -return, -no_return <classes>	-chk_return, -chk_no_return <classes>
+   -check, -no_check <classes>		-chk_all, -chk_no_all <classes>
+   -destroy, -no_destroy		-chk_destroy, -chk_no_destroy
+   -psather_chk, -no_psather_chk	-chk_psather, -chk_no_psather
+					New: "-chk" same as "-chk_all all"
+					     "-chk_no" same as "-chk_no_all all"
+
+   -optimize				eliminated
+   -O					same
+   -O_verbose				same
+   -fast				-O_fast
+   -hoist_const, -no_hoist_const	-O_hoist_const, -O_no_hoist_const
+   -cse, -no_cse			-O_cse, -O_no_cse
+   -hoist_iter_init,                    -O_-hoist_iter_init,
+      -no_hoist_iter_init                  -O_no_hoist_iter_init
+   -inline, -no_inline			-O_inline, -O_no_inline
+   -inline_routine <num>		-O_inline_routine_thresh <num>
+   -inline_iters <num>			-O_inline_iter_thresh <num>
+   -move_while, -no_move_while		-O_move_while, -O_no_move_while
+   -O_yields_in_locks			same
+   -no_O_yields_in_locks		-O_no_yield_in_locks
+   -O_locks_on_stack			same
+   -no_O_locks_on_stack  		-O_no_locks_on_stack
+   -side_effects, -no_side_effects      -O_side_effects, -O_no_side_effects
+   -O_debug				same
+   -side_debug				-O_debug_side_effects
+   -cse_debug				-O_debug_cse
+
+   -main <class>			same
+   -o <file>				same
+   -output_C				same
+   -pretty				same
+   -verbose				same
+   -prolix				same
+   -only_parse				same
+   -only_check				same
+   -only_C				same
+   -only_reachable			same
+   -has <file> <classes>		same
+   -external <class> <files>		same
+   -end					same
+   -C_flag <flags>                      same
+					New: "-V", "-version", "-V1.0",
+					     "-convert", "-convert_all"
+
+					
+   -deterministic, -debug, -g, -PO, -POG   becomes:
+
+       -debug_deterministic		same as '-deterministic' before
+       -debug_source			same as '-debug' before
+       -debug       			same as '-debug -PO' before
+       -debug_graphical			same as '-debug -POG' before
+       -debug_C               		same as '-C_flag -g' before
+       -debug -debug_C       		same as '-PO -C_flag -g' before
+       -debug_graphical -debug_C       	same as '-POG -C_flag -g' before
+
+-----------------------------------------------------------------
+
+Environment variables:
+========================
+
+   SATHER_HOME
+   SATHER_LIBRARY
+   PSATHER_LIBRARY			Use SATHER_LIBRARY instead
+   START_GDB				SATHER_START_GDB
+   CLUSTERS				SATHER_NODES
+   DEBUG_PSATHER			Platform specific variable
+   SATHER_MEMORY			Platform specific variable
+
+Configuration variables:
+=========================
+   see Doc/runtime_spec for details
+	VERSION				CC_DEBUG_FLA
+	PLATFORMS			CC_O_FLAG		
+	DEFAULT_PLATFORM		MAKE_VERBOSE_FLAG
+	THREADS				CC_PROLIX_FLAG
+	DISTRIBUTED			POLLING 
+	TRACE				ATOMIC_CLASSES
+	LIBRARY				BUILTIN_CLASSES 
+	C_COMPILER			REFERNCE_FREE
+	CC_OPTIONS			
+	LINK_OPTIONS	
+	MAKE_COMMAND
+	OBJECT_EXT
+	LIB_EXT
+	SHELL_SEP
+	EXEC_OPTION
+	NULL_SEGFAULTS		
+	SEPARATE_POINTERS
+
+
+Log
+-----
+added -V1.0, -convert, -convert_all, -V, -version options
+added System/Debug
+added System/Debug/print.c, the interface to PO() and POG()
+added the class PO with a bunch of functions useful for debugging
+	  (there will be a separate document for this)
+removed all special_functions in cgen.sa
+replaced CONFIG and added a bunch of *.config files in the library
+added -PO, -POG options and the interface to the graphical 
+	browser (there will be a separate mail about how to use it).
+
+removed _offset variables from dispatch tables
+added the keyword builtin
+changed the way builtin functions are handled
+  o  all builtin functions are now written as 
+     xxx is builtin SOME_IDENT; end;
+     SOME_IDENT has to be defined in the config file
+  o  if a function says in a comment that it is builtin and
+     raises an exception "xxx not defined", well, now it will
+     raise this exception (This happens for functions that I
+     forgot to convert to the new builtin keyword)
+  o  builtin iters are now inlined even if called from within
+     an iterator.
+  For more information check ${SATHER_HOME}/Doc/runtime_spec
+removed the BUILTIN class
+added clean: to the generated Makefile
+	(removes *.o and *.c that are no longer in use)
+	Actually, the current compiler is able to do that anyway, so clean:
+	 will probably be removed again.
+replaced the pSather directory with the new distributed
+	  pSather library
+added the option -arch, used for pSather
+removed all special handling of AVAL and AREF classes
+	 (except for asize of AVAL classes: I generate a macro
+	CLASS_ASISE for the constant size of the array, and of course
+	new() still works as expected).
+changed the name if AVAL::ainds! to AVAL::aind!
+	AVAL's are now bound checked, and can have sizes>32.
+	removed the 'replace iters' from the optimizer, as this
+	code is now obsolete (the new builtin keyword handles this
+	much better).
+is_atomic has been renamed to is_reference_free, and the list
+	of builtin classes that satisfy this is stored in CONFIG
+is_atomic is now used for pSather types. Its true if an assignment
+	of such a type is atomic (all those types have to be
+	defined in CONFIG)
+removed the obsolete files MACROS, ITERS and EXTERN
+pSather works now on single Solaris, Sun and Linux Computers,
+	and Solaris Computers connected either over TCPIP or Myrinet.
+	In the latter cases (Myrinet and TCPIP) you need some special 
+	configuration files. They are currently in the cvs tree, but to use
+	them you have to start your pSather program on icsib78.
+
+BUGS
+----
+Fixed a bug: SAME was resolved incorrectly when used inside parloop. 
+Fixed incorrect code generation for helper classes containing active
+	local and attributes created for parloop
+Fixed name capture effects in RAISE macro.
+Allowed #SAME inside partial classes
+Functions in external classes are no longer truncated at 24 chars
+Fixed a bug: duplicate constant targets in case statement no longe 
+	cause bogus code generation that fails during C compilation
+Enabled generation of prototypes for functions in external classes.
+	Prototypes are not generated for built-in external classes
+	(they usually get them through #include)
+"Dispatch on void" error message now specifies the culprit method.
+Fixed a bug that prohibited passing elements of multidimensional
+	arrays as out/inout arguments
+Disabled SIGFPE handling fir Linux (caused standard FP test to dump core
+	due to differences from IEEE standard). The signal is ignored.
+Fixed error position reporting for "missing main"
+Upgraded to GC 4.10
+Disabled masking and unmasking of interrupts for GC. -DNO_SIGNAL is
+	default for GC compilation. Has VERY significant performance
+	implications!
+Fixed "readonly" feature modifier bug: was silently ignored when used
+	with something else rather than attributes
+Many, many library bug fixes due to Erik Schnetter.
+Added some macros necessary for Free BSD (Mats Lofkvist)
+Fixed a bug in inlining. Some recursive functions were inlined too many times.
+Fixed a bug that incorrectly intialized inlined ``out'' arguments when the
+	actual parameter was abstract and and the formal arg was value.
+Fixed a bug:some function have been called twice when checking was on (Fleiner)Val arrays can now have any size (Claudio Fleiner)
+Fixed evaluation order when one of the aarguments is an iterator call and
+	a call takes place inside the loop (Claudio Fleiner)
+fixed a bug with dispatch tables (Claudio Fleiner)
+Fixed "assignment" to attributes of value objects (Claudio Fleiner)
+Fixed all (hopefully) supertyping problems. The way the type graphs were
+	generated and used was not quite right. Merged TYPE_GRAPH_DES and
+	TYPE_GRAPH_ANC into single TYPE_GRAPH and deldted lots of code.
+	To compute ancestor and descendant information both subtyping and 
+	supertyping edges are use.
+Fixed a problem with incorrect error location reporting when a main class
+	or function is missing or has a wrong signature
+Added RETURNED_CONST, a macro normally defined to const, but which could
+	be redefined to be blank as needed for some system that do not
+	allow to returned qualified constant types (AIX 4.1) Quowong P Liu
+Fixed a bug that occured if the nested iter was abstract and had no yields
+	(Thanks to  Matthias Ernst for the report).
+
+
+
+-----------------------------------------------------------------
+Version 1.0.8 released 12/1/95
+
+Fixed a bug in A_QUEUE::copy - returns SAME instead of A_QUEUE{T}.
+Thanks go to Seth M. LaForge <sethml@ugcs.caltech.edu> and Erik Schnetter
+<erik.schnetter@student.uni-tuebingen.de>.
+Fixed a bug in FSTR::tail: now copies bytes up to the last used, not the
+end of FSTR (Quowong P Liu, <qpliu%qpliu.remote.Princeton.EDU@Princeton.EDU>)
+Fixed a bug in H_MULTIMAP, cmpare key bug (Matthias Ernst,
+<tisi@beutlin.desy.de>
+Enabled exp10 to work on Alphas (Frank Horowitz,<frank@solo.ned.dem.csiro.au>)
+Fixed a bug for inout/out args in bound routine calls
+Eliminated some of FMAPs and FSETs from invar.sa
+Fixed a bug with value arrays: the size was hardcoded!
+Fixed bugs in value_compare and value_void
+Enabled exp10 to work under HPUX. Now tests run fins on snakes.
+-----------------------------------------------------------------
+Version 1.0.8p1, pre-release 11/16/95
+
+patch1  - fixes a bound ROUT bug: arguments of a call rather then types
+	  were used to compute hash values (args are not uniques)
+patch2  - added AM_INVARIANT_STMT to typecase in cursor.sa
+patch3  - changed Browser/TkKit/library/interface_c.c to conform to patch4
+patch4  - added a stage that mangles all sigs in external classes to avoid 
+	  possible name collisions and incorrect mangling at later stages.
+patch5  - the scanner reported '^L' in the beginning of the line as syntax
+	  error. The patch fixes it.
+patch6  - fixes a bug in FSTR::head and tidies up the definitions, 
+	  preconditions, and macro expansions of various "acopy" routines.
+patch7  - fixed syntax error in lwp.h file
+patch8  - fized a bug in invariant computations and cursor
+patch9	- Fixed an out arg name mangling bug. Name collisions were possible 
+	  since argument names were not mangled correctly.
+patch10 - Fixed a dispatched iter mangling bug.
+patch11 - Fixed a bug that has to do with subtyping of '_'. It caused
+	  #ROUT(foo(out _)) to break. Everything is a subtype of an untyped
+	  '_' in this case, so that foo can have sig: foo(x:INT)
+patch12 - 0i is no longer odd! Fixed a bug in inti.sa
+patch13 - Fixed the "-o" bug. Now relative and absolute path names work when 
+	  used with "-o"
+patch14 - Fixed an incorrect splitting of C files for small thresholds  and 
+	  deletion of old C files (thanks to Erik Schnetter, 
+	  erik.schnetter@student.uni-tuebingen.de)
+patch15 - Disabled dispatching of ROUTs. Now an error message is generated
+	  that says that dispatched ROUTs are not implemented yet. 
+patch16 - Finally fixed typecase. The AS->AM translation as well as generated
+	  code had to change. AM for typecase was modified to get rid of 
+	  void_stmts. cgen.sa was modified to emit goto to the default branch 
+	  when the typecased object is void. Appropriate labels are generated.
+
+Added new tests for bound routines, parameterized classes, callbacks from C.
+Added Sather-Tk Gui. Check out Gui directory.
+Added X11 identifiers to FORBID
+Made cs generated from the supplied C sources for the bootstrap compiler
+be the default installation compiler. The "full" installation has been
+sped up significantly by disabling some of the optimizations that do
+not win anything for the compiler. This also reduced memory requirements
+by 15Mb.
+Made possible passing external Fortran types as "in" arguments. 1.1 spec
+will be modified accordingly.
+A new Gui directory with ui classes  by David Bailey
+<dbailey@icsi.berkeley.edu> and Ben Gomes has been added.
+
+Library:
+Split $NIL into $NIL and $IS_NIL such that $NIL < $IS_NIL (Alex Cozzi's
+suggestions)
+
+Added the faster (representation changing) versions of FSET.  This
+was meant to replace FSET in the compiler and has been pretty extensively
+checked (against FSET).
+
+FSET - changed to not be under any abstraction. This removes dependancies on
+general $SET and should reduce code looked at by some amount.
+Also, the two different set interfaces (the older FSET stuff and
+the newer $SET names) were confusingly similar.
+
+
+New stuff by Ben Gomes (gomes@icsi.berkeley.edu):
+I considered all the "proper" container classes to
+be fair game for changes, but avoided or minimized any changes to the
+existing "F" classes that the compiler uses extensively
+
+        These modifications were made over a long period of time and I
+did not keep careful track of the divergence from the library.  Here
+are some salient points, for the record.
+        
+-- Added new abstract classes
+        $CONTAINER
+        $ARR (also $RO_ARR - dunno about that one, don't use it)
+        $DISPENSER  (over $STACK and $QUEUE)
+        $RO_SET $SET
+        $RO_MAP $MAP
+        $RO_BAG $BAG
+        $RO_MULTIMAP $MULTIMAP
+        $LIST
+-- Added some "view" classes particularly for sets. See the head of set.sa
+        FILTER_SET_VIEW         set_views.sa
+                View a set "filtered" through a bound routine as a set.
+-- Added some new fast classes 
+         FGAP_LIST 
+                Gap lists, which have good
+         FMULTIMAP (Dictionary)
+                Multple values with each key. This used to be called DICT
+                It includes FMAP, rather painfully.
+-- Added functionality to existing "F" classes
+        All "F" classes should now have a STR routine.
+                An issue is whether $CONTAINER should be under $STR but
+                this brings in much dispatched junk into *every* compile.
+                (whenever $STR.str is used, all the string routine and the
+                routines reachable from them are generated for all the class
+es
+                under $STR that have been seen;  we have no type inference)
+        TUPs  have hashing and string functions.
+        Put some of the existing classes such as 
+        FSET < $RO_SET  In one place (FSET::union) this requires
+                that FSET must work on void sets as it used to.
+        ARRAY, FLIST < $ARR
+                This should permit the use of any of the algorithm classes
+                on arrays and flists.
+        Added functionality to FSETs to allow them to work with regular
+        $RO_SETs
+        The names are not consistent between FSETs and RO_SETs
+        (intersect vs. intersection, difference vs. diff, sym_difference vs
+        sym_diff).
+-- Modified some of the "proper" containers to reflect the naming convention
+        <representation type>_<abstraction>
+        A_  = Array based representation
+        LH_ = Linear hash table based representation(FMAP and FSET basically)
+        H_  = Bucketed hash table based representation.
+        Hence, we have A_STACK, LH_MAP (wrapper for FMAP), H_MAP (written 
+                using the bucketed hash table).
+        QUEUE->A_QUEUE and STACK->A_STACK
+-- There is also one class chosen to be the "standard" version.
+        Users can therefore just use
+        SET{T}, BAG{T} etc. and expect something reasonable.
+        These versions could even be made clever to change between      
+        representations based on their usage.
+-- Added "proper" classes that are wrappers for many of the "F" classes.
+        GAP_LIST (over FGAP_LIST), 
+        MULTIMAP (over FMULTIMAP),
+        LH_SET (over FSET),
+        LH_MAP (over FMAP)
+        A_LIST - extensible array, the "good" version of FLIST.
+                This is NOT a wrapper over FLIST, but a rewrite 
+                that does not have much of the junk in FLIST 
+        LIST (alias for A_LIST, actually, not a wrapper over FLIST)
+-- Added "algorithm" classes - which are basically stateless collections
+        of functions.
+        I played with many versions of these classes, including versions
+        that were meant to be used by inclusion. I found, however, that
+        it seemed simplest to just have them be called by class calls 
+        (:: calls) 
+    $CONTAINER modules
+    MEMBER member.sa  
+        Works on any containers and has membership functions such
+       as count_if, any, some, every etc.
+    $ARR modules 
+    The most significant one is A_SORT - the others are a little threadbare
+    A_ALG a_alg.sa 
+        Miscellaneous array based algorithms.
+    A_PERMUTE a_permute.sa
+        Permutation checking functions - very simple, but useful
+                for verifying that the result of an operation on
+                a hash table, for instance, matches some predefined output.
+    A_SORT a_sort.sa
+        Various sorting functions - quick, insertion and merge sort
+        + tests for sorting.
+        In addition, there is support for indirect sorting, i.e.
+        sorting a list of indirect indices rather than the array itself.
+        There are many functions in this class with only very small
+        differences; this seems wasteful, but also the simplest version.
+        I previously had a parametrized version of the sort classes
+        that could automatically (by different parametrizations)
+        handle the case when the comparison function changed or an
+        indirect sorting was used.
+        However, the interface became considerably more complex and
+        required the user to understand how a couple of auxilliary
+        classes worked, which (I thought) would make for unnecessary work.
+        The sorting algorithms are also written to use swap calls, but
+                these calls should be inlined
+        Let me know what you think.
+    A_SELECT a_select.sa
+        Median finding and ith element routines. Select may not be the
+        best word here.
+    A_SEARCH a_search.sa
+        Binary searching/matching algorithms on arrays.
+-- Modified Containers.module to reflect the new file structure
+-- All test classes are split out into their own files - this reduces parse
+        time and also avoids pulling in classes that are only used for
+        the TEST classes.
+-- Added new TEST classes
+        TEST_TUP
+        TEST_FGAP_LIST
+        TEST_MULTIMAP
+        TEST_SORT
+        TEST_LIST
+        TEST_ARR_ALG
+        TEST_FMULTIMAP
+
+        These must be incorporated into test-oblig.sa
+-- Several other classes are split into their own files.
+        This may reduce parse and compile time and the size of the
+        generated code.
+-- Changed iters in FSTR, STR and FLIST to not be nested.
+        They were calling aelt! and aind! and this should reduce the
+        size and improve the speed of the generated code.
+Apologies:
+-- In the course of making modifications I frequently moved classes around
+        between files and sometimes lost the original author attributions.
+        My sincere apologies for this, and if you see places where you would
+        like this fixed please let me know and I'll make the change.
+        I don't currently have the time to go through and track where things
+        come from.
+        
+Where to look for bugs:
+-- Modifications of elt! and ind! iters in FSTR, STR and FLIST - the modifie
+d 
+        versions are all marked, and I looked at them carefully and  tested 
+        them but ....
+-- Modifications to FSET and ARRAY - very minor changes to existing code,
+        but added some  new functions - may cause conflicts on inclusion.
+
+New Emacs Version by Kevin Lewis:
+  Update to `sather-mode.texinfo'.
+ - Fixed the hl319 routine patterns to be like font-lock.
+ - Fixed a bug in `sather-new-class'.
+ - Added dark faces to `sample.emacs', which are selected using
+   `sather-highlight-background-mode'.
+ - Now compiler bug reports are saluted to Boris (ie, "Dear Boris").
+   I assumed this was appropriate, let me know if it is not.
+If you are an emacs user, you no longer have to muck around with sample.emac
+s.
+Just set the variables 
+(setq sather-highlight-background-mode 'light)
+(setq sather-use-highlight-package 'font-lock)
+Before loading emacs:
+(load "/u/gomes/Sather/Sather/Emacs/sample.emacs")
+
+-----------------------------------------------------------------
+
+
+
+Version 1.0.8p0, pre-release 10/16/95
+
+Fixed layout generation for dispatched iter frames
+Fixed missing '_' in iter frames
+Added missing types to Base.module:abstract.sa
+Added priority queue class (Ben Gomes)
+Fixed problem with inlining constant initializations
+Added test to catch infinite numbers of classes
+Runtime fix for NeXT (Colin Perkins)
+Solaris fix for signalling_nan (Matt Brand)
+Removed troublesome ' in CONFIG.proto
+Fixed bug with multiply subtyped dispatched iters
+Fixed bug with inlining SYS::inlined_C
+Fixed bug with supertyping over builtin types
+Fixed layout generation for dispatched iter frames
+Fixed container classes mostly dealing with rare exceptional states 
+within the dynamic hash tables. (Thanks to Andrew Duckworth 
+<andrew@insession.com> and cozzi@asterix.neurop2.ruhr-uni-bochum.de 
+(Alex Cozzi))(Holger Klawitter)
+Removing unneccessary global tables from the compiler by introducing 
+direct references from the TP classes to their interfaces and element lists.
+changes to some containers so that they return better hashing values.
+a new statistic module
+an AM_CURSOR module, which does not work with pSather yet
+a new optimizer (for Sather only)
+a bunch of new options:
+	-no_inline
+	-O_verbose
+	-O_debug
+	-move_while / -no_move_while
+	-replace_iters / -no_replace_iters
+	-hoist_iter_init / -no_hoist_iter_init
+	-hoist_const / -no_hoist_const
+	-side_effects / -no_side_effects
+	-side_debug
+See FAQ for details.
+The compiler calculates the side effects now.
+removed the inlining of "complex iters", as it sometimes generates wrong code.
+changes to cgen regarding loops
+several changes to AM_LOOP_STMT
+new AM_NODES: AM_ASIZE_EXPR, AM_COMMENT_STMT
+changes to SIG (attr srcsig is new), modes
+an new am_out.sa file, with a much more readable output, but does not
+  work well with pSather stuff yet.
+a copy for nearly all $AM_STMT and $AM_EXPR, with the exception
+  of iters and loops.
+is_eq for $AM_EXPR (not complete, but works), with some enhancements
+More updates for WIN32 port
+Massive changes to incorporate 1.1 spec out and inout arguments: changes
+to scanner, parser, Abstract Sytax, Abstract Machine, inlining, optimizations,
+code generation, signatures, type implementation, conformance computation etc.
+Although not officially in the language until Sather 1.1 is born, 
+"out" and "inout" arguments can already be used.
+A bulk of 1.1 external FORTRAN interface has been implemented. 
+Malefile modified to allow installation only of a boot compiler. Platforms
+with not enough memory to compile a fast compiler with all optimzations
+on, can still enjoy a "fast" compiler which is probably in most cases 
+no worse then the one produced in traditional manner: first bootstrap,
+then installation.
+A bunch of new targets to test the compiler is added to Makefile. A word
+of caution - some take hours, so you probably don't want to run them
+unless you are porting the compiler.
+
+
+-----------------------------------------------------------------
+Version 1.0.7 released 7/22/95 (now one year since beta 0!)
+
+Fixed symbol for SunPRO use of sunmath.h
+Made test classes accept $STR args
+Fixed bug with zero length strings in runtime.h
+CPX now under $NIL
+Added to $QUEUE::top
+Changed default to do inline void checks 
+Fixed bug in inlined comparisons of value objects
+Added FLIST::reset
+Changed FILE::clear to use macro
+Added signal processing library in Contrib/ (Alex Cozzi)
+Misc improvements to array{,2,3} classes (Alex Cozzi)
+Fixed ARRAY{T}::remove_if
+Changes to support RISC/os 5.01 (YOSHIDA, Atsushi)
+Fixed \a handling, since gcc can handle it now
+    (but left commented out, since some users still report failure!?)
+Fixed VEC::to_array to return res
+Updated System/README
+Added Win32 constants to floatmath.h
+Changed STR_CURSOR::get_bool to skip preceding space
+FLIST{T} now subtypes from $STR
+Upgraded garbage collector to release 4.5
+Fixed bug causing undeclared types in array creation expressions
+Fixed bug with dispatch wrapper return types
+Changed Makefile to use () for Win32
+Fixed dependence on ".o" extension for Win32
+Optimization to short-circuit value attr assigns
+Fixed handling of bogus file names
+Modified FSTR to allow creation with zero length
+SIG representation changed to be unique, removed sig_output table
+Made -pretty include commented out #line directives
+Bug with abstract key objects fixed in FSET, FMAP and FQSET
+Got rid of $REHASH
+Added void check to SYS::id
+Dispatched iters (Boris Vaysman)
+General inlining (Ilya Vinarsky, Boris Vaysman)
+Updates to the browser
+Contrib/ is now bundled separately
+Added $ELT, $CONTAINER, $COPY types
+Fixed bug causing multiple evaluation of size arg of new()
+New emacs modes, manual on-line, more robust but slower
+Added BOOL::is_lt
+All VEC classes now under $STR
+Minor tweaks to compiler document
+
+-----------------------------------------------------------------
+Version 1.0.6 released 5/9/95
+
+Lean C header generation
+Incremental compilation - if one uses "-output_C"
+Garbage collector updated to v4.4
+Fixed bug in passing arrays to external routines
+All arithmetic checking now performed, if enabled
+Destroy checks now performed, if enabled
+Added SYS::destroy calls to library code
+Eliminated _many_ latent minor bugs in the libraries that
+   the arithmetic and destroy checking caught
+Eliminated emitting duplicate string constants
+Allow environment variables in command files
+Update to Boser's interpreter
+Stages added for inlining and optimization
+Added is_neq to $IS_EQ
+Better inlining of SYS::ob_eq
+All object fields now sorted by decreasing alignment
+Fixed exception handling around iters and returns
+Lean (and corrected) #line directive generation
+pSather works, although brittle
+Updates to Contrib/cschwarz (Sheldon White)
+New queue, stack, testing classes (Ben Gomes)
+Updates to Lisp interpreter (Nobuyuki Hikichi)
+Contributed GUI classes based on Tk (Matthias Ernst)
+Tcl-based browser (Ben Gomes)
+Provisions for porting to NT
+Now executables are in Bin/
+CONFIG variables now in top makefile, no '#' chars used
+Ported code for performance comparison (Nobuyuki Hikichi)
+Fixed GC problem causing excessive VM consumption
+Added "-prolix" option, eliminated some verbosity
+Update to the Sather emacs mode
+Added SYS::inline_C (use with caution!)
+Split up globals into multiple files to avoid cc bug
+Restructured library into subdirectories/modules
+Added automatic "xxx.module" recognition
+Added (* ... *) comments to modules
+Changed SATHER_COMMANDS to SATHER_LIBRARY
+Changes to Makefile, smaller and faster installation
+Added load ratio to container classes
+Added checks for snowballing to hashing container classes
+Improved hash functions
+Added is_nil under $NIL, updated libraries
+Updates to Contrib/schnetter (Erik Schnetter)
+Pentominoes solver (Sheldon White)
+Added bag, set, map, dict hash table classes (Holger Klawitter)
+Leaner C generation for typecase (Matthias Ernst)
+Fixed NaN handling for floating point libs
+Improved floating point testing (Alex Cozzi)
+Added dummy field to empty structs
+Added socket classes to library (Dave Bailey)
+Compiler description document
+Added "-external", "-end" options
+
+-----------------------------------------------------------------
+Version 1.0.5 released 2/13/95
+
+Misc changes to many files, much restructuring
+Postconditions, invariants, result and initial now handled
+Fixed bugs with bound routines
+Fixed potential bug in initializing array creation expressions
+Fixed potential bug in not null-terminating strings passed to C
+Changed STR, OUT, ERR, FILE to use plus($STR) instead of overloading.
+Added ${LIB} variable to generated makefiles
+Name mangling much more robust
+Changes to bring pSather parsing, semantic analysis up-to-date
+New, improved sather.el <lewikk@aud.alcatel.com>
+New ARRAY3 class
+Many changes to numeric classes
+Additions to str_cursor.sa
+Misc. contributions by gomes@icsi.berkeley.edu
+An interim Sather interpreter contributed by B. Boser
+Contributed portable file system classes by Ari Huttunen
+More X classes by Erik Schnetter
+
+-----------------------------------------------------------------
+Version 1.0.4 released 12/23/94
+
+Fixed bug with bound routines created with CLASS::
+Fixed problem with generated C to make it ANSI 
+Replaced manual with correct document, added psather.ps
+Added README to Contrib/jefu
+Fixed memory allocation bugs in System/str.c, Library/fstr.sa
+Fixed bug that allowed duplicate class names when it
+    was the "-main" class and in a "-has" argument
+
+-----------------------------------------------------------------
+Version 1.0.3 released 12/22/94
+
+Misc fixes, speed improvements in many (most?) files
+    (Now at least twice as fast Sather->C)
+Changed error message format; now says file:line:column (for emacs' sake)
+Bound routines implemented
+Manual has been reworked
+Fixed "-check" option (was ignored)
+Added GC_malloc_atomic to help out the conservative GC (mbk)
+GC update to 4.3
+New code contributions
+
+-----------------------------------------------------------------
+Version 1.0.2 released 11/18/94
+
+Misc fixes to rnd.sa, flt.sa, fltd.sa, int.sa, str.sa, flist.sa, 
+    file.sa, char.sa, System/EXTERNS
+CPX has been completely revamped (Erik Schnetter)
+Fixed namespace collision with iter locals
+Fixed declaration ordering bug with multiple nested iters
+Fixed bug which allowed create expressions to access private methods
+Changes with external classes:
+    Added AREF{EXT_OB} as valid arg type to externals in spec and compiler
+    Fixed generation of external routines with bodies when reachable
+    Made compiler and spec strictly pass void as NULL
+	to external routines (instead of non-zero offset to array portion)
+Portability improvements:
+    Added terminating newlines to some generated files
+    OS/2 now supported (your milage may vary)
+Performance improvements:
+    Added '-has' option to allow library parsing only on demand
+    Heap allocated iter frames now explicitly freed instead of GCed
+    Eliminated some boxing to reduce garbage generation
+    Misc pointer stomping to make AM_* things become garbage sooner
+
+-----------------------------------------------------------------
+Version 1.0.1 released 10/28/94
+
+Added top-level GC_CC variable and made CONFIG CC get set automatically
+Changed quoting of characters to always use \b forms instead of octal
+Changed sort routines in INT, added test class
+Fixed bug in FSET
+Fixed precedence problem with C's boolean operators
+Added conditional code for more portable bcopy
+Accidentally left debug flag on for bootstrap in last release - oops!
+Macro facilities improved, many new macros thanks to Matt Kennel
+Fixed preconditions of ARRAY{T}::copy and AREF{T}::acopy
+Added text versions of the man page and the manual (but they're gross)
+
+-----------------------------------------------------------------
+Version 1.0.0 released 10/14/94
+
+A few more changes to try to cut down on memory consumption
+Fixed bug which made compiler not find 'create' if private
+Fixed bug which disallowed explicit overriding of included attrs
+Fixed misc library and portability bugs
+Fixed bug that prevented compiling non-sather files
+
+-----------------------------------------------------------------
+Beta 5 released 9/27/94
+
+*** Now generates separate C files instead of one big one ***
+Added get_str, get_char and get_line to FILE
+Fixed bug that allowed parameterized typespecs as expressions
+Fixed bug that allowed access to private routines
+Added basic iter inlining
+Fixed bug in pSather parsing 'dist'
+Fixed bug with overlapping abstract types in typecase or protect
+Added INT::is_pow_of_2 and next_pow_of_2 (phlipp@icsi)
+Fixed bug in constant initialization ordering
+Purified library of psather keyword use
+Added plus(FLTD) and plus(FLTD):_ to ERR
+Fixed bug in type inference with constant folding
+Misc changes to reduce space usage (not very successful)
+Added new STR_CURSOR class thanks to dschultz@cs.nmt.edu
+
+-----------------------------------------------------------------
+Beta 4 released 9/7/94
+
+Added #line directives into Sather source if -debug or -g
+Updated parser to parse complete pSather spec
+Added upper case to CHAR::is_hex_digit and hex_digit_value
+Added execve and ARRAY{STR} -> C conversion code
+Mod to utils.c to support feof macro on BSD platforms
+Added STR::plus(FLTD):STR
+Work around in CHAR::ascii_int for gcc bug (not recognizing '\a')
+Included Huu LeVan's string matching code in Contrib/
+Included Christian Schwarz's data structure code in Contrib/
+Fixed bug in reporting position of command line errors
+
+-----------------------------------------------------------------
+Beta 3 released 8/23/94
+
+Included Robert Griesemer's excellent Lisp interpreter demo
+Added ARRAY{T}::resize
+Fixed serious bug which sometimes allocated wrongly sized arrays
+Fixed bug in FSTR::is_lt
+Typos in ERR sent output wrong place
+Fixed NetBSD const arg in ftell
+Fixed serious bug which could result in multiple expression evaluation
+    under dispatching
+
+-----------------------------------------------------------------
+Beta 2 released 8/10/94
+
+Many small bug fixes
+"protect" and "exception" now work
+Added options to inhibit parts of compile
+Added pSather parsing option
+All 32-bit dependencies should be removed
+Now uses ver. 4.2 of the garbage collector
+
+-----------------------------------------------------------------
+Beta 1 released 7/25/94
+
+Lots and lots of changes.  Generated C files about half the original
+size, countless portability bugs fixed.  Some primitive inlining
+and constant folding (just INT::plus).
+
+-----------------------------------------------------------------
+Beta 0 released 7/17/94

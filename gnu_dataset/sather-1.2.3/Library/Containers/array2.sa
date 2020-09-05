@@ -1,0 +1,202 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- array2.sa: Two-dimensional arrays.
+
+-- Notes: a new set of identifier is provided for consistency with
+-- ARRAY3, like size1, size2, ind1!, ind2!, elt1!,elt2! and so on.
+-------------------------------------------------------------------
+
+class ARRAY2{T} < $ELT{T} is
+   -- Two-dimensional arrays of elements of type T.
+   private include AREF{T}   aclear->aclear, array_ptr->array_ptr;
+   
+   readonly attr size2:INT;	-- Size of the fastest changing dimension.
+
+   readonly attr size1:INT;     -- Size of the slowest changing dimension.
+
+   create(d1,d2:INT):SAME 
+      -- A new two-dimensional array with dimensions `d1 x d2'
+      -- initialized to void.
+      pre d1>0 and d2>0 is
+      res::=new(d1*d2);
+      res.size1:=d1;
+      res.size2:=d2;
+      return(res); end;
+
+   create(a: ARRAY{ARRAY{T}}): SAME 
+      -- Create a new array with the same dimensions and values as
+      -- a, which is an array of arrays(rows). 
+      -- Assume that all the rows of "a" have the same number of elements
+      pre a.size > 0 and a[0].size > 0 is
+      sz1 ::= a.size;
+      sz2 ::= a[0].size;
+      res ::= #SAME(sz1,sz2);
+      loop r::=sz1.times!; 
+	 loop c::=sz2.times!; res[r,c] := a[r][c]; end; 
+      end;
+      return(res);
+      end;
+	 
+   copy: SAME 
+      -- Return a new 2D array with the same set of values as self
+      pre ~void(self) and size1 > 0 and size2 > 0 is
+      res ::= #SAME(size1,size2);
+      res.acopy(self);
+      return(res);
+      end;
+      
+   copy(a: ARRAY{ARRAY{T}}) is
+      -- Copy as much of a as will fit into self
+      loop 
+	 r::=size1.min(a.size).times!;
+	 row ::= a[r];
+	 loop set_row!(r,row.elt!) end end end;   
+
+   aget(i1,i2:INT):T is
+      -- The element with indices `[i1,i2]'.
+      return([i1*size2+i2]) end;
+
+   aset(i1,i2:INT,val:T) is
+      -- Set the element with indices `[i1,i2]' to val.
+      [i1*size2+i2]:=val end;      
+
+   nr: INT is 
+      -- The size of the first dimension of the array. Number of rows
+      return size1 end;
+   
+   nc: INT is
+      -- The size of the second dimension of the array. Number of cols
+      return size2 end;
+
+   ind1!: INT is
+      -- Yield each value of the first index in order. The rows
+      loop yield(size1.times!); end end;
+   
+   ind2!:INT is
+      -- Yield each value of the second index in order. The columns
+      loop yield(size2.times!); end end;
+
+   row_ind!: INT is
+      -- Yield each value of the first index in order. The rows
+      loop yield(size1.times!); end end;
+   
+   col_ind!:INT is
+      -- Yield each value of the second index in order. The columns
+      loop yield(size2.times!); end end;
+   
+   diag_elt!: T is
+      -- Yield values along the diagonal (square in smaller dimension)
+      loop ind ::= (size1.min(size2)).times!; yield([ind,ind]) end; end;
+
+   set_diag_elt!(val:T) is
+      -- Set values along the diagonal (square in smaller dimension)
+      loop id ::= (size1.min(size2)).times!; [id,id] := val; yield;  end; end;
+   
+   inds!:TUP{INT,INT} is
+      -- Yield tuples of the indices of self in lexicographical order.
+      loop row ::=size1.times!;
+	 loop yield(#TUP{INT,INT}(row,size2.times!)); end end end;
+
+   elt!: T is
+      -- Yield all elements in row major order
+      loop yield(aelt!) end; end;
+   
+   set!(val:T) is
+      -- Set all elements in row major order
+      loop aset!(val); yield; end end;
+
+   elt1!(once i1:INT):T is
+      -- Yield elements by varying index 2 and holding index 1 at `i1'.
+      -- The elements of a row "i1"
+      -- this is the same as row_elt!
+      loop yield(aelt!(i1*size2,size2,1)); end end;
+
+   elt2!(once i2:INT):T is
+      -- Yield elements by varying index 1 and holding index 2 at `i2'.
+      -- The elements of a "column" i2
+      -- this is the same as col_elt!
+      loop yield(aelt!(i2,size1,size2)); end end;
+      
+   row_elt!(once row:INT):T is
+      -- Yield elements by varying index 2 and holding index 1 at `row'.
+      -- The elements of a row "row"
+      loop yield(aelt!(row*size2,size2,1)); end end;
+
+   col_elt!(once col:INT):T is
+      -- Yield elements by varying index 1 and holding index 2 at `col'.
+      -- The elements of a "column" col
+      loop yield(aelt!(col,size1,size2)); end end;
+
+   set1!(once i1:INT, val:T) is
+      -- Set to val elements with varying index 2 and index 1 fixed at `i1'.
+      -- i.e. setting the row i1
+      -- this is the same as set_row!
+      loop aset!(i1*size2,size2,val); yield end end;
+
+   set2!(once i2:INT, val:T) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `i2'.
+      -- i.e. setting the column i2 
+      -- this is the same as set_col!
+      loop aset!(i2,size1,size2,val); yield end end;
+
+   set_row!(once row:INT, val:T) is
+      -- Set to val elements with varying index 2 and index 1 fixed at `row'.
+      -- i.e. setting a row "row"
+      loop aset!(row*size2,size2,val); yield end end;
+
+   set_col!(once col:INT, val:T) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `col'.
+      -- i.e. setting the column col 
+      loop aset!(col,size1,size2,val); yield end end;
+
+   transpose: SAME is
+      -- Return a new array containing the transpose of self
+      res::=#SAME(size2,size1);
+      res.to_transpose_of(self);
+      return(res) end;
+   
+   to_transpose_of(a:SAME)
+      -- Set self to the transpose of a.
+      pre a.size1=size2 and a.size2=size1 is
+      loop t::=inds!; [t.t1,t.t2]:=a[t.t2,t.t1] end;
+      end;
+   
+   to_portion_of(a: SAME) is
+      -- Copy into self as much of arg as will fit and return it. Don't
+      -- alter other elements.
+      loop r::=size1.min(a.size1).times!;
+	 loop set1!(r,a.elt1!(r)) end end end;
+
+   resize(sz1, sz2:INT):SAME is
+      res ::= #SAME(sz1, sz2);
+      col:INT;
+      
+      loop
+         size2.min(sz1).times!;
+         col := 0.upto!(sz2.min(size1));
+         loop
+            res.set2!(col, elt2!(col));
+         end;
+         --(loop)
+      end;
+      --(loop)
+      return (res);
+   end;
+   --(resize(INT, INT):SAME)
+
+end; -- class ARRAY2{T}
+
+-------------------------------------------------------------------
+   
+      

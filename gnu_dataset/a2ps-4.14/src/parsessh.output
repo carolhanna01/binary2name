@@ -1,0 +1,2153 @@
+文法
+
+    0 $accept: file $end
+
+    1 file: style_sheet
+
+    2 style_sheet: tSTYLE tSTRING tIS definition_list tEND tSTYLE
+
+    3 definition_list: /* 空 */
+    4                | definition_list tOPTIONAL tKEYWORDS keywords_def tKEYWORDS
+    5                | definition_list tKEYWORDS keywords_def tKEYWORDS
+    6                | definition_list tOPTIONAL tOPERATORS operators_def tOPERATORS
+    7                | definition_list tOPERATORS operators_def tOPERATORS
+    8                | definition_list tOPTIONAL sequence_def
+    9                | definition_list sequence_def
+   10                | definition_list ancestors_def
+   11                | definition_list tALPHABETS tARE tSTRING
+   12                | definition_list tFIRST tALPHABET tIS tSTRING
+   13                | definition_list tSECOND tALPHABET tIS tSTRING
+   14                | definition_list case_def
+   15                | definition_list documentation
+   16                | definition_list authors
+   17                | definition_list version
+   18                | definition_list requirement
+
+   19 requirement: tREQUIRES tA2PS tSTRING
+   20            | tREQUIRES tA2PS tVERSION tSTRING
+
+   21 documentation: tDOCUMENTATION tIS long_string tEND tDOCUMENTATION
+
+   22 long_string: tSTRING
+   23            | long_string tSTRING
+
+   24 authors: tWRITTEN tBY tSTRING
+
+   25 version: tVERSION tIS tSTRING
+   26        | tVERSION tSTRING
+
+   27 ancestors_def: tANCESTORS tARE ancestors_list tEND tANCESTORS
+
+   28 ancestors_list: tSTRING
+   29               | ancestors_list ',' tSTRING
+
+   30 case_def: tCASE tSENSITIVENESS
+
+   31 regex: tREGEX
+   32      | regex tREGEX
+
+   33 rhs: a_rhs
+
+   34 a_rhs: tSTRING fface
+   35      | tSTRING
+   36      | fface
+   37      | tBACK_REF fface
+   38      | tBACK_REF
+   39      | tLATEXSYMBOL
+
+   40 rhs_list: a_rhs
+   41         | rhs_list ',' a_rhs
+
+   42 fface: tFACE
+   43      | tFFLAGS
+   44      | '(' fface_sxp ')'
+
+   45 fface_sxp: tFACE
+   46          | tFFLAGS
+   47          | fface_sxp '+' tFACE
+   48          | fface_sxp '+' tFFLAGS
+
+   49 rule: tSTRING rhs
+   50     | tSTRING
+   51     | '(' tSTRING rhs_list ')'
+
+   52 keywords_def: tIN fface tARE keywords_rule_list tEND
+   53             | tARE keywords_rule_list tEND
+
+   54 keywords_rule_list: rule
+   55                   | keyword_regex
+   56                   | keywords_rule_list ',' rule
+   57                   | keywords_rule_list ',' keyword_regex
+
+   58 keyword_regex: regex rhs
+   59              | regex
+   60              | '(' regex rhs_list ')'
+
+   61 operators_def: tIN fface tARE operators_rule_list tEND
+   62              | tARE operators_rule_list tEND
+
+   63 operators_rule_list: rule
+   64                    | operator_regex
+   65                    | operators_rule_list ',' rule
+   66                    | operators_rule_list ',' operator_regex
+
+   67 operator_regex: regex rhs
+   68               | regex
+   69               | '(' regex rhs_list ')'
+
+   70 sequence_def: tSEQUENCES tARE sequence_list tEND tSEQUENCES
+
+   71 sequence_list: sequence
+   72              | sequence_list ',' sequence
+
+   73 sequence: tSTRING tLATEXSYMBOL fface closers_opt exception_def_opt
+   74         | tSTRING tSTRING fface fface closers_opt exception_def_opt
+   75         | tSTRING fface fface closers_opt exception_def_opt
+   76         | tSTRING tSTRING fface closers_opt exception_def_opt
+   77         | tSTRING fface closers_opt exception_def_opt
+   78         | regex tSTRING fface fface closers_opt exception_def_opt
+   79         | regex fface fface closers_opt exception_def_opt
+   80         | regex tSTRING fface closers_opt exception_def_opt
+   81         | regex fface closers_opt exception_def_opt
+   82         | '(' tSTRING rhs_list ')' fface closers_opt exception_def_opt
+   83         | '(' regex rhs_list ')' fface closers_opt exception_def_opt
+   84         | tCSTRING
+   85         | tCCHAR
+
+   86 closers_opt: /* 空 */
+   87            | rule
+   88            | operator_regex
+   89            | tCLOSERS operators_def tCLOSERS
+
+   90 exception_def_opt: /* 空 */
+   91                  | tEXCEPTIONS operators_def tEXCEPTIONS
+
+
+出現位置の規則による終端
+
+$end (0) 0
+'(' (40) 44 51 60 69 82 83
+')' (41) 44 51 60 69 82 83
+'+' (43) 47 48
+',' (44) 29 41 56 57 65 66 72
+error (256)
+tSTYLE (258) 2
+tIS (259) 2 12 13 21 25
+tEND (260) 2 21 27 52 53 61 62 70
+tKEYWORDS (261) 4 5
+tARE (262) 11 27 52 53 61 62 70
+tIN (263) 52 61
+tOPERATORS (264) 6 7
+tSEQUENCES (265) 70
+tFIRST (266) 12
+tSECOND (267) 13
+tALPHABET (268) 12 13
+tALPHABETS (269) 11
+tDOCUMENTATION (270) 21
+tEXCEPTIONS (271) 91
+tCASE (272) 30
+tCSTRING (273) 84
+tCCHAR (274) 85
+tOPTIONAL (275) 4 6 8
+tCLOSERS (276) 89
+tWRITTEN (277) 24
+tBY (278) 24
+tVERSION (279) 20 25 26
+tREQUIRES (280) 19 20
+tA2PS (281) 19 20
+tANCESTORS (282) 27
+tFACE (283) 42 45 47
+tFFLAGS (284) 43 46 48
+tSTRING (285) 2 11 12 13 19 20 22 23 24 25 26 28 29 34 35 49 50 51
+    73 74 75 76 77 78 80 82
+tLATEXSYMBOL (286) 39 73
+tREGEX (287) 31 32
+tSENSITIVENESS (288) 30
+tBACK_REF (289) 37 38
+
+
+出現位置の規則による非終端
+
+$accept (39)
+    左辺: 0
+file (40)
+    左辺: 1, 右辺: 0
+style_sheet (41)
+    左辺: 2, 右辺: 1
+definition_list (42)
+    左辺: 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18,
+    右辺: 2 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
+requirement (43)
+    左辺: 19 20, 右辺: 18
+documentation (44)
+    左辺: 21, 右辺: 15
+long_string (45)
+    左辺: 22 23, 右辺: 21 23
+authors (46)
+    左辺: 24, 右辺: 16
+version (47)
+    左辺: 25 26, 右辺: 17
+ancestors_def (48)
+    左辺: 27, 右辺: 10
+ancestors_list (49)
+    左辺: 28 29, 右辺: 27 29
+case_def (50)
+    左辺: 30, 右辺: 14
+regex (51)
+    左辺: 31 32, 右辺: 32 58 59 60 67 68 69 78 79 80 81 83
+rhs (52)
+    左辺: 33, 右辺: 49 58 67
+a_rhs (53)
+    左辺: 34 35 36 37 38 39, 右辺: 33 40 41
+rhs_list (54)
+    左辺: 40 41, 右辺: 41 51 60 69 82 83
+fface (55)
+    左辺: 42 43 44, 右辺: 34 36 37 52 61 73 74 75 76 77 78 79 80
+    81 82 83
+fface_sxp (56)
+    左辺: 45 46 47 48, 右辺: 44 47 48
+rule (57)
+    左辺: 49 50 51, 右辺: 54 56 63 65 87
+keywords_def (58)
+    左辺: 52 53, 右辺: 4 5
+keywords_rule_list (59)
+    左辺: 54 55 56 57, 右辺: 52 53 56 57
+keyword_regex (60)
+    左辺: 58 59 60, 右辺: 55 57
+operators_def (61)
+    左辺: 61 62, 右辺: 6 7 89 91
+operators_rule_list (62)
+    左辺: 63 64 65 66, 右辺: 61 62 65 66
+operator_regex (63)
+    左辺: 67 68 69, 右辺: 64 66 88
+sequence_def (64)
+    左辺: 70, 右辺: 8 9
+sequence_list (65)
+    左辺: 71 72, 右辺: 70 72
+sequence (66)
+    左辺: 73 74 75 76 77 78 79 80 81 82 83 84 85,
+    右辺: 71 72
+closers_opt (67)
+    左辺: 86 87 88 89, 右辺: 73 74 75 76 77 78 79 80 81 82 83
+exception_def_opt (68)
+    左辺: 90 91, 右辺: 73 74 75 76 77 78 79 80 81 82 83
+
+
+状態 0
+
+    0 $accept: . file $end
+
+    tSTYLE  shift, and go to state 1
+
+    file         go to state 2
+    style_sheet  go to state 3
+
+
+状態 1
+
+    2 style_sheet: tSTYLE . tSTRING tIS definition_list tEND tSTYLE
+
+    tSTRING  shift, and go to state 4
+
+
+状態 2
+
+    0 $accept: file . $end
+
+    $end  shift, and go to state 5
+
+
+状態 3
+
+    1 file: style_sheet .
+
+    $default  reduce using rule 1 (file)
+
+
+状態 4
+
+    2 style_sheet: tSTYLE tSTRING . tIS definition_list tEND tSTYLE
+
+    tIS  shift, and go to state 6
+
+
+状態 5
+
+    0 $accept: file $end .
+
+    $default  accept
+
+
+状態 6
+
+    2 style_sheet: tSTYLE tSTRING tIS . definition_list tEND tSTYLE
+
+    $default  reduce using rule 3 (definition_list)
+
+    definition_list  go to state 7
+
+
+状態 7
+
+    2 style_sheet: tSTYLE tSTRING tIS definition_list . tEND tSTYLE
+    4 definition_list: definition_list . tOPTIONAL tKEYWORDS keywords_def tKEYWORDS
+    5                | definition_list . tKEYWORDS keywords_def tKEYWORDS
+    6                | definition_list . tOPTIONAL tOPERATORS operators_def tOPERATORS
+    7                | definition_list . tOPERATORS operators_def tOPERATORS
+    8                | definition_list . tOPTIONAL sequence_def
+    9                | definition_list . sequence_def
+   10                | definition_list . ancestors_def
+   11                | definition_list . tALPHABETS tARE tSTRING
+   12                | definition_list . tFIRST tALPHABET tIS tSTRING
+   13                | definition_list . tSECOND tALPHABET tIS tSTRING
+   14                | definition_list . case_def
+   15                | definition_list . documentation
+   16                | definition_list . authors
+   17                | definition_list . version
+   18                | definition_list . requirement
+
+    tEND            shift, and go to state 8
+    tKEYWORDS       shift, and go to state 9
+    tOPERATORS      shift, and go to state 10
+    tSEQUENCES      shift, and go to state 11
+    tFIRST          shift, and go to state 12
+    tSECOND         shift, and go to state 13
+    tALPHABETS      shift, and go to state 14
+    tDOCUMENTATION  shift, and go to state 15
+    tCASE           shift, and go to state 16
+    tOPTIONAL       shift, and go to state 17
+    tWRITTEN        shift, and go to state 18
+    tVERSION        shift, and go to state 19
+    tREQUIRES       shift, and go to state 20
+    tANCESTORS      shift, and go to state 21
+
+    requirement    go to state 22
+    documentation  go to state 23
+    authors        go to state 24
+    version        go to state 25
+    ancestors_def  go to state 26
+    case_def       go to state 27
+    sequence_def   go to state 28
+
+
+状態 8
+
+    2 style_sheet: tSTYLE tSTRING tIS definition_list tEND . tSTYLE
+
+    tSTYLE  shift, and go to state 29
+
+
+状態 9
+
+    5 definition_list: definition_list tKEYWORDS . keywords_def tKEYWORDS
+
+    tARE  shift, and go to state 30
+    tIN   shift, and go to state 31
+
+    keywords_def  go to state 32
+
+
+状態 10
+
+    7 definition_list: definition_list tOPERATORS . operators_def tOPERATORS
+
+    tARE  shift, and go to state 33
+    tIN   shift, and go to state 34
+
+    operators_def  go to state 35
+
+
+状態 11
+
+   70 sequence_def: tSEQUENCES . tARE sequence_list tEND tSEQUENCES
+
+    tARE  shift, and go to state 36
+
+
+状態 12
+
+   12 definition_list: definition_list tFIRST . tALPHABET tIS tSTRING
+
+    tALPHABET  shift, and go to state 37
+
+
+状態 13
+
+   13 definition_list: definition_list tSECOND . tALPHABET tIS tSTRING
+
+    tALPHABET  shift, and go to state 38
+
+
+状態 14
+
+   11 definition_list: definition_list tALPHABETS . tARE tSTRING
+
+    tARE  shift, and go to state 39
+
+
+状態 15
+
+   21 documentation: tDOCUMENTATION . tIS long_string tEND tDOCUMENTATION
+
+    tIS  shift, and go to state 40
+
+
+状態 16
+
+   30 case_def: tCASE . tSENSITIVENESS
+
+    tSENSITIVENESS  shift, and go to state 41
+
+
+状態 17
+
+    4 definition_list: definition_list tOPTIONAL . tKEYWORDS keywords_def tKEYWORDS
+    6                | definition_list tOPTIONAL . tOPERATORS operators_def tOPERATORS
+    8                | definition_list tOPTIONAL . sequence_def
+
+    tKEYWORDS   shift, and go to state 42
+    tOPERATORS  shift, and go to state 43
+    tSEQUENCES  shift, and go to state 11
+
+    sequence_def  go to state 44
+
+
+状態 18
+
+   24 authors: tWRITTEN . tBY tSTRING
+
+    tBY  shift, and go to state 45
+
+
+状態 19
+
+   25 version: tVERSION . tIS tSTRING
+   26        | tVERSION . tSTRING
+
+    tIS      shift, and go to state 46
+    tSTRING  shift, and go to state 47
+
+
+状態 20
+
+   19 requirement: tREQUIRES . tA2PS tSTRING
+   20            | tREQUIRES . tA2PS tVERSION tSTRING
+
+    tA2PS  shift, and go to state 48
+
+
+状態 21
+
+   27 ancestors_def: tANCESTORS . tARE ancestors_list tEND tANCESTORS
+
+    tARE  shift, and go to state 49
+
+
+状態 22
+
+   18 definition_list: definition_list requirement .
+
+    $default  reduce using rule 18 (definition_list)
+
+
+状態 23
+
+   15 definition_list: definition_list documentation .
+
+    $default  reduce using rule 15 (definition_list)
+
+
+状態 24
+
+   16 definition_list: definition_list authors .
+
+    $default  reduce using rule 16 (definition_list)
+
+
+状態 25
+
+   17 definition_list: definition_list version .
+
+    $default  reduce using rule 17 (definition_list)
+
+
+状態 26
+
+   10 definition_list: definition_list ancestors_def .
+
+    $default  reduce using rule 10 (definition_list)
+
+
+状態 27
+
+   14 definition_list: definition_list case_def .
+
+    $default  reduce using rule 14 (definition_list)
+
+
+状態 28
+
+    9 definition_list: definition_list sequence_def .
+
+    $default  reduce using rule 9 (definition_list)
+
+
+状態 29
+
+    2 style_sheet: tSTYLE tSTRING tIS definition_list tEND tSTYLE .
+
+    $default  reduce using rule 2 (style_sheet)
+
+
+状態 30
+
+   53 keywords_def: tARE . keywords_rule_list tEND
+
+    tSTRING  shift, and go to state 50
+    tREGEX   shift, and go to state 51
+    '('      shift, and go to state 52
+
+    regex               go to state 53
+    rule                go to state 54
+    keywords_rule_list  go to state 55
+    keyword_regex       go to state 56
+
+
+状態 31
+
+   52 keywords_def: tIN . fface tARE keywords_rule_list tEND
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    fface  go to state 60
+
+
+状態 32
+
+    5 definition_list: definition_list tKEYWORDS keywords_def . tKEYWORDS
+
+    tKEYWORDS  shift, and go to state 61
+
+
+状態 33
+
+   62 operators_def: tARE . operators_rule_list tEND
+
+    tSTRING  shift, and go to state 50
+    tREGEX   shift, and go to state 51
+    '('      shift, and go to state 62
+
+    regex                go to state 63
+    rule                 go to state 64
+    operators_rule_list  go to state 65
+    operator_regex       go to state 66
+
+
+状態 34
+
+   61 operators_def: tIN . fface tARE operators_rule_list tEND
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    fface  go to state 67
+
+
+状態 35
+
+    7 definition_list: definition_list tOPERATORS operators_def . tOPERATORS
+
+    tOPERATORS  shift, and go to state 68
+
+
+状態 36
+
+   70 sequence_def: tSEQUENCES tARE . sequence_list tEND tSEQUENCES
+
+    tCSTRING  shift, and go to state 69
+    tCCHAR    shift, and go to state 70
+    tSTRING   shift, and go to state 71
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 72
+
+    regex          go to state 73
+    sequence_list  go to state 74
+    sequence       go to state 75
+
+
+状態 37
+
+   12 definition_list: definition_list tFIRST tALPHABET . tIS tSTRING
+
+    tIS  shift, and go to state 76
+
+
+状態 38
+
+   13 definition_list: definition_list tSECOND tALPHABET . tIS tSTRING
+
+    tIS  shift, and go to state 77
+
+
+状態 39
+
+   11 definition_list: definition_list tALPHABETS tARE . tSTRING
+
+    tSTRING  shift, and go to state 78
+
+
+状態 40
+
+   21 documentation: tDOCUMENTATION tIS . long_string tEND tDOCUMENTATION
+
+    tSTRING  shift, and go to state 79
+
+    long_string  go to state 80
+
+
+状態 41
+
+   30 case_def: tCASE tSENSITIVENESS .
+
+    $default  reduce using rule 30 (case_def)
+
+
+状態 42
+
+    4 definition_list: definition_list tOPTIONAL tKEYWORDS . keywords_def tKEYWORDS
+
+    tARE  shift, and go to state 30
+    tIN   shift, and go to state 31
+
+    keywords_def  go to state 81
+
+
+状態 43
+
+    6 definition_list: definition_list tOPTIONAL tOPERATORS . operators_def tOPERATORS
+
+    tARE  shift, and go to state 33
+    tIN   shift, and go to state 34
+
+    operators_def  go to state 82
+
+
+状態 44
+
+    8 definition_list: definition_list tOPTIONAL sequence_def .
+
+    $default  reduce using rule 8 (definition_list)
+
+
+状態 45
+
+   24 authors: tWRITTEN tBY . tSTRING
+
+    tSTRING  shift, and go to state 83
+
+
+状態 46
+
+   25 version: tVERSION tIS . tSTRING
+
+    tSTRING  shift, and go to state 84
+
+
+状態 47
+
+   26 version: tVERSION tSTRING .
+
+    $default  reduce using rule 26 (version)
+
+
+状態 48
+
+   19 requirement: tREQUIRES tA2PS . tSTRING
+   20            | tREQUIRES tA2PS . tVERSION tSTRING
+
+    tVERSION  shift, and go to state 85
+    tSTRING   shift, and go to state 86
+
+
+状態 49
+
+   27 ancestors_def: tANCESTORS tARE . ancestors_list tEND tANCESTORS
+
+    tSTRING  shift, and go to state 87
+
+    ancestors_list  go to state 88
+
+
+状態 50
+
+   49 rule: tSTRING . rhs
+   50     | tSTRING .
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    $default  reduce using rule 50 (rule)
+
+    rhs    go to state 92
+    a_rhs  go to state 93
+    fface  go to state 94
+
+
+状態 51
+
+   31 regex: tREGEX .
+
+    $default  reduce using rule 31 (regex)
+
+
+状態 52
+
+   51 rule: '(' . tSTRING rhs_list ')'
+   60 keyword_regex: '(' . regex rhs_list ')'
+
+    tSTRING  shift, and go to state 95
+    tREGEX   shift, and go to state 51
+
+    regex  go to state 96
+
+
+状態 53
+
+   32 regex: regex . tREGEX
+   58 keyword_regex: regex . rhs
+   59              | regex .
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tREGEX        shift, and go to state 97
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    $default  reduce using rule 59 (keyword_regex)
+
+    rhs    go to state 98
+    a_rhs  go to state 93
+    fface  go to state 94
+
+
+状態 54
+
+   54 keywords_rule_list: rule .
+
+    $default  reduce using rule 54 (keywords_rule_list)
+
+
+状態 55
+
+   53 keywords_def: tARE keywords_rule_list . tEND
+   56 keywords_rule_list: keywords_rule_list . ',' rule
+   57                   | keywords_rule_list . ',' keyword_regex
+
+    tEND  shift, and go to state 99
+    ','   shift, and go to state 100
+
+
+状態 56
+
+   55 keywords_rule_list: keyword_regex .
+
+    $default  reduce using rule 55 (keywords_rule_list)
+
+
+状態 57
+
+   42 fface: tFACE .
+
+    $default  reduce using rule 42 (fface)
+
+
+状態 58
+
+   43 fface: tFFLAGS .
+
+    $default  reduce using rule 43 (fface)
+
+
+状態 59
+
+   44 fface: '(' . fface_sxp ')'
+
+    tFACE    shift, and go to state 101
+    tFFLAGS  shift, and go to state 102
+
+    fface_sxp  go to state 103
+
+
+状態 60
+
+   52 keywords_def: tIN fface . tARE keywords_rule_list tEND
+
+    tARE  shift, and go to state 104
+
+
+状態 61
+
+    5 definition_list: definition_list tKEYWORDS keywords_def tKEYWORDS .
+
+    $default  reduce using rule 5 (definition_list)
+
+
+状態 62
+
+   51 rule: '(' . tSTRING rhs_list ')'
+   69 operator_regex: '(' . regex rhs_list ')'
+
+    tSTRING  shift, and go to state 95
+    tREGEX   shift, and go to state 51
+
+    regex  go to state 105
+
+
+状態 63
+
+   32 regex: regex . tREGEX
+   67 operator_regex: regex . rhs
+   68               | regex .
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tREGEX        shift, and go to state 97
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    $default  reduce using rule 68 (operator_regex)
+
+    rhs    go to state 106
+    a_rhs  go to state 93
+    fface  go to state 94
+
+
+状態 64
+
+   63 operators_rule_list: rule .
+
+    $default  reduce using rule 63 (operators_rule_list)
+
+
+状態 65
+
+   62 operators_def: tARE operators_rule_list . tEND
+   65 operators_rule_list: operators_rule_list . ',' rule
+   66                    | operators_rule_list . ',' operator_regex
+
+    tEND  shift, and go to state 107
+    ','   shift, and go to state 108
+
+
+状態 66
+
+   64 operators_rule_list: operator_regex .
+
+    $default  reduce using rule 64 (operators_rule_list)
+
+
+状態 67
+
+   61 operators_def: tIN fface . tARE operators_rule_list tEND
+
+    tARE  shift, and go to state 109
+
+
+状態 68
+
+    7 definition_list: definition_list tOPERATORS operators_def tOPERATORS .
+
+    $default  reduce using rule 7 (definition_list)
+
+
+状態 69
+
+   84 sequence: tCSTRING .
+
+    $default  reduce using rule 84 (sequence)
+
+
+状態 70
+
+   85 sequence: tCCHAR .
+
+    $default  reduce using rule 85 (sequence)
+
+
+状態 71
+
+   73 sequence: tSTRING . tLATEXSYMBOL fface closers_opt exception_def_opt
+   74         | tSTRING . tSTRING fface fface closers_opt exception_def_opt
+   75         | tSTRING . fface fface closers_opt exception_def_opt
+   76         | tSTRING . tSTRING fface closers_opt exception_def_opt
+   77         | tSTRING . fface closers_opt exception_def_opt
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 110
+    tLATEXSYMBOL  shift, and go to state 111
+    '('           shift, and go to state 59
+
+    fface  go to state 112
+
+
+状態 72
+
+   82 sequence: '(' . tSTRING rhs_list ')' fface closers_opt exception_def_opt
+   83         | '(' . regex rhs_list ')' fface closers_opt exception_def_opt
+
+    tSTRING  shift, and go to state 113
+    tREGEX   shift, and go to state 51
+
+    regex  go to state 114
+
+
+状態 73
+
+   32 regex: regex . tREGEX
+   78 sequence: regex . tSTRING fface fface closers_opt exception_def_opt
+   79         | regex . fface fface closers_opt exception_def_opt
+   80         | regex . tSTRING fface closers_opt exception_def_opt
+   81         | regex . fface closers_opt exception_def_opt
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    tSTRING  shift, and go to state 115
+    tREGEX   shift, and go to state 97
+    '('      shift, and go to state 59
+
+    fface  go to state 116
+
+
+状態 74
+
+   70 sequence_def: tSEQUENCES tARE sequence_list . tEND tSEQUENCES
+   72 sequence_list: sequence_list . ',' sequence
+
+    tEND  shift, and go to state 117
+    ','   shift, and go to state 118
+
+
+状態 75
+
+   71 sequence_list: sequence .
+
+    $default  reduce using rule 71 (sequence_list)
+
+
+状態 76
+
+   12 definition_list: definition_list tFIRST tALPHABET tIS . tSTRING
+
+    tSTRING  shift, and go to state 119
+
+
+状態 77
+
+   13 definition_list: definition_list tSECOND tALPHABET tIS . tSTRING
+
+    tSTRING  shift, and go to state 120
+
+
+状態 78
+
+   11 definition_list: definition_list tALPHABETS tARE tSTRING .
+
+    $default  reduce using rule 11 (definition_list)
+
+
+状態 79
+
+   22 long_string: tSTRING .
+
+    $default  reduce using rule 22 (long_string)
+
+
+状態 80
+
+   21 documentation: tDOCUMENTATION tIS long_string . tEND tDOCUMENTATION
+   23 long_string: long_string . tSTRING
+
+    tEND     shift, and go to state 121
+    tSTRING  shift, and go to state 122
+
+
+状態 81
+
+    4 definition_list: definition_list tOPTIONAL tKEYWORDS keywords_def . tKEYWORDS
+
+    tKEYWORDS  shift, and go to state 123
+
+
+状態 82
+
+    6 definition_list: definition_list tOPTIONAL tOPERATORS operators_def . tOPERATORS
+
+    tOPERATORS  shift, and go to state 124
+
+
+状態 83
+
+   24 authors: tWRITTEN tBY tSTRING .
+
+    $default  reduce using rule 24 (authors)
+
+
+状態 84
+
+   25 version: tVERSION tIS tSTRING .
+
+    $default  reduce using rule 25 (version)
+
+
+状態 85
+
+   20 requirement: tREQUIRES tA2PS tVERSION . tSTRING
+
+    tSTRING  shift, and go to state 125
+
+
+状態 86
+
+   19 requirement: tREQUIRES tA2PS tSTRING .
+
+    $default  reduce using rule 19 (requirement)
+
+
+状態 87
+
+   28 ancestors_list: tSTRING .
+
+    $default  reduce using rule 28 (ancestors_list)
+
+
+状態 88
+
+   27 ancestors_def: tANCESTORS tARE ancestors_list . tEND tANCESTORS
+   29 ancestors_list: ancestors_list . ',' tSTRING
+
+    tEND  shift, and go to state 126
+    ','   shift, and go to state 127
+
+
+状態 89
+
+   34 a_rhs: tSTRING . fface
+   35      | tSTRING .
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    $default  reduce using rule 35 (a_rhs)
+
+    fface  go to state 128
+
+
+状態 90
+
+   39 a_rhs: tLATEXSYMBOL .
+
+    $default  reduce using rule 39 (a_rhs)
+
+
+状態 91
+
+   37 a_rhs: tBACK_REF . fface
+   38      | tBACK_REF .
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    $default  reduce using rule 38 (a_rhs)
+
+    fface  go to state 129
+
+
+状態 92
+
+   49 rule: tSTRING rhs .
+
+    $default  reduce using rule 49 (rule)
+
+
+状態 93
+
+   33 rhs: a_rhs .
+
+    $default  reduce using rule 33 (rhs)
+
+
+状態 94
+
+   36 a_rhs: fface .
+
+    $default  reduce using rule 36 (a_rhs)
+
+
+状態 95
+
+   51 rule: '(' tSTRING . rhs_list ')'
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    a_rhs     go to state 130
+    rhs_list  go to state 131
+    fface     go to state 94
+
+
+状態 96
+
+   32 regex: regex . tREGEX
+   60 keyword_regex: '(' regex . rhs_list ')'
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tREGEX        shift, and go to state 97
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    a_rhs     go to state 130
+    rhs_list  go to state 132
+    fface     go to state 94
+
+
+状態 97
+
+   32 regex: regex tREGEX .
+
+    $default  reduce using rule 32 (regex)
+
+
+状態 98
+
+   58 keyword_regex: regex rhs .
+
+    $default  reduce using rule 58 (keyword_regex)
+
+
+状態 99
+
+   53 keywords_def: tARE keywords_rule_list tEND .
+
+    $default  reduce using rule 53 (keywords_def)
+
+
+状態 100
+
+   56 keywords_rule_list: keywords_rule_list ',' . rule
+   57                   | keywords_rule_list ',' . keyword_regex
+
+    tSTRING  shift, and go to state 50
+    tREGEX   shift, and go to state 51
+    '('      shift, and go to state 52
+
+    regex          go to state 53
+    rule           go to state 133
+    keyword_regex  go to state 134
+
+
+状態 101
+
+   45 fface_sxp: tFACE .
+
+    $default  reduce using rule 45 (fface_sxp)
+
+
+状態 102
+
+   46 fface_sxp: tFFLAGS .
+
+    $default  reduce using rule 46 (fface_sxp)
+
+
+状態 103
+
+   44 fface: '(' fface_sxp . ')'
+   47 fface_sxp: fface_sxp . '+' tFACE
+   48          | fface_sxp . '+' tFFLAGS
+
+    ')'  shift, and go to state 135
+    '+'  shift, and go to state 136
+
+
+状態 104
+
+   52 keywords_def: tIN fface tARE . keywords_rule_list tEND
+
+    tSTRING  shift, and go to state 50
+    tREGEX   shift, and go to state 51
+    '('      shift, and go to state 52
+
+    regex               go to state 53
+    rule                go to state 54
+    keywords_rule_list  go to state 137
+    keyword_regex       go to state 56
+
+
+状態 105
+
+   32 regex: regex . tREGEX
+   69 operator_regex: '(' regex . rhs_list ')'
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tREGEX        shift, and go to state 97
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    a_rhs     go to state 130
+    rhs_list  go to state 138
+    fface     go to state 94
+
+
+状態 106
+
+   67 operator_regex: regex rhs .
+
+    $default  reduce using rule 67 (operator_regex)
+
+
+状態 107
+
+   62 operators_def: tARE operators_rule_list tEND .
+
+    $default  reduce using rule 62 (operators_def)
+
+
+状態 108
+
+   65 operators_rule_list: operators_rule_list ',' . rule
+   66                    | operators_rule_list ',' . operator_regex
+
+    tSTRING  shift, and go to state 50
+    tREGEX   shift, and go to state 51
+    '('      shift, and go to state 62
+
+    regex           go to state 63
+    rule            go to state 139
+    operator_regex  go to state 140
+
+
+状態 109
+
+   61 operators_def: tIN fface tARE . operators_rule_list tEND
+
+    tSTRING  shift, and go to state 50
+    tREGEX   shift, and go to state 51
+    '('      shift, and go to state 62
+
+    regex                go to state 63
+    rule                 go to state 64
+    operators_rule_list  go to state 141
+    operator_regex       go to state 66
+
+
+状態 110
+
+   74 sequence: tSTRING tSTRING . fface fface closers_opt exception_def_opt
+   76         | tSTRING tSTRING . fface closers_opt exception_def_opt
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    fface  go to state 142
+
+
+状態 111
+
+   73 sequence: tSTRING tLATEXSYMBOL . fface closers_opt exception_def_opt
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    fface  go to state 143
+
+
+状態 112
+
+   75 sequence: tSTRING fface . fface closers_opt exception_def_opt
+   77         | tSTRING fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tFACE     shift, and go to state 57
+    tFFLAGS   shift, and go to state 58
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 145
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    fface           go to state 146
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 149
+
+
+状態 113
+
+   82 sequence: '(' tSTRING . rhs_list ')' fface closers_opt exception_def_opt
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    a_rhs     go to state 130
+    rhs_list  go to state 150
+    fface     go to state 94
+
+
+状態 114
+
+   32 regex: regex . tREGEX
+   83 sequence: '(' regex . rhs_list ')' fface closers_opt exception_def_opt
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tREGEX        shift, and go to state 97
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    a_rhs     go to state 130
+    rhs_list  go to state 151
+    fface     go to state 94
+
+
+状態 115
+
+   78 sequence: regex tSTRING . fface fface closers_opt exception_def_opt
+   80         | regex tSTRING . fface closers_opt exception_def_opt
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    fface  go to state 152
+
+
+状態 116
+
+   79 sequence: regex fface . fface closers_opt exception_def_opt
+   81         | regex fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tFACE     shift, and go to state 57
+    tFFLAGS   shift, and go to state 58
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 145
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    fface           go to state 153
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 154
+
+
+状態 117
+
+   70 sequence_def: tSEQUENCES tARE sequence_list tEND . tSEQUENCES
+
+    tSEQUENCES  shift, and go to state 155
+
+
+状態 118
+
+   72 sequence_list: sequence_list ',' . sequence
+
+    tCSTRING  shift, and go to state 69
+    tCCHAR    shift, and go to state 70
+    tSTRING   shift, and go to state 71
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 72
+
+    regex     go to state 73
+    sequence  go to state 156
+
+
+状態 119
+
+   12 definition_list: definition_list tFIRST tALPHABET tIS tSTRING .
+
+    $default  reduce using rule 12 (definition_list)
+
+
+状態 120
+
+   13 definition_list: definition_list tSECOND tALPHABET tIS tSTRING .
+
+    $default  reduce using rule 13 (definition_list)
+
+
+状態 121
+
+   21 documentation: tDOCUMENTATION tIS long_string tEND . tDOCUMENTATION
+
+    tDOCUMENTATION  shift, and go to state 157
+
+
+状態 122
+
+   23 long_string: long_string tSTRING .
+
+    $default  reduce using rule 23 (long_string)
+
+
+状態 123
+
+    4 definition_list: definition_list tOPTIONAL tKEYWORDS keywords_def tKEYWORDS .
+
+    $default  reduce using rule 4 (definition_list)
+
+
+状態 124
+
+    6 definition_list: definition_list tOPTIONAL tOPERATORS operators_def tOPERATORS .
+
+    $default  reduce using rule 6 (definition_list)
+
+
+状態 125
+
+   20 requirement: tREQUIRES tA2PS tVERSION tSTRING .
+
+    $default  reduce using rule 20 (requirement)
+
+
+状態 126
+
+   27 ancestors_def: tANCESTORS tARE ancestors_list tEND . tANCESTORS
+
+    tANCESTORS  shift, and go to state 158
+
+
+状態 127
+
+   29 ancestors_list: ancestors_list ',' . tSTRING
+
+    tSTRING  shift, and go to state 159
+
+
+状態 128
+
+   34 a_rhs: tSTRING fface .
+
+    $default  reduce using rule 34 (a_rhs)
+
+
+状態 129
+
+   37 a_rhs: tBACK_REF fface .
+
+    $default  reduce using rule 37 (a_rhs)
+
+
+状態 130
+
+   40 rhs_list: a_rhs .
+
+    $default  reduce using rule 40 (rhs_list)
+
+
+状態 131
+
+   41 rhs_list: rhs_list . ',' a_rhs
+   51 rule: '(' tSTRING rhs_list . ')'
+
+    ','  shift, and go to state 160
+    ')'  shift, and go to state 161
+
+
+状態 132
+
+   41 rhs_list: rhs_list . ',' a_rhs
+   60 keyword_regex: '(' regex rhs_list . ')'
+
+    ','  shift, and go to state 160
+    ')'  shift, and go to state 162
+
+
+状態 133
+
+   56 keywords_rule_list: keywords_rule_list ',' rule .
+
+    $default  reduce using rule 56 (keywords_rule_list)
+
+
+状態 134
+
+   57 keywords_rule_list: keywords_rule_list ',' keyword_regex .
+
+    $default  reduce using rule 57 (keywords_rule_list)
+
+
+状態 135
+
+   44 fface: '(' fface_sxp ')' .
+
+    $default  reduce using rule 44 (fface)
+
+
+状態 136
+
+   47 fface_sxp: fface_sxp '+' . tFACE
+   48          | fface_sxp '+' . tFFLAGS
+
+    tFACE    shift, and go to state 163
+    tFFLAGS  shift, and go to state 164
+
+
+状態 137
+
+   52 keywords_def: tIN fface tARE keywords_rule_list . tEND
+   56 keywords_rule_list: keywords_rule_list . ',' rule
+   57                   | keywords_rule_list . ',' keyword_regex
+
+    tEND  shift, and go to state 165
+    ','   shift, and go to state 100
+
+
+状態 138
+
+   41 rhs_list: rhs_list . ',' a_rhs
+   69 operator_regex: '(' regex rhs_list . ')'
+
+    ','  shift, and go to state 160
+    ')'  shift, and go to state 166
+
+
+状態 139
+
+   65 operators_rule_list: operators_rule_list ',' rule .
+
+    $default  reduce using rule 65 (operators_rule_list)
+
+
+状態 140
+
+   66 operators_rule_list: operators_rule_list ',' operator_regex .
+
+    $default  reduce using rule 66 (operators_rule_list)
+
+
+状態 141
+
+   61 operators_def: tIN fface tARE operators_rule_list . tEND
+   65 operators_rule_list: operators_rule_list . ',' rule
+   66                    | operators_rule_list . ',' operator_regex
+
+    tEND  shift, and go to state 167
+    ','   shift, and go to state 108
+
+
+状態 142
+
+   74 sequence: tSTRING tSTRING fface . fface closers_opt exception_def_opt
+   76         | tSTRING tSTRING fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tFACE     shift, and go to state 57
+    tFFLAGS   shift, and go to state 58
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 145
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    fface           go to state 168
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 169
+
+
+状態 143
+
+   73 sequence: tSTRING tLATEXSYMBOL fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 62
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 170
+
+
+状態 144
+
+   89 closers_opt: tCLOSERS . operators_def tCLOSERS
+
+    tARE  shift, and go to state 33
+    tIN   shift, and go to state 34
+
+    operators_def  go to state 171
+
+
+状態 145
+
+   44 fface: '(' . fface_sxp ')'
+   51 rule: '(' . tSTRING rhs_list ')'
+   69 operator_regex: '(' . regex rhs_list ')'
+
+    tFACE    shift, and go to state 101
+    tFFLAGS  shift, and go to state 102
+    tSTRING  shift, and go to state 95
+    tREGEX   shift, and go to state 51
+
+    regex      go to state 105
+    fface_sxp  go to state 103
+
+
+状態 146
+
+   75 sequence: tSTRING fface fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 62
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 172
+
+
+状態 147
+
+   87 closers_opt: rule .
+
+    $default  reduce using rule 87 (closers_opt)
+
+
+状態 148
+
+   88 closers_opt: operator_regex .
+
+    $default  reduce using rule 88 (closers_opt)
+
+
+状態 149
+
+   77 sequence: tSTRING fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 174
+
+
+状態 150
+
+   41 rhs_list: rhs_list . ',' a_rhs
+   82 sequence: '(' tSTRING rhs_list . ')' fface closers_opt exception_def_opt
+
+    ','  shift, and go to state 160
+    ')'  shift, and go to state 175
+
+
+状態 151
+
+   41 rhs_list: rhs_list . ',' a_rhs
+   83 sequence: '(' regex rhs_list . ')' fface closers_opt exception_def_opt
+
+    ','  shift, and go to state 160
+    ')'  shift, and go to state 176
+
+
+状態 152
+
+   78 sequence: regex tSTRING fface . fface closers_opt exception_def_opt
+   80         | regex tSTRING fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tFACE     shift, and go to state 57
+    tFFLAGS   shift, and go to state 58
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 145
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    fface           go to state 177
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 178
+
+
+状態 153
+
+   79 sequence: regex fface fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 62
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 179
+
+
+状態 154
+
+   81 sequence: regex fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 180
+
+
+状態 155
+
+   70 sequence_def: tSEQUENCES tARE sequence_list tEND tSEQUENCES .
+
+    $default  reduce using rule 70 (sequence_def)
+
+
+状態 156
+
+   72 sequence_list: sequence_list ',' sequence .
+
+    $default  reduce using rule 72 (sequence_list)
+
+
+状態 157
+
+   21 documentation: tDOCUMENTATION tIS long_string tEND tDOCUMENTATION .
+
+    $default  reduce using rule 21 (documentation)
+
+
+状態 158
+
+   27 ancestors_def: tANCESTORS tARE ancestors_list tEND tANCESTORS .
+
+    $default  reduce using rule 27 (ancestors_def)
+
+
+状態 159
+
+   29 ancestors_list: ancestors_list ',' tSTRING .
+
+    $default  reduce using rule 29 (ancestors_list)
+
+
+状態 160
+
+   41 rhs_list: rhs_list ',' . a_rhs
+
+    tFACE         shift, and go to state 57
+    tFFLAGS       shift, and go to state 58
+    tSTRING       shift, and go to state 89
+    tLATEXSYMBOL  shift, and go to state 90
+    tBACK_REF     shift, and go to state 91
+    '('           shift, and go to state 59
+
+    a_rhs  go to state 181
+    fface  go to state 94
+
+
+状態 161
+
+   51 rule: '(' tSTRING rhs_list ')' .
+
+    $default  reduce using rule 51 (rule)
+
+
+状態 162
+
+   60 keyword_regex: '(' regex rhs_list ')' .
+
+    $default  reduce using rule 60 (keyword_regex)
+
+
+状態 163
+
+   47 fface_sxp: fface_sxp '+' tFACE .
+
+    $default  reduce using rule 47 (fface_sxp)
+
+
+状態 164
+
+   48 fface_sxp: fface_sxp '+' tFFLAGS .
+
+    $default  reduce using rule 48 (fface_sxp)
+
+
+状態 165
+
+   52 keywords_def: tIN fface tARE keywords_rule_list tEND .
+
+    $default  reduce using rule 52 (keywords_def)
+
+
+状態 166
+
+   69 operator_regex: '(' regex rhs_list ')' .
+
+    $default  reduce using rule 69 (operator_regex)
+
+
+状態 167
+
+   61 operators_def: tIN fface tARE operators_rule_list tEND .
+
+    $default  reduce using rule 61 (operators_def)
+
+
+状態 168
+
+   74 sequence: tSTRING tSTRING fface fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 62
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 182
+
+
+状態 169
+
+   76 sequence: tSTRING tSTRING fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 183
+
+
+状態 170
+
+   73 sequence: tSTRING tLATEXSYMBOL fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 184
+
+
+状態 171
+
+   89 closers_opt: tCLOSERS operators_def . tCLOSERS
+
+    tCLOSERS  shift, and go to state 185
+
+
+状態 172
+
+   75 sequence: tSTRING fface fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 186
+
+
+状態 173
+
+   91 exception_def_opt: tEXCEPTIONS . operators_def tEXCEPTIONS
+
+    tARE  shift, and go to state 33
+    tIN   shift, and go to state 34
+
+    operators_def  go to state 187
+
+
+状態 174
+
+   77 sequence: tSTRING fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 77 (sequence)
+
+
+状態 175
+
+   82 sequence: '(' tSTRING rhs_list ')' . fface closers_opt exception_def_opt
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    fface  go to state 188
+
+
+状態 176
+
+   83 sequence: '(' regex rhs_list ')' . fface closers_opt exception_def_opt
+
+    tFACE    shift, and go to state 57
+    tFFLAGS  shift, and go to state 58
+    '('      shift, and go to state 59
+
+    fface  go to state 189
+
+
+状態 177
+
+   78 sequence: regex tSTRING fface fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 62
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 190
+
+
+状態 178
+
+   80 sequence: regex tSTRING fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 191
+
+
+状態 179
+
+   79 sequence: regex fface fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 192
+
+
+状態 180
+
+   81 sequence: regex fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 81 (sequence)
+
+
+状態 181
+
+   41 rhs_list: rhs_list ',' a_rhs .
+
+    $default  reduce using rule 41 (rhs_list)
+
+
+状態 182
+
+   74 sequence: tSTRING tSTRING fface fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 193
+
+
+状態 183
+
+   76 sequence: tSTRING tSTRING fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 76 (sequence)
+
+
+状態 184
+
+   73 sequence: tSTRING tLATEXSYMBOL fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 73 (sequence)
+
+
+状態 185
+
+   89 closers_opt: tCLOSERS operators_def tCLOSERS .
+
+    $default  reduce using rule 89 (closers_opt)
+
+
+状態 186
+
+   75 sequence: tSTRING fface fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 75 (sequence)
+
+
+状態 187
+
+   91 exception_def_opt: tEXCEPTIONS operators_def . tEXCEPTIONS
+
+    tEXCEPTIONS  shift, and go to state 194
+
+
+状態 188
+
+   82 sequence: '(' tSTRING rhs_list ')' fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 62
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 195
+
+
+状態 189
+
+   83 sequence: '(' regex rhs_list ')' fface . closers_opt exception_def_opt
+
+    tCLOSERS  shift, and go to state 144
+    tSTRING   shift, and go to state 50
+    tREGEX    shift, and go to state 51
+    '('       shift, and go to state 62
+
+    $default  reduce using rule 86 (closers_opt)
+
+    regex           go to state 63
+    rule            go to state 147
+    operator_regex  go to state 148
+    closers_opt     go to state 196
+
+
+状態 190
+
+   78 sequence: regex tSTRING fface fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 197
+
+
+状態 191
+
+   80 sequence: regex tSTRING fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 80 (sequence)
+
+
+状態 192
+
+   79 sequence: regex fface fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 79 (sequence)
+
+
+状態 193
+
+   74 sequence: tSTRING tSTRING fface fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 74 (sequence)
+
+
+状態 194
+
+   91 exception_def_opt: tEXCEPTIONS operators_def tEXCEPTIONS .
+
+    $default  reduce using rule 91 (exception_def_opt)
+
+
+状態 195
+
+   82 sequence: '(' tSTRING rhs_list ')' fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 198
+
+
+状態 196
+
+   83 sequence: '(' regex rhs_list ')' fface closers_opt . exception_def_opt
+
+    tEXCEPTIONS  shift, and go to state 173
+
+    $default  reduce using rule 90 (exception_def_opt)
+
+    exception_def_opt  go to state 199
+
+
+状態 197
+
+   78 sequence: regex tSTRING fface fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 78 (sequence)
+
+
+状態 198
+
+   82 sequence: '(' tSTRING rhs_list ')' fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 82 (sequence)
+
+
+状態 199
+
+   83 sequence: '(' regex rhs_list ')' fface closers_opt exception_def_opt .
+
+    $default  reduce using rule 83 (sequence)

@@ -1,0 +1,8106 @@
+@q solids.web @>
+    
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Solid.@>
+@** Solid\quad ({\tt solids\PERIOD web}).\hfil
+\initials{LDF 2002.09.29.}
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2002.11.12.}  
+Add |get_center()|.  Must set
+|center| in the |Polyhedra| before this is useful.
+\ENDTODO 
+
+\LOG
+\initials{LDF 2002.09.29.}
+Created this file.
+
+\initials{LDF 2003.11.12.}
+Removed the version control identifiers from the CWEB
+files for the distribution of 3DLDF 1.1.  They're still used in my
+development versions.
+
+\initials{LDF 2003.12.10.}
+Put the version control identifiers back
+into my release versions for 3DLDF 1.1.4.  I've already put some of
+them back in, now I'm doing the rest of them.  However, the release
+versions are now in their own RCS repository.
+\ENDLOG 
+
+@q * (1) Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.05.21.}  Now including \filename{pens.web}.
+\ENDLOG 
+
+@<Include files@>=
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++"  
+#include "pictures.h++"  
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++"
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+#include "arc.h++"
+#include "helices.h++"
+#include "origami.h++"
+
+#if 0 
+   #include "patterns.h++"
+#endif 
+
+
+@q * (1) Solid class definition.@>
+@* {\bf Solid} class definition.
+
+\LOG
+\initials{LDF 2002.09.30.}  
+Added the data members |circles|, |ellipses|, 
+|polygons|, and |paths|.  On the one hand, this is wasteful, since
+most if not all |Solids| will contain only one kind of |Path|; on the
+other hand, it's an advantage to be able to have the drawing and
+filling functions be members of |Solid|, since they don't have to know
+what kind of a |Path| a |Path| is, in order to draw or fill it.  This
+way, I don't have to define the drawing and filling functions for
+|Sphere|, |Ellipsoid|, |Polyhedron|, etc.
+
+\initials{LDF 2002.10.01.}  
+Added the data member |projective_extremes|.
+
+\initials{LDF 2003.04.11.}  
+Added the |static const| data members |PATH|,
+|CIRCLE|, |ELLIPSE|, |REG_POLYGON|, and |RECTANGLE|.  Currently, their
+only use is as arguments to |get_shape_ptr()| and |get_shape_center()|. 
+
+\initials{LDF 2003.04.11.}  
+Renamed |polygons| to |reg_polygons|.
+This is in case I decide to make
+it possible to have irregular polygons.  In this case, I may define a
+|class Polygon| and derived |Reg_Polygon| from it.
+
+\initials{LDF 2004.02.05.}  
+Changed the names of |PATH|,
+|CIRCLE|, |ELLIPSE|, |REG_POLYGON|, and |RECTANGLE| to 
+|PATH_VALUE|,
+|CIRCLE_VALUE|, |ELLIPSE_VALUE|, |REG_POLYGON_VALUE|, and |RECTANGLE_VALUE|
+
+\initials{LDF 2005.04.04.}
+Added |valarray <real> world_extremes|.
+
+\initials{LDF 2005.06.30.}
+Added |valarray <real> pre_projective_extremes|.
+
+\initials{LDF 2006.01.25.}
+Added  |vector <Parabola*> parabolae|, 
+|vector <Hyperbola*> hyperbolae|, 
+|static const unsigned short PARABOLA_VALUE|,
+and
+|static const unsigned short HYPERBOLA_VALUE|.
+\ENDLOG 
+
+@q ** (2) Definition.@> 
+  
+@<Define |class Solid|@>=
+
+class Solid : public Shape
+{
+ protected:
+  Point center;
+  bool do_output; /*  LDF 2002.10.01.  Added.  */    
+
+  vector <Path*> paths;
+
+  vector <Ellipse*> ellipses;
+  vector <Circle*> circles;
+  vector <Parabola*> parabolae;
+  vector <Hyperbola*> hyperbolae;
+
+  vector <Rectangle*> rectangles; 
+  vector <Reg_Polygon*> reg_polygons;
+
+  valarray <real> world_extremes;  
+  valarray <real> pre_projective_extremes;  
+  valarray <real> projective_extremes;  
+
+ public:
+
+  static const unsigned short PATH_VALUE;        
+
+  static const unsigned short CIRCLE_VALUE;      
+  static const unsigned short ELLIPSE_VALUE;     
+  static const unsigned short PARABOLA_VALUE;     
+  static const unsigned short HYPERBOLA_VALUE;     
+
+  static const unsigned short RECTANGLE_VALUE;   
+  static const unsigned short REG_POLYGON_VALUE; 
+
+  @<Declare |Solid| functions@>@;
+};
+
+
+@q * Define static const Solid data members.@>
+@ Define {\bf static const Solid} data members.
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this section.
+
+\initials{LDF 2006.01.25.}
+Now setting |PARABOLA_VALUE| and |HYPERBOLA_VALUE|.
+\ENDLOG 
+
+@<Define |static const Solid| data members@>=
+
+   const unsigned short Solid::PATH_VALUE        = 0;        
+
+   const unsigned short Solid::ELLIPSE_VALUE     = 1; 
+   const unsigned short Solid::CIRCLE_VALUE      = 2;      
+   const unsigned short Solid::PARABOLA_VALUE    = 3;     
+   const unsigned short Solid::HYPERBOLA_VALUE   = 4;         
+
+   const unsigned short Solid::RECTANGLE_VALUE   = 5;   
+   const unsigned short Solid::REG_POLYGON_VALUE = 6; 
+
+
+@q * (1) Constructors.@>
+@* Constructors.
+\initials{LDF Undated.}
+
+@q ** (2) Default constructor.  (No arguments.)@>
+@*1 Default constructor.  (No arguments.)
+@^\cfunc{Solid}{Solid}@>
+\initials{LDF 2002.10.02.}
+
+|Solid| will not normally be used in user code, since it is intended
+to be a base class only.  Therefore, objects of type |Solid| will not
+normally be declared as automatic variables and there will be no
+|static| global |Solids|.  However, |create_new<Solid>()| is
+used in the drawing and filling functions, in order to put |Solids|
+onto |Pictures|.  If we didn't have a constructor,
+|projective_extremes| wouldn't initially have the right size and
+|on_free_store| and |do_output| would both be |false| (assuming the
+compiler set s the initial values of uninitialized |bools| to |false|).
+None of this would really matter, because presumably an assignment
+would follow immediately, which would take care of everything, but
+there's no harm in making sure.
+\initials{LDF 2002.10.02.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Now setting |shape_type = SOLID_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Now setting |surface_hiding_ctr = 0|.
+
+\initials{LDF 2005.04.04.}
+Now resizing |world_extremes|.
+
+\initials{LDF 2005.04.18.}
+Now setting |decomposition_level = 0|.
+
+\initials{LDF 2005.06.30.}
+Now resizing |pre_projective_extremes|.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+Solid(void);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+Solid::Solid(void)
+{
+  do_output     = true;
+  world_extremes.resize(6, 0); 
+  pre_projective_extremes.resize(6, 0); 
+  projective_extremes.resize(6, 0); 
+  shape_type = SOLID_TYPE;
+  surface_hiding_ctr = 0;
+  decomposition_level = 0;
+
+}
+
+@q ** (2) Copy constructor.@>
+@*1 Copy constructor.
+@^\cfunc{Solid}{Solid}@>
+\initials{LDF 2002.10.02.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Now setting |shape_type = SOLID_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Now setting |surface_hiding_ctr = 0|.
+
+\initials{LDF 2005.04.04.}
+Now resizing |world_extremes|.
+
+\initials{LDF 2005.04.18.}
+Now setting |decomposition_level = 0|.
+
+\initials{LDF 2005.06.30.}
+Now resizing |pre_projective_extremes|.
+
+\initials{LDF 2006.01.25.}
+Added code for copying |vector <Parabola*> parabolae| and 
+|vector <Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+Solid(const Solid& s);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+Solid::Solid(const Solid& s)
+{
+  do_output     = true;
+
+  world_extremes.resize(6, 0);
+  pre_projective_extremes.resize(6, 0);
+  projective_extremes.resize(6, 0);
+
+  shape_type = SOLID_TYPE;
+  surface_hiding_ctr = 0;
+  decomposition_level = 0;
+
+  for (vector<Path*>::const_iterator iter = s.paths.begin();
+       iter != s.paths.end(); ++iter)
+    {
+      paths.push_back(create_new<Path>(0));
+      *(paths.back()) = **iter;
+    }
+
+  for (vector<Ellipse*>::const_iterator iter = s.ellipses.begin();
+       iter != s.ellipses.end(); ++iter)
+    {
+      ellipses.push_back(create_new<Ellipse>(0));
+      *(ellipses.back()) = **iter;
+    }
+
+  for (vector<Circle*>::const_iterator iter = s.circles.begin();
+       iter != s.circles.end(); ++iter)
+    {
+      circles.push_back(create_new<Circle>(0));
+      *(circles.back()) = **iter;
+    }
+
+  for (vector<Parabola*>::const_iterator iter = s.parabolae.begin();
+       iter != s.parabolae.end(); ++iter)
+    {
+      parabolae.push_back(create_new<Parabola>(0));
+      *(parabolae.back()) = **iter;
+    }
+
+  for (vector<Hyperbola*>::const_iterator iter = s.hyperbolae.begin();
+       iter != s.hyperbolae.end(); ++iter)
+    {
+      hyperbolae.push_back(create_new<Hyperbola>(0));
+      *(hyperbolae.back()) = **iter;
+    }
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s.reg_polygons.begin();
+       iter != s.reg_polygons.end(); ++iter)
+    {
+      reg_polygons.push_back(create_new<Reg_Polygon>(0));
+      *(reg_polygons.back()) = **iter;
+    }
+
+  for (vector<Rectangle*>::const_iterator iter = s.rectangles.begin();
+       iter != s.rectangles.end(); ++iter)
+    {
+      rectangles.push_back(create_new<Rectangle>(0));
+      *(rectangles.back()) = **iter;
+    }
+
+}  /* End of |Solid(const Solid& s)| definition.  */
+
+@q * (1) Pseudo-constructor for dynamic allocation. @>
+@* Pseudo-constructor for dynamic allocation.
+
+@q ** (2) Pointer argument.@>
+@*1 Pointer argument.
+
+\LOG
+\initials{LDF 2003.12.30.}  Replaced |Solid::create_new_solid()|
+with a specialization of |template <class C> C* create_new()| for
+|Solid|.  The argument is now |const|.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Solid|@>=
+Solid* 
+create_new(const Solid* c, Scanner_Node scanner_node);
+  
+@q ** (2) Reference argument.@>
+@*1 Reference argument.
+
+\LOG
+\initials{LDF 2003.12.30.}
+Added this function.
+
+\initials{LDF 2004.10.11.}
+Added |Scanner_Node scanner_node| argument.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Solid|@>=
+
+Solid* 
+create_new(const Solid& c, Scanner_Node scanner_node);
+
+@q * (1) Destructor.@>
+@* Destructor. 
+@^\cfunc{Solid}{\~{}Solid}@>
+
+\LOG
+\initials{LDF 2003.08.27.}  
+Added a |virtual| destructor with an empty
+definition, because GCC with the ``{\tt -Wall}'' option issued the
+following warning:  
+``{}`class Solid' has virtual functions but non-virtual destructor''.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+~Solid();
+
+@
+@<Define |Solid| functions@>=
+Solid::~Solid() {}
+
+
+@q * (1) Assignment.@>
+@* Assignment.
+@^\cofunc{Solid}{=}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.04.04.}
+Now setting |world_extremes| to 0.
+
+\initials{LDF 2005.06.30.}
+Now setting |pre_projective_extremes| to 0.
+
+\initials{LDF 2005.11.09.}
+Now calling |Path::clear()| and |Conic_Section::clear()| for the items 
+on |ellipses| and |circles|.
+
+\initials{LDF 2006.01.25.}
+Now calling |Path::clear()| and |Conic_Section::clear()| for the items 
+on |parabolae| and |hyperbolae|.
+\ENDLOG 
+
+@q ** (2) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+const Solid&
+operator=(const Solid& s);
+
+@q ** (2) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+const Solid&
+Solid::operator=(const Solid& s)
+{
+  bool DEBUG = false; /* |true| */@;
+  if (DEBUG)
+    cerr << "Entering Solid::operator=().\n";
+
+  if (this == &s) /* Make sure it's not self-assignment. */
+    return *this;
+
+  center = s.center; /* LDF 2002.10.06.  Added this line, because
+                        |center| is now a member of |Solid|.  */
+
+
+@q *** (3)@> 
+
+@ First, call the destructor on all of the
+elements of |paths|, |circles|, |ellipses|, |reg_polygons|,
+and |rectangles|, because they've been allocated dynamically.  
+Then clear out the vectors.
+\initials{LDF 2002.10.02.}  
+
+@<Define |Solid| functions@>=
+
+  if (paths.size() > 0)
+    {
+      for (vector <Path*>::iterator iter = paths.begin();
+           iter != paths.end(); ++iter)
+        (**iter).clear();
+      paths.clear();
+    }
+
+  if (ellipses.size() > 0)
+    {
+      for (vector <Ellipse*>::iterator iter = ellipses.begin();
+           iter != ellipses.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+      ellipses.clear();
+    }
+
+  if (circles.size() > 0)
+    {
+      for (vector <Circle*>::iterator iter = circles.begin();
+           iter != circles.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+
+      circles.clear();
+    }
+
+  if (parabolae.size() > 0)
+    {
+      for (vector <Parabola*>::iterator iter = parabolae.begin();
+           iter != parabolae.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+
+      parabolae.clear();
+    }
+
+  if (hyperbolae.size() > 0)
+    {
+      for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+           iter != hyperbolae.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+
+      hyperbolae.clear();
+    }
+
+  if (reg_polygons.size() > 0)
+    {
+      for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+           iter != reg_polygons.end(); ++iter)
+        (**iter).clear();
+      reg_polygons.clear();
+    }
+
+  if (rectangles.size() > 0)
+    {
+      for (vector <Rectangle*>::iterator iter = rectangles.begin();
+           iter != rectangles.end(); ++iter)
+        (**iter).clear();
+      rectangles.clear();
+    }
+
+@q *** (3)@> 
+
+@ Now, create new |Path|, |Circle|, |Ellipse|,
+|Reg_Polygon|, and |Rectangle| pointers, allocate memory for them, 
+assign values to the objects they point to from |s|, and 
+push them onto the appropriate vectors. 
+\initials{LDF 2002.10.02.}
+
+\LOG
+\initials{LDF 2005.06.30.}
+Now setting |pre_projective_extremes| to 0.
+
+\initials{LDF 2006.01.25.}
+Added code for copying |vector<Parabola*> s.parabolae| 
+and |vector<Hyperbola*> s.hyperbolae|.
+\ENDLOG 
+
+@<Define |Solid| functions@>=
+   Path* p;
+   for (vector<Path*>::const_iterator iter = s.paths.begin();
+       iter != s.paths.end(); ++iter)
+    {
+      p = create_new<Path>(0);
+      paths.push_back(p);
+      *(paths.back()) = **iter;
+    }
+
+  for (vector<Ellipse*>::const_iterator iter = s.ellipses.begin();
+       iter != s.ellipses.end(); ++iter)
+    {
+      ellipses.push_back(create_new<Ellipse>(0));
+      *(ellipses.back()) = **iter;
+    }
+
+  for (vector<Circle*>::const_iterator iter = s.circles.begin();
+       iter != s.circles.end(); ++iter)
+    {
+      circles.push_back(create_new<Circle>(0));
+      *(circles.back()) = **iter;
+    }
+
+  for (vector<Parabola*>::const_iterator iter = s.parabolae.begin();
+       iter != s.parabolae.end(); ++iter)
+    {
+      parabolae.push_back(create_new<Parabola>(0));
+      *(parabolae.back()) = **iter;
+    }
+
+  for (vector<Hyperbola*>::const_iterator iter = s.hyperbolae.begin();
+       iter != s.hyperbolae.end(); ++iter)
+    {
+      hyperbolae.push_back(create_new<Hyperbola>(0));
+      *(hyperbolae.back()) = **iter;
+    }
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s.reg_polygons.begin();
+       iter != s.reg_polygons.end(); ++iter)
+    {
+      reg_polygons.push_back(create_new<Reg_Polygon>(0));
+      *(reg_polygons.back()) = **iter;
+    }
+
+  for (vector<Rectangle*>::const_iterator iter = s.rectangles.begin();
+       iter != s.rectangles.end(); ++iter)
+    {
+      rectangles.push_back(create_new<Rectangle>(0));
+      *(rectangles.back()) = **iter;
+    }
+
+  world_extremes = 0;  
+
+  pre_projective_extremes = 0;  /* For output.  */
+  projective_extremes = 0;  
+
+  do_output = true;
+
+  if (DEBUG)
+    {
+      cerr << "paths.size() == " << paths.size() << endl;
+      cerr << "ellipses.size() == " << ellipses.size() << endl;
+      cerr << "circles.size() == " << circles.size() << endl;
+
+      cerr << "parabolae.size() == " << parabolae.size() << endl;
+      cerr << "hyperbolae.size() == " << hyperbolae.size() << endl;
+
+      cerr << "reg_polygons.size() == " << reg_polygons.size()
+           << endl;
+      cerr << "rectangles.size() == " << rectangles.size() << endl;
+    }
+
+  if (DEBUG)
+    cerr << "Exiting Solid::operator=().\n";
+
+  return *this;
+
+}  /* End of |Solid::operator=(const Solid& s)| definition.  */  
+
+@q * (1) Copying.@>
+@* Copying.
+@^\cfunc{Solid}{get\_copy}@>
+
+\LOG
+\initials{LDF 2003.05.06.}  
+@:BUG FIX@> BUG FIX:  Changed |s| from |Shape*| to
+|Solid*|.  I noticed this bug when I tried to copy a |Picture|
+containing a |Cuboid|, and the copy contained a single empty |Shape*|
+on |shapes|. 
+
+\initials{LDF 2005.03.18.}
+Now using |static_cast| rather than |dynamic_cast|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+Shape* 
+get_copy() const;
+
+@
+@<Define |Solid| functions@>=
+Shape* 
+Solid::get_copy() const
+{
+  Solid* s = create_new<Solid>(0);
+  *s = *this;
+  return static_cast<Shape*>(s);
+}
+
+@q * (1) Returning elements and information.@>
+@* Returning elements and information.
+\initials{LDF Undated.}
+
+The functions |get_shape_ptr()|,\newline
+|get_circle_ptr()|,
+|get_ellipse_ptr()|, |get_path_ptr()|, |get_rectangle_ptr()|, and
+|get_reg_polygon_ptr()| all return |const| pointers to |Shape|, |Circle|,
+|Ellipse|, etc.  Therefore, they must be invoked in such a way, that
+the |const| qualifier is not discarded.  For example, following
+|Dodecahedron d(origin, 5);|, two ways of 
+invoking |get_reg_polygon_ptr()| are:
+|const Reg_Polygon* ptr = d.get_reg_polygon_ptr(5);| and\newline
+|Reg_Polygon A = *d.get_reg_polygon_ptr(5);|.
+\initials{LDF 2003.04.11.}  
+
+\LOG
+\initials{LDF 2003.05.09.}  
+Changed the names of |get_shape()|, |get_circle()|,
+|get_ellipse()|, |get_path()|,\newline
+|get_rectangle()|, and
+|get_reg_polygon()| to 
+|get_shape_ptr()|, |get_circle_ptr()|,
+|get_ellipse_ptr()|, |get_path_ptr()|,\newline
+|get_rectangle_ptr()|, and
+|get_reg_polygon_ptr()|.  The names without ``|_ptr|'' were confusing,
+because they didn't make clear that the functions returned pointers. 
+\ENDLOG 
+
+@q ** (2) Get |Shape| type.@> 
+@*1 Get {\bf Shape} type.
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual 
+inline
+unsigned short 
+get_shape_type(void) const
+{
+   return SOLID_TYPE;
+}
+
+
+
+
+@q ** (2) Get center.@>
+@*1 Get center.
+@^\cfunc{Solid}{get\_center}@>
+\initials{LDF 2003.05.06.}  
+
+\LOG
+\initials{LDF 2003.05.06.}  
+Added this function.
+
+\initials{LDF 2003.08.10.}  
+Made this function |const|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual
+const Point&
+get_center() const;
+
+@
+@<Define |Solid| functions@>=
+const Point&
+Solid::get_center() const
+{
+  return center;
+}
+
+@q * (1) Copy coordinates.@> 
+@* Copy coordinates.
+\initials{LDF 2005.04.09.}
+
+\LOG
+\initials{LDF 2005.04.09.}
+Added this function.
+
+\initials{LDF 2005.04.11.}
+Removed the defaults for the |const char| 
+arguments |from| and |to|.  Added the |Scanner_Node scanner_node| argument with
+the default 0.
+
+\initials{LDF 2005.04.15.}
+Added the optional argument |bool set_z_to_zero| 
+with the default |false|.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+
+virtual 
+int 
+copy_coords(const char from, 
+            const char to, 
+            bool set_z_to_zero = false,
+            Scanner_Node scanner_node = 0);
+
+@
+@<Define |Solid| functions@>=
+int 
+Solid::copy_coords(const char from, 
+                   const char to, 
+                   bool set_z_to_zero,
+                   Scanner_Node scanner_node)
+{
+   return 0;
+}
+
+
+
+
+@q ** (2) Getting Shapes.@>
+@*1 Getting Shapes.
+
+\LOG
+\initials{LDF 2003.04.30.}  
+Changed the functions |get_circle_ptr()|,
+|get_ellipse_ptr()|, 
+|get_path_ptr()|,\newline
+|get_rectangle_ptr()|, and |get_reg_polygon_ptr()|.  They no
+longer use |get_shape_ptr()|.  There's no good reason for casting pointers
+from one type to another.  I rather doubt that |get_shape_ptr()| is
+needed, anyway.   
+\ENDLOG 
+
+  
+@q *** Get (3) Shape pointer.@>
+@*1 Get Shape pointer.
+@^\cfunc{Solid}{get\_shape\_ptr}@>
+\initials{LDF 2003.04.11.}  
+
+This function copies one of the objects on
+one of the vectors of |Shape*| belonging to the |Solid|, and returns a
+pointer to |Shape| that points to the copy.  Currently,
+a |Solid| contains the vectors |circles|, |ellipses|, |paths|, |rectangles|, and
+|reg_polygons|.  The argument |shape_type| indicates which vector
+should be accessed.  Normally, the corresponding |public static const|
+data members |CIRCLE_VALUE|, |ELLIPSE_VALUE|, |PATH_VALUE|, |RECTANGLE_VALUE|, or
+|REG_POLYGON_VALUE| should be passed as the |shape_type| argument, e.g.,
+|Circle* c_ptr = static_cast<Circle*>(get_shape_ptr(Solid::CIRCLE_VALUE, 3))|.
+\initials{LDF 2003.05.30.}
+
+\initials{LDF 2003.04.30.}
+This function was mainly intended for use in the functions
+|get_circle_ptr()|,\newline
+|get_ellipse_ptr()|, etc., and was not intended for use in
+user code.  I now doubt whether this function is needed at all,
+especially since it is no longer used in the functions
+mentioned above.
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this function.
+
+\initials{LDF 2003.04.30.}  Now using |get_copy()| instead of
+|static_cast<const Shape*>()|.  The way it was caused compilation
+errors under Tru64 (DEC ALPHA).
+
+\initials{LDF 2003.05.30.}  Changed return value to |Shape*| from 
+|const Shape*|.  The way it was before caused ``Memory fault'' errors at
+run-time. 
+
+\initials{LDF 2005.03.18.}
+Changed the name of the |shape_type| argument to |curr_shape_type| so
+that it doesn't conflict with the data member |Shape::shape_type|.
+
+\initials{LDF 2006.01.25.}
+Added code for getting pointers from |vector<Parabola*> parabolae| 
+and |vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual 
+Shape*
+get_shape_ptr(const unsigned short shape_type, const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+Shape*
+Solid::get_shape_ptr(const unsigned short curr_shape_type,
+                     const unsigned short s) const
+{
+  bool DEBUG = false; /* |true|  */@;
+
+  if (DEBUG)
+    {
+      cerr << "Entering Solid::get_shape_ptr().\n";
+    }
+
+
+@q **** Path case.@>
+    if (curr_shape_type == PATH_VALUE)
+      {
+        if (s < paths.size())
+          {
+            return paths[s]->get_copy();
+          }
+        else
+          {
+            
+            cerr << "ERROR! In Solid::get_shape_ptr():\n"
+              << "s (" << s << ") > paths.size() (" << paths.size()
+                << ")\nReturning a null pointer (0).\n\n";
+            return static_cast<Shape*>(0);
+          }
+
+      }
+
+@q **** Ellipse case.@>
+    else if (curr_shape_type == ELLIPSE_VALUE)
+      {
+        if (s < ellipses.size())
+          {
+            return ellipses[s]->get_copy();
+          }
+        else
+          {
+            
+            cerr << "ERROR! In Solid::get_shape_ptr():\n"
+              << "s (" << s << ") > ellipses.size() (" << ellipses.size()
+                << ")\nReturning a null pointer (0).\n\n";
+            return static_cast<Shape*>(0);
+          }
+      }
+
+@q **** Circle case.@>
+    else if (curr_shape_type == CIRCLE_VALUE)
+      {
+        if (s < circles.size())
+          {
+            return circles[s]->get_copy();
+          }
+        else
+          {
+            
+            cerr << "ERROR! In Solid::get_shape_ptr():\n"
+              << "s (" << s << ") > circles.size() (" << circles.size()
+                << ")\nReturning a null pointer (0).\n\n";
+            return static_cast<Shape*>(0);
+          }
+
+      }
+
+@q **** Parabola case.@>
+
+    else if (curr_shape_type == PARABOLA_VALUE)
+      {
+        if (s < parabolae.size())
+          {
+            return parabolae[s]->get_copy();
+          }
+        else
+          {
+            
+            cerr << "ERROR! In Solid::get_shape_ptr():\n"
+              << "s (" << s << ") > parabolae.size() (" << parabolae.size()
+                << ")\nReturning a null pointer (0).\n\n";
+            return static_cast<Shape*>(0);
+          }
+
+      }
+
+@q **** Hyperbola case.@>
+    else if (curr_shape_type == HYPERBOLA_VALUE)
+      {
+        if (s < hyperbolae.size())
+          {
+            return hyperbolae[s]->get_copy();
+          }
+        else
+          {
+            
+            cerr << "ERROR! In Solid::get_shape_ptr():\n"
+              << "s (" << s << ") > hyperbolae.size() (" << hyperbolae.size()
+                << ")\nReturning a null pointer (0).\n\n";
+            return static_cast<Shape*>(0);
+          }
+
+      }
+
+
+
+
+@q **** Rectangle case.@>
+    else if (curr_shape_type == RECTANGLE_VALUE)
+      {
+        if (s < rectangles.size())
+          {
+            return rectangles[s]->get_copy();
+          }
+        else
+          {
+            
+            cerr << "ERROR! In Solid::get_shape_ptr():\n"
+              << "s (" << s << ") > rectangles.size() (" << rectangles.size()
+                << ")\nReturning a null pointer (0).\n\n";
+            return static_cast<Shape*>(0);
+          }
+      }
+
+@q **** Reg_Polygon case.@>
+    else if (curr_shape_type == REG_POLYGON_VALUE)
+      {
+        if (s < reg_polygons.size())
+          {
+            return reg_polygons[s]->get_copy();
+          }
+        else
+          {
+            
+            cerr << "ERROR! In Solid::get_shape_ptr():\n"
+              << "s (" << s << ") > reg_polygons.size() (" << reg_polygons.size()
+                << ")\nReturning a null pointer (0).\n\n";
+            return static_cast<Shape*>(0);
+          }
+      }
+
+@q **** Default case, Invalid value for curr_shape_type.@>
+    else 
+      {
+        cerr << "ERROR! In Solid::get_shape_ptr():\n"
+          << "Invalid value for curr_shape_type: " << curr_shape_type << endl
+            << "Returning a null pointer (0).\n\n";
+        return static_cast<Shape*>(0);
+      }
+
+}  /* End of |Solid::get_shape_ptr()| definition.  */
+
+@q *** (3) Get Path pointer.@>
+@*2 Get {\bf Path} pointer.
+@^\cfunc{Solid}{get\_path\_ptr}@>
+\initials{LDF 2003.04.11.}  
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this function.
+
+\initials{LDF 2003.04.30.}  
+Changed this function, so that it no longer uses
+|get_shape_ptr()|. 
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+const Path*
+get_path_ptr(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Path*
+Solid::get_path_ptr(const unsigned short s) const
+{
+
+  if (paths.size() > s)
+    {
+      return paths[s];
+    }
+  else
+    {
+      return static_cast<const Path*>(0);
+    }
+
+}
+
+@q *** (3) Get Ellipse pointer.@>
+@*2 Get {\bf Ellipse} pointer.
+@^\cfunc{Solid}{get\_ellipse\_ptr}@>
+\initials{LDF 2003.04.11.}  
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this function.
+
+\initials{LDF 2003.04.30.}  
+Changed this function, so that it no longer uses
+|get_shape_ptr()|. 
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+const Ellipse*
+get_ellipse_ptr(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Ellipse*
+Solid::get_ellipse_ptr(const unsigned short s) const
+{
+  if (ellipses.size() > s)
+    {
+      return ellipses[s];
+    }
+  else
+    {
+      return static_cast<const Ellipse*>(0);
+    }
+}
+
+@q *** (3) Get Circle pointer.@>
+@*2 Get {\bf Circle} pointer.
+@^\cfunc{Solid}{get\_circle\_ptr}@>
+\initials{LDF 2003.04.11.}  
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this function.
+
+\initials{LDF 2003.04.30.}  
+Changed this function, so that it no longer uses
+|get_shape_ptr()|. 
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual 
+const Circle*
+get_circle_ptr(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Circle*
+Solid::get_circle_ptr(const unsigned short s) const
+{
+  if (circles.size() > s)
+    {
+      return circles[s];
+    }
+  else
+    {
+      return static_cast<const Circle*>(0);
+    }
+}
+
+@q *** (3) Get Parabola pointer.@>
+@*2 Get {\bf Parabola} pointer.
+@^\cfunc{Solid}{get\_parabola\_ptr}@>
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual 
+const Parabola*
+get_parabola_ptr(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Parabola*
+Solid::get_parabola_ptr(const unsigned short s) const
+{
+  if (parabolae.size() > s)
+    {
+      return parabolae[s];
+    }
+  else
+    {
+      return static_cast<const Parabola*>(0);
+    }
+}
+
+@q *** (3) Get Hyperbola pointer.@>
+@*2 Get {\bf Hyperbola} pointer.
+@^\cfunc{Solid}{get\_hyperbola\_ptr}@>
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual 
+const Hyperbola*
+get_hyperbola_ptr(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Hyperbola*
+Solid::get_hyperbola_ptr(const unsigned short s) const
+{
+  if (hyperbolae.size() > s)
+    {
+      return hyperbolae[s];
+    }
+  else
+    {
+      return static_cast<const Hyperbola*>(0);
+    }
+}
+
+
+
+@q *** (3) Get Rectangle pointer.@>
+@*2 Get {\bf Rectangle} pointer.
+@^\cfunc{Solid}{get\_rectangle\_ptr}@>
+\initials{LDF 2003.04.11.}  
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this function.
+
+\initials{LDF 2003.04.30.}  
+Changed this function, so that it no longer uses
+|get_shape_ptr()|. 
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+const Rectangle*
+get_rectangle_ptr(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Rectangle*
+Solid::get_rectangle_ptr(const unsigned short s) const
+{
+  if (rectangles.size() > s)
+    {
+      return rectangles[s];
+    }
+  else
+    {
+      return static_cast<const Rectangle*>(0);
+    }
+}
+
+@q *** (3) Get Reg_Polygon pointer.@>
+@*2 Get {\bf Reg\_Polygon} pointer.
+@^\cfunc{Solid}{get\_reg\_polygon\_ptr}@>
+\initials{LDF 2003.04.11.}  
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this function.   
+
+\initials{LDF 2003.04.30.}  
+Changed this function, so that it no longer uses
+|get_shape_ptr()|. 
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual 
+const Reg_Polygon*
+get_reg_polygon_ptr(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Reg_Polygon*
+Solid::get_reg_polygon_ptr(const unsigned short s) const
+{
+  if (reg_polygons.size() > s)
+    {
+      return reg_polygons[s];
+    }
+  else
+    {
+      return static_cast<const Reg_Polygon*>(0);
+    }
+}
+
+
+
+@q ** (2) Getting Shape centers.@>
+@*1 Getting Shape centers.
+
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2003.04.30.}  
+I think it might be possible to code the functions in
+this section more succinctly.
+\ENDTODO 
+
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this section.
+\ENDLOG 
+
+@q *** (3) Get Shape center.@>  
+@*2 Get Shape center. 
+@^\cfunc{Solid}{get\_shape\_center}@> 
+
+This function returns the center of the |Circle|, |Ellipse|,
+|Rectangle|, or |Reg_Polygon| number |s| in 
+|circles|, |ellipses|, |rectangles|, or |reg_polygons|, respectively.
+If |s| is larger than \<vector>|.size()|, an error message is issued and
+|INVALID_POINT| is returned. 
+
+One of the following |public static const| data members of 
+|Solid| can (and probably should) be used as the |shape_type|
+argument: |CIRCLE_VALUE|, |ELLIPSE_VALUE|, |RECTANGLE_VALUE|, and |REG_POLYGON_VALUE|. 
+
+@:!!@> !! Note that this function will have to be changed, if new vectors of
+|Shape| pointers are added to |class Solid|!
+
+\LOG
+\initials{LDF 2002.10.16.}  
+Added this function.
+
+\initials{LDF 2003.04.09.}  
+Moved this function from |Polyhedron| to |Solid|. 
+
+\initials{LDF 2003.04.11.}  
+Changed this function from |get_polygon_center()| to
+|get_shape_center()|.  Added the |char| argument |shape_type| to indicate
+whether it should return the center of a |Circle|, |Ellipse|,
+|Rectangle|, or |Reg_Polygon|.
+
+\initials{LDF 2003.04.11.}  
+Changed the |shape_type| argument from |char| to
+|const unsigned short|.  
+
+\initials{LDF 2005.03.18.}
+Changed the name of the |shape_type| argument to |curr_shape_type| so
+that it doesn't conflict with the data member |Shape::shape_type|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual
+const Point&
+get_shape_center(const unsigned short curr_shape_type, const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Point&
+Solid::get_shape_center(const unsigned short curr_shape_type,
+                        const unsigned short s) const
+{
+@q **** Circle case.@>
+if (curr_shape_type == CIRCLE_VALUE)
+  {
+    if (s < circles.size())
+      return circles[s]->get_center();  
+    else
+      {
+        cerr << "ERROR! In Solid::get_shape_center():\n"
+          << "s (" << s << ") > circles.size() (" << circles.size()
+            << ")\nReturning INVALID_POINT.\n\n";
+        return INVALID_POINT;
+      }
+  }
+
+@q **** Ellipse case.@>
+else if (curr_shape_type == ELLIPSE_VALUE)
+  {
+    if (s < ellipses.size())
+      return ellipses[s]->get_center();  
+    else
+      {
+        cerr << "ERROR! In Solid::get_shape_center():\n"
+          << "s (" << s << ") > ellipses.size() (" << ellipses.size()
+            << ")\nReturning INVALID_POINT.\n\n";
+        return INVALID_POINT;
+      }
+  }
+
+@q **** Rectangle case.@>
+else if (curr_shape_type == RECTANGLE_VALUE)
+  {
+    if (s < rectangles.size())
+      return rectangles[s]->get_center();  
+    else
+      {
+        cerr << "ERROR! In Solid::get_shape_center():\n"
+          << "s (" << s << ") > rectangles.size() (" << rectangles.size()
+            << ")\nReturning INVALID_POINT.\n\n";
+        return INVALID_POINT;
+      }
+  }
+
+@q **** Reg_Polygon case.@>
+else if (curr_shape_type == REG_POLYGON_VALUE)
+{
+  if (s < reg_polygons.size())
+    return reg_polygons[s]->get_center();  
+  else
+    {
+      cerr << "ERROR! In Solid::get_shape_center():\n"
+        << "s (" << s << ") > reg_polygons.size() (" << reg_polygons.size()
+          << ")\nReturning INVALID_POINT.\n\n";
+      return INVALID_POINT;
+    }
+}
+
+@q **** (4) Default case, Invalid value for curr_shape_type.@>
+
+    else 
+        {
+          cerr << "ERROR! In Solid::get_shape_center():\n"
+            << "Invalid argument for curr_shape_type: " << curr_shape_type
+              << endl << "Returning INVALID_POINT.\n\n";
+          return INVALID_POINT;
+        }   
+}
+
+@q *** (3) Get Circle center.@>
+@*2 Get Circle center. 
+@^\cfunc{Solid}{get\_circle\_center}@> 
+\initials{LDF 2003.04.11.}  
+
+\LOG
+\initials{LDF 2003.04.11.}  
+Added this function.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+
+virtual
+const Point&
+get_circle_center(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+
+const Point&
+Solid::get_circle_center(const unsigned short s) const
+{
+  return get_shape_center(CIRCLE_VALUE, s);
+}
+
+@q *** Get Ellipse center.@> 
+@ Get Ellipse center. 
+@^\cfunc{Solid}{get\_ellipse\_center}@> 
+\LOG
+\initials{LDF 2003.04.11.}  Added this function.
+\ENDLOG 
+@<Declare |Solid| functions@>=
+virtual
+const Point&
+get_ellipse_center(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Point&
+Solid::get_ellipse_center(const unsigned short s) const
+{
+  return get_shape_center(ELLIPSE_VALUE, s);
+}
+
+@q *** Get Rectangle center.@> 
+@ Get Rectangle center. 
+@^\cfunc{Solid}{get\_rectangle\_center}@> 
+\LOG
+\initials{LDF 2003.04.11.}  Added this function.
+\ENDLOG 
+@<Declare |Solid| functions@>=
+virtual
+const Point&
+get_rectangle_center(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Point&
+Solid::get_rectangle_center(const unsigned short s) const
+{
+  return get_shape_center(RECTANGLE_VALUE, s);
+}
+
+
+@q *** Get Reg_Polygon center.@>
+@ Get {\bf Reg\_Polygon} center. 
+@^\cfunc{Solid}{get\_reg\_polygon\_center}@> 
+\LOG
+\initials{LDF 2003.04.11.}  Added this function.
+\ENDLOG 
+@<Declare |Solid| functions@>=
+virtual
+const Point&
+get_reg_polygon_center(const unsigned short s) const;
+
+@
+@<Define |Solid| functions@>=
+const Point&
+Solid::get_reg_polygon_center(const unsigned short s) const
+{
+  return get_shape_center(REG_POLYGON_VALUE, s);
+}
+
+
+@q * (1) Functions for checking types.@> 
+@* Functions for checking types.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Is |Point|.@> 
+@*1 Is {\bf Point}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_point(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Nurb|.@> 
+@*1 Is {\bf Nurb}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_nurb(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Path|.@> 
+@*1 Is {\bf Path}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_path(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Polygon|.@> 
+@*1 Is {\bf Polygon}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_polygon(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Triangle|.@> 
+@*1 Is {\bf Triangle}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_triangle(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Rectangle|.@> 
+@*1 Is {\bf Rectangle}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_rectangle(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Reg_Polygon|.@> 
+@*1 Is {\bf Reg\_Polygon}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_reg_polygon(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Ellipse|.@> 
+@*1 Is {\bf Ellipse}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_ellipse(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Ellipse_Slice|.@> 
+@*1 Is {\bf Ellipse\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_ellipse_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Circle|.@> 
+@*1 Is {\bf Circle}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_circle(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Circle_Slice|.@> 
+@*1 Is {\bf Circle\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_circle_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Parabola|.@> 
+@*1 Is {\bf Parabola}.
+\initials{LDF 2005.11.07.}
+
+\LOG
+\initials{LDF 2005.11.07.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_parabola(void) const
+{
+   return false;
+}
+
+
+@q ** (2) Is |Hyperbola|.@> 
+@*1 Is {\bf Hyperbola}.
+\initials{LDF 2005.11.07.}
+
+\LOG
+\initials{LDF 2005.11.07.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_hyperbola(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Arc|-type.@> 
+@*1 Is {\bf Arc}-type.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_arc_type(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Helix|.@> 
+@*1 Is {\bf Helix}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_helix(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Helix_Slice|.@> 
+@*1 Is {\bf Helix\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_helix_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Solid|.@> 
+@*1 Is {\bf Solid}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_solid(void) const
+{
+   return true;
+}
+
+@q ** (2) Is |Solid_Faced|.@> 
+@*1 Is {\bf Solid\_Faced}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_solid_faced(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Polyhedron|.@> 
+@*1 Is {\bf Polyhedron}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_polyhedron(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Polyhedron_Slice|.@> 
+@*1 Is {\bf Polyhedron\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_polyhedron_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Cuboid|.@> 
+@*1 Is {\bf Cuboid}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_cuboid(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Cuboid_Slice|.@> 
+@*1 Is {\bf Cuboid\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_cuboid_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Tetrahedron|.@> 
+@*1 Is {\bf Tetrahedron}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_tetrahedron(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Octahedron|.@> 
+@*1 Is {\bf Octahedron}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_octahedron(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Dodecahedron|.@> 
+@*1 Is {\bf Dodecahedron}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_dodecahedron(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Icosahedron|.@> 
+@*1 Is {\bf Icosahedron}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_icosahedron(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Trunc_Octahedron|.@> 
+@*1 Is {\bf Trunc\_Octahedron}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_trunc_octahedron(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Great_Rhombicosidodecahedron|.@> 
+@*1 Is {\bf Great\_Rhombicosidodecahedron}.
+\initials{LDF 2005.12.14.}
+
+\LOG
+\initials{LDF 2005.12.14.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_great_rhombicosidodecahedron(void) const
+{
+   return false;
+}
+
+
+
+@q ** (2) Is |Cone|.@> 
+@*1 Is {\bf Cone}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_cone(void) const
+{
+   return false;
+}
+
+@q ** (2) Is conical|.@> 
+@*1 Is conical.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_conical(Scanner_Node scanner_node = 0) const;
+
+@q ** (2) Is |Cone_Slice|.@> 
+@*1 Is {\bf Cone\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_cone_slice(void) const
+{
+   return false;
+}
+
+
+@q ** (2) Is |Cylinder|.@> 
+@*1 Is {\bf Cylinder}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_cylinder(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Cylinder_Slice|.@> 
+@*1 Is {\bf Cylinder\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_cylinder_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is cylindrical|.@> 
+@*1 Is cylindrical.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_cylindrical(Scanner_Node scanner_node = 0) const;
+
+@q ** (2) Is |Ellipsoid|.@> 
+@*1 Is {\bf Ellipsoid}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_ellipsoid(void) const
+{
+   return false;
+}
+
+
+@q ** (2) Is ellipsoidal|.@> 
+@*1 Is ellipsoidal.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_ellipsoidal(Scanner_Node scanner_node = 0) const;
+
+@q ** (2) Is |Ellipsoid_Slice|.@> 
+@*1 Is {\bf Ellipsoid\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_ellipsoid_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Sphere|.@> 
+@*1 Is {\bf Sphere}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_sphere(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Sphere_Slice|.@> 
+@*1 Is {\bf Sphere\_Slice}.
+\initials{LDF 2005.05.24.}
+
+\LOG
+\initials{LDF 2005.05.24.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_sphere_slice(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |Paraboloid|.@> 
+@*1 Is {\bf Paraboloid}.
+\initials{LDF 2005.11.07.}
+
+\LOG
+\initials{LDF 2005.11.07.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_paraboloid(void) const
+{
+   return false;
+}
+
+@q ** (2) Is paraboloidal|.@> 
+@*1 Is paraboloidal.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_paraboloidal(Scanner_Node scanner_node = 0) const;
+
+@q ** (2) Is |Elliptical_Paraboloid|.@> 
+@*1 Is {\bf Elliptical\_Paraboloid}.
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_elliptical_paraboloid(void) const
+{
+   return false;
+}
+
+@q ** (2) Is elliptical_paraboloidal|.@> 
+@*1 Is elliptical\_paraboloidal.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_elliptical_paraboloidal(Scanner_Node scanner_node = 0) const;
+
+@q ** (2) Is |Hyperbolic_Paraboloid|.@> 
+@*1 Is {\bf Hyperbolic\_Paraboloid}.
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_hyperbolic_paraboloid(void) const
+{
+   return false;
+}
+
+@q ** (2) Is hyperbolic_paraboloidal|.@> 
+@*1 Is hyperbolic\_paraboloidal.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_hyperbolic_paraboloidal(Scanner_Node scanner_node = 0) const;
+
+
+
+@q ** (2) Is |Hyperboloid|.@> 
+@*1 Is {\bf Hyperboloid}.
+\initials{LDF 2005.11.07.}
+
+\LOG
+\initials{LDF 2005.11.07.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_hyperboloid(void) const
+{
+   return false;
+}
+
+@q ** (2) Is hyperboloidal.@> 
+@*1 Is hyperboloidal.
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+bool
+is_hyperboloidal(void) const
+{
+   return false;
+}
+
+@q ** (2) Is |One_Shell_Hyperboloid|.@> 
+@*1 Is {\bf One\_Shell\_Hyperboloid}.
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+#if 0 
+virtual
+inline
+bool
+is_one_shell_hyperboloid(void) const
+{
+   return false;
+}
+#endif 
+
+@q ** (2) Is one_shell_hyperboloidal|.@> 
+@*1 Is one\_shell\_hyperboloidal.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+#if 0 
+virtual
+bool
+is_one_shell_hyperboloidal(Scanner_Node scanner_node = 0) const;
+#endif 
+
+@q ** (2) Is |Two_Shell_Hyperboloid|.@> 
+@*1 Is {\bf Two\_Shell\_Hyperboloid}.
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+#if 0 
+virtual
+inline
+bool
+is_two_shell_hyperboloid(void) const
+{
+   return false;
+}
+#endif 
+
+@q ** (2) Is two_shell_hyperboloidal|.@> 
+@*1 Is two-shell hyperboloidal.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function declaration.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+#if 0 
+virtual
+bool
+is_two_shell_hyperboloidal(Scanner_Node scanner_node = 0) const;
+#endif 
+
+@q * (1) Functions for checking integrity of form.@> 
+@* Functions for checking integrity of form.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Is whatever.@>
+@*1 Is whatever. 
+@^\cfunc{Solid}{is\_whatever}@>
+\initials{LDF 2005.10.26.}
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_whatever(Scanner_Node scanner_node = 0,
+            real tolerance = Shape::DEFAULT_TOLERANCE) const;
+
+
+@
+@<Define |Solid| functions@>=
+
+bool
+Solid::is_whatever(Scanner_Node scanner_node,
+                   real tolerance) const
+{
+    return true;
+}
+
+@q ** (2) Is spherical|.@> 
+@*1 Is spherical.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function declaration.
+
+\initials{LDF 2005.10.26.}
+Added optional |real tolerance| argument with default 
+|Shape::DEFAULT_TOLERANCE|.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+bool
+is_spherical(Scanner_Node scanner_node = 0,
+             real tolerance = Shape::DEFAULT_TOLERANCE) const;
+
+@q * (1) Setting data members.@>
+@* Setting data members.
+\initials{LDF 2005.03.17.}
+
+\LOG
+\initials{LDF 2005.03.17.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Push draw color.@>
+@*1 Push draw color.
+\initials{LDF 2005.03.17.}
+
+\LOG
+\initials{LDF 2005.03.17.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual
+int
+push_draw_color(Color*& c, bool copy = true);
+
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::push_draw_color(Color*& c, bool copy)
+{
+   if (draw_color_vector == static_cast<Pointer_Vector<Color>*>(0))
+      draw_color_vector = new Pointer_Vector<Color>;
+
+   Color* d;
+
+   if (copy == true)
+      d = create_new<Color>(c);
+
+   else
+      d = c;
+
+   c = 0;
+
+   *draw_color_vector += d;
+
+   return 0;
+
+}  /* End of |Solid::push_draw_color()|  */
+
+
+@q ** (2) Push fill color.@>
+@*1 Push fill color.
+\initials{LDF 2005.03.17.}
+
+\LOG
+\initials{LDF 2005.03.17.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual
+int
+push_fill_color(Color*& c, bool copy = true);
+
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::push_fill_color(Color*& c, bool copy)
+{
+   if (fill_color_vector == static_cast<Pointer_Vector<Color>*>(0))
+      fill_color_vector = new Pointer_Vector<Color>;
+
+   Color* d;
+
+   if (copy == true)
+      d = create_new<Color>(c);
+
+   else
+      d = c;
+
+   c = 0;
+
+   *fill_color_vector += d;
+
+   return 0;
+
+}  /* End of |Solid::push_fill_color()|  */
+
+
+@q ** (2) Push color.@>
+@*1 Push color.
+\initials{LDF 2005.03.17.}
+
+\LOG
+\initials{LDF 2005.03.17.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual
+int
+push_color(Color*& c, bool copy = true);
+
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::push_color(Color*& c, bool copy)
+{
+   if (draw_color_vector == static_cast<Pointer_Vector<Color>*>(0))
+      draw_color_vector = new Pointer_Vector<Color>;
+
+   if (fill_color_vector == static_cast<Pointer_Vector<Color>*>(0))
+      fill_color_vector = new Pointer_Vector<Color>;
+
+   Color* d;
+
+   d = create_new<Color>(c);
+
+   *draw_color_vector += d;
+
+   if (copy == true)
+      d = create_new<Color>(c);
+   else
+      d = c;
+
+   *fill_color_vector += d;
+
+   c = 0;
+
+   return 0;
+
+}  /* End of |Solid::push_color()|  */
+
+@q ** (2) Push pen.@>
+@*1 Push pen.
+@^\cfunc{Solid}{push\_pen}@>
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual 
+int 
+push_pen(Pen*& p, bool copy = true);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int 
+Solid::push_pen(Pen*& p, bool copy)
+{
+   if (pen_vector == static_cast<Pointer_Vector<Pen>*>(0))
+      pen_vector = new Pointer_Vector<Pen>;
+
+   Pen* q;
+
+   if (copy == true)
+      q = create_new<Pen>(p);
+
+   else
+     {
+         q = p;
+         p = 0;
+     }
+
+   *pen_vector += q;
+
+   return 0;
+
+}  /* End of |Solid::push_pen()| definition.  */
+
+@q ** (2) Push dash_pattern.@>
+@*1 Push {\bf Dash\_Pattern}.
+@^\cfunc{Solid}{push\_dash\_pattern}@>
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual 
+int 
+push_dash_pattern(Dash_Pattern*& d, bool copy = true);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int 
+Solid::push_dash_pattern(Dash_Pattern*& d, bool copy)
+{
+   if (dash_pattern_vector == static_cast<Pointer_Vector<Dash_Pattern>*>(0))
+      dash_pattern_vector = new Pointer_Vector<Dash_Pattern>;
+
+   Dash_Pattern* e;
+
+   if (copy == true)
+      e = create_new<Dash_Pattern>(d);
+
+   else
+     {
+         e = d;
+         d = 0;
+     }
+
+   *dash_pattern_vector += e;
+
+   return 0;
+
+}  /* End of |Solid::push_dash_pattern()| definition.  */
+
+
+
+@q * (1) Show.@>
+@* Show.
+@^\cfunc{Solid}{show}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added code for showing |vector<Parabola*> parabolae| 
+and |vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+
+@<Declare |Solid| functions@>=
+
+virtual 
+void 
+show(string text = "", char coords = 'w',
+     const bool do_persp = true, const bool do_apply = true,
+     Focus* f = 0, const unsigned short proj = Projections::persp,
+     const real factor = 1) const;
+
+@
+@<Define |Solid| functions@>=
+void 
+Solid::show(string text, char coords,
+            const bool do_persp, const bool do_apply,
+            Focus* f, const unsigned short proj,
+            const real factor) const
+{
+
+  if (text == "")
+    text = "Solid:";
+
+  cerr << text << endl;
+
+  stringstream g;
+  int i;
+
+  if (paths.size() > 0)
+    {
+      cerr << "Showing paths.\n";
+      i = 0;
+      for (vector <Path*>::const_iterator iter = paths.begin();
+           iter != paths.end(); ++iter)
+        {
+          g << "Path " << i++ << ":";
+          (**iter).show(g.str(), coords, do_persp, do_apply, f, proj, factor);
+          g.str("");
+        }
+    }
+  else
+    cerr << "paths is empty.\n";
+  
+  if (ellipses.size() > 0)
+    {
+      cerr << "Showing ellipses.\n";
+      i = 0;
+      for (vector <Ellipse*>::const_iterator iter = ellipses.begin();
+           iter != ellipses.end(); ++iter)
+        {
+          g << "Ellipse " << i++ << ":";
+          (**iter).show(g.str(), coords, do_persp, do_apply, f, proj, factor);
+          g.str("");
+        }
+    }
+  else
+    cerr << "ellipses is empty.\n";
+
+  if (circles.size() > 0)
+    {
+      cerr << "Showing circles.\n";
+      i = 0;
+      for (vector <Circle*>::const_iterator iter = circles.begin();
+           iter != circles.end(); ++iter)
+        {
+          g << "Circle " << i++ << ":";
+          (**iter).show(g.str(), coords, do_persp, do_apply, f, proj, factor);
+          g.str("");
+        }
+    }
+  else
+    cerr << "circles is empty.\n";
+
+
+  if (parabolae.size() > 0)
+    {
+      cerr << "Showing parabolae.\n";
+      i = 0;
+      for (vector <Parabola*>::const_iterator iter = parabolae.begin();
+           iter != parabolae.end(); ++iter)
+        {
+          g << "Parabola " << i++ << ":";
+          (**iter).show(g.str(), coords, do_persp, do_apply, f, proj, factor);
+          g.str("");
+        }
+    }
+  else
+    cerr << "parabolae is empty.\n";
+
+
+  if (hyperbolae.size() > 0)
+    {
+      cerr << "Showing hyperbolae.\n";
+      i = 0;
+      for (vector <Hyperbola*>::const_iterator iter = hyperbolae.begin();
+           iter != hyperbolae.end(); ++iter)
+        {
+          g << "Hyperbola " << i++ << ":";
+          (**iter).show(g.str(), coords, do_persp, do_apply, f, proj, factor);
+          g.str("");
+        }
+    }
+  else
+    cerr << "hyperbolae is empty.\n";
+
+  if (reg_polygons.size() > 0)
+    {
+      cerr << "Showing reg_polygons.\n";
+      i = 0;
+      for (vector <Reg_Polygon*>::const_iterator iter = reg_polygons.begin();
+           iter != reg_polygons.end(); ++iter)
+        {
+          g << "Polygon " << i++ << ":";
+          (**iter).show(g.str(), coords, do_persp, do_apply, f, proj, factor);
+          g.str("");
+        }
+    }
+  else
+    cerr << "reg_polygons is empty.\n";
+
+  if (rectangles.size() > 0)
+    {
+      cerr << "Showing rectangles.\n";
+      i = 0;
+      for (vector <Rectangle*>::const_iterator iter = rectangles.begin();
+           iter != rectangles.end(); ++iter)
+        {
+          g << "Rectangle " << i++ << ":";
+          (**iter).show(g.str(), coords, do_persp, do_apply, f, proj, factor);
+          g.str("");
+        }
+    }
+  
+  else
+    cerr << "rectangles is empty.\n";
+  cerr << endl;
+  return;
+
+}  /* End of |Solid::show()| definition.  */
+
+@q * (1) Clear.@>
+@* Clear.
+@^\cfunc{Solid}{clear}@>
+
+\LOG
+\initials{LDF 2002.10.07.}  
+Replaced dummy definition with a real one.  Now,
+|clear()| is called for all of the objects in the |Solid|.
+
+\initials{LDF 2005.10.25.}
+Made debugging output thread-safe.  Now setting |center| to (0, 0, 0),
+|do_output| to |true|, and |world_extremes|, |pre_projective_extremes|,
+and |projective_extremes| to 0.    
+
+\initials{LDF 2005.11.09.}
+Now calling |Path::clear()| and |Conic_Section::clear()| for the items 
+on |ellipses| and |circles|.
+
+\initials{LDF 2006.01.25.}
+Now calling |Path::clear()| and |Conic_Section::clear()| for the items 
+on |parabolae| and |hyperbolae|.
+\ENDLOG 
+
+@q ** (2). Declaration.@>
+
+@<Declare |Solid| functions@>=
+virtual 
+void 
+clear(void);
+
+@q ** (2). Definition.@>
+
+@
+@<Define |Solid| functions@>=
+void 
+Solid::clear(void)
+{
+
+@q *** (3) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = 0;
+
+#ifdef HAVE_PTHREAD_H
+
+   Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+
+   if (thread_info != static_cast<Thread_Info_Type*>(0))
+      scanner_node = thread_info->scanner_node;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q *** (3).@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+          cerr_strm << thread_name 
+                    << "Entering `Solid::clear()'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   center.set(0, 0, 0);
+   do_output = true;
+
+   world_extremes           = 0;  
+   pre_projective_extremes  = 0;  
+   projective_extremes      = 0;    
+
+
+   for (vector <Path*>::iterator iter = paths.begin();
+        iter != paths.end(); ++iter)
+     (**iter).clear();
+   paths.clear();
+
+   for (vector <Ellipse*>::iterator iter = ellipses.begin();
+        iter != ellipses.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+
+   ellipses.clear();
+
+
+   for (vector <Circle*>::iterator iter = circles.begin();
+        iter != circles.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+
+   circles.clear();
+
+   for (vector <Parabola*>::iterator iter = parabolae.begin();
+        iter != parabolae.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+
+   parabolae.clear();
+
+   for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+        iter != hyperbolae.end(); ++iter)
+         {
+            (**iter).Conic_Section::clear();
+            (**iter).Path::clear();
+         }
+
+   hyperbolae.clear();
+
+
+
+   for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+        iter != reg_polygons.end(); ++iter)
+     (**iter).clear();
+   reg_polygons.clear();
+
+   for (vector <Rectangle*>::iterator iter = rectangles.begin();
+        iter != rectangles.end(); ++iter)
+     (**iter).clear();
+   rectangles.clear();
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+          cerr_strm << thread_name 
+                    << "Exiting `Solid::clear()'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return;
+
+}  /* End of |Solid::clear()| definition.  */
+
+@q * (1) Transformations.@>
+@* Transformations.
+
+@q ** (2) Multiplying by a Transform.@>
+@*1 Multiplying by a {\bf Transform}.
+@^\cofunc{Solid}{*=}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Now multiplying the |Parabolae| and |Hyperbolae| pointed to by the
+pointers on |vector<Parabola*> parabolae| and |vector<Hyperbola*> hyperbolae|
+by |Transform t|.
+\ENDLOG 
+
+
+@<Declare |Solid| functions@>=
+virtual 
+Transform 
+operator*=(const Transform& t);
+
+@
+@<Define |Solid| functions@>=
+Transform 
+Solid::operator*=(const Transform& t)
+{
+  center *= t;
+  for (vector <Path*>::iterator iter = paths.begin();
+       iter != paths.end(); ++iter)
+    **iter *= t;
+
+  for (vector <Ellipse*>::iterator iter = ellipses.begin();
+       iter != ellipses.end(); ++iter)
+    **iter *= t;
+
+  for (vector <Circle*>::iterator iter = circles.begin();
+       iter != circles.end(); ++iter)
+    **iter *= t;
+
+  for (vector <Parabola*>::iterator iter = parabolae.begin();
+       iter != parabolae.end(); ++iter)
+    **iter *= t;
+
+  for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+       iter != hyperbolae.end(); ++iter)
+    **iter *= t;
+
+  for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+       iter != reg_polygons.end(); ++iter)
+    **iter *= t;
+
+  for (vector <Rectangle*>::iterator iter = rectangles.begin();
+       iter != rectangles.end(); ++iter)
+    **iter *= t;
+
+
+  return t;
+}
+
+
+@q ** (2) Applying a transformation.@>
+@*1 Applying a transformation.
+@^\cfunc{Solid}{apply\_transform}@>
+
+\LOG
+\initials{LDF 2003.01.05.}  
+Added this function.  It's now needed because I've
+made |apply_transform()| a pure |virtual| function in |class Shape|.
+@: BUG FIX@>  BUG FIX: 
+I've done this in an attempt to fix a bug in |Picture::output()|,
+where the |Points| on a |Path| were not transformed when I used
+``|Transform t; *current_picture *= t|''.
+
+\initials{LDF 2006.01.25.}
+Now calling |apply_transform()| on the |Parabolae| and |Hyperbolae| pointed to by the
+pointers on |vector<Parabola*> parabolae| and |vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual 
+void 
+apply_transform(void);
+
+@
+@<Define |Solid| functions@>=
+void
+Solid::apply_transform(void)
+{
+  center.apply_transform();
+
+  for (vector <Path*>::iterator iter = paths.begin();
+       iter != paths.end(); ++iter)
+    (**iter).apply_transform();
+
+  for (vector <Ellipse*>::iterator iter = ellipses.begin();
+       iter != ellipses.end(); ++iter)
+    (**iter).apply_transform();
+
+  for (vector <Circle*>::iterator iter = circles.begin();
+       iter != circles.end(); ++iter)
+    (**iter).apply_transform();
+
+  for (vector <Parabola*>::iterator iter = parabolae.begin();
+       iter != parabolae.end(); ++iter)
+    (**iter).apply_transform();
+
+  for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+       iter != hyperbolae.end(); ++iter)
+    (**iter).apply_transform();
+
+  for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+       iter != reg_polygons.end(); ++iter)
+    (**iter).apply_transform();
+
+  for (vector <Rectangle*>::iterator iter = rectangles.begin();
+       iter != rectangles.end(); ++iter)
+    (**iter).apply_transform();
+}
+
+@q ** (2) Scale.@>
+@*1 Scale.
+@^\cfunc{Solid}{scale}@>
+@<Declare |Solid| functions@>=
+virtual 
+Transform 
+scale(real xx, real yy = 0, real zz = 0);
+
+@
+@<Define |Solid| functions@>=
+Transform 
+Solid::scale(real xx, real yy, real zz)
+{
+  Transform t;
+  t.scale(xx, yy, zz);
+  *this *= t;
+  return t;
+}
+
+@q ** (2) Shear.@>
+@*1 Shear.
+@^\cfunc{Solid}{shear}@>
+@<Declare |Solid| functions@>=
+virtual 
+Transform 
+shear(real xy, real xz = 0, real yx = 0, real yz = 0, 
+      real zx = 0, real zy = 0);
+
+@
+@<Define |Solid| functions@>=
+Transform 
+Solid::shear(real xy, real xz, real yx, real yz, 
+      real zx, real zy)
+{
+  Transform t;
+  t.shear(xy, xz, yx, yz, zx, zy);
+  *this *= t;
+  return t;
+}
+
+
+@q ** (2) Shift.@>
+@*1 Shift.
+
+@q *** (3) real arguments.@>
+@*2 {\bf real} arguments.
+@^\cfunc{Solid}{shift}@>
+@<Declare |Solid| functions@>=
+virtual 
+Transform 
+shift(real xx, real yy = 0, real zz = 0);
+
+@
+@<Define |Solid| functions@>=
+Transform 
+Solid::shift(real xx, real yy, real zz)
+{
+  Transform t;
+  t.shift(xx, yy, zz);
+  *this *= t;
+  return t;
+}
+
+@q *** (3) Point argument.@>
+@*2 {\bf Point} argument.
+@^\cfunc{Solid}{shift}@>
+@<Declare |Solid| functions@>=
+virtual 
+Transform 
+shift(const Point& pt);
+
+@
+@<Define |Solid| functions@>=
+Transform 
+Solid::shift(const Point& pt)
+{
+  Transform t;
+  t.shift(pt);
+  *this *= t;
+  return t;
+}
+
+
+
+@q ** (2) Rotatation around the main axes.@>
+@*1 Rotatation around the main axes.
+@^\cfunc{Solid}{rotate}@>
+@<Declare |Solid| functions@>=
+virtual 
+Transform 
+rotate(const real xx, const real yy = 0, const real zz = 0);
+
+@
+@<Define |Solid| functions@>=
+Transform 
+Solid::rotate(const real xx, const real yy, const real zz)
+{
+  Transform t;
+  t.rotate(xx, yy, zz);
+  *this *= t;
+  return t;
+}
+     
+
+
+@q ** (2) Rotatation around an arbitrary axis.@>
+@*1 Rotatation around an arbitrary axis.
+@^\cfunc{Solid}{rotate}@>
+\LOG
+\initials{LDF 2003.05.02.}  Changed name of this function from |rotate_around()|
+to |rotate()|.  This function now overloads |rotate()| with three
+|real| arguments.
+\ENDLOG 
+@<Declare |Solid| functions@>=
+virtual 
+Transform 
+rotate(const Point& p0, const Point& p1,
+                                  const real angle = 180);
+
+
+
+
+@
+@<Define |Solid| functions@>=
+Transform 
+Solid::rotate(const Point& p0, const Point& p1,
+                                  const real angle)
+{
+  Transform t;
+  t.rotate(p0, p1, angle);
+  *this *= t;
+  return t;
+}
+
+
+@q * (1) Reflections.@>
+@* Reflections.
+
+\LOG
+\initials{LDF 2004.12.15.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Reflection in a |Plane|.@>
+@*1 Reflection in a {\bf Plane}.
+\initials{LDF 2004.10.03.}
+@^\cfunc{Solid}{reflect\_in}@>
+
+Please note that this function tries to allocate memory on the free 
+store for the |Solid| pointed to by the pointer to |Shape| which is 
+its return value.  Therefore, programmers who use this function must 
+ensure that this memory is freed.
+\initials{LDF 2004.10.03.}
+
+If allocation fails, this function throws a |bad_alloc| exception.  
+If the reflection of |*this| cannot be found in the |Plane|, 
+this function returns 0.
+\initials{LDF 2004.10.03.}
+
+\LOG
+\initials{LDF 2004.10.03.}
+Added this function.
+
+\initials{LDF 2004.10.12.}
+Rewrote this function.  Following a system update, having |Shape*| as
+the return value no longer worked.
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<Declare |Solid| functions@>=
+virtual
+int
+reflect_in(const Plane& p, 
+           void* v,
+           const Scanner_Node scanner_node = 0) const;
+
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::reflect_in(const Plane& p, 
+                  void* v,
+                  const Scanner_Node scanner_node) const
+{
+
+
+@q *** (3) Preliminaries.@> 
+
+  bool DEBUG = false; /* |true|  */
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+  if (scanner_node)
+     scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                   &error_stop_value,
+                                                   &warning_stop_value);
+
+
+@q *** (3).@> 
+
+  Solid* solid_reflection = static_cast<Solid*>(v); 
+
+
+@q *** (3) If |solid_reflection == 0|, try to allocate memory @> 
+@q *** (3) for it on the free store.@> 
+
+@ If |solid_reflection == 0|, try to allocate memory for it
+@ on the free store.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+
+   if (solid_reflection == static_cast<Solid*>(0))
+     {
+        cerr_strm << thread_name 
+                  << "WARNING! In `Solid::reflect_in()':"
+                  << endl << "`solid_reflection' == 0. "
+                  << "Will try to allocate memory on the free store for it.";
+ 
+        log_message(cerr_strm);
+        cerr_message(cerr_strm, warning_stop_value);
+        cerr_strm.str("");
+ 
+
+        try
+          {
+             solid_reflection = create_new<Solid>(0, scanner_node);
+          }
+
+@q **** (4) Error handling:  |create_new<Solid>()| failed.@>   
+
+@ Error handling:  |create_new<Solid>()| failed.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+       catch (bad_alloc)
+          {
+             
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl << "`create_new<Solid>()' failed. "
+                        << "Rethrowing `bad_alloc'.";
+
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              throw;
+
+
+          } /* |catch (bad_alloc)|  */
+
+@q **** (4) |create_new<Solid>()| succeeded.@>           
+
+@ |create_new<Solid>()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "In `Solid::reflect_in()':"
+                   << endl << "`create_new<Solid>()' succeeded.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+@q **** (4) @>   
+
+     } /* |if (solid_reflection == 0)|  */
+
+
+
+@q *** (3).@> 
+
+  int status;
+
+
+@q *** (3) Reflect the objects on the vectors.@> 
+
+@ Reflect the objects on the vectors.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+
+@q **** (4) |circles|.@> 
+@ |circles|.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+ { /* Beginning of |Circle| group.  */
+
+  
+  Circle* circle_reflection;
+
+  for (vector<Circle*>::const_iterator iter = circles.begin();
+       iter != circles.end();
+       iter++)
+    {
+
+@q ***** (5) Call |create_new<Circle>()|.@> 
+
+@ Call |create_new<Circle>()|.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+            circle_reflection = create_new<Circle>(0, scanner_node);
+
+@q ***** (5) Call |Circle::reflect_in()|.@> 
+
+@ Call |Circle::reflect_in()|.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+        status = (**iter).reflect_in(p,
+                                     static_cast<void*>(circle_reflection),
+                                     scanner_node);
+
+@q ****** (6) Error handling:  |Circle::reflect_in()| returned 1.@> 
+
+@ Error handling:  |Circle::reflect_in()| returned 1.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+      if (status != 0)
+         {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Circle::reflect_in()' failed, returning 1."
+                        << endl 
+                        << "Deleting `solid_reflection' and "
+                        << "exiting function with return value 1.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+
+              delete solid_reflection;
+
+              return 1;
+
+
+         } /* |if (status != 0)|  */
+
+@q ****** (6) |Circle::reflect_in()| succeeded.@> 
+
+@ |Circle::reflect_in()| succeeded.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   else if (DEBUG)  /* |status == 0|  */
+     {
+
+          cerr_strm << thread_name 
+                    << "In `Solid::reflect_in()':"
+                    << endl 
+                    << "`Circle::reflect_in()' succeeded.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+     }       /* |else if (DEBUG)| (|status == 0|)  */
+#endif /* |DEBUG_COMPILE|  */@; 
+        
+
+@q ***** (5) Push |circle_reflection| onto |circles|.@> 
+
+@ Push |circle_reflection| onto |circles|.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+      solid_reflection->circles.push_back(circle_reflection);
+
+    } /* |for| (|circles|)  */
+
+ } /* End of |Circle| group.  */
+
+
+
+@q **** (4) |ellipses|.@> 
+@ |ellipses|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+ { /* Beginning of |Ellipse| group.  */
+
+
+  Ellipse* ellipse_reflection;
+
+  for (vector<Ellipse*>::const_iterator iter = ellipses.begin();
+       iter != ellipses.end();
+       iter++)
+    {
+
+@q ***** (5) Call |create_new<Ellipse>()|.@> 
+
+@ Call |create_new<Ellipse>()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+       try 
+         {
+            ellipse_reflection = create_new<Ellipse>(0, scanner_node);
+         }
+
+
+@q ****** (6) Error handling:  |create_new<Ellipse>()| failed.@> 
+
+@ Error handling:  |create_new<Ellipse>()| failed.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+ 
+        catch (bad_alloc)
+           {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl << "`create_new<Ellipse>()' failed. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing `bad_alloc'.";
+
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              throw;
+
+           }  /* |catch (bad_alloc)|  */
+
+
+@q ****** (6) |create_new<Ellipse>()| succeeded.@> 
+
+@ |create_new<Ellipse>()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "In `Solid::reflect_in()':"
+                   << endl << "`create_new<Ellipse>()' succeeded.";
+         
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+@q ***** (5) Call |Ellipse::reflect_in()|.@> 
+
+@ Call |Ellipse::reflect_in()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   try 
+     {
+        status = (**iter).reflect_in(p,
+                                     static_cast<void*>(ellipse_reflection),
+                                     scanner_node);
+     }
+
+
+@q ****** (6) Error handling:  |Ellipse::reflect_in()| threw |bad_alloc|.@> 
+
+@ Error handling:  |Ellipse::reflect_in()| threw |bad_alloc|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   catch (bad_alloc)
+     {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Ellipse::reflect_in()' threw `bad_alloc'. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing exception.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              throw;
+
+     }  /* |catch (bad_alloc)|  */
+
+
+
+@q ****** (6) Error handling:  |Ellipse::reflect_in()| returned 1.@> 
+
+@ Error handling:  |Ellipse::reflect_in()| returned 1.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+      if (status != 0)
+         {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Ellipse::reflect_in()' failed, returning 1."
+                        << endl 
+                        << "Deleting `solid_reflection' and "
+                        << "exiting function with return value 1.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              return 1;
+
+         } /* |if (status != 0)|  */
+
+@q ****** (6) |Ellipse::reflect_in()| succeeded.@> 
+
+@ |Ellipse::reflect_in()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   else if (DEBUG)  /* |status == 0|  */
+     {
+
+          cerr_strm << thread_name 
+                    << "In `Solid::reflect_in()':"
+                    << endl 
+                    << "`Ellipse::reflect_in()' succeeded.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+     }       /* |else if (DEBUG)| (|status == 0|)  */
+#endif /* |DEBUG_COMPILE|  */@; 
+        
+
+@q ***** (5) Push |ellipse_reflection| onto |ellipses|.@> 
+
+@ Push |ellipse_reflection| onto |ellipses|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+      solid_reflection->ellipses.push_back(ellipse_reflection);
+
+    } /* |for| (|ellipses|)  */
+
+
+ } /* End of |Ellipse| group.  */
+
+@q **** (4) |paths|.@> 
+@ |paths|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+ { /* Beginning of |Path| group.  */
+
+
+  Path* path_reflection;
+
+  for (vector<Path*>::const_iterator iter = paths.begin();
+       iter != paths.end();
+       iter++)
+    {
+
+@q ***** (5) Call |create_new<Path>()|.@> 
+
+@ Call |create_new<Path>()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+       try 
+         {
+            path_reflection = create_new<Path>(0, scanner_node);
+         }
+
+
+@q ****** (6) Error handling:  |create_new<Path>()| failed.@> 
+
+@ Error handling:  |create_new<Path>()| failed.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+ 
+        catch (bad_alloc)
+           {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl << "`create_new<Path>()' failed. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing `bad_alloc'.";
+
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              throw;
+
+           }  /* |catch (bad_alloc)|  */
+
+
+@q ****** (6) |create_new<Path>()| succeeded.@> 
+
+@ |create_new<Path>()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "In `Solid::reflect_in()':"
+                   << endl << "`create_new<Path>()' succeeded.";
+         
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+@q ***** (5) Call |Path::reflect_in()|.@> 
+
+@ Call |Path::reflect_in()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   try 
+     {
+        status = (**iter).reflect_in(p,
+                                     static_cast<void*>(path_reflection),
+                                     scanner_node);
+     }
+
+
+@q ****** (6) Error handling:  |Path::reflect_in()| threw |bad_alloc|.@> 
+
+@ Error handling:  |Path::reflect_in()| threw |bad_alloc|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   catch (bad_alloc)
+     {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Path::reflect_in()' threw `bad_alloc'. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing exception.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              throw;
+
+     }  /* |catch (bad_alloc)|  */
+
+
+
+@q ****** (6) Error handling:  |Path::reflect_in()| returned 1.@> 
+
+@ Error handling:  |Path::reflect_in()| returned 1.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+      if (status != 0)
+         {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Path::reflect_in()' failed, returning 1."
+                        << endl 
+                        << "Deleting `solid_reflection' and "
+                        << "exiting function with return value 1.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              return 1;
+
+
+         } /* |if (status != 0)|  */
+
+@q ****** (6) |Path::reflect_in()| succeeded.@> 
+
+@ |Path::reflect_in()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   else if (DEBUG)  /* |status == 0|  */
+     {
+
+          cerr_strm << thread_name 
+                    << "In `Solid::reflect_in()':"
+                    << endl 
+                    << "`Path::reflect_in()' succeeded.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+     }       /* |else if (DEBUG)| (|status == 0|)  */
+#endif /* |DEBUG_COMPILE|  */@; 
+        
+
+@q ***** (5) Push |path_reflection| onto |paths|.@> 
+
+@ Push |path_reflection| onto |paths|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+      solid_reflection->paths.push_back(path_reflection);
+
+    } /* |for| (|paths|)  */
+
+
+ } /* End of |Path| group.  */
+
+
+
+@q **** (4) |rectangles|.@> 
+@ |rectangles|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+ { /* Beginning of |Rectangle| group.  */
+
+
+  Rectangle* rectangle_reflection;
+
+  for (vector<Rectangle*>::const_iterator iter = rectangles.begin();
+       iter != rectangles.end();
+       iter++)
+    {
+
+@q ***** (5) Call |create_new<Rectangle>()|.@> 
+
+@ Call |create_new<Rectangle>()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+       try 
+         {
+            rectangle_reflection = create_new<Rectangle>(0, scanner_node);
+         }
+
+
+@q ****** (6) Error handling:  |create_new<Rectangle>()| failed.@> 
+
+@ Error handling:  |create_new<Rectangle>()| failed.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+ 
+        catch (bad_alloc)
+           {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl << "`create_new<Rectangle>()' failed. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing `bad_alloc'.";
+
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              throw;
+
+           }  /* |catch (bad_alloc)|  */
+
+
+@q ****** (6) |create_new<Rectangle>()| succeeded.@> 
+
+@ |create_new<Rectangle>()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "In `Solid::reflect_in()':"
+                   << endl << "`create_new<Rectangle>()' succeeded.";
+         
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+@q ***** (5) Call |Rectangle::reflect_in()|.@> 
+
+@ Call |Rectangle::reflect_in()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   try 
+     {
+        status = (**iter).reflect_in(p,
+                                     static_cast<void*>(rectangle_reflection),
+                                     scanner_node);
+     }
+
+
+@q ****** (6) Error handling:  |Rectangle::reflect_in()| threw |bad_alloc|.@> 
+
+@ Error handling:  |Rectangle::reflect_in()| threw |bad_alloc|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   catch (bad_alloc)
+     {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Rectangle::reflect_in()' threw `bad_alloc'. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing exception.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              throw;
+
+     }  /* |catch (bad_alloc)|  */
+
+
+
+@q ****** (6) Error handling:  |Rectangle::reflect_in()| returned 1.@> 
+
+@ Error handling:  |Rectangle::reflect_in()| returned 1.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+      if (status != 0)
+         {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Rectangle::reflect_in()' failed, returning 1."
+                        << endl 
+                        << "Deleting `solid_reflection' and "
+                        << "exiting function with return value 1.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+ 
+              return 1;
+              
+         } /* |if (status != 0)|  */
+
+@q ****** (6) |Rectangle::reflect_in()| succeeded.@> 
+
+@ |Rectangle::reflect_in()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   else if (DEBUG)  /* |status == 0|  */
+     {
+
+          cerr_strm << thread_name 
+                    << "In `Solid::reflect_in()':"
+                    << endl 
+                    << "`Rectangle::reflect_in()' succeeded.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+     }       /* |else if (DEBUG)| (|status == 0|)  */
+#endif /* |DEBUG_COMPILE|  */@; 
+        
+
+@q ***** (5) Push |rectangle_reflection| onto |rectangles|.@> 
+
+@ Push |rectangle_reflection| onto |rectangles|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+      solid_reflection->rectangles.push_back(rectangle_reflection);
+
+    } /* |for| (|rectangles|)  */
+
+
+ } /* End of |Rectangle| group.  */
+
+
+@q **** (4) |reg_polygons|.@> 
+@ |reg_polygons|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+ { /* Beginning of |Reg_Polygon| group.  */
+
+
+  Reg_Polygon* reg_polygon_reflection;
+
+  for (vector<Reg_Polygon*>::const_iterator iter = reg_polygons.begin();
+       iter != reg_polygons.end();
+       iter++)
+    {
+
+@q ***** (5) Call |create_new<Reg_Polygon>()|.@> 
+
+@ Call |create_new<Reg_Polygon>()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+       try 
+         {
+            reg_polygon_reflection = create_new<Reg_Polygon>(0, scanner_node);
+         }
+
+
+@q ****** (6) Error handling:  |create_new<Reg_Polygon>()| failed.@> 
+
+@ Error handling:  |create_new<Reg_Polygon>()| failed.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+ 
+        catch (bad_alloc)
+           {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl << "`create_new<Reg_Polygon>()' failed. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing `bad_alloc'.";
+
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+              
+              throw;
+
+           }  /* |catch (bad_alloc)|  */
+
+
+@q ****** (6) |create_new<Reg_Polygon>()| succeeded.@> 
+
+@ |create_new<Reg_Polygon>()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "In `Solid::reflect_in()':"
+                   << endl << "`create_new<Reg_Polygon>()' succeeded.";
+         
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+@q ***** (5) Call |Reg_Polygon::reflect_in()|.@> 
+
+@ Call |Reg_Polygon::reflect_in()|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   try 
+     {
+        status = (**iter).reflect_in(p,
+                                     static_cast<void*>(reg_polygon_reflection),
+                                     scanner_node);
+     }
+
+
+@q ****** (6) Error handling:  |Reg_Polygon::reflect_in()| threw |bad_alloc|.@> 
+
+@ Error handling:  |Reg_Polygon::reflect_in()| threw |bad_alloc|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+   catch (bad_alloc)
+     {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Reg_Polygon::reflect_in()' threw `bad_alloc'. "
+                        << "Deleting `solid_reflection' and "
+                        << "rethrowing exception.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+
+              throw;
+
+     }  /* |catch (bad_alloc)|  */
+
+
+
+@q ****** (6) Error handling:  |Reg_Polygon::reflect_in()| returned 1.@> 
+
+@ Error handling:  |Reg_Polygon::reflect_in()| returned 1.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+      if (status != 0)
+         {
+
+              cerr_strm << thread_name 
+                        << "ERROR! In `Solid::reflect_in()':"
+                        << endl 
+                        << "`Reg_Polygon::reflect_in()' failed, returning 1."
+                        << endl 
+                        << "Deleting `solid_reflection' and "
+                        << "exiting function with return value 1.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              delete solid_reflection;
+        
+              return 1;
+
+         } /* |if (status != 0)|  */
+
+@q ****** (6) |Reg_Polygon::reflect_in()| succeeded.@> 
+
+@ |Reg_Polygon::reflect_in()| succeeded.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   else if (DEBUG)  /* |status == 0|  */
+     {
+
+          cerr_strm << thread_name 
+                    << "In `Solid::reflect_in()':"
+                    << endl 
+                    << "`Reg_Polygon::reflect_in()' succeeded.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+     }       /* |else if (DEBUG)| (|status == 0|)  */
+#endif /* |DEBUG_COMPILE|  */@; 
+        
+
+@q ***** (5) Push |reg_polygon_reflection| onto |reg_polygons|.@> 
+
+@ Push |reg_polygon_reflection| onto |reg_polygons|.
+\initials{LDF 2004.10.12.}
+
+@<Define |Solid| functions@>=
+
+
+    solid_reflection->reg_polygons.push_back(0);
+    
+    solid_reflection->reg_polygons.back() = reg_polygon_reflection;
+
+    } /* |for| (|reg_polygons|)  */
+
+
+ } /* End of |Reg_Polygon| group.  */
+
+@q **** (4) End of code for reflecting the objects on the vectors.@>
+
+@q *** (3) Set data members of |*solid_reflection|.@> 
+
+@ Set data members of |*solid_reflection|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Solid| functions@>=
+
+  solid_reflection->center = center;
+  solid_reflection->do_output = do_output;
+
+
+@q *** (3) Exit function successfully with return value 0.@> 
+
+@ Exit function successfully with return value 0.
+\initials{LDF 2004.10.05.}
+
+@<Define |Solid| functions@>=
+
+  return 0;
+
+} /* End of |Solid::reflect_in()|  definition.  */
+
+
+@q ** (2) Reflection off of a |Plane|.@>
+@*1 Reflection off of a {\bf Plane}.
+@^\cfunc{Solid}{reflect\_in}@>
+\initials{LDF 2004.12.15.}
+
+
+\LOG
+\initials{LDF 2004.12.15.}
+Added this function.  Still working on it, because it's not yet
+functional. 
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<Declare |Solid| functions@>=
+virtual
+int
+reflect_off(const Plane& p,
+            Point direction,
+            void* v,
+            const Scanner_Node scanner_node = 0) const;
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::reflect_off(const Plane& p,
+                   Point direction,
+                   void* v,
+                   const Scanner_Node scanner_node) const
+
+{
+
+
+@q **** (4) Preliminaries.@> 
+
+   bool DEBUG = false; /* |true|  */
+
+   using namespace Scan_Parse;
+
+   stringstream cerr_strm;
+
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                   &error_stop_value,
+                                                   &warning_stop_value);
+
+
+   int status;
+
+@q **** (4) @> 
+
+  Pointer_Vector<Solid>* solid_ptr_vector 
+     = static_cast<Pointer_Vector<Solid>*>(v);
+
+@q **** (4) Error handling:  |solid_ptr_vector == 0|.  @> 
+
+@ Error handling:  |solid_ptr_vector == 0|.  Return 1.
+\initials{LDF 2004.12.15.}
+
+\LOG
+\initials{LDF 2004.12.15.}
+Added this section.
+\ENDLOG
+
+@<Define |Solid| functions@>=
+  
+  if (solid_ptr_vector == static_cast<Pointer_Vector<Solid>*>(0))
+     {
+
+         cerr_strm << thread_name << "ERROR!  In `Solid::reflect_off()':"
+                   << endl 
+                   << "`Pointer_Vector<Solid>* solid_ptr_vector' == 0."
+                   << endl << "Returning 1.";
+  
+         log_message(cerr_strm);
+         cerr_message(cerr_strm, error_stop_value);
+         cerr_strm.str("");
+      
+         return 1;
+
+      }  /* |if (solid_ptr_vector == 0)|  */
+
+
+@q **** (4) Error handling:  |solid_ptr_vector->ctr < 4|.  @> 
+
+@ Error handling:  |solid_ptr_vector->ctr < 4|.  
+Delete |solid_ptr_vector| and return 1.
+\initials{LDF 2004.12.15.}
+
+\LOG
+\initials{LDF 2004.12.15.}
+Added this section.
+\ENDLOG
+
+@<Define |Solid| functions@>=
+
+
+  if (solid_ptr_vector->ctr < 4)
+     {
+
+         cerr_strm << thread_name << "ERROR!  In `Solid::reflect_off()':"
+                   << endl 
+                   << "`Pointer_Vector<Solid>* solid_ptr_vector->ctr' < 4."
+                   << endl << "Deleting `solid_ptr_vector' and returning 1.";
+  
+         log_message(cerr_strm);
+         cerr_message(cerr_strm, error_stop_value);
+         cerr_strm.str("");
+       
+         delete solid_ptr_vector;
+ 
+        
+         return 1;
+
+      }  /* |if (solid_ptr_vector->ctr < 4)|  */
+
+@q **** (4) Error handling:  |direction == origin|.@> 
+
+@ Error handling:  |direction == origin|.
+\initials{LDF 2004.12.15.}
+
+@<Define |Solid| functions@>=
+
+  Point origin;
+
+  if (direction == origin)
+    {
+
+      cerr_strm << thread_name << "ERROR! In `Solid::reflect_off()':"
+                    << endl 
+                    << "`direction'  == (0, 0, 0)."
+                    << endl << "Deleting `solid_ptr_vector', setting it to 0,"
+                    << endl 
+                    << "and exiting function with return value 1.";
+              
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          delete solid_ptr_vector;
+         
+          solid_ptr_vector = 0;
+
+          return 1;
+
+    }  /* |if (direction == *this)|  */
+
+
+
+@q **** (4) @>   
+@
+@<Define |Solid| functions@>=
+
+@q **** (4)  Try to allocate memory for a pointer to |Point_Vector<Point>|.@> 
+
+@ Try to allocate memory for a pointer to |Point_Vector<Point>|.
+\initials{LDF 2004.12.15.}
+
+@<Define |Solid| functions@>=
+
+   Pointer_Vector<Point>* center_pv;  
+
+   try 
+      {
+          center_pv  = new Pointer_Vector<Point>;
+      }
+
+@q ***** (5) Error handling:  |new Pointer_Vector<Point>| failed.@>   
+@ Error handling:  |new Pointer_Vector<Point>| failed.
+\initials{LDF 2004.12.15.}
+
+@<Define |Solid| functions@>=
+
+   catch (bad_alloc) 
+      {
+
+          cerr_strm << thread_name << "ERROR!  In `Solid::reflect_off()':"
+                    << endl << "`new Pointer_Vector<Point>' failed.  "
+                    << "Rethrowing `bad_alloc'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          throw;
+         
+      }  /* |catch (bad_alloc)|  */
+
+
+@q **** (4) Set up |Point_Vector<Point>| object.@> 
+
+@ Set up |Point_Vector<Point>| object.
+\initials{LDF 2004.12.15.}
+
+@<Define |Solid| functions@>=
+
+
+   for (int i = 0; i < 4; ++i)
+      {
+         *center_pv += &(solid_ptr_vector->v[i]->center);
+      }  /* |for|  */
+
+
+@q **** (4)  Call |Point::reflect_off()| on |center|.@> 
+
+@ Call |Point::reflect_off()| on |center|.
+Return 1 upon error.
+\initials{LDF 2004.12.15.}
+
+@<Define |Solid| functions@>=
+
+
+   status = center.reflect_off(p, direction, center_pv, scanner_node);
+
+   if (status != 0)
+      {
+          cerr_strm << thread_name << "ERROR!  In `Solid::reflect_off()':"
+                    << endl << "`Point::reflect_off()' failed.   "
+                    << "Exiting function with return value 1.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return 1;
+
+      }  /* |status != 0|  */
+
+
+@q **** (4) |Rectangles|.@> 
+@ |Rectangles|.
+\initials{LDF 2004.10.11.}
+
+@<Define |Solid| functions@>=
+
+   Pointer_Vector<Rectangle>* rectangle_pv;
+  
+   try   
+     {
+        rectangle_pv = new Pointer_Vector<Rectangle>;
+     }
+
+   catch (bad_alloc)
+     {
+        cerr_strm << thread_name 
+                  << "ERROR!  In `Solid::reflect_off()':"
+                  << endl << "`new Pointer_Vector<Rectangle>()' failed.   "
+                  << "Rethrowing `bad_alloc'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm, error_stop_value);
+        cerr_strm.str("");
+
+        throw;
+
+    } /* |catch (bad_alloc)|  */
+
+
+   try 
+      {
+         solid_ptr_vector->v[0]->rectangles.push_back(create_new<Rectangle>(0));
+         solid_ptr_vector->v[1]->rectangles.push_back(create_new<Rectangle>(0));
+         solid_ptr_vector->v[2]->rectangles.push_back(create_new<Rectangle>(0));
+         solid_ptr_vector->v[3]->rectangles.push_back(create_new<Rectangle>(0));
+      }
+
+   catch (bad_alloc)
+     {
+        cerr_strm << thread_name 
+                  << "ERROR!  In `Solid::reflect_off()':"
+                  << endl << "`create_new<Rectangle>()' failed.   "
+                  << "Rethrowing `bad_alloc'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm, error_stop_value);
+        cerr_strm.str("");
+
+        throw;
+
+    } /* |catch (bad_alloc)|  */
+
+
+/* !! START HERE.  LDF 2004.12.15. */@; 
+
+   for (int i = 0; i < 4; ++i)
+      *rectangle_pv += solid_ptr_vector->v[i]->rectangles[0];
+   
+   rectangles[0]->reflect_off(p, direction, rectangle_pv, scanner_node);
+
+
+@q **** (4) Exit function successfully with return value 0.@>   
+
+@ Exit function successfully with return value 0.
+\initials{LDF 2004.12.15.}
+
+@<Define |Solid| functions@>=
+
+   return 0;
+
+
+};  /* End of |Solid::reflect_off()| definition.  */
+
+@q * (1) Outputting.@>
+@* Outputting.
+
+@q ** (2) Extract.@>
+@*1 Extract.  
+@^\cfunc{Solid}{extract}@>
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@q *** (3)@> 
+
+@<Declare |Solid| functions@>=
+virtual
+vector<Shape*>
+extract(const Focus& f, const unsigned short proj, real factor);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+vector<Shape*>
+Solid::extract(const Focus& f, const unsigned short proj, real factor)
+{
+  vector <Shape*> v;
+
+  for (vector <Path*>::iterator iter = paths.begin();
+       iter != paths.end(); ++iter)
+    {
+      (**iter).apply_transform();
+      if (!(**iter).project(f, proj, factor))
+        {
+            cerr << "WARNING! In Solid::extract():\n"
+                 << "Path cannot be projected. "
+                 << "Returning empty vector <Shape*>.\n";
+            return v;
+            break;
+        }
+    }
+
+  for (vector <Ellipse*>::iterator iter = ellipses.begin();
+       iter != ellipses.end(); ++iter)
+    {
+      (**iter).apply_transform();
+      if (!(**iter).project(f, proj, factor))
+        {
+            cerr << "WARNING! In Solid::extract():\n"
+                 << "Ellipse cannot be projected. "
+                 << "Returning empty vector <Shape*>.\n";
+            return v;
+            break;
+        }
+    }
+
+  for (vector <Circle*>::iterator iter = circles.begin();
+       iter != circles.end(); ++iter)
+    {
+      (**iter).apply_transform();
+      if (!(**iter).project(f, proj, factor))
+        {
+            cerr << "WARNING! In Solid::extract():\n"
+                 << "Circle cannot be projected. "
+                 << "Returning empty vector <Shape*>.\n";
+            return v;
+            break;
+        }
+    }
+
+  for (vector <Parabola*>::iterator iter = parabolae.begin();
+       iter != parabolae.end(); ++iter)
+    {
+      (**iter).apply_transform();
+      if (!(**iter).project(f, proj, factor))
+        {
+            cerr << "WARNING! In Solid::extract():\n"
+                 << "Parabola cannot be projected. "
+                 << "Returning empty vector <Shape*>.\n";
+            return v;
+            break;
+        }
+    }
+
+  for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+       iter != hyperbolae.end(); ++iter)
+    {
+      (**iter).apply_transform();
+      if (!(**iter).project(f, proj, factor))
+        {
+            cerr << "WARNING! In Solid::extract():\n"
+                 << "Hyperbola cannot be projected. "
+                 << "Returning empty vector <Shape*>.\n";
+            return v;
+            break;
+        }
+    }
+
+
+
+
+  for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+       iter != reg_polygons.end(); ++iter)
+    {
+      (**iter).apply_transform();
+      if (!(**iter).project(f, proj, factor))
+        {
+            cerr << "WARNING! In Solid::extract():\n"
+                 << "Polygon cannot be projected. "
+                 << "Returning empty vector <Shape*>.\n";
+            return v;
+            break;
+        }
+    }
+
+  for (vector <Rectangle*>::iterator iter = rectangles.begin();
+       iter != rectangles.end(); ++iter)
+    {
+      (**iter).apply_transform();
+      if (!(**iter).project(f, proj, factor))
+        {
+            cerr << "WARNING! In Solid::extract():\n"
+                 << "Rectangle cannot be projected. "
+                 << "Returning empty vector <Shape*>.\n";
+            return v;
+            break;
+        }
+    }
+
+  v.push_back(this);
+  return v;
+}
+
+@q ** (2) Set world extremes.@> 
+@*1 Set world extremes.
+\initials{LDF 2005.04.04.}
+
+\LOG
+\initials{LDF 2005.04.04.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+bool 
+set_world_extremes(Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+
+bool 
+Solid::set_world_extremes(Scanner_Node scanner_node)
+{
+   return true;
+}
+
+@q ** (2) Set pre-projective extremes.@>
+@*1 Set pre-projective extremes.
+@^\cfunc{Solid}{set\_pre\_projective\_extremes}@>
+\initials{LDF 2005.06.30.}
+
+\LOG
+\initials{LDF 2005.06.30.}
+Added this function.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual
+bool
+set_pre_projective_extremes(Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+bool
+Solid::set_pre_projective_extremes(Scanner_Node scanner_node)
+{
+  bool DEBUG = false; /* |true| */@;
+  if (DEBUG)
+    cerr << "Entering Solid::set_pre_projective_extremes()" << "\n";
+  valarray <real> v;
+  v.resize(6, 0);  /* LDF 2002.12.13.  Added.  Needed for compiling
+                      under GNU/Linux using GCC on the Intel i686
+                      computer gwdu101.gwdg.de.  */
+ 
+ 
+  
+  for (vector <Path*>::iterator iter = paths.begin();
+       iter != paths.end(); ++iter)
+    {
+      if(!(**iter).set_pre_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_pre_projective_extremes():\n"
+               << "Path::set_pre_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_pre_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          pre_projective_extremes[i] = min(pre_projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          pre_projective_extremes[i] = max(pre_projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Ellipse*>::iterator iter = ellipses.begin();
+       iter != ellipses.end(); ++iter)
+    {
+      if(!(**iter).set_pre_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_pre_projective_extremes():\n"
+               << "Path::set_pre_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_pre_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          pre_projective_extremes[i] = min(pre_projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          pre_projective_extremes[i] = max(pre_projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Circle*>::iterator iter = circles.begin();
+       iter != circles.end(); ++iter)
+    {
+      if(!(**iter).set_pre_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_pre_projective_extremes():\n"
+               << "Path::set_pre_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_pre_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          pre_projective_extremes[i] = min(pre_projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          pre_projective_extremes[i] = max(pre_projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Parabola*>::iterator iter = parabolae.begin();
+       iter != parabolae.end(); ++iter)
+    {
+      if(!(**iter).set_pre_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_pre_projective_extremes():\n"
+               << "Path::set_pre_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_pre_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          pre_projective_extremes[i] = min(pre_projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          pre_projective_extremes[i] = max(pre_projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+       iter != hyperbolae.end(); ++iter)
+    {
+      if(!(**iter).set_pre_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_pre_projective_extremes():\n"
+               << "Path::set_pre_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_pre_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          pre_projective_extremes[i] = min(pre_projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          pre_projective_extremes[i] = max(pre_projective_extremes[i], v[i]);
+        }
+    }
+
+
+
+
+  for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+       iter != reg_polygons.end(); ++iter)
+    {
+      if(!(**iter).set_pre_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_pre_projective_extremes():\n"
+               << "Path::set_pre_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_pre_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          pre_projective_extremes[i] = min(pre_projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          pre_projective_extremes[i] = max(pre_projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Rectangle*>::iterator iter = rectangles.begin();
+       iter != rectangles.end(); ++iter)
+    {
+      if(!(**iter).set_pre_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_pre_projective_extremes():\n"
+               << "Path::set_pre_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_pre_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          pre_projective_extremes[i] = min(pre_projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          pre_projective_extremes[i] = max(pre_projective_extremes[i], v[i]);
+        }
+    }
+
+  if (DEBUG)
+    cerr << "Exiting Solid::set_pre_projective_extremes()" << "\n";
+  return true;
+
+}  /* End of |Solid::set_pre_projective_extremes()| definition.  */
+
+@q ** (2) Set projective extremes.@>
+@*1 Set projective extremes.
+@^\cfunc{Solid}{set\_projective\_extremes}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.03.23.}
+Added optional |Scanner_Node scanner_node| argument with default 0.
+
+\initials{LDF 2005.04.04.}
+Changed the name of this function from |set_extremes()| to 
+|set_projective_extremes()|.  Changed all references to it without comment.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual
+bool
+set_projective_extremes(Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+bool
+Solid::set_projective_extremes(Scanner_Node scanner_node)
+{
+  bool DEBUG = false; /* |true| */@;
+  if (DEBUG)
+    cerr << "Entering Solid::set_projective_extremes()" << "\n";
+  valarray <real> v;
+  v.resize(6, 0);  /* LDF 2002.12.13.  Added.  Needed for compiling
+                      under GNU/Linux using GCC on the Intel i686
+                      computer gwdu101.gwdg.de.  */
+ 
+ 
+  
+  for (vector <Path*>::iterator iter = paths.begin();
+       iter != paths.end(); ++iter)
+    {
+      if(!(**iter).set_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_projective_extremes():\n"
+               << "Path::set_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          projective_extremes[i] = min(projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          projective_extremes[i] = max(projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Ellipse*>::iterator iter = ellipses.begin();
+       iter != ellipses.end(); ++iter)
+    {
+      if(!(**iter).set_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_projective_extremes():\n"
+               << "Path::set_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          projective_extremes[i] = min(projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          projective_extremes[i] = max(projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Circle*>::iterator iter = circles.begin();
+       iter != circles.end(); ++iter)
+    {
+      if(!(**iter).set_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_projective_extremes():\n"
+               << "Path::set_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          projective_extremes[i] = min(projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          projective_extremes[i] = max(projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Parabola*>::iterator iter = parabolae.begin();
+       iter != parabolae.end(); ++iter)
+    {
+      if(!(**iter).set_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_projective_extremes():\n"
+               << "Path::set_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          projective_extremes[i] = min(projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          projective_extremes[i] = max(projective_extremes[i], v[i]);
+        }
+    }
+
+
+  for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+       iter != hyperbolae.end(); ++iter)
+    {
+      if(!(**iter).set_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_projective_extremes():\n"
+               << "Path::set_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          projective_extremes[i] = min(projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          projective_extremes[i] = max(projective_extremes[i], v[i]);
+        }
+    }
+
+
+
+  for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+       iter != reg_polygons.end(); ++iter)
+    {
+      if(!(**iter).set_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_projective_extremes():\n"
+               << "Path::set_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          projective_extremes[i] = min(projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          projective_extremes[i] = max(projective_extremes[i], v[i]);
+        }
+    }
+
+  for (vector <Rectangle*>::iterator iter = rectangles.begin();
+       iter != rectangles.end(); ++iter)
+    {
+      if(!(**iter).set_projective_extremes())
+        {
+          cerr << "ERROR! In Solid::set_projective_extremes():\n"
+               << "Path::set_projective_extremes() returned false. "
+               << "Returning false.\n\n";
+          return false;
+        }
+      v = (**iter).get_projective_extremes();
+
+      for (int i = 0; i < 3; ++i) /* Minima.  */
+        {
+          projective_extremes[i] = min(projective_extremes[i], v[i]);
+        }
+
+      for (int i = 3; i < 6; ++i)  /* Maxima.  */
+        {
+          projective_extremes[i] = max(projective_extremes[i], v[i]);
+        }
+    }
+
+  if (DEBUG)
+    cerr << "Exiting Solid::set_projective_extremes()" << "\n";
+  return true;
+
+}
+
+@q ** (2) Enclosing Cuboids Intersect.@>
+@*1 Enclosing Cuboids Intersect.
+@^\cfunc{Solid}{enclosing\_cuboids\_intersect}@>
+\initials{LDF 2005.03.23.}
+
+\LOG
+\initials{LDF 2005.03.23.}
+Added this function.
+
+\initials{LDF 2005.03.31.}
+Changed the name of this function from |enclosing_prisms_intersect()|
+to |enclosing_cuboids_intersect()|.
+
+\initials{LDF 2005.04.01.}
+Changed the return type of this function from |unsigned short|
+to |Unsigned_Byte|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+Unsigned_Byte
+enclosing_cuboids_intersect(Shape* s, Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+
+Unsigned_Byte
+Solid::enclosing_cuboids_intersect(Shape* s, Scanner_Node scanner_node)
+{
+   return 0;
+}
+
+@q ** (2) Intersection with |Shape|.@>
+@*1 Intersection with |Shape|.
+@^\cfunc{Solid}{intersection}@>
+\initials{LDF 2005.03.23.}
+
+\LOG
+\initials{LDF 2005.03.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+Int_Void_Ptr
+intersection(Shape* s, Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+
+Int_Void_Ptr
+Solid::intersection(Shape* s, Scanner_Node scanner_node)
+{
+
+   Int_Void_Ptr ivp;
+
+   return ivp;
+}
+
+@q * (1) Projections intersect.@>  
+@* Projections intersect.
+@^\cfunc{Solid}{projections\_intersect}@>
+\initials{LDF 2005.04.11.}
+
+\LOG
+\initials{LDF 2005.04.11.}
+Added this function.  Currently, it just returns 0 immediately.
+\ENDLOG
+
+@q ** (2) Declaration.@>  
+
+@<Declare |Solid| functions@>=
+virtual 
+Unsigned_Byte
+projections_intersect(Shape* s,
+                      Scanner_Node scanner_node = 0);
+
+
+@q ** (2) Definition.@>  
+
+@ 
+@<Define |Solid| functions@>=
+Unsigned_Byte
+Solid::projections_intersect(Shape* s,
+                            Scanner_Node scanner_node)
+{
+   return 0;
+}
+
+
+@q ** (2) Get world extremes.@> 
+@*1 Get world extremes.
+\initials{LDF 2005.04.04.}
+
+\LOG
+\initials{LDF 2005.04.04.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+
+virtual 
+inline
+const valarray<real>& 
+get_world_extremes(void) const
+{
+   return world_extremes;
+}
+
+@q ** (2) Get pre-projective extremes.@>
+@*1 Get pre-projective extremes.
+@^\cfunc{Solid}{get\_pre\_projective\_extremes}@>
+
+\LOG
+\initials{LDF 2005.06.30.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+
+inline
+virtual
+const
+valarray <real>&
+get_pre_projective_extremes(void) const
+{
+  return pre_projective_extremes;
+}
+
+@q ** (2) Get projective extremes.@>
+@*1 Get projective extremes.
+@^\cfunc{Solid}{get\_projective\_extremes}@>
+
+\LOG
+\initials{LDF 2005.03.23.}
+Changed the return value from |const valarray <real>| to 
+|const valarray <real>&|, i.e., I've made it a reference.
+
+\initials{LDF 2005.04.04.}
+Changed the name of this function from |get_extremes()| to 
+|get_projective_extremes()|.  Changed all references to it without comment.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+
+inline
+virtual
+const
+valarray <real>&
+get_projective_extremes(void) const
+{
+  return projective_extremes;
+}
+
+@q ** (2) Get minimum x.@>
+@*1 Get minimum x.
+@^\cfunc{Solid}{get\_minimum\_x}@>
+\initials{LDF 2005.04.19.}
+
+\LOG
+\initials{LDF 2005.04.19.}
+Added this function.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+real
+get_minimum_x(const unsigned short s = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_minimum_x(const unsigned short s) const
+{
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::get_minimum_x()" << endl;
+
+  if (DEBUG)
+    cerr << "minimum_x == " << projective_extremes[0] << endl;
+
+  if (DEBUG)
+    cerr << "Exiting Solid::get_minimum_x()" << endl;
+
+  return projective_extremes[0];
+}
+
+@q ** (2) Get maximum x.@>
+@*1 Get maximum x.
+@^\cfunc{Solid}{get\_maximum\_x}@>
+\initials{LDF 2005.04.19.}
+
+\LOG
+\initials{LDF 2005.04.19.}
+Added this function.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<Declare |Solid| functions@>=
+
+virtual
+real
+get_maximum_x(const unsigned short s = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_maximum_x(const unsigned short s) const
+{
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::get_maximum_x()" << endl;
+
+  if (DEBUG)
+    cerr << "maximum_x == " << projective_extremes[1] << endl;
+
+  if (DEBUG)
+    cerr << "Exiting Solid::get_maximum_x()" << endl;
+
+  return projective_extremes[1];
+}
+
+@q ** (2) Get mean x.@>
+@*1 Get mean x.
+@^\cfunc{Solid}{get\_mean\_x}@>
+\initials{LDF 2005.04.19.}
+
+\LOG
+\initials{LDF 2005.04.19.}
+Added this function.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+\ENDLOG 
+
+@q *** (3) Declaration.@>
+
+@<Declare |Solid| functions@>=
+virtual
+real
+get_mean_x(const unsigned short s = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_mean_x(const unsigned short s) const
+{
+  return ((projective_extremes[0] + projective_extremes[1]) / 2);
+}
+
+@q ** (2) Get minimum y.@>
+@*1 Get minimum y.
+@^\cfunc{Solid}{get\_minimum\_y}@>
+\initials{LDF 2005.04.19.}
+
+\LOG
+\initials{LDF 2005.04.19.}
+Added this function.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+real
+get_minimum_y(const unsigned short s = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_minimum_y(const unsigned short s) const
+{
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::get_minimum_y()" << endl;
+
+  if (DEBUG)
+    cerr << "minimum_y == " << projective_extremes[2] << endl;
+
+  if (DEBUG)
+    cerr << "Exiting Solid::get_minimum_y()" << endl;
+
+  return projective_extremes[2];
+}
+
+@q ** (2) Get maximum y.@>
+@*1 Get maximum y.
+@^\cfunc{Solid}{get\_maximum\_y}@>
+\initials{LDF 2005.04.19.}
+
+\LOG
+\initials{LDF 2005.04.19.}
+Added this function.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<Declare |Solid| functions@>=
+
+virtual
+real
+get_maximum_y(const unsigned short s = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_maximum_y(const unsigned short s) const
+{
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::get_maximum_y()" << endl;
+
+  if (DEBUG)
+    cerr << "maximum_y == " << projective_extremes[3] << endl;
+
+  if (DEBUG)
+    cerr << "Exiting Solid::get_maximum_y()" << endl;
+
+  return projective_extremes[3];
+}
+
+@q ** (2) Get mean y.@>
+@*1 Get mean y.
+@^\cfunc{Solid}{get\_mean\_y}@>
+\initials{LDF 2005.04.19.}
+
+\LOG
+\initials{LDF 2005.04.19.}
+Added this function.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+\ENDLOG 
+
+@q *** (3) Declaration.@>
+
+@<Declare |Solid| functions@>=
+virtual
+real
+get_mean_y(const unsigned short s = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_mean_y(const unsigned short s) const
+{
+  return ((projective_extremes[2] + projective_extremes[3]) / 2);
+}
+
+@q ** (2) Get minimum z.@>
+@*1 Get minimum z.
+@^\cfunc{Solid}{get\_minimum\_z}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+
+\initials{LDF 2005.07.07.}
+Rewrote this function.  It now tests the value of 
+the |const unsigned short s| argument.  Made the debugging and
+error output thread-safe.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual
+real
+get_minimum_z(const unsigned short s 
+              = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_minimum_z(const unsigned short s) const
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+
+/* This code is for functions that don't take a |Scanner_Node scanner_node|
+   argument.  */
+
+   Scanner_Node scanner_node = 0;
+
+#ifdef HAVE_PTHREAD_H
+
+   Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+
+   if (thread_info != static_cast<Thread_Info_Type*>(0))
+      scanner_node = thread_info->scanner_node;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "Entering 'Solid::get_minimum_z()'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+    if (s == Shape::PROJECTIVE_COORDINATES_VALUE)
+       return projective_extremes[4];
+
+    else if (s == PRE_PROJECTIVE_COORDINATES_VALUE)
+       return pre_projective_extremes[4];
+       
+    else
+      {
+          cerr_strm << thread_name 
+                    << "ERROR!  In 'Solid::get_minimum_z()':"
+                    << endl 
+                    << "Invalid value for the unsigned short 's' argument:  "
+                    << s 
+                    << endl 
+                    << "Haven't programmed this case yet."
+                    << endl 
+                    << "Exiting function unsuccessfully with return value "
+                    << "'INVALID_REAL'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return INVALID_REAL;
+
+      }  /* |else|  */
+   
+   
+}  /* End of |Solid::get_minimum_z()| definition.  */
+
+
+
+
+@q ** (2) Get maximum z.@>
+@*1 Get maximum z.
+@^\cfunc{Solid}{get\_maximum\_z}@>
+
+\LOG
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+
+\initials{LDF 2005.07.07.}
+Rewrote this function.  It now tests the value of 
+the |const unsigned short s| argument.  Made the debugging and
+error output thread-safe.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+real
+get_maximum_z(const unsigned short s 
+              = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_maximum_z(const unsigned short s) const
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+
+/* This code is for functions that don't take a |Scanner_Node scanner_node|
+   argument.  */
+
+   Scanner_Node scanner_node = 0;
+
+#ifdef HAVE_PTHREAD_H
+
+   Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+
+   if (thread_info != static_cast<Thread_Info_Type*>(0))
+      scanner_node = thread_info->scanner_node;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "Entering 'Solid::get_maximum_z()'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+    if (s == Shape::PROJECTIVE_COORDINATES_VALUE)
+       return projective_extremes[5];
+
+    else if (s == PRE_PROJECTIVE_COORDINATES_VALUE)
+       return pre_projective_extremes[5];
+       
+    else
+      {
+          cerr_strm << thread_name 
+                    << "ERROR!  In 'Solid::get_maximum_z()':"
+                    << endl 
+                    << "Invalid value for the unsigned short 's' argument:  "
+                    << s 
+                    << endl 
+                    << "Haven't programmed this case yet."
+                    << endl 
+                    << "Exiting function unsuccessfully with return value "
+                    << "'INVALID_REAL'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return INVALID_REAL;
+
+      }  /* |else|  */
+   
+   
+}  /* End of |Solid::get_maximum_z()| definition.  */
+
+
+@q ** (2) Get mean z.@>
+@ Get mean z.
+@^\cfunc{Solid}{get\_mean\_z}@>
+
+\LOG
+\initials{LDF 2003.05.16.}  
+Added this function.
+
+\initials{LDF 2005.06.30.}
+Added a |const unsigned short| argument.
+The default is is the |static const unsigned short|
+|Shape::PROJECTIVE_COORDINATES_VALUE|.
+
+\initials{LDF 2005.07.07.}
+Rewrote this function.  It now tests the value of 
+the |const unsigned short s| argument.  Made the debugging and
+error output thread-safe.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+real
+get_mean_z(const unsigned short s = Shape::PROJECTIVE_COORDINATES_VALUE) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+real
+Solid::get_mean_z(const unsigned short s) const
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+
+/* This code is for functions that don't take a |Scanner_Node scanner_node|
+   argument.  */
+
+   Scanner_Node scanner_node = 0;
+
+#ifdef HAVE_PTHREAD_H
+
+   Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+
+   if (thread_info != static_cast<Thread_Info_Type*>(0))
+      scanner_node = thread_info->scanner_node;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "Entering 'Solid::get_mean_z()'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+    if (s == Shape::PROJECTIVE_COORDINATES_VALUE)
+       return ((projective_extremes[4] + projective_extremes[5]) / 2);
+
+    else if (s == PRE_PROJECTIVE_COORDINATES_VALUE)
+       return ((pre_projective_extremes[4] + pre_projective_extremes[5]) / 2);
+       
+    else
+      {
+          cerr_strm << thread_name 
+                    << "ERROR!  In 'Solid::get_mean_z()':"
+                    << endl 
+                    << "Invalid value for the unsigned short 's' argument:  "
+                    << s 
+                    << endl 
+                    << "Haven't programmed this case yet."
+                    << endl 
+                    << "Exiting function unsuccessfully with return value "
+                    << "'INVALID_REAL'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return INVALID_REAL;
+
+      }  /* |else|  */
+   
+   
+}  /* End of |Solid::get_mean_z()| definition.  */
+
+@q ** Suppress output.@>
+@ Suppress output.
+@^\cfunc{Solid}{suppress\_output}@>
+@<Declare |Solid| functions@>=
+virtual
+void
+suppress_output();
+
+@
+@<Define |Solid| functions@>=
+void
+Solid::suppress_output()
+{
+  do_output = false;
+  return;
+}
+
+@q ** Unsuppress output.@>
+@ Unsuppress output.
+@^\cfunc{Solid}{unsuppress\_output}@>
+@<Declare |Solid| functions@>=
+virtual
+void
+unsuppress_output();
+
+@
+@<Define |Solid| functions@>=
+void
+Solid::unsuppress_output()
+{
+  do_output = true;
+  return;
+}
+
+
+
+@q ** (2) Output.@>
+@*1 Output.
+@^\cfunc{Solid}{output}@>
+\initials{LDF 2002.10.02.}  
+In |Picture::output()|, |shapes| is sorted according to the values 
+in\newline
+|projective_extremes| for each |Shape|.  However, it's possible (and
+even likely) that the individual |Paths| in a |Solid| are not ordered
+in such a way that they will be output in the correct order.
+Therefore, I declare a |vector <Shape*> s| and put the |Paths| from
+|paths|, |circles|, |ellipses|, |reg_polygons|, and |rectangles| onto it.
+Then I sort 
+|s| and call |output()| for each |Shape|.  Currently, |output()| will
+resolve to |Path::output()|, because |output()| hasn't been overloaded
+for |Circle|, |Ellipse|, |Reg_Polygon|, or |Rectangle| (and probably 
+won't be).  
+
+The invocation of |push_back()| in each of the four loops depends on
+the fact that |Path::extract()| returns a |vector| 
+containing only one element.  That's why I use |front()|.  There is no
+operator or function for concatenating |vectors|, at least I couldn't
+find one in Stroustrup.  @:!! TO DO@> TO DO: Get reference!
+
+\LOG
+\initials{LDF 2004.05.25.}  
+Added |Scanner_Node| argument.  
+
+\initials{LDF 2005.07.07.}
+Now passing template argument 
+to |Compare_Maximum_Z::operator()()|.
+
+\initials{LDF 2005.07.08.}
+Removed the explicit template argument from the call to 
+|Compare_Maximum_Z::operator()()|.
+\ENDLOG 
+
+
+@<Declare |Solid| functions@>=
+virtual
+void   
+output(Scanner_Node s);
+
+@  
+@<Define |Solid| functions@>=
+void
+Solid::output(Scanner_Node s)
+{
+  bool DEBUG = false; /* |true|  */ 
+  if (DEBUG)
+    cerr << "Entering Solid::output().\n";
+
+  vector <Shape*> v;
+
+  for (vector <Path*>::iterator iter = paths.begin();
+       iter != paths.end(); ++iter)
+    v.push_back((**iter).get_copy());
+
+  for (vector <Ellipse*>::iterator iter = ellipses.begin();
+       iter != ellipses.end(); ++iter)
+    v.push_back((**iter).get_copy());
+
+  for (vector <Circle*>::iterator iter = circles.begin();
+       iter != circles.end(); ++iter)
+    v.push_back((**iter).get_copy());
+
+  for (vector <Parabola*>::iterator iter = parabolae.begin();
+       iter != parabolae.end(); ++iter)
+    v.push_back((**iter).get_copy());
+
+  for (vector <Hyperbola*>::iterator iter = hyperbolae.begin();
+       iter != hyperbolae.end(); ++iter)
+    v.push_back((**iter).get_copy());
+  
+  for (vector <Reg_Polygon*>::iterator iter = reg_polygons.begin();
+       iter != reg_polygons.end(); ++iter)
+    v.push_back((**iter).get_copy());
+
+  for (vector <Rectangle*>::iterator iter = rectangles.begin();
+       iter != rectangles.end(); ++iter)
+    v.push_back((**iter).get_copy());
+
+  sort(v.begin(), v.end(), Compare_Maximum_Z<>());
+
+  for (vector <Shape*>::iterator iter = v.begin();
+       iter != v.end(); ++iter)
+    {
+      (**iter).output(s);
+      delete (*iter);
+    }
+
+  if (DEBUG)
+    cerr << "Exiting Solid::output().\n";
+}
+
+@q * (1) Drawing and filling.@>
+@* Drawing and filling.
+\initials{LDF Undated.}
+
+@q ** (2) Process vectors for |draw()|.@>
+@*1 Process vectors for {\it draw\/}().
+\initials{LDF 2002.10.09.}  Added this section.
+The same things are done to each of the |Shape*| vectors |paths|,
+|ellipses|, |circles|, |reg_polygons|, and |rectangles|, so I've put
+the code in this named section.  Each time it's used, |iter| is an
+iterator for a different vector.
+
+\LOG
+\initials{LDF 2002.10.09.}
+Added code for handling |draw_color|.
+
+\initials{LDF 2004.09.03.}
+Now setting |*c = Colors::black| if |color_ptr == 0|.  
+I'm not sure this is necessary.
+
+
+\initials{LDF 2004.09.05.}
+Changed the way |color_ptr| is set.  Now we cycle through the
+|vector<const Color*>| again if we reach the end.
+
+\initials{LDF 2004.10.20.}
+@:BUG FIX@> BUG FIX:  |color_ptr| is now set properly.
+
+\initials{LDF 2005.03.17.}
+Now calling |Path::push_draw_color()| instead of 
+|Path::set_draw_color()|.
+
+\initials{LDF 2005.10.25.}
+@:BUG FIX@> BUG FIX:  Now only pushing |ddashed| and |ppen| onto the corresponding 
+vectors, if they're non-null.
+\ENDLOG 
+
+@<Process vectors for |draw()|@>=
+
+{   /* Beginning of group.  */
+
+
+  if (c_iter != v.end())
+    color_ptr = *c_iter++;
+  else
+   {
+       c_iter = v.begin();
+       color_ptr = *c_iter++;
+   }
+
+  (**iter).set_fill_draw_value(DRAW_VALUE);
+
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr_strm << thread_name << "In `Solid::draw()':"
+                << endl << "Allocating memory for Color.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+  Color* c = create_new<Color>(0);
+  
+  if (color_ptr != static_cast<Color*>(0))
+    *c  = *color_ptr;
+  else
+    *c = Colors::black;
+
+  (**iter).push_draw_color(c, false);
+
+  if (ddashed)
+     (**iter).push_dash_pattern(ddashed); 
+
+  if (ppen)
+     (**iter).push_pen(ppen);
+
+
+  if (c_iter == v.end())
+    {
+      c_iter = v.begin();
+    } 
+
+}   /* End of |@<Process vectors for |draw()|@>| group.  */
+
+@q ** (2) Draw.@>
+@*1 Draw.
+@^\cfunc{Solid}{draw}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2004.06.02.}  
+Made |Picture& picture| the first argument and
+removed the default, |*current_picture|, since |current_picture| is no longer in
+use.  Changed |const string ppen| to |const Pen* ppen|.  
+
+\initials{LDF 2004.06.03.}  
+No longer using 
+|Colors::default_color|, since I've gotten rid of it.
+
+\initials{LDF 2004.06.07.}  
+Changed |const string ddashed = ""| to 
+|const Dash_Pattern* ddash_pattern = 0|.
+
+\initials{LDF 2004.06.07.}  
+Removed the default for |v|, since I've gotten rid
+of |Colors::default_color_vector|.
+
+\initials{LDF 2004.06.24.}
+Changed return value from |void| to |int|.  Now trying to lock and unlock
+|picture.mutex|, if |HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2004.08.30.}
+@:BUG FIX@> BUG FIX: 
+Changed |const vector <const Color* > v| argument
+to |const vector <const Color* >& v|, i.e., it's 
+now a reference.  The way it was before caused 
+|Scan_Parse::drawing_command_solid()| to fail.
+
+\initials{LDF 2004.09.05.}
+Started to make debugging and error output thread-safe by making the
+following changes:\hfil\break
+1. Added |Scanner_Node scanner_node| argument.\hfil\break
+2. Added ``|using namespace Scan_Parse|'' declaration.\hfil\break
+3. Added the local variables |string thread_name|, |stringstream cerr_strm|, 
+   and |bool stop_value|.\hfil\break
+4. Added conditionally compiled code for setting |thread_name|.
+
+\initials{LDF 2004.10.04.}
+Changed |bool stop_value| to |error_stop_value|.
+
+\initials{LDF 2005.03.18.}
+Made |Pen* ppen| argument non-|const|.
+
+\initials{LDF 2005.03.18.}
+Made |Dash_Pattern* dash_pattern| argument non-|const|.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+int
+draw(Picture& picture,
+     vector <Color*>& v,
+     Dash_Pattern* ddashed = 0,
+     Pen* ppen = 0,
+     Scanner_Node scanner_node = 0) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::draw(Picture& picture,
+            vector <Color*>& v,
+            Dash_Pattern* ddashed,
+            Pen* ppen,
+            Scanner_Node scanner_node) const
+{
+
+
+  using namespace Scan_Parse;
+
+  string thread_name = "";
+
+  bool error_stop_value
+    = (scanner_node->get_run_state()->error_stop_mode == Run_State::STOPPING)
+      ? true : false;
+
+  stringstream cerr_strm;
+
+#ifdef HAVE_PTHREAD_H
+
+  Thread_Info_Type* thread_info;
+  if ( scanner_node->get_run_state()->multithread_input
+      || scanner_node->get_run_state()->multithread_output
+      || scanner_node->get_run_state()->multithread_include)
+    {
+      thread_info = Thread_Info_Type::get_thread_info();
+      thread_name = thread_info->name;
+    }
+  else
+    {
+      thread_info = 0;
+      thread_name = "";
+    } 
+
+#endif /* |HAVE_PTHREAD_H| */@;
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    {
+      cerr_strm << thread_name << "Entering `Solid::draw()'.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+      {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "In `Solid::draw()':" << endl;
+
+        int i = 0;
+        stringstream i_strm;
+        
+
+        for (vector<Color*>::const_iterator iter = v.begin();
+             iter != v.end();
+             iter++)
+          {
+            i_strm << "Color: ";
+            i_strm << i++;
+            (**iter).show(i_strm.str());
+            i_strm.str("");
+          }
+        cerr << "Type <RETURN> to continue. ";
+        getchar(); 
+        cerr_mutex.unlock(); 
+        
+      }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+  Solid* s = create_new<Solid>(0);
+  *s = *this;
+
+  Color* color_ptr = 0;
+
+  vector <Color*>::const_iterator c_iter = v.begin();
+
+
+  for (vector<Path*>::const_iterator iter = s->paths.begin();
+       iter != s->paths.end();
+       ++iter)
+    {
+      @<Process vectors for |draw()|@>@;
+    } 
+
+  c_iter = v.begin();
+
+  for (vector<Ellipse*>::const_iterator iter = s->ellipses.begin();
+       iter != s->ellipses.end();
+       ++iter)
+    {
+      @<Process vectors for |draw()|@>@;
+    } /* |for|  */@;
+
+  c_iter = v.begin();
+
+  for (vector<Circle*>::const_iterator iter = s->circles.begin();
+       iter != s->circles.end();
+       ++iter)
+    {
+      @<Process vectors for |draw()|@>@;
+    } 
+
+  c_iter = v.begin();
+
+  for (vector<Parabola*>::const_iterator iter = s->parabolae.begin();
+       iter != s->parabolae.end();
+       ++iter)
+    {
+      @<Process vectors for |draw()|@>@;
+    } 
+
+  c_iter = v.begin();
+
+  for (vector<Hyperbola*>::const_iterator iter = s->hyperbolae.begin();
+       iter != s->hyperbolae.end();
+       ++iter)
+    {
+      @<Process vectors for |draw()|@>@;
+    } 
+
+  c_iter = v.begin();
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s->reg_polygons.begin();
+       iter != s->reg_polygons.end();
+       ++iter)
+    {
+      @<Process vectors for |draw()|@>@;
+    } 
+
+  for (vector<Rectangle*>::const_iterator iter = s->rectangles.begin();
+       iter != s->rectangles.end();
+       ++iter)
+    {
+      @<Process vectors for |draw()|@>@;
+    } 
+
+
+@q **** (4) Try to lock |picture.mutex|.@>   
+@ Try to lock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    int status;
+    status = picture.lock();
+
+    if (status != 0)
+      {
+        cerr_strm << thread_name << "ERROR! In `Solid::draw()':"
+             << "`Picture::lock()' failed. "
+             << "Returning 1 and will try to continue.";
+
+        
+        log_message(cerr_strm);
+        cerr_message(cerr_strm, error_stop_value);
+        cerr_strm.str("");
+
+        return 1;
+
+      } /* |if (status != 0)|  */
+
+
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr_strm << thread_name << "In `Solid::draw()': "
+                << "`Picture::lock()' succeeded.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+
+@q **** (4) Add |p| to |picture|.@>   
+@ Add |p| to |picture|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+
+
+  picture += dynamic_cast<Shape*>(s);
+
+
+@q **** (4) Try to unlock |picture.mutex|.@>   
+@ Try to unlock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    status = picture.unlock();
+
+    if (status != 0)
+      {
+        cerr_strm << thread_name << "ERROR! In `Solid::draw()':"
+             << "`Picture::unlock()' failed. "
+             << "Returning 1 and will try to continue.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm, error_stop_value);
+        cerr_strm.str("");
+        
+        return 1;
+
+      } /* |if (status != 0)|  */
+
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << thread_name << "In `Solid::draw()': "
+           << "`Picture::unlock()' succeeded.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+@q **** (4) Exit function successfully.@>   
+@ Exit function successfully.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG) 
+     {
+       cerr_strm << thread_name << "Exiting `Solid::draw()'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return 0;
+
+} /* End of |Solid::draw()| definition.  */
+
+
+@q ** (2) Process vectors for |fill()|.@>
+@*1 Process vectors for {\it fill\/}().
+\initials{LDF 2002.10.09.}  Added this section.
+The same things are done to each of the |Shape*| vectors |paths|,
+|ellipses|, |circles|, |reg_polygons|, and |rectangles|, so I've put
+the code in this named section.  Each time it it's used, |iter| is an
+iterator for a different vector.
+
+\LOG
+\initials{LDF 2002.10.09.} 
+Added code for handling |draw_color| and |fill_color|.
+
+\initials{LDF 2003.08.10.}  
+Now setting pen to |""|, because I've removed the pen
+argument from |fill()|.
+
+\initials{LDF 2004.06.07.}  
+Changed the argument of |set_dash_pattern| from 
+|""| to |static_cast<Dash_Pattern*>(0)|.
+
+\initials{LDF 2004.09.05.}
+Changed the way |color_ptr| is set.  Now we cycle through the
+|vector<const Color*>| again if we reach the end.
+
+\initials{LDF 2004.10.20.}
+@:BUG FIX@> BUG FIX:  |color_ptr| is now set properly.
+
+\initials{LDF 2005.03.17.}
+Removed the call to |Path::set_draw_color()|.
+\ENDLOG 
+
+@<Process vectors for |fill()|@>=
+{
+
+  if (c_iter != v.end())
+    color_ptr = *c_iter++;
+  else
+   {
+       c_iter = v.begin();
+       color_ptr = *c_iter++;
+   }
+
+  (**iter).set_fill_draw_value(FILL_VALUE);
+
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr << "Allocating memory for Color." << endl;
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+   Color* c = create_new<Color>(0);
+
+   if (color_ptr != static_cast<Color*>(0))
+      *c  = *color_ptr;
+   else
+      *c = Colors::black;
+
+   *c  = *color_ptr;
+   
+
+  (**iter).push_fill_color(c, false);
+
+  if (c_iter == v.end())
+    {
+      c_iter = v.begin();
+    } 
+
+}
+
+
+
+@q ** Fill.@>
+@ Fill.
+@^\cfunc{Solid}{fill}@>
+
+\LOG
+\initials{LDF 2003.08.10.}  Removed pen argument, since filling doesn't use a
+pen. 
+
+\initials{LDF 2004.06.02.}  Made |Picture& picture| the first argument and
+removed the default, |*current_picture|, since |current_picture| is no longer in
+use.  
+
+\initials{LDF 2004.06.03.}  No longer using 
+|Colors::default_color|, since I've gotten rid of it.
+
+\initials{LDF 2004.06.24.}
+Changed return value from |void| to |int|.  Now trying to lock and unlock
+|picture.mutex|, if |HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2004.08.30.}
+@:BUG FIX@> BUG FIX: 
+Changed |const vector <const Color* > v| argument
+to |const vector <const Color* >& v|, i.e., it's 
+now a reference.  The way it was before caused 
+|Scan_Parse::drawing_command_solid()| to fail.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@q *** Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+int
+fill(Picture& picture,
+     vector <Color*>& v) const;
+
+@q *** Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::fill(Picture& picture,
+            vector <Color*>& v) const
+{
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::fill():" << "\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+  Solid* s = create_new<Solid>(0);
+  *s = *this;
+
+  Color* color_ptr = 0;
+  vector <Color*>::const_iterator c_iter = v.begin();
+
+  for (vector<Path*>::const_iterator iter = s->paths.begin();
+       iter != s->paths.end();
+       ++iter)
+    {
+      @<Process vectors for |fill()|@>@;      
+    }
+
+  c_iter = v.begin();
+
+  for (vector<Ellipse*>::const_iterator iter = s->ellipses.begin();
+       iter != s->ellipses.end();
+       ++iter)
+    {
+      @<Process vectors for |fill()|@>@;      
+    }
+
+  c_iter = v.begin();
+
+  for (vector<Circle*>::const_iterator iter = s->circles.begin();
+       iter != s->circles.end();
+       ++iter)
+    {
+      @<Process vectors for |fill()|@>@;      
+    } 
+
+  c_iter = v.begin();
+
+  for (vector<Parabola*>::const_iterator iter = s->parabolae.begin();
+       iter != s->parabolae.end();
+       ++iter)
+    {
+      @<Process vectors for |fill()|@>@;      
+    } 
+
+  c_iter = v.begin();
+
+  for (vector<Hyperbola*>::const_iterator iter = s->hyperbolae.begin();
+       iter != s->hyperbolae.end();
+       ++iter)
+    {
+      @<Process vectors for |fill()|@>@;      
+    } 
+
+  c_iter = v.begin();
+
+
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s->reg_polygons.begin();
+       iter != s->reg_polygons.end();
+       ++iter)
+    {
+      @<Process vectors for |fill()|@>@;      
+    } 
+
+  c_iter = v.begin();
+
+  for (vector<Rectangle*>::const_iterator iter = s->rectangles.begin();
+       iter != s->rectangles.end();
+       ++iter)
+    {
+      @<Process vectors for |fill()|@>@;      
+    } 
+
+
+@q **** (4) Try to lock |picture.mutex|.@>   
+@ Try to lock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    int status;
+    status = picture.lock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::fill()':"
+             << "`Picture::lock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::lock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+
+@q **** (4) Add |p| to |picture|.@>   
+@ Add |p| to |picture|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+  picture += dynamic_cast<Shape*>(s);
+
+
+@q **** (4) Try to unlock |picture.mutex|.@>   
+@ Try to unlock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    status = picture.unlock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::fill()':"
+             << "`Picture::unlock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::unlock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+@q **** (4) Exit function successfully.@>   
+@ Exit function successfully.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Exiting Solid::fill():" << "\n";
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return 0;
+
+}
+
+
+@q ** (2) Process vectors for |filldraw()|.@>
+
+@*1 Process vectors for {\it filldraw\/}().
+
+The same things are done to each of the |Shape*| vectors |paths|,
+|ellipses|, |circles|, |reg_polygons|, and |rectangles|, so I've put
+the code in this named section.  Each time it it's used, |iter| is an
+iterator for a different vector.
+\initials{LDF 2002.10.09.}  
+
+\LOG
+\initials{LDF 2002.10.09.}  
+Added this section.
+
+\initials{LDF 2004.09.05.}
+Changed the way |draw_color_ptr| and |fill_color_ptr| are set.  
+Now we cycle through each |vector<const Color*>| again 
+if we reach the end.
+
+\initials{LDF 2004.10.20.}
+@:BUG FIX@> BUG FIX:  |draw_color_ptr| and |fill_color_ptr| are now
+set properly.
+
+\initials{LDF 2005.03.17.}
+Now calling |Path::push_draw_color()| instead of 
+|Path::set_draw_color()|.
+
+\initials{LDF 2005.10.25.}
+@:BUG FIX@> BUG FIX:  Now only pushing |ddashed| and |ppen| onto the corresponding 
+vectors, if they're non-null.
+\ENDLOG 
+
+@<Process vectors for |filldraw()|@>=
+{
+  if (draw_color_iter != draw_colors.end())
+     draw_color_ptr = *draw_color_iter++;
+  else
+    {
+       draw_color_iter = draw_colors.begin();
+       draw_color_ptr = *draw_color_iter++;
+    } 
+     
+
+
+  if (fill_color_iter != fill_colors.end())
+      fill_color_ptr = *fill_color_iter++;
+  else
+    {
+       fill_color_iter = fill_colors.begin();
+       fill_color_ptr = *fill_color_iter++;
+    } 
+
+  (**iter).set_fill_draw_value(FILLDRAW_VALUE);
+  
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Allocating memory for Color." << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+    
+    Color* c = create_new<Color>(0);
+
+  if (draw_color_ptr != static_cast<Color*>(0))
+    *c  = *draw_color_ptr;
+  else
+    *c = Colors::black;
+
+  (**iter).push_draw_color(c, false);
+
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Allocating memory for Color." << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+  
+  c = create_new<Color>(0);
+
+  if (fill_color_ptr != static_cast<Color*>(0))
+    *c  = *fill_color_ptr;
+  else
+    *c = Colors::white;
+
+  (**iter).push_fill_color(c, false);
+  if (ppen)
+     (**iter).push_pen(ppen);
+
+  if (ddashed)
+     (**iter).push_dash_pattern(ddashed);
+}
+
+@q ** Filldraw.@>
+@ Filldraw.
+@^\cfunc{Solid}{filldraw}@>
+
+\LOG
+\initials{LDF 2004.06.02.}  
+Made |Picture& picture| the first argument and
+removed the default, |*current_picture|, since |current_picture| is no longer in
+use.  Changed |const string ppen| to |const Pen* ppen|.  
+
+\initials{LDF 2004.06.07.}  
+Changed |const string ddashed = ""| to 
+|const Dash_Pattern* ddash_pattern = 0|.
+
+\initials{LDF 2004.06.07.}  
+Removed defaults for |draw_colors|
+and |fill_colors|, because I've gotten rid of 
+|Colors::default_color_vector| and |Colors::background_color_vector|.
+
+\initials{LDF 2004.06.24.}
+Changed return value from |void| to |int|.  Now trying to lock and unlock
+|picture.mutex|, if |HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2004.08.30.}
+@:BUG FIX@> BUG FIX: 
+Changed |const vector <const Color* > v| argument
+to |const vector <const Color* >& v|, i.e., it's 
+now a reference.  The way it was before caused 
+|Scan_Parse::drawing_command_solid()| to fail.
+
+\initials{LDF 2005.03.18.}
+Made |Pen* ppen| argument non-|const|.
+
+\initials{LDF 2005.03.18.}
+Made |Dash_Pattern* dash_pattern| argument non-|const|.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG
+
+@q *** Declaration.@> 
+
+@<Declare |Solid| functions@>=
+virtual
+int
+filldraw(Picture& picture,
+         vector <Color*>& draw_colors,
+         vector <Color*>& fill_colors,
+         Dash_Pattern* ddashed = 0,
+         Pen* ppen = 0) const;
+
+@q *** Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::filldraw(Picture& picture,
+                vector <Color*>& draw_colors,
+                vector <Color*>& fill_colors,
+                Dash_Pattern* ddashed,
+                Pen* ppen) const
+{
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::filldraw():" 
+         << "\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  Solid* s = create_new<Solid>(0);
+  *s = *this;
+
+  Color* draw_color_ptr;
+  Color* fill_color_ptr;
+
+  vector <Color*>::const_iterator draw_color_iter
+    = draw_colors.begin();
+  vector <Color*>::const_iterator fill_color_iter
+    = fill_colors.begin();
+
+  for (vector<Path*>::const_iterator iter = s->paths.begin();
+       iter != s->paths.end();
+       ++iter)
+    {
+      @<Process vectors for |filldraw()|@>@;
+    } 
+
+  draw_color_iter = draw_colors.begin();
+  fill_color_iter = fill_colors.begin();
+
+  for (vector<Ellipse*>::const_iterator iter = s->ellipses.begin();
+       iter != s->ellipses.end();
+       ++iter)
+    {
+      @<Process vectors for |filldraw()|@>@;
+    }
+
+  draw_color_iter = draw_colors.begin();
+  fill_color_iter = fill_colors.begin();
+
+  for (vector<Circle*>::const_iterator iter = s->circles.begin();
+       iter != s->circles.end();
+       ++iter)
+    {
+      @<Process vectors for |filldraw()|@>@;
+    }
+
+  draw_color_iter = draw_colors.begin();
+  fill_color_iter = fill_colors.begin();
+
+  for (vector<Parabola*>::const_iterator iter = s->parabolae.begin();
+       iter != s->parabolae.end();
+       ++iter)
+    {
+      @<Process vectors for |filldraw()|@>@;
+    }
+
+  draw_color_iter = draw_colors.begin();
+  fill_color_iter = fill_colors.begin();
+
+  for (vector<Hyperbola*>::const_iterator iter = s->hyperbolae.begin();
+       iter != s->hyperbolae.end();
+       ++iter)
+    {
+      @<Process vectors for |filldraw()|@>@;
+    }
+
+  draw_color_iter = draw_colors.begin();
+  fill_color_iter = fill_colors.begin();
+
+
+
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s->reg_polygons.begin();
+       iter != s->reg_polygons.end();
+       ++iter)
+    {
+      @<Process vectors for |filldraw()|@>@;
+    }
+
+  for (vector<Rectangle*>::const_iterator iter = s->rectangles.begin();
+       iter != s->rectangles.end();
+       ++iter)
+    {
+      @<Process vectors for |filldraw()|@>@;
+    } 
+  
+
+@q **** (4) Try to lock |picture.mutex|.@>   
+@ Try to lock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    int status;
+    status = picture.lock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::filldraw()':"
+             << "`Picture::lock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::lock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+
+@q **** (4) Add |p| to |picture|.@>   
+@ Add |p| to |picture|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+
+  picture += dynamic_cast<Shape*>(s);
+
+@q **** (4) Try to unlock |picture.mutex|.@>   
+@ Try to unlock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    status = picture.unlock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::filldraw()':"
+             << "`Picture::unlock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::unlock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+@q **** (4) Exit function successfully.@>   
+@ Exit function successfully.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Exiting Solid::filldraw():" << "\n";
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return 0;
+
+}
+
+@q ** (2) Process vectors for |undraw()|.@>
+@*1 Process vectors for {\it undraw\/}().
+\initials{LDF 2002.10.09.}  
+
+\LOG
+\initials{LDF 2002.10.09.}  
+Added this section.
+The same things are done to each of the |Shape*| vectors |paths|,
+|ellipses|, |circles|, |reg_polygons|, and |rectangles|, so I've put
+the code in this named section.  Each time it it's used, |iter| is an
+iterator for a different vector.
+
+\initials{LDF 2005.03.17.}
+Removed the call to |Path::set_draw_color()|.
+
+\initials{LDF 2005.10.25.}
+@:BUG FIX@> BUG FIX:  Now only pushing |ddashed| and |ppen| onto the corresponding 
+vectors, if they're non-null.
+\ENDLOG 
+
+@<Process vectors for |undraw()|@>=
+{
+  (**iter).set_fill_draw_value(UNDRAW_VALUE);
+
+  if (ddashed)
+     (**iter).push_dash_pattern(ddashed); 
+
+  if (ppen)
+     (**iter).push_pen(ppen);
+}
+
+@q ** (2) Undraw.@>
+@*1 Undraw.
+@^\cfunc{Solid}{undraw}@>
+
+\LOG
+\initials{LDF 2004.06.02.}  Made |Picture& picture| the first argument and 
+removed the default, |*current_picture|, since |current_picture| 
+is no longer in use.  Changed |const string ppen| 
+to |const Pen* ppen|.  
+
+\initials{LDF 2004.06.07.}  Changed |const string ddashed = ""| to 
+|const Dash_Pattern* ddash_pattern = 0|.
+
+\initials{LDF 2004.06.24.}
+Changed return value from |void| to |int|.  Now trying to lock and unlock
+|picture.mutex|, if |HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2005.03.18.}
+Made |Pen* ppen| argument non-|const|.
+
+\initials{LDF 2005.03.18.}
+Made |Dash_Pattern* dash_pattern| argument non-|const|.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual
+int
+undraw(Picture& picture,
+       Dash_Pattern* ddashed = 0,
+       Pen* ppen = 0) const;
+
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::undraw(Picture& picture,
+              Dash_Pattern* ddashed,
+              Pen* ppen) const
+{
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::undraw():" << "\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  Solid* s = create_new<Solid>(0);
+  *s = *this;
+
+
+  for (vector<Path*>::const_iterator iter = s->paths.begin();
+       iter != s->paths.end();
+       ++iter)
+    {
+      @<Process vectors for |undraw()|@>@;
+    }
+
+  for (vector<Ellipse*>::const_iterator iter = s->ellipses.begin();
+       iter != s->ellipses.end();
+       ++iter)
+    {
+     @<Process vectors for |undraw()|@>@;
+    }
+
+  for (vector<Circle*>::const_iterator iter = s->circles.begin();
+       iter != s->circles.end();
+       ++iter)
+    {
+      @<Process vectors for |undraw()|@>@;
+    }
+
+  for (vector<Parabola*>::const_iterator iter = s->parabolae.begin();
+       iter != s->parabolae.end();
+       ++iter)
+    {
+      @<Process vectors for |undraw()|@>@;
+    }
+
+  for (vector<Hyperbola*>::const_iterator iter = s->hyperbolae.begin();
+       iter != s->hyperbolae.end();
+       ++iter)
+    {
+      @<Process vectors for |undraw()|@>@;
+    }
+
+
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s->reg_polygons.begin();
+       iter != s->reg_polygons.end();
+       ++iter)
+    {
+      @<Process vectors for |undraw()|@>@;
+    }
+
+  for (vector<Rectangle*>::const_iterator iter = s->rectangles.begin();
+       iter != s->rectangles.end();
+       ++iter)
+    {
+      @<Process vectors for |undraw()|@>@;
+    }
+
+@q **** (4) Try to lock |picture.mutex|.@>   
+@ Try to lock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    int status;
+    status = picture.lock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::undraw()':"
+             << "`Picture::lock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::lock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+
+@q **** (4) Add |p| to |picture|.@>   
+@ Add |p| to |picture|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+
+  picture += dynamic_cast<Shape*>(s);
+
+@q **** (4) Try to unlock |picture.mutex|.@>   
+@ Try to unlock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    status = picture.unlock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::undraw()':"
+             << "`Picture::unlock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::unlock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+@q **** (4) Exit function successfully.@>   
+@ Exit function successfully.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Exiting Solid::undraw():" << "\n";
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return 0;
+}
+
+@q ** (2) Process vectors for |unfill()|.@>
+@*1 Process vectors for {\it unfill\/}().
+\initials{LDF 2002.10.09.}  
+
+\LOG
+\initials{LDF 2002.10.09.}  
+Added this section.
+The same things are done to each of the |Shape*| vectors |paths|,
+|ellipses|, |circles|, |reg_polygons|, and |rectangles|, so I've put
+the code in this named section.  Each time it it's used, |iter| is an
+iterator for a different vector.
+
+\initials{LDF 2003.08.10.}  
+Now setting pen to |""|, since I've removed the pen
+argument to |unfill()|.
+
+\initials{LDF 2004.06.07.}  
+Changed the argument of |set_dash_pattern| from 
+|""| to |static_cast<Dash_Pattern*>(0)|.
+
+\initials{LDF 2005.03.17.}
+Removed the call to |Path::set_draw_color()|.
+\ENDLOG 
+
+
+@<Process vectors for |unfill()|@>=
+{
+  (**iter).set_fill_draw_value(UNFILL_VALUE);
+
+}
+
+@q ** (2) Unfill.@>
+@*1 Unfill.
+@^\cfunc{Solid}{unfill}@>
+
+\LOG
+\initials{LDF 2003.08.10.}  
+Removed the pen argument, since unfilling doesn't
+use a pen.
+
+\initials{LDF 2004.06.02.}   
+Removed the default for |Picture& picture|, |*current_picture|, since  
+|current_picture| is no longer in use.  
+
+\initials{LDF 2004.06.24.}
+Changed return value from |void| to |int|.  Now trying to lock and unlock
+|picture.mutex|, if |HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual
+int
+unfill(Picture& picture) const;
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::unfill(Picture& picture) const
+{
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::unfill():" << "\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  Solid* s = create_new<Solid>(0);
+  *s = *this;
+
+
+  for (vector<Path*>::const_iterator iter = s->paths.begin();
+       iter != s->paths.end();
+       ++iter)
+    {
+      @<Process vectors for |unfill()|@>@;
+    } 
+
+
+  for (vector<Ellipse*>::const_iterator iter = s->ellipses.begin();
+       iter != s->ellipses.end();
+       ++iter)
+    {
+      @<Process vectors for |unfill()|@>@;
+    } 
+
+  for (vector<Circle*>::const_iterator iter = s->circles.begin();
+       iter != s->circles.end();
+       ++iter)
+    {
+      @<Process vectors for |unfill()|@>@;
+    } 
+
+  for (vector<Parabola*>::const_iterator iter = s->parabolae.begin();
+       iter != s->parabolae.end();
+       ++iter)
+    {
+      @<Process vectors for |unfill()|@>@;
+    } 
+
+  for (vector<Hyperbola*>::const_iterator iter = s->hyperbolae.begin();
+       iter != s->hyperbolae.end();
+       ++iter)
+    {
+      @<Process vectors for |unfill()|@>@;
+    } 
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s->reg_polygons.begin();
+       iter != s->reg_polygons.end();
+       ++iter)
+    {
+      @<Process vectors for |unfill()|@>@;
+    }
+
+  for (vector<Rectangle*>::const_iterator iter = s->rectangles.begin();
+       iter != s->rectangles.end();
+       ++iter)
+    {
+      @<Process vectors for |unfill()|@>@;
+    }
+
+@q **** (4) Try to lock |picture.mutex|.@>   
+@ Try to lock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    int status;
+    status = picture.lock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::unfill()':"
+             << "`Picture::lock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::lock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+
+@q **** (4) Add |p| to |picture|.@>   
+@ Add |p| to |picture|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+
+  picture += dynamic_cast<Shape*>(s);
+
+@q **** (4) Try to unlock |picture.mutex|.@>   
+@ Try to unlock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    status = picture.unlock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::unfill()':"
+             << "`Picture::unlock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::unlock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+@q **** (4) Exit function successfully.@>   
+@ Exit function successfully.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Exiting Solid::unfill():" << "\n";
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return 0;
+
+}
+
+
+@q ** (2) Process vectors for |unfilldraw()|.@>
+@*1 Process vectors for {\it unfilldraw\/}().
+The same things are done to each of the |Shape*| vectors |paths|,
+|ellipses|, |circles|, |reg_polygons|, and |rectangles|, so I've put
+the code in this named section.  Each time it it's used, |iter| is an
+iterator for a different vector.
+\initials{LDF 2002.10.09.}  
+
+\LOG
+\initials{LDF 2002.10.09.}  
+Added this section.
+
+\initials{LDF 2005.03.17.}
+Removed the call to |Path::set_draw_color()|.
+
+\initials{LDF 2005.10.25.}
+@:BUG FIX@> BUG FIX:  Now only pushing |ddashed| and |ppen| onto the corresponding 
+vectors, if they're non-null.
+\ENDLOG 
+
+@<Process vectors for |unfilldraw()|@>=
+{
+   (**iter).set_fill_draw_value(UNFILLDRAW_VALUE);
+
+   if (ddashed)
+      (**iter).push_dash_pattern(ddashed); 
+
+   if (ppen)
+      (**iter).push_pen(ppen);
+}
+
+@q ** (2) Unfilldraw.@>
+@*1 Unfilldraw.
+@^\cfunc{Solid}{unfilldraw}@>
+
+Unlike |Path::unfilldraw()|, |Solid::unfilldraw()|
+behaves like\newline
+\MP/'s {\it unfilldraw} command, i.e., it unfills and
+undraws.  I intend to change |Path::unfilldraw\/()| so that it also
+behaves this way.    
+\initials{LDF 2002.10.09.}  
+
+\initials{LDF 2002.10.09.}  
+@:!!@> !!  Check this: the correct code is written
+to |out_stream|, but after |filldraw()| and |unfill_draw()|, the
+outline is visible, but no lines inside the outline.  
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+Check what 
+{\bf filldraw} and {\bf unfilldraw} mean in \MP/ and \MF/.
+\initials{LDF Undated.}
+\ENDTODO 
+
+\LOG
+\initials{LDF 2004.06.02.}  
+Made |Picture& picture| the first argument and
+removed the default, |*current_picture|, since |current_picture| is no longer in
+use.  Changed |const string ppen| to |const Pen* ppen|.  
+
+\initials{LDF 2004.06.07.}  
+Changed |const string ddashed = ""| to 
+|const Dash_Pattern* ddash_pattern = 0|.
+
+\initials{LDF 2004.06.24.}
+Changed return value from |void| to |int|.  Now trying to lock and unlock
+|picture.mutex|, if |HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2005.03.18.}
+Made |Pen* ppen| argument non-|const|.
+
+\initials{LDF 2005.03.18.}
+Made |Dash_Pattern* dash_pattern| argument non-|const|.
+
+\initials{LDF 2006.01.25.}
+Added code for handling |vector<Parabola*> parabolae| and 
+|vector<Hyperbola*> hyperbolae|.
+\ENDLOG 
+
+@<Declare |Solid| functions@>=
+virtual
+int
+unfilldraw(Picture& picture,
+           Dash_Pattern* ddashed = 0,
+           Pen* ppen = 0) const;
+
+@
+@<Define |Solid| functions@>=
+int
+Solid::unfilldraw(Picture& picture,
+                  Dash_Pattern* ddashed,
+                  Pen* ppen) const
+{
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering Solid::unfilldraw():" << "\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  Solid* s = create_new<Solid>(0);
+  *s = *this;
+
+  for (vector<Path*>::const_iterator iter = s->paths.begin();
+       iter != s->paths.end();
+       ++iter)
+    {
+      @<Process vectors for |unfilldraw()|@>@;
+    } /* |for|  */
+
+
+  for (vector<Ellipse*>::const_iterator iter = s->ellipses.begin();
+       iter != s->ellipses.end();
+       ++iter)
+    {
+     @<Process vectors for |unfilldraw()|@>@;
+    }
+
+  for (vector<Circle*>::const_iterator iter = s->circles.begin();
+       iter != s->circles.end();
+       ++iter)
+    {
+      @<Process vectors for |unfilldraw()|@>@;
+    }
+
+  for (vector<Parabola*>::const_iterator iter = s->parabolae.begin();
+       iter != s->parabolae.end();
+       ++iter)
+    {
+      @<Process vectors for |unfilldraw()|@>@;
+    }
+  for (vector<Hyperbola*>::const_iterator iter = s->hyperbolae.begin();
+       iter != s->hyperbolae.end();
+       ++iter)
+    {
+      @<Process vectors for |unfilldraw()|@>@;
+    }
+
+  for (vector<Reg_Polygon*>::const_iterator iter = s->reg_polygons.begin();
+       iter != s->reg_polygons.end();
+       ++iter)
+    {
+      @<Process vectors for |unfilldraw()|@>@;
+    }
+
+  for (vector<Rectangle*>::const_iterator iter = s->rectangles.begin();
+       iter != s->rectangles.end();
+       ++iter)
+    {
+      @<Process vectors for |unfilldraw()|@>@;
+    }
+
+@q **** (4) Try to lock |picture.mutex|.@>   
+@ Try to lock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    int status;
+    status = picture.lock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::unfilldraw()':"
+             << "`Picture::lock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::lock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+
+@q **** (4) Add |p| to |picture|.@>   
+@ Add |p| to |picture|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+  
+  picture += dynamic_cast<Shape*>(s);
+
+
+@q **** (4) Try to unlock |picture.mutex|.@>   
+@ Try to unlock |picture.mutex|.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+
+#ifdef HAVE_PTHREAD_H 
+
+    status = picture.unlock();
+
+    if (status != 0)
+      {
+        cerr << "ERROR! In `Solid::unfilldraw()':"
+             << "`Picture::unlock()' failed. "
+             << "Returning 1 and will try to continue."
+             << endl;
+        return 1;
+      }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      
+      cerr << "`Picture::unlock()' succeeded."
+           << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#endif /* |HAVE_PTHREAD_H|  */@;
+
+@q **** (4) Exit function successfully.@>   
+@ Exit function successfully.
+\initials{LDF 2004.06.24.}
+
+@<Define |Solid| functions@>=
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Exiting Solid::unfilldraw():" << "\n";
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+  return 0;
+}
+
+@q * (1) Surface Hiding.@>
+@* Surface Hiding.
+\initials{LDF 2005.01.24.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Set |surface_hiding_ctr|.@> 
+@*1 Set {\it surface\_hiding\_ctr}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+void
+set_surface_hiding_ctr(unsigned long u)
+{
+   surface_hiding_ctr = u;
+}
+
+@q ** (2) Reset |surface_hiding_ctr|.@> 
+@*1 Reset {\it surface\_hiding\_ctr}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+unsigned long
+reset_surface_hiding_ctr(unsigned long u = 0)
+{
+   unsigned long old_value = surface_hiding_ctr;
+   surface_hiding_ctr = u;
+   return old_value;
+}
+
+@q ** (2) Get |surface_hiding_ctr|.@> 
+@*1 Get {\it surface\_hiding\_ctr}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+unsigned long
+get_surface_hiding_ctr(void)
+{
+   return surface_hiding_ctr;
+}
+
+@q ** (2) Set |decomposition_level|.@> 
+@*1 Set {\it decomposition\_level}.
+\initials{LDF 2005.04.18.}
+
+\LOG
+\initials{LDF 2005.04.18.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+void
+set_decomposition_level(unsigned long u)
+{
+   decomposition_level = u;
+}
+
+@q ** (2) Reset |decomposition_level|.@> 
+@*1 Reset {\it decomposition\_level}.
+\initials{LDF 2005.04.18.}
+
+\LOG
+\initials{LDF 2005.04.18.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+unsigned long
+reset_decomposition_level(unsigned long u = 0)
+{
+   unsigned long old_value = decomposition_level;
+   decomposition_level = u;
+   return old_value;
+}
+
+@q ** (2) Get |decomposition_level|.@> 
+@*1 Get {\it decomposition\_level}.
+\initials{LDF 2005.04.18.}
+
+\LOG
+\initials{LDF 2005.04.18.}
+Added this function.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+virtual
+inline
+unsigned long
+get_decomposition_level(void)
+{
+   return decomposition_level;
+}
+
+
+
+@q ** (2) Decompose.@> 
+
+@*1 Decompose.
+\initials{LDF 2005.01.24.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Added this section.
+\ENDLOG
+
+@q *** (3) | Path*| argument.@> 
+@*2 {\bf  Path*} argument.
+\initials{LDF 2005.01.24.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Added this function.  Currently, it returns 0 immediately.
+
+\initials{LDF 2005.01.24.}
+Added |unsigned short level| argument with default 0.
+
+\initials{LDF 2005.02.01.}
+Changed the return value of this function from |Pointer_Vector<Shape>*|
+to |Pointer_Vector<Path>*|.  Removed the |unsigned short level|
+argument and the default for the |const Path* p| argument.
+
+\initials{LDF 2005.02.01.}
+Added optional |Scanner_Node scanner_node| argument with default 0.
+
+\initials{LDF 2005.02.01.}
+Made |Path*| argument non-|const|.
+
+\initials{LDF 2005.04.04.}
+Made the |Path*| argument, and this function itself, |const|.
+
+\initials{LDF 2005.04.05.}
+Made the |Path*| argument, and this function itself, non-|const| again.
+\ENDLOG
+
+@<Declare |Solid| functions@>=
+
+virtual 
+Pointer_Vector<Path>* 
+decompose(Path* p, Scanner_Node scanner_node = 0);
+
+@
+@<Define |Solid| functions@>=
+
+Pointer_Vector<Path>*
+Solid::decompose(Path* p, Scanner_Node scanner_node) 
+{
+   return 0;
+}
+
+@q *** (3) |Shape*| argument.@> 
+@*2 {\bf Shape*} argument.
+\initials{LDF 2005.04.01.}
+
+\LOG
+\initials{LDF 2005.04.01.}
+Added this function.  Currently, it returns 0 immediately.
+
+\initials{LDF 2005.04.04.}
+Made the |Shape*| argument, and this function itself, |const|.
+
+\initials{LDF 2005.04.05.}
+Made the |Shape*| argument, and this function itself, non-|const| again.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual 
+Pointer_Vector<Shape>* 
+decompose(Shape* s, Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.@> 
+
+@
+@<Define |Solid| functions@>=
+Pointer_Vector<Shape>*
+Solid::decompose(Shape* s, Scanner_Node scanner_node) 
+{
+   return 0;
+}
+
+@q *** (3) Self-decomposition:  |unsigned short| argument.@> 
+@*2 Self-decomposition:  {\bf unsigned short} argument.
+\initials{LDF 2005.04.10.}
+
+\LOG
+\initials{LDF 2005.04.10.}
+Added this function.  Currently, it returns 0 immediately.
+
+\initials{LDF 2005.04.14.}
+Changed the arguments to this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Solid| functions@>=
+
+virtual
+Pointer_Vector<Shape>*
+decompose(const unsigned short limit, 
+          const bool use_rectangles = false,
+          Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.@>   
+
+@
+@<Define |Solid| functions@>=
+Pointer_Vector<Shape>*
+Solid::decompose(const unsigned short limit, 
+                 const bool use_rectangles,
+                 Scanner_Node scanner_node)
+{
+   return 0;
+
+}  /* End of |Pointer_Vector<Shape>*
+              Solid::decompose(const unsigned short limit, 
+                               const bool use_rectangles,
+                               Scanner_Node scanner_node)|
+      definition.  */
+
+@q * (1) Putting Solid together.@>
+@ Putting {\bf Solid} together.
+
+@ This is what's compiled.
+@c
+@<Include files@>@;
+@<Define |class Solid|@>@;
+@<Define |static const Solid| data members@>@;
+@<Define |Solid| functions@>@;
+@<Declare non-member template functions for |Solid|@>@;
+
+@ This is what's written to \filename{solids.h}. 
+@(solids.h@>=
+@<Define |class Solid|@>@;
+@<Declare non-member template functions for |Solid|@>@;
+
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 70))    @>
+
+
+
+
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q run-mp-on-file:"persp.mp" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

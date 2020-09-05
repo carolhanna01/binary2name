@@ -1,0 +1,2510 @@
+\input texinfo   @c -*-texinfo-*-
+@c %**start of header
+@setfilename sather.info
+@settitle The Sather Specification
+@setchapternewpage off
+@paragraphindent 0
+@c Define an index for keywords.
+@defcodeindex kw
+@c %**end of header
+
+@ifinfo
+This file describes the Sather language.
+
+Copyright (C) 1995 by International Computer Science Institute
+This file is part of the GNU Sather package. It is free software; you may
+redistribute  and/or modify it under the terms of the  GNU General Public
+License (GPL)  as  published  by the  Free  Software  Foundation;  either
+version 3 of the license, or (at your option) any later version.
+This  program  is distributed  in the  hope that it will  be  useful, but
+WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.
+The license text is also available from:  Free Software Foundation, Inc.,
+59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+----------->  Please email comments to <bug-sather@@gnu.org>  <-----------
+@end ifinfo
+
+@titlepage
+@sp 5
+@center @titlefont{The Sather 1.0 Specification}
+@sp 5
+@center December 2, 1994
+@sp 5
+@center Steve Omohundro
+@center David Stoutamire@footnote{Direct email correspondence to David at davids@@icsi.berkeley.edu}
+@sp 5
+@center International Computer Science Institue
+@center 1947 Center Street, Suite 600
+@center Berkeley, California 94704
+
+@page
+@vskip 0pt plus 1filll
+Copyright @copyright{} 1995 by International Computer Science Institute
+
+This file is part of the GNU Sather package. It is free software; you may
+redistribute  and/or modify it under the terms of the  GNU General Public
+License (GPL)  as  published  by the  Free  Software  Foundation;  either
+version 3 of the license, or (at your option) any later version.
+
+This  program  is distributed  in the  hope that it will  be  useful, but
+WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.
+
+The license text is also available from:  Free Software Foundation, Inc.,
+59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+@end titlepage
+
+@node Top, , (dir), (dir)
+@top
+
+@ifinfo
+This document describes the Sather 1.0 language, as implemented by the
+Sather 1.0.7 compiler.
+@end ifinfo
+
+@menu
+* Introduction::
+* Types and Classes::
+* Class Elements::
+* Statements::
+* Expressions::
+* Lexical Structure::
+* Special Features::
+* Built-in Classes::
+* Interfacing with other Languages::
+* Acknowledgements::
+* Concept Index::
+* Keyword and Built-in Index::
+@end menu
+
+@node Introduction, Types and Classes, Top, Top
+@unnumbered Introduction
+@cindex Introduction
+
+Sather is an object-oriented language that supports highly efficient
+computation, powerful abstractions for encapsulation and code reuse, a
+flexible interactive development environment, and constructs for
+improving code correctness. It has statically-checked strong
+typing, multiple inheritance, explicit subtyping which is independent of
+implementation inheritance, parameterized types, dynamic dispatch,
+iteration abstraction, higher-order routines and iters, garbage
+collection, exception handling, assertions, preconditions,
+postconditions, and class invariants. The development environment
+integrates an interpreter, a debugger, and a compiler. Sather code can
+be compiled into C code and can efficiently link with C object (``.o'')
+files. This document is a terse but precise specification of Sather
+1.0. ``The Sather 1.0 Tutorial'' presents more examples and motivations.
+
+Data structures in Sather are constructed from @emph{objects}, each of
+which has a specific @emph{concrete type} that determines the operations
+that may be performed on it. The implementation of concrete types is
+defined by textual units called @emph{classes}.  @emph{Abstract types}
+specify a set of operations without providing an implementation and
+correspond to sets of concrete types.  Sather programs consist of
+classes and abstract type specifications.  Each Sather variable has a
+declared type which determines the types of objects it may hold. Classes
+define the following @emph{features: object attributes} which make up
+the internal state of objects, @emph{shared} and @emph{constant}
+attributes which are shared by all objects of a type, @emph{routines}
+which perform operations on objects, and @emph{iters} which encapsulate
+iteration. Features may be declared @emph{private} to allow only the
+class in which they appear to access them. Accessor routines are
+automatically defined for reading object, shared, and constant
+attributes and for writing object and shared attributes. The set of
+non-private routines and iters in a class define the @emph{interface} of
+the corresponding type. Abstract types directly specify their
+interfaces. Routine and iter definitions consist of @emph{statements}
+and these are constructed from @emph{expressions}. There are special
+@emph{literal expressions} for boolean, character, string, integer, and
+floating point objects.
+
+The following sections describe each of these constructs in turn. Most
+sections begin with an example of a syntactic construct followed by
+corresponding grammar rules. Multi-line examples are indented after the
+first line and three dots ``@dots{}'' indicate code that has been left
+out for clarity.
+
+The grammar rules are expressed in a variant of Backus-Naur form.
+Non-terminal symbols are represented by strings of letters and
+underscores in an italic font and begin with a letter.  The nonterminal
+symbol on the left-hand side of a grammar rule is followed by a double
+arrow ``@result{}'' and the right-hand side of the rule. The terminal
+symbols consist of Sather keywords and special symbols and are typeset
+in the @code{Courier} font. Vertical bars ``@dots{}|@dots{}'' separate
+alternatives, parentheses ``(@dots{})'' are used for grouping, square
+brackets ``[@dots{}]'' enclose optional clauses and braces
+``@{@dots{}@}'' enclose clauses which may be repeated zero or more
+times.
+
+Certain conditions are described as @emph{fatal errors}. These
+conditions should never occur in correct programs and all
+implementations must be able to detect them. For efficiency reasons,
+however, implementations may provide the option of disabling checking
+for certain conditions.
+
+@node Types and Classes, Class Elements, Introduction, Top
+@unnumbered Types and Classes
+@cindex Types and Classes
+
+There are three kinds of objects in Sather: @emph{value objects} (e.g.
+integers), @emph{reference objects} (e.g.  strings) and @emph{bound
+objects} (Sather's version of closures). The corresponding types:
+@emph{value}, @emph{reference}, and @emph{bound} types, are called
+concrete types. Abstract types represent sets of concrete
+types. @emph{External types} specify interfaces to other languages.
+
+The @emph{type graph} for a program is a directed acyclic graph that is
+constructed from the program's source text. Its nodes are types and its
+edges represent the @emph{subtype} relationship. If there is a path in
+this graph from a type t1 to a type t2, we say that t2 is a
+@emph{subtype} of t1 and that t1 is a @emph{supertype} of t2. Subtyping
+is reflexive; any type is a subtype of itself. Only abstract and bound
+types can be supertypes (@pxref{Abstract type definitions} and
+@pxref{Bound routine and iter creation expressions}).
+
+Every Sather variable has a declared type. The fundamental typing rule
+is: @var{An object can only be held by a variable if the object's
+type is a subtype of the variable's type}. It is not possible for a
+program which compiles to violate this rule (i.e. Sather is
+@emph{statically type-safe}).
+
+Operations are performed on objects by calling @emph{routines}
+(@pxref{Routine definitions}) and @emph{iters} (@pxref{Iter
+definitions}) on them. The @emph{signature} of a routine consists of its
+name, the types of its arguments, if any, and its return type, if any.
+Iter signatures additionally specify that certain arguments are marked
+``!''. This means that they will be re-evaluated on each iteration
+through a loop (@pxref{Iter definitions}).
+
+We say that the routine or iter signature @var{f} @emph{conflicts} with
+@var{g} when
+
+@enumerate
+@item
+@var{f} and @var{g} have the same name,
+
+@item
+@var{f} and @var{g} have the same number of arguments,
+
+@item
+@var{f} and @var{g} either both return a value or neither does,
+
+@item
+and each argument type in @var{f} is either equal to the corresponding
+argument type in @var{g} or one of the two types is either abstract or
+bound.
+@end enumerate
+
+We say that the routine or iter signature @var{f} @emph{conforms} to
+@var{g} when
+
+@enumerate
+@item
+@var{f} and @var{g} have the same name,
+
+@item
+@var{f} and @var{g} have the same number of arguments,
+
+@item
+the type of each argument of @var{g} is a subtype of the
+corresponding argument of @var{f} (i.e. @emph{contravariant}
+conformance) and for corresponding arguments of iters, either both are
+marked ``!'' or neither is,
+
+@item
+@var{f} and @var{g} either both return a value or neither does,
+
+@item
+and if @var{f} and @var{g} return values, then the return type of
+@var{f} is a subtype of the return type of @var{g}.
+@end enumerate
+
+The set of routines and iters that may be called on a type is called the
+@emph{interface} of that type.  A type interface may not contain
+conflicting signatures. An interface I1 conforms to an interface I2 if
+for every routine or iter f2 in I2 there is a unique conforming routine
+or iter f1 in I1. The basic subtyping rule is: @var{``The interface
+of each type must conform to the interfaces of each of its
+supertypes.''}  This ensures that calls made on a type can be handled by
+any of its subtypes.
+
+@menu
+* Sather source files::
+* Abstract type definitions::
+* Classes::
+* Type specifiers::
+@end menu
+
+@node Sather source files, Abstract type definitions, Types and Classes, Types and Classes
+@unnumberedsec Sather source files
+@cindex Sather source files
+
+Example:
+
+@example
+type $COUNTRY is @dots{} end; class USA < $COUNTRY is @dots{} end;
+
+@end example
+
+Syntax:
+
+@example
+@var{source_file} @result{} [ @var{abstract_type_definition} | @var{class} ]
+   @{ ; [ @var{abstract_type_definition} | @var{class} ] @}
+
+@end example
+
+Sather source files consist of semicolon separated lists of abstract
+type definitions and classes. Abstract types specify interfaces without
+implementation. Classes define types with implementations. Execution of a
+Sather program begins with a routine named @code{main} in a specified
+class (@pxref{main}).
+
+@node Abstract type definitions, Classes, Sather source files, Types and Classes
+@unnumberedsec Abstract type definitions
+@cindex Abstract type definitions
+@kwindex type
+@kwindex is
+@kwindex end
+
+Example:
+
+@example
+type $SHIPPING_CRATE@{T@} < $CONTAINER@{T@} is
+   destination:$LOCATION;
+   weight:FLT;
+end
+
+@end example
+
+Syntax:
+
+@example
+@var{abstract_type_definition} @result{} @code{type} @var{abstract_type_name}
+   [ @{ @var{parameter_declaration} @{ , @var{parameter_declaration} @} @} ]
+   [ @var{subtyping_clause} ] [ @var{supertyping_clause} ]
+   @code{is} [ @var{abstract_signature} ] @{ ; [ @var{abstract_signature} ] @} @code{end}
+
+@var{parameter_declaration} @result{} @var{uppercase_identifier} [ < @var{type_specifier}]
+
+@var{subtyping_clause} @result{} < @var{type_specifier_list}
+
+@var{supertyping_clause} @result{} > @var{type_specifier_list}
+
+@var{type_specifier_list} @result{} @var{type_specifier} @{ , @var{type_specifier@}}
+
+@var{abstract_signature} @result{} ( @var{identifier} | @var{iter_name})
+   [ (@var{abstract_argument} @{ , @var{abstract_argument} @} ) ] [ : @var{type_specifier} ]
+
+@var{abstract_argument} @result{} @var{identifier_list} : @var{type_specifier} [ ! ]
+
+@end example
+
+Abstract type definitions specify interfaces without implementations.
+Abstract type names must be entirely uppercase and must begin with a
+dollar sign ``$'' (@pxref{Lexical Structure}).
+
+Abstract type definitions may be @emph{parameterized} by one or more
+type parameters within enclosing braces. The scope of abstract type
+names is the entire program. Two abstract type definitions may define
+types with the same name only if they specify a different number of type
+parameters. Type parameter names are local to the abstract type
+definition and they shadow non-parameterized types with the same name.
+Parameter names must be all uppercase, and they may be used within the
+abstract type definition as type specifiers. Whenever a parameterized
+type is referred to, its parameters are specified by type
+specifiers. The abstract type definition behaves like a
+non-parameterized version whose body is a textual copy of the original
+definition in which each parameter occurrence is replaced by its
+specified type.
+
+If a parameter declaration is followed by a type constraint clause
+(@code{<} followed by a type specifier), then the parameter can only be
+replaced by subtypes of the constraining type. If a type constraint is
+not explicitly specified, then @code{< $OB} is taken as the constraint. An
+abstract type definition must satisfy all of the typing rules when its
+parameters are replaced by any subtype of their constraining types.
+
+A subtyping clause adds to the type graph an edge from each type in the
+@var{type_specifier_list} to the type being defined. Each listed type
+must be abstract. Every type is automatically a subtype of $OB
+(@pxref{Built-in Classes}). There must be no cycle of abstract types
+such that each appears in the subtype list of the next, ignoring the
+values of any type parameters but not their number.
+
+A supertyping clause adds to the type graph an edge from the type being
+defined to each type in the @var{type_specifier_list}. These type
+specifiers may not be type parameters (though they may include type
+parameters as components) or external types. There must be no cycle of
+abstract classes such that each class appears in the supertype list of
+the next, ignoring the values of any type parameters but not their
+number. If both subtyping and supertyping clauses are present, then each
+type in the supertyping list must be a subtype of each type in the
+subtyping list using only edges introduced by subtyping clauses. This
+ensures that the subtype relationship can be tested by examining only
+definitions reachable from the two types in question.
+
+The body of abstract type definitions consists of a semi-colon separated
+list of abstract signatures. Each specifies the signature of a routine
+or iter without providing an implementation. The argument names are for
+documentation purposes only and do not affect the semantics. The
+@var{abstract_signatures} of all types listed in the subtyping clause
+are included in the interface of the type being defined. Explicitly
+specified signatures override any conflicting signatures from the
+subtyping clause. If two types in the subtyping clause have conflicting
+signatures that are not equal, then the type definition must explicitly
+specify a signature that overrides them. The interface of an abstract
+type consists of any explicitly specified signatures along with those
+introduced by the subtyping clause.
+
+@node Classes, Type specifiers, Abstract type definitions, Types and Classes
+@unnumberedsec Classes
+@cindex Classes
+@kwindex class
+@kwindex value
+@kwindex external
+
+Examples:
+
+@example
+class VIEWER@{DATA < $VIEWER_DATA@} is @dots{} end
+value class DOLPHIN < $MAMMAL, $SWIMMER is @dots{} end
+external class @code{EXT} is @dots{} end
+
+@end example
+
+Syntax:
+
+@example
+@var{class} @result{} [ value | external ] class @var{uppercase_identifier}
+   [ @{ @var{parameter_declaration} @{ , @var{parameter_declaration} @} @} ]
+   [ @var{subtyping_clause} ]
+   is [ @var{class_element} ] @{ ; [ @var{class_element} ] @} end
+@end example
+
+Classes define the types that have implementations: reference, value,
+and external types are defined by classes beginning with @code{class},
+@code{value class}, and @code{external class}, respectively. Class names
+must be entirely uppercase (@pxref{Lexical Structure}). Reference and
+value classes may be @emph{parameterized} by one or more type
+parameters. The scope of class names is the entire program and two
+classes may have the same name only if they specify a different number
+of type parameters.
+
+Class types may optionally declare one or more @emph{type parameters}
+within enclosing braces.  Type parameter names are local to the class
+definition in which they appear and they shadow non-parameterized types
+with the same name. Parameter names must be all uppercase, and they may
+be used within the class body as type specifiers. Whenever a
+parameterized type is referred to, its parameters are specified by type
+specifiers. The class behaves like a non-parameterized version whose
+body is a textual copy of the original class in which each parameter
+occurrence is replaced by its specified type.
+
+If a parameter declaration is followed by a type constraint clause
+(@code{<} followed by a type specifier), then the parameter can only be
+replaced by subtypes of the constraining type. If a type constraint is
+not explicitly specified, then @code{< $OB} is taken as the constraint. A
+type constraint specifier may not refer to @code{SAME}. The body of a
+parameterized class must be type-correct when the parameters are
+replaced by any subtype of their constraining types.
+
+Subtyping clauses introduce edges into  the type graph. The
+type_specifier_list must consist of only abstract types. There is an
+edge in the type graph from each type in the list to the type being
+defined. Every type is automatically a subtype of @code{$OB}
+(@pxref{Built-in Classes}).
+
+@node Type specifiers, , Classes, Types and Classes
+@unnumberedsec Type specifiers
+@cindex Type specifiers
+@kwindex ROUT
+@kwindex ITER
+@kwindex SAME
+
+Examples:
+
+@example
+A@{B,C@{$D@}@}
+ROUT@{A,B,C@}:D
+ITER@{A,B!,C@}
+SAME
+@end example
+
+Syntax:
+
+@example
+@var{type_specifier} @result{} ( @var{uppercase_identifier} | @var{abstract_type_name} )
+   [ @{ @var{type_specifier_list} @} ]
+   | ( ROUT | ITER )
+      [ @{ @var{type_specifier} [ ! ] @{ , @var{type_specifier} [ ! ] @} @} ]
+      [ : @var{type_specifier} ]
+   | SAME
+@end example
+
+In source text, Sather types are specified by one of the following forms
+of @emph{type specifier}:
+
+@itemize @bullet
+@item
+The name of a non-parameterized class or abstract type (e.g. @code{A} or
+@code{$A}).
+
+@item
+The name of a parameterized class or abstract type followed by a list of
+parameter type specifiers in braces (e.g. @code{A@{B,C@}}). The
+parameter values must not cause the generation of an infinite number of
+types (e.g.  @code{FOO@{FOO@{T@}@}} within the class @code{FOO@{T@}}).
+
+@item
+The name of a type parameter within the body of a parameterized class or
+abstract type definition (e.g. @code{T} in the body of @code{class
+B@{T@} is @dots{} end}).
+
+@item
+The keyword @code{ROUT} or @code{ITER} optionally followed by a list of
+argument types in braces, optionally followed by a colon and return type
+(e.g. @code{ROUT@{A,B@}:C}). Bound iter argument types may be followed
+by a ``!''  (@pxref{Bound routine and iter creation expressions},
+e.g. @code{ITER@{A!@}:D}).
+
+@item
+The special type specifier @code{SAME}, which denotes the type of the
+class in which it appears. It may not appear in abstract type
+definitions.
+@end itemize
+
+@node Class Elements, Statements, Types and Classes, Top
+@unnumbered Class Elements
+@cindex Class Elements
+
+Syntax:
+
+@example
+@var{class_element} @result{} @var{const_definition} | @var{shared_definition} | @var{attr_definition} |
+   @var{routine_definition} | @var{iter_definition} | @var{include_clause}
+@end example
+
+The main body of each class is a semicolon separated list of
+@emph{feature} definitions and @code{include} clauses. The possible
+features of a class are: @emph{constant attributes}, @emph{shared
+attributes}, @emph{object attributes}, @emph{routines} and
+@emph{iters}. The semantics of a class is independent of the textual
+order of the class elements. All features are named and attributes may
+contribute a reader and a writer routine of the same name to the class
+interface. The scope of feature names is the class body and is separate
+from the class namespace. If a feature is @emph{private}, then it may
+only be referred to from within the class and is not part of the class
+interface.
+
+@menu
+* Constant attribute definitions::
+* Shared attribute definitions::
+* Object attribute definitions::
+* Routine definitions::
+* Iter definitions::
+* include clauses::
+@end menu
+
+@node Constant attribute definitions, Shared attribute definitions, Class Elements, Class Elements
+@unnumberedsec Constant attribute definitions
+@cindex Constant attribute definitions
+@kwindex const
+@kwindex private
+
+Examples:
+
+@example
+const r:FLT:=45.6
+private const a,b,c
+@end example
+
+Syntax:
+
+@example
+@var{const_definition} @result{} [ private ] const @var{identifier}
+   ( : @var{type_specifier} := @var{expression} | [ := @var{expression} ] [ , @var{identifier_list} ] )
+   @var{identifier_list} @result{} @var{identifier} @{ , @var{identifier @}}
+@end example
+
+Constant attributes are accessible by all objects in a class and may not
+be assigned to. If a type is specified, then the construct defines a
+single constant attribute named @var{identifier} and it must be
+initialized by the expression @var{expression}. This must be a constant
+expression which means that it is:
+
+@enumerate
+@item
+a character, boolean, character, string, integer or floating point
+literal expression (@pxref{Boolean literal expressions}),
+
+@item
+a @code{void} or @code{void} test expression (@pxref{void expressions}),
+
+@item
+an @code{and} or @code{or} expression (@pxref{and expressions}), each of
+whose components is a constant expression,
+
+@item
+an array creation expression (@pxref{Array creation expressions}), each
+of whose components is a constant expression,
+
+@item
+a routine call applied to a constant expression, each of whose arguments
+is a constant expression (@pxref{Routine and iter call expressions}),
+
+@item
+or a reference to another constant in the same class or in another class
+using the @code{::} notation (@pxref{Routine and iter call
+expressions}).
+@end enumerate
+
+There must not be cyclic dependencies among constant initializers.
+
+If a type specifier is not provided, then the construct defines one or
+more successive integer constants. The first identifier is assigned the
+value zero by default or its value may be specified by an integer
+expression. The remaining identifiers are assigned successive integer
+values.
+
+Each constant attribute definition causes the definition of a reader
+routine with the same name. It takes no arguments and returns the value
+of the constant. Its return type is the constant's type. The routine
+is private if and only if the constant is declared @code{private}.
+
+@node Shared attribute definitions, Object attribute definitions, Constant attribute definitions, Class Elements
+@unnumberedsec Shared attribute definitions
+@cindex Shared attribute definitions
+@kwindex shared
+@kwindex readonly
+
+Examples:
+
+@example
+private shared i,j:INT
+shared s:STR:="name"
+readonly shared c:CHAR:='x'
+@end example
+
+Syntax:
+
+@example
+@var{shared_definition} @result{} [ private | readonly ] shared
+   ( @var{identifier} : @var{type_specifier} := @var{expression} | @var{identifier_list} : @var{type_specifier} )
+@end example
+
+@emph{Shared attributes} are variables that are directly accessible to
+all objects of a given type. When only a single shared attribute is
+defined by a clause, it may be provided with an initializing expression
+which must be a constant expression (@pxref{Constant attribute
+definitions}). If no initializing expression is provided, the shared is
+initialized the same as object attributes of that type would be
+(@pxref{Object attribute definitions}).
+
+Each shared attribute definition causes the definition of a reader and
+a writer routine with the same name. The reader routine takes no
+arguments and returns the value of the shared.  Its return type is the
+shared's type. The reader routine  is private if and only if the shared
+is declared @code{private}. The writer routine sets the value of the shared,
+taking a single argument whose type is the shared's type, and has no
+return value. The writer routine  is private if and only if the shared
+is declared either @code{private} or @code{readonly}.
+
+@node Object attribute definitions, Routine definitions, Shared attribute definitions, Class Elements
+@unnumberedsec Object attribute definitions
+@cindex Object attribute definitions
+@kwindex attr
+
+Examples:
+
+@example
+attr a,b,c:INT
+private attr c:CHAR
+readonly attr s1,s2:STR
+
+@end example
+
+Syntax:
+
+@example
+@var{attr_definition} [ private | readonly ] attr @var{identifier_list} : @var{type_specifier}
+
+@end example
+
+An object's state consists of the @emph{object attributes} defined in
+its class together with an optional array portion. The array portion
+appears if there is an @code{include} path (@pxref{include clauses})
+from the type to @code{AREF} for reference types or to @code{AVAL} for
+value types (@pxref{Built-in Classes}). Bound and reference objects must
+be explicitly allocated as described in @ref{new expressions}, and
+@ref{Bound routine and iter creation expressions}. Variables have the
+value @code{void} until an object is assigned to them (@pxref{void
+expressions}). There must be no cycle of value types where each type has
+an object attribute whose type is the next in the cycle.  External
+classes may not define object attributes.
+
+Each object attribute definition causes the definition of a reader and
+a writer routine with the same name. The reader routine takes no
+arguments and returns the value of the attribute. Its declared return
+type is the attribute's type. It is private if and only if the
+attribute is declared @code{private}.
+
+The writer routine takes different forms for reference and value types.
+For reference types, it takes a single argument whose type is the
+attribute's type and has no return value. Its effect is to modify the
+object by setting the value of the attribute. For value types, it takes
+a single argument whose type is the attribute's type, and returns a
+copy of the object with the attribute set to the specified new value,
+and whose type is the type of the object. This difference arises
+because it is not possible to modify value objects once they are
+constructed.  Object attribute writer routines are private if and only
+if the corresponding attribute is declared either @code{private} or
+@code{readonly}.
+
+@node Routine definitions, Iter definitions, Object attribute definitions, Class Elements
+@unnumberedsec Routine definitions
+@cindex Routine definitions
+@kwindex pre
+@kwindex post
+
+Examples:
+
+@example
+a(f:FLT):FLT pre f>1.2 post result<4.3 is @dots{} end
+b is @dots{} end
+private d:INT is @dots{} end
+c(s1,s2,s3:STR)
+@end example
+
+Syntax:
+
+@example
+@var{routine_definition} @result{} [ private ] @var{identifier}
+   [ ( @var{routine_argument} @{ , @var{routine_argument} @} ) ]
+   [ : @var{type_specifier} ]
+   [ pre @var{expression} ] [ post @var{expression} ]
+   [ is @var{statement_list} end ]
+
+@var{routine_argument} @result{} @var{identifier_list} : @var{type_specifier}
+@end example
+
+A @emph{routine} definition may begin with the keyword @code{private} to
+indicate that the routine may be called from within the class but is not
+part of the class interface. The @var{identifier} specifies the name
+of the routine.
+
+If a routine has arguments, the declaration list is enclosed in
+parentheses. The name and type of each argument is specified in this
+list. The types of consecutive arguments may be declared with a single
+type specifier. If a routine has a return value, it is declared by a
+colon and a specifier for the return type.
+
+The optional @code{pre} construct contains a boolean expression which
+must evaluate to @code{true} whenever the routine is called; it is a
+fatal error if it evaluates to @code{false}. The expression may refer to
+@code{self} and to the routine's arguments.
+
+The optional @code{post} construct contains a boolean expression which
+must evaluate to @code{true} whenever the routine returns; it is a fatal
+error if it evaluates to @code{false}. The expression may refer to
+@code{self} and to the routine's arguments. It may use @code{result}
+expressions (@pxref{result expressions}) to refer to the value returned
+by the routine and @code{initial} expressions (@pxref{initial
+expressions}) to refer to values which are computed before the routine
+executes.
+
+The body of a routine definition is a list of statements
+(@pxref{Statements}). The body is optional in external classes
+(@pxref{Interfacing with other Languages}).
+
+@node Iter definitions, include clauses, Routine definitions, Class Elements
+@unnumberedsec Iter definitions
+@cindex Iter definitions
+
+Example:
+
+@example
+elts!(i:INT, x:FLT!):T is @dots{} end
+@end example
+
+Syntax:
+
+@example
+@var{iter_definition} @result{} [ private ] @var{iter_name}
+   [ ( @var{iter_argument} @{ , @var{iter_argument} @} ) ]
+   [ : @var{type_specifier} ]
+   [ pre @var{expression} ] [ post @var{expression} ] is @var{statement_list} end
+
+@var{iter_argument} @result{} @var{identifier_list} : @var{type_specifier} [ ! ]
+@end example
+
+@emph{Iters} are similar to routines but encapsulate iteration
+abstractions.  Their names end with an exclamation point ``!'' and they
+may only be called within @code{loop} statements (@pxref{loop
+statements}). Iter argument type specifiers may be followed by a ``!''
+to cause re-evaluation of that argument at each iteration.
+
+The description of routine arguments and @code{pre} and @code{post}
+constructs also applies to iter definitions. Iters may contain
+@code{yield} (@pxref{yield statements}) and @code{quit} (@pxref{quit
+statements}) statements but may not contain @code{return}
+statements. The semantics of iter calls is described in the section on
+loop statements (@pxref{loop statements}) . The @code{pre} clause must
+be true each time the iter is called and the @code{post} clause must be
+true each time it yields. The @code{post} clause is not evaluated when
+an iter quits.
+
+@node include clauses, , Iter definitions, Class Elements
+@unnumberedsec @code{include} clauses
+@cindex include clauses
+@kwindex include
+
+Examples:
+
+@example
+include A a->b, c->, d->private d;
+private include D e->readonly f;
+@end example
+
+Syntax:
+
+@example
+@var{include_clause} @result{} [ private ] include @var{type_specifier}
+   [ @var{feature_modifier} @{ , @var{feature_modifier} @} ]
+
+@var{feature_modifier} @result{} ( @var{identifier} | @var{iter_name} ) ->
+   [ [ private | readonly ] ( @var{identifier} | @var{iter_name} ) ]
+@end example
+
+Implementation inheritance is defined by @emph{include clauses}. These
+cause the incorporation of the implementation of the specified type,
+possibly undefining or renaming features with @var{feature_modifier}
+clauses. External classes may not have include clauses. The
+@code{include} clause may begin with the keyword @code{private}, in
+which case any unmodified included feature is made private. We say that
+there is an @emph{include path} from one type to another if there is a
+sequence of types between them such that each includes the next in the
+sequence.
+
+The included type specified by the @var{type_specifier} must not be an
+external type, a bound type, or a type parameter (though type parameters
+may appear as components of the type specifier). There mustn't be
+include paths from reference types to @code{AVAL} or from value types to
+@code{AREF} (@pxref{Built-in Classes}). There must be no cycle of
+classes such that each class includes the next, ignoring the values of
+any type parameters but not their number.
+
+Each @var{feature_modifier} clause specifies an identifier which must
+be the name of at least one feature in the included class. If no clause
+follows the @code{->} symbol, then the named features are not included
+in the class. If an identifier follows the @code{->} symbol, then it
+becomes the new name for the features. In this case, the listed features
+are included as part of the public interface unless they are specified
+as @code{private} or @code{readonly}. Identifiers may only be renamed as
+identifiers and iter names may only be renamed by iter names.
+
+A class may not explicitly define two routines or iters whose signatures
+conflict (@pxref{Types and Classes}). A class may not define a routine
+whose signature conflicts with either the reader or the writer routine
+of any of its attributes (whether explicitly defined or included from
+other classes).  If a routine or iter is explicitly defined in a class,
+it overrides all conflicting routines or iters from included
+classes. The reader and writer routines of a class's attributes also
+override any included routines and must not conflict with each other. If
+an included routine or iter is not overridden, then it must not conflict
+with another included routine or iter. Feature modification clauses can
+be used to resolve any conflicts.
+
+@node Statements, Expressions, Class Elements, Top
+@unnumbered Statements
+@cindex Statements
+
+Syntax:
+
+@example
+@var{statement_list} @result{} [ @var{statement} ] @{ ; [ @var{statement} ] @}
+
+@var{statement} @result{} @var{declaration_statement} | @var{assign_statement}
+   | @var{if_statement} | @var{loop_statement} | @var{return_statement}
+   | @var{yield_statement} | @var{quit_statement} | @var{case_statement}
+   | @var{typecase_statement} | @var{assert_statement} | @var{protect_statement}
+   | @var{raise_statement} | @var{expression_statement}
+@end example
+
+The body of a routine or iter is a semicolon separated list of
+statements. The statements in a statement list are executed sequentially
+unless a @code{return}, @code{quit}, @code{yield}, or @code{raise}
+statement is executed. In a routine with a return value, the final
+statement along each execution path must be either a @code{return}
+statement or a @code{raise} statement.
+
+@menu
+* Declaration statements::
+* Assignment statements::
+* if statements::
+* loop statements::
+* yield statements::
+* quit statements::
+* return statements::
+* case statements::
+* typecase statements::
+* assert statements::
+* protect statements::
+* raise statements::
+* Expression statements::
+@end menu
+
+@node Declaration statements, Assignment statements, Statements, Statements
+@unnumberedsec Declaration statements
+@cindex Declaration statements
+
+Example:
+
+@example
+i,j,k:INT
+@end example
+
+Syntax:
+
+@example
+@var{declaration_statement} @result{} @var{identifier_list} : @var{type_specifier}
+@end example
+
+@emph{Declaration statements} are used to declare the type of one or
+more local variables. Local variables may also be declared in assignment
+statements (@pxref{Assignment statements}). The scope of a local
+variable declaration begins at the declaration and continues to the end
+of the statement list in which the declaration occurs. The scope of
+routine and iter arguments is the entire body of the routine or
+iter. Local variables shadow routines in the class which have the same
+name and no arguments. Within the scope of a local variable it is
+illegal to declare another local variable with the same name. Local
+variables are initialized to @code{void} (@pxref{void expressions}) when
+the containing routine or iter is called.
+
+@node Assignment statements, if statements, Declaration statements, Statements
+@unnumberedsec Assignment statements
+@cindex Assignment statements
+
+Examples:
+
+@example
+a:=5
+b(7).c:=5
+A::d:=5
+[3]:=5
+e[7,8]:=5
+g:INT:=5
+h::=5
+@end example
+
+Syntax:
+
+@example
+@var{assign_statement} ( @var{expression} | @var{identifier} : [ @var{type_specifier} ] ) := @var{expression}
+@end example
+
+@emph{Assignment statements} are used to assign objects to locations and
+can also declare new local variables. The expression on the right-hand
+side must have a return type which is a subtype of the declared type of
+the destination specified by the left hand side. When a reference object
+is assigned to a location, only a @var{reference} to the object is
+assigned.  This means that later changes to the state of the object will
+be observable from the assigned location. Since value and bound objects
+cannot be modified once constructed, this issue is not relevant to them.
+We consider each of the allowed forms for the left-hand side of an
+assignment in turn:
+
+@enumerate
+@item
+@var{``identifier''}
+
+If the left hand side is a local variable or an argument of a routine or
+iter, then the assignment is directly performed (e.g. @code{a:=5}).
+Otherwise the statement is syntactic sugar for a call of the routine
+named @var{identifier} with the right hand side of the assignment as the
+only argument (e.g. @code{a(5)}).
+
+@item
+@var{``( expression . | type_specifier :: ) identifier''}
+
+These forms are syntactic sugar for calls of a routine named identifier
+with the right-hand side as an argument: @var{( expression . |
+type_specifier :: ) identifier ( rhs )}. For example, @code{b(7).c:=5}
+is sugar for @code{b(7).c(5)} and @code{A::d:=5} is sugar for
+@code{A::d(5)}.
+
+@item
+@var{``[ expression ] [ expression_list ] ''}
+
+This form is syntactic sugar for a call on a routine named @code{aset}
+with the array index expressions and the right-hand side of the
+assignment as arguments: @var{[ expression . | type_specifier :: ] aset(
+expression_list , rhs )}. For example, @code{[3]:=5} is sugar for
+@code{aset(3,5)} and @code{e[7,8]:=5} is sugar for @code{e.aset(7,8,5)}.
+
+@item
+@var{``identifier : [ type_specifier ]''}
+
+This form both declares a new local variable and assigns to it
+(e.g. @code{g:INT:=5}). If a type specifier is not provided, then the
+declared type of the variable is the return type of the expression on
+the right-hand side (e.g. @code{h::=5}). The scoping rules given in
+@ref{Declaration statements}, apply here as well. If a type is
+explicitly specified, the construct is syntactic sugar for a declaration
+statement followed by an assignment statement.
+@end enumerate
+
+@node if statements, loop statements, Assignment statements, Statements
+@unnumberedsec @code{if} statements
+@cindex if statements
+@kwindex if
+@kwindex then
+@kwindex elsif
+@kwindex else
+
+Example:
+
+@example
+if a>5 then foo elsif a>2 then bar else error end
+@end example
+
+Syntax:
+
+@example
+@var{if_statement} @result{} if @var{expression} then @var{statement_list}
+   @{ elsif @var{expression} then @var{statement_list} @}
+   [ else @var{statement_list} ] end
+@end example
+
+@emph{if statements} are used to conditionally execute statement lists
+according to the value of a boolean expression. Each @var{expression} in
+the form must return a boolean value. The first expression is evaluated
+and if it is true, the following statement list is executed. If it is
+false, then the expressions of successive @code{elsif} clauses are
+evaluated in order. The statement list following the first of these to
+return @code{true} is executed. If none of the expressions return
+@code{true} and there is an @code{else} clause, then its statement list
+is executed.
+
+@node loop statements, yield statements, if statements, Statements
+@unnumberedsec @code{loop} statements
+@cindex loop statements
+@kwindex loop
+
+Example:
+
+@example
+loop @dots{} end
+@end example
+
+Syntax:
+
+@example
+@var{loop_statement} @result{} loop @var{statement_list} end
+@end example
+
+Iteration is done with @emph{loop statements}, used in conjunction with
+iter calls (@pxref{Routine and iter call expressions}). An execution
+state is maintained for each textual iter call. When a loop is entered,
+the execution state of all enclosed iter calls is initialized. When an
+iter is first called in a loop, the expressions for @code{self} and for
+each argument without a ``!''  marking are evaluated left to right. Then
+the expressions for ``!''  arguments are evaluated left to right. On
+subsequent calls, only the expressions for ``!'' arguments are
+re-evaluated. @code{self} and any arguments not marked with a ``!''
+retain their earlier values. The expressions for @code{self} and for
+arguments not marked ``!'' in an iter call may not themselves contain
+iter calls (such iters would only execute their first iteration).
+
+When an iter is called, it executes the statements in its body in
+order. If it executes a @code{yield} statement, control is returned to
+the caller. Subsequent calls on the iter resume execution with the
+statement following the @code{yield} statement. If an iter executes
+@code{quit} or reaches the end of its body, control passes immediately
+to the end of the innermost enclosing loop statement in the caller and
+no value is returned from the iter.
+
+@node yield statements, quit statements, loop statements, Statements
+@unnumberedsec @code{yield} statements
+@cindex yield statements
+@kwindex yield
+
+Examples:
+
+@example
+yield
+yield x
+@end example
+
+Syntax:
+
+@example
+@var{yield_statement} @result{} yield [ @var{expression} ]
+@end example
+
+@emph{yield statements} are used to return control to a loop and may
+appear only in iter definitions.  The @var{expression} clause must be
+present if the iter has a return value and must be absent if it does
+not. If @var{expression} is present, then its type must be a subtype of
+the return type. Execution of a @code{yield} statement causes the
+expression to be evaluated and its value to be returned to the caller of
+the iter in which it appears.
+
+@node quit statements, return statements, yield statements, Statements
+@unnumberedsec @code{quit} statements
+@cindex quit statements
+@kwindex quit
+
+Example:
+
+@example
+quit
+@end example
+
+Syntax:
+
+@example
+@var{quit_statement} @result{} quit
+@end example
+
+@emph{quit statements} are used to terminate loops and may only appear
+in iter definitions. No value is returned from an iter when it quits. No
+statements may follow a @code{quit} statement in a statement list.
+
+@node return statements, case statements, quit statements, Statements
+@unnumberedsec @code{return} statements
+@cindex return statements
+@kwindex return
+
+Examples:
+
+@example
+return
+return x
+@end example
+
+Syntax:
+
+@example
+@var{return_statement} @result{} return [ @var{expression} ]
+@end example
+
+@emph{return statements} are used to return from routine calls. No other
+statements may follow a @code{return} statement in a statement list
+because they could never be executed. If a routine doesn't have a return
+value then it may return either by executing a @code{return} statement
+without an @var{expression} portion or by executing the last statement
+in the routine body.
+
+If a routine has a return value, then its @code{return} statements must
+specify expressions whose types are subtypes of the routine's declared
+return type. Execution of the @code{return} statement causes the
+expression to be evaluated and its value to be returned. It is a fatal
+error if the final statement executed in such a routine is not a
+@code{return} statement.
+
+@node case statements, typecase statements, return statements, Statements
+@unnumberedsec @code{case} statements
+@cindex case statements
+@kwindex case
+@kwindex when
+
+Example:
+
+@example
+case i
+   when 5, 6 then @dots{}
+   when j then @dots{}
+   else @dots{} end
+@end example
+
+Syntax:
+
+@example
+@var{case_statement} @result{} case @var{expression}
+   @{ when @var{expression} @{ , @var{expression} @} then @var{statement_list} @}
+   [ else @var{statement_list} ] end
+@end example
+
+Multi-way branches are implemented by @emph{case statements}. There may
+be an arbitrary number of @emph{when clauses} and an optional @emph{else
+clause}. The initial @var{expression} construct is evaluated first and
+may have a return value of any type. This type must define one or more
+routines named @code{is_eq} with a single argument and a boolean return
+value. The case statement is semantically syntactic sugar for
+(equivalent to) an @code{if} statement, each of whose branches tests a
+call of @code{is_eq}. The arguments to these calls are the successive
+expressions of successive @code{when} lists. If one of these calls
+returns @code{true}, then the corresponding statement list is executed
+and control passes to the statement following the @code{case}
+statement. If none of the @code{when} expressions matches and an
+@code{else} clause is present, then the statement list following it is
+executed. It is a fatal error if no branch matches in the absence of an
+@code{else} clause.
+
+@node typecase statements, assert statements, case statements, Statements
+@unnumberedsec @code{typecase} statements
+@cindex typecase statements
+@kwindex typecase
+
+Example:
+
+@example
+typecase a
+   when INT then @dots{}
+   when FLT then @dots{}
+   when $A then @dots{}
+   else @dots{} end
+@end example
+
+Syntax:
+
+@example
+@var{typecase_statement} @result{} typecase @var{identifier}
+   @{ when @var{type_specifier} then @var{statement_list} @}
+   [ else @var{statement_list} ] end
+@end example
+
+An operation that depends on the runtime type of an object held by a
+variable of abstract type may be performed inside a @emph{typecase
+statement}. The @var{identifier} must name a local variable or an
+argument of a routine or iter. If the @code{typecase} appears in an
+iter, then the @var{identifier} must not refer to a ``!'' argument,
+because the type of object that such an argument holds could change.
+
+On execution, each successive @var{type_specifier} is tested for being a
+supertype of the type of the object held by the variable. The statement
+list following the first matching type specifier is executed and control
+passes to the statement following the @code{typecase}. Within that
+statement list, the type of the @code{typecase} variable is taken to be
+the type specified by the matching type specifier unless the variable's
+declared type is a subtype of it, in which case it retains its declared
+type. It is not legal to assign to the @code{typecase} variable within
+the statement lists. If the object's type is not a subtype of any of the
+type specifiers and an @code{else} clause is present, then the statement
+list following it is executed. It is a fatal error for no branch to
+match in the absence of an @code{else} clause. The declared type of the
+variable is not changed within the @code{else} statement list. If the
+value of the variable is @code{void} when the @code{typecase} is
+executed, then its type is taken to be the declared type of the
+variable.
+
+@node assert statements, protect statements, typecase statements, Statements
+@unnumberedsec @code{assert} statements
+@cindex assert statements
+@kwindex assert
+
+Example:
+
+@example
+assert x>5
+@end example
+
+Syntax:
+
+@example
+@var{assert_statement} @result{} assert @var{expression}
+@end example
+
+@emph{assert statements} specify a boolean expression that must evaluate
+to @code{true}; otherwise it is a fatal error.
+
+@node protect statements, raise statements, assert statements, Statements
+@unnumberedsec @code{protect} statements
+@cindex protect statements
+@kwindex protect
+
+Example:
+
+@example
+protect @dots{}
+   when E then @dots{}
+   when $F then @dots{}
+   else @dots{} end
+@end example
+
+Syntax:
+
+@example
+@var{protect_statement} @result{} protect @var{statement_list}
+   @{ when @var{type_specifier} then @var{statement_list} @}
+   [ else @var{statement_list} ] end
+@end example
+
+Sather uses @emph{exceptions} to signal and recover from exceptional
+situations. Exceptions may be explicitly raised by a program
+(@pxref{raise statements}) or generated by the system. Each exception is
+represented by an @emph{exception object} whose type is used to select a
+handler from a @emph{protect statement}. Execution of a @code{protect}
+statement begins with the statement list following the @code{protect}
+keyword. If all exceptions which are raised are handled by other
+@code{protect} statements, then the statements in this list are executed
+to completion.
+
+If an exception is raised which is not handled elsewhere, then the
+system finds the first type specifier listed in the @code{when} lists
+which is a supertype of the exception object type. The statement list
+following this specifier is executed and then control passes to the
+statement following the @code{protect} statement. An @code{exception}
+expression (@pxref{exception expressions}) may be used to access the
+exception object in these handler statements. If none of the specified
+types are supertypes, then the statements in an @code{else} clause are
+executed if it is present. If it is not present, the same exception
+object is raised to the next most recently entered @code{protect} statement
+which is still in progress. It is a fatal error to raise an exception
+which is not handled by some @code{protect} statement. @code{protect}
+statements may only contain iter calls if they also contain the
+surrounding loop.
+
+@node raise statements, Expression statements, protect statements, Statements
+@unnumberedsec @code{raise} statements
+@cindex raise statements
+@kwindex raise
+
+Example:
+
+@example
+raise x
+@end example
+
+Syntax:
+
+@example
+@var{raise_statement} @result{} raise @var{expression}
+@end example
+
+Exceptions are explicitly raised by @emph{raise statements}. The
+@var{expression} is evaluated to obtain the exception object. No
+statements may follow a @code{raise} statement in a statement list
+because they could never be executed.
+
+@node Expression statements, , raise statements, Statements
+@unnumberedsec Expression statements
+@cindex Expression statements
+
+Example:
+
+@example
+foo(1,2)
+@end example
+
+Syntax:
+
+@example
+@var{expression_statement} @result{} @var{expression}
+@end example
+
+A statement may consist of an expression (@pxref{Expressions}) which
+doesn't return a value and is executed solely for its side-effects.
+
+@node Expressions, Lexical Structure, Statements, Top
+@unnumbered Expressions
+@cindex Expressions
+
+Syntax:
+
+@example
+@var{expression} @result{} @var{self_expression} | @var{local_expression} | @var{call_expression}
+   | @var{void_expression} | @var{void_test_expression} | @var{new_expression}
+   | @var{create_expression} | @var{array_expression} | @var{bound_create_expression}
+   | @var{sugar_expression} | @var{and_expression} | @var{or_expression} | @var{except_expression}
+   | @var{initial_expression} | @var{result_expression} | @var{while!_expression}
+   | @var{until!_expression} | @var{break!_expression} | @var{bool_literal_expression}
+   | @var{char_literal_expression} | @var{str_literal_expression}
+   | @var{int_literal_expression} | @var{flt_literal_expression}
+@end example
+
+Sather @emph{expressions} are used to compute values or to cause
+side-effects.  If they return a value, then they have a @emph{return
+type} that is either explicitly declared or inferred from context.
+
+@menu
+* self expressions::
+* Local variable access expressions::
+* Routine and iter call expressions::
+* void expressions::
+* void test expressions::
+* new expressions::
+* Creation expressions::
+* Array creation expressions::
+* Bound routine and iter creation expressions::
+* Syntactic sugar expressions::
+* and expressions::
+* or expressions::
+* exception expressions::
+* initial expressions::
+* result expressions::
+* while! expressions::
+* until! expressions::
+* break! expressions::
+@end menu
+
+@node self expressions, Local variable access expressions, Expressions, Expressions
+@unnumberedsec @code{self} expressions
+@cindex self expressions
+@kwindex self
+
+Example:
+
+@example
+self
+@end example
+
+Syntax:
+
+@example
+@var{self_expression} @result{} self
+@end example
+
+@emph{self expressions} may appear in the bodies and in the @code{pre}
+and @code{post} clauses of routines and iters. They return the object on
+which the routine or iter was called. The return type is the type in
+which the routine or iter appears.
+
+@node Local variable access expressions, Routine and iter call expressions, self expressions, Expressions
+@unnumberedsec Local variable access expressions
+@cindex Local variable access expressions
+
+Example:
+
+@example
+a
+@end example
+
+Syntax:
+
+@example
+@var{local_expression} @result{} @var{identifier}
+@end example
+
+The name of an argument or local variable in a routine or iter is an
+expression which returns the value of that variable. The return type of
+such an expression is the declared type of the variable. Local variables
+may be accessed only within the body of a routine or iter.  Arguments
+may additionally be accessed in routine and iter @code{pre} and
+@code{post} clauses.
+
+All other expressions consisting of a single identifier are routine or
+iter calls on @code{self} as described in the next section.
+
+@node Routine and iter call expressions, void expressions, Local variable access expressions, Expressions
+@unnumberedsec Routine and iter call expressions
+@cindex Routine and iter call expressions
+
+Examples:
+
+@example
+a(5,7)
+b.a(5,7)
+A::a(5,7)
+@end example
+
+Syntax:
+
+@example
+@var{call_expression} @result{} [ @var{expression} . | @var{type_specifier} :: ]
+   ( @var{identifier} | @var{iter_name} ) [ ( @var{expression_list} ) ]
+
+@var{expression_list} @result{} @var{expression} @{ , @var{expression} @}
+@end example
+
+The most common expressions in Sather programs are @emph{routine and
+iter calls}. The @var{identifier} names the routine or iter being
+called. The object to which the routine or iter is applied is determined
+by what precedes the @var{identifier}. If nothing precedes it, then the
+form is syntactic sugar for a call on @code{self} (e.g. @code{a(5,7)} is
+short for @code{self.a(5,7)}). If the @var{identifier} is preceded by an
+expression and a dot @code{.}, then the routine or iter is called on the
+object returned by the expression. If @var{identifier} is preceded by a
+type specifier and a double colon @code{::}, then the routine or iter is
+taken from the interface of the specified type with @code{self}
+initialized as described in @ref{Object attribute definitions}.
+
+Routine calls are evaluated by first evaluating the expression to the
+left of the dot, if present, then evaluating any argument expressions
+from left to right and then calling the routine. The evaluation of iter
+calls is described in @ref{loop statements}.
+
+Sather supports routine and iter @emph{overloading}. In addition to the
+name, the number and types of arguments in a call and whether a return
+value is used contribute to the selection of the routine or iter. The
+@var{expression_list} portion of a call must supply an expression
+corresponding to each declared argument of the routine or iter. There
+must be a routine or iter with the specified name such that the type of
+each expression is a subtype of the declared type of the corresponding
+argument and it must be unique. If the routine or iter defines a return
+value, it must be used (i.e. the call may not be an
+@var{expression_statement}). Only non-private routines and iters may be
+called from outside a class, but all routines and iters may be called
+from inside a class.
+
+Sather also supports @emph{dynamic dispatch} on the type of @code{self}
+when the expression on which the call is made has an abstract declared
+return type. The routine or iter matching the call from the runtime type
+of the returned object is actually executed. Because of the subtyping
+rule (@pxref{Types and Classes}), if the abstract type specifies a
+conforming routine or iter, so will the type of the returned object.
+
+Direct calls of a type's routines or iters may be made using the double
+colon @code{::} syntax.  The @var{type_specifier} must specify a
+reference, value, or external class. In such calls @code{self} has the
+default value described in @ref{Object attribute definitions}.
+
+@node void expressions, void test expressions, Routine and iter call expressions, Expressions
+@unnumberedsec @code{void} expressions
+@cindex void expressions
+@kwindex void
+
+Example:
+
+@example
+void
+@end example
+
+Syntax:
+
+@example
+@var{void_expression} @result{} @var{void}
+@end example
+
+A @emph{void expression} returns a value whose type is determined from
+context. @code{void} is the value that a variable of the type receives
+when it is declared but not explicitly initialized. The value of
+@code{void} for abstract, reference, and bound variables is a special
+value that represents the absence of a reference to an object. The value
+of @code{void} for boolean variables is @code{false} (@pxref{Boolean literal
+expressions}) and for other value types it is determined by recursively
+setting each attribute and array element to @code{void}. The built-in
+value types are defined in terms of arrays of @code{BOOL} and so have
+all their bits set to 0 by this rule.
+
+@code{void} expressions may appear as the initializer for a constant or
+shared attribute, as the right hand side of an assignment statement, as
+the return value in a @code{return} or @code{yield} statement, as the
+value of one of the expressions in a @code{case} statement, as the
+exception object in a @code{raise} statement, or as an argument value in
+a routine or iter call or in a creation expression (@pxref{Creation
+expressions}). In this last case, the argument is ignored in resolving
+overloading.
+
+It is a fatal error to access object attributes of a void variable of
+reference type or to make any calls on a void variable of abstract
+type. It is not legal to dot into an explicit @code{void} expression.
+
+@node void test expressions, new expressions, void expressions, Expressions
+@unnumberedsec @code{void} test expressions
+@cindex void test expressions
+@kwindex void
+
+Example:
+
+@example
+void(a)
+@end example
+
+Syntax:
+
+@example
+@var{void_test_expression} @result{} void ( @var{expression} )
+@end example
+
+@emph{Void test expressions} evaluate their argument and return a
+boolean value which is true if the value is @code{void} (@pxref{void
+expressions}).
+
+@node new expressions, Creation expressions, void test expressions, Expressions
+@unnumberedsec @code{new} expressions
+@cindex new expressions
+@kwindex new
+
+Examples:
+
+@example
+new
+new(17)
+@end example
+
+Syntax:
+
+@example
+@var{new_expression} @result{} new [ ( @var{expression} ) ]
+@end example
+
+@emph{new expressions} are used to allocate space for reference objects
+and may only appear in reference classes. They return reference objects
+of type @code{SAME}. All attributes and array elements are initialized
+to @code{void} (@pxref{void expressions}). If there is an @code{include}
+path from the type in which the @code{new} appears to @code{AREF}
+(@pxref{Built-in Classes}), then @code{new} must be provided with a
+non-negative @code{INT} argument which specifies the number of array
+elements in the returned object.
+
+@node Creation expressions, Array creation expressions, new expressions, Expressions
+@unnumberedsec Creation expressions
+@cindex Creation expressions
+@kwindex create
+
+Examples:
+
+@example
+#FOO(1,2,3)
+#(1,2,3)
+#FOO
+#
+@end example
+
+Syntax:
+
+@example
+@var{create_expression} @result{} # [ @var{type_specifier} ] [ ( @var{expression_list} ) ]
+@end example
+
+Value and reference object @emph{creation expressions} are a convenient
+shorthand used for creating new objects and initializing their
+attributes. A creation expression is syntactic sugar for a call on a
+routine named @code{create} with the specified arguments. @code{self} is
+given the default value described in @ref{Object attribute definitions},
+in this call. The type defining the @code{create} routine may be
+explicitly specified as a reference or value type. If the type is not
+explicitly specified, then it is taken to be the declared type of the
+context in which the call appears (and it must be a value or reference
+type). A type must be specified if the expression appears as the
+right-hand side of a @code{::=} assignment (@pxref{Assignment
+statements}), as a routine or iter argument in which overloading
+resolution would otherwise be ambiguous, or as the object on which a
+call is made.
+
+@node Array creation expressions, Bound routine and iter creation expressions, Creation expressions, Expressions
+@unnumberedsec Array creation expressions
+@cindex Array creation expressions
+
+Examples:
+
+@example
+|2,4,6,8|
+|"apple", "orange", "cherry", "kiwi"|
+@end example
+
+Syntax:
+
+@example
+@var{array_expression} @result{} | @var{expression_list} |
+@end example
+
+Array creation expressions are used to create and directly specify the
+elements of an array object. The type is taken to be the declared type
+of the context in which it appears and it must be @code{ARRAY@{T@}} for
+some type @code{T}. An array creation expression may not appear as the
+right-hand side of a @code{::=} assignment (@pxref{Assignment
+statements}), as a routine or iter argument in which the overloading
+resolution is ambiguous, or as the object on which a call is made. The
+types of each expression in the @var{expression_list} must be subtypes
+of @code{T}. The size of the created array is equal to the number of
+specified expressions. The expressions are evaluated left to right and
+the results are assigned to successive array elements.
+
+@node Bound routine and iter creation expressions, Syntactic sugar expressions, Array creation expressions, Expressions
+@unnumberedsec Bound routine and iter creation expressions
+@cindex Bound routine and iter creation expressions
+@kwindex bind
+@kwindex bind
+
+Examples:
+
+@example
+bind(2.plus(_))
+bind(_:INT.upto!(5))
+@end example
+
+Syntax:
+
+@example
+@var{bound_create_expression} @result{} ( bind | bind )
+   ( [ @var{type_specifier} :: | @var{bound_argument} . ] ( @var{identifier} | @var{iter_name} )
+   [ ( @var{bound_argument} @{ , @var{bound_argument} @} ) ] [ : @var{type_specifier} ] )
+
+@var{bound_argument} @result{} @var{expression} | _ [ : @var{type_specifier} ]
+@end example
+
+@emph{Bound routines and iters} generalize the ``function pointer'' and
+``closure'' constructs of other languages. They bind a reference to a
+routine or iter together with zero or more argument values (possibly
+including @code{self}).
+
+The outer part of the expression is @code{bind(@dots{})} for bound
+routines and @code{bind(@dots{})} for bound iters. These surround an
+ordinary routine or iter call in which any of the arguments or
+@code{self} may be replaced by the underscore character @code{_}. Such
+unspecified arguments are @emph{unbound}.  Unbound arguments are
+specified when the bound routine or iter is eventually called. In
+forming a bound iter, all arguments marked ``!''  must be left
+unbound. Optional @var{``:type_specifier''} clauses are used to
+specify the types of underscore arguments or the return type and may be
+necessary to disambiguate overloaded routines or iters.  If @code{self}
+is specified by an underscore without type information, the type is
+taken to be @code{SAME}.
+
+The expressions in this construct are evaluated from left to right and
+the resulting values are stored as part of the bound routine or iter.
+Bound creation expressions return bound types. As described in @ref{Type
+specifiers}, the type specifiers for these types have the form:
+
+@example
+@var{bound_type_specifier} @result{} ( ROUT | ITER )
+   [ @{ @var{type_specifier} [ ! ] @{ , @var{type_specifier} [ ! ] @} @} ]
+   [ : @var{type_specifier} ]
+@end example
+
+These specifiers begin with the keyword @code{ROUT} for routines and
+@code{ITER} for iters and are followed by the types of the underscore
+arguments, if any, enclosed in braces (e.g.
+@code{ROUT@{A,B,C@}}). These are followed by a colon and the return
+type, if there is one (e.g.  @code{ITER@{INT!@}:INT}).
+
+Each bound routine defines a routine named @code{call} and each bound
+iter defines an iter named @code{call!}. These have argument and return
+value types that correspond to the bound type descriptor. An invocation
+of one of these features behaves like a call on the original routine or
+iter with the arguments specified by a combination of the bound values
+and those provided to @code{call} or @code{call!}. The arguments to
+@code{call} or @code{call!}  match the underscores positionally from
+left to right (e.g.  @code{i::=bind(2.plus(_)).call(3)} is equivalent
+to @code{i::=2.plus(3)}).
+
+Bound types implicitly introduce edges into the type graph. There is an
+edge from each bound type @var{t1} to all bound types @var{t2}
+that satisfy the @emph{contravariant} requirement that
+
+@enumerate
+@item
+Both @var{t1} and @var{t2} are routine types or both are iter types.
+
+@item
+@var{t1} and @var{t2} have the same number of arguments, and either both
+have or both do not have a return value.
+
+@item
+Each argument type in @var{t1}, if there are any, is a @emph{subtype} of
+the corresponding argument type in @var{t2}. Also, in the case of iters,
+either both argument types are marked with ``!'' or both aren't
+(@pxref{Iter definitions}).
+
+@item
+The type of the return value, if any, in @var{t1} is a @emph{supertype}
+of the corresponding return type in @var{t2}.
+@end enumerate
+
+@node Syntactic sugar expressions, and expressions, Bound routine and iter creation expressions, Expressions
+@unnumberedsec Syntactic sugar expressions
+@cindex Syntactic sugar expressions
+@kwindex +
+@kwindex plus
+@kwindex -
+@kwindex minus
+@kwindex negate
+@kwindex *
+@kwindex times
+@kwindex /
+@kwindex div
+@kwindex ^
+@kwindex pow
+@kwindex %
+@kwindex mod
+@kwindex ~
+@kwindex not
+@kwindex <
+@kwindex is_lt
+@kwindex <=
+@kwindex is_leq
+@kwindex =
+@kwindex is_eq
+@kwindex /=
+@kwindex is_neq
+@kwindex >
+@kwindex is_gt
+@kwindex >=
+@kwindex is_geq
+@kwindex [
+@kwindex ]
+@kwindex aget
+
+Examples:
+
+@example
+a+b
+x<7
+@end example
+
+Syntax:
+
+@example
+@var{sugar_expression} @result{} @var{expression} @var{binary_op} @var{expression}
+   | - @var{expression}
+   | [ @var{expression} ] [ @var{expression_list} ]
+   | ( @var{expression} )
+
+@var{binary_op} @result{} + | - | * | / | ^ | % | ~ | < | <= | = | /= | > | >=
+@end example
+
+As shown in the following table, several Sather constructs are simply
+@emph{syntactic sugar} for corresponding routine calls.  Each of these
+transformations is applied after the component expressions have
+themselves been transformed. The precedence ordering shown determines
+the grouping of these forms. Symbols of the same precedence associate
+left to right and parentheses may be used for explicit grouping.
+
+@example
+
+          Sugar form                    Translation
+
+         @var{expr1} + @var{expr2}                @var{expr1}.plus(@var{expr2})
+
+         @var{expr1} - @var{expr2}                @var{expr1}.minus(@var{expr2})
+
+         @var{expr1} * @var{expr2}                @var{expr1}.times(@var{expr2})
+
+         @var{expr1} / @var{expr2}                @var{expr1}.div(@var{expr2})
+
+         @var{expr1} ^ @var{expr2}                @var{expr1}.pow(@var{expr2})
+
+         @var{expr1} % @var{expr2}                @var{expr1}.mod(@var{expr2})
+
+         @var{expr1} < @var{expr2}                @var{expr1}.is_lt(@var{expr2})
+
+         @var{expr1} <= @var{expr2}               @var{expr1}.is_leq(@var{expr2})
+
+         @var{expr1} = @var{expr2}                @var{expr1}.is_eq(@var{expr2})
+
+         @var{expr1} /= @var{expr2}               @var{expr1}.is_neq(@var{expr2})
+
+         @var{expr1} > @var{expr2}                @var{expr1}.is_gt(@var{expr2})
+
+         @var{expr1} >= @var{expr2}               @var{expr1}.is_geq(@var{expr2})
+
+         - @var{expr}                       @var{expr}.negate
+
+         ~ @var{expr}                       @var{expr}.not
+
+         [@var{expr_list}]                    aget(@var{expression_list})
+
+         @var{expr1}[@var{expression_list}]         @var{expr1}.aget(@var{expression_list})
+
+         (@var{expression})                 @var{expression}
+@end example
+
+@noindent
+Table 1: Syntactic sugar expressions and their translations
+
+@example
+                     .   ::   []   ()
+
+                            ^
+
+                       ~   Unary  -
+
+                        *   /   %
+
+                      +   Binary  -
+
+                  <   <=   =   /=   >=   >
+
+                         and   or
+@end example
+
+@noindent
+Table 2: Precedence ordering of special symbols from strongest to
+weakest
+
+@node and expressions, or expressions, Syntactic sugar expressions, Expressions
+@unnumberedsec @code{and} expressions
+@cindex and expressions
+@kwindex and
+
+Example:
+
+@example
+0<=x and x<10
+@end example
+
+Syntax:
+
+@example
+@var{and_expression} @result{} @var{expression} and @var{expression}
+@end example
+
+@emph{and expressions} compute the conjunction of two boolean
+expressions and return boolean values. The first expression is evaluated
+and if @code{false}, is immediately returned as the result.  Otherwise,
+the second expression is evaluated and its value returned.
+
+@node or expressions, exception expressions, and expressions, Expressions
+@unnumberedsec @code{or} expressions
+@cindex or expressions
+@kwindex or
+
+Example:
+
+@example
+x=2 or x=3
+@end example
+
+Syntax:
+
+@example
+@var{or_expression} @result{} @var{expression} or @var{expression}
+@end example
+
+@emph{or expressions} compute the disjunction of two boolean expressions
+and return boolean values. The first expression is evaluated and if
+@code{true}, is immediately returned as the result. Otherwise, the
+second expression is evaluated and its value returned.
+
+@node exception expressions, initial expressions, or expressions, Expressions
+@unnumberedsec @code{exception} expressions
+@cindex exception expressions
+@kwindex exception
+
+Example:
+
+@example
+exception
+@end example
+
+Syntax:
+
+@example
+@var{except_expression} @result{} @var{exception}
+@end example
+
+@emph{exception expressions} may only appear within the statements of
+the @code{then} and @code{else} clauses in @code{protect}
+statements. They return the exception object that caused the @code{when}
+branch to be taken in the most tightly enclosing @code{protect}
+statement. The return type is the type specified in the corresponding
+@code{when} clause (@pxref{protect statements}). In an else clause the
+return type is @code{$OB}.
+
+@node initial expressions, result expressions, exception expressions, Expressions
+@unnumberedsec @code{initial} expressions
+@cindex initial expressions
+@kwindex initial
+
+Example:
+
+@example
+initial(a)
+@end example
+
+Syntax:
+
+@example
+@var{initial_expression} @result{} initial ( @var{expression} )
+@end example
+
+@emph{initial expressions} may only appear in the @code{post}
+expressions of routines and iters. The @var{expression} must have a
+return value and must not itself contain @code{initial}
+expressions. When a routine is called or an iter resumes it evaluates
+the @var{expression} of each @code{initial} expression from left to
+right. When the postcondition is checked at the end, each @code{initial}
+expression returns its precomputed value.
+
+@node result expressions, while! expressions, initial expressions, Expressions
+@unnumberedsec @code{result} expressions
+@cindex result expressions
+@kwindex result
+
+Example:
+
+@example
+result
+@end example
+
+Syntax:
+
+@example
+@var{result_expression} @result{} result
+@end example
+
+@emph{result expressions} may only appear within the postconditions of
+routines and iters that have return values and may not appear within
+@code{initial} expressions. They return the value returned by the
+routine or yielded by the iter. Their type is the return type of the
+routine or iter in which they appear.
+
+@node while! expressions, until! expressions, result expressions, Expressions
+@unnumberedsec @code{while!} expressions
+@cindex while! expressions
+@kwindex while!
+
+Example:
+
+@example
+while!(a<10)
+@end example
+
+Syntax:
+
+@example
+@var{while!_expression} @result{} while!( @var{expression} )
+@end example
+
+@emph{while! expressions} are iter calls which take a single boolean
+argument that is re-evaluated on each iteration. They @code{yield} when
+the argument is true and @code{quit} when it is false.
+
+@node until! expressions, break! expressions, while! expressions, Expressions
+@unnumberedsec @code{until!} expressions
+@cindex until! expressions
+@kwindex until!
+
+Example:
+
+@example
+until!(a>10)
+@end example
+
+Syntax:
+
+@example
+@var{until!_expression} @result{} until!( @var{expression} )
+@end example
+
+@emph{until! expressions} are iter calls which take a single boolean
+argument that is re-evaluated on each iteration. They @code{yield} when
+the argument is false and @code{quit} when it is true.
+
+@node break! expressions, , until! expressions, Expressions
+@unnumberedsec @code{break!} expressions
+@cindex break! expressions
+@kwindex break!
+
+Example:
+
+@example
+break!
+@end example
+
+Syntax:
+
+@example
+@var{break!_expression} @result{} break!
+@end example
+
+@emph{break! expressions} are iter calls which immediately @code{quit} when
+they are called.
+
+@node Lexical Structure, Special Features, Expressions, Top
+@unnumbered Lexical Structure
+@cindex Lexical Structure
+@kwindex --
+@kwindex !
+@kwindex $
+
+The character set used in Sather source files is implementation
+dependent, but it must include at least the characters which appear in
+the syntactic constructs in this specification.  Many implementations
+will be based on ASCII, but this is not required. The case of characters
+in source files is significant. All syntactic constructs except
+identifiers and certain literals may be separated by an arbitrary number
+of @emph{whitespace} characters and @emph{comments}.  The seven
+whitespace characters are space, tab, newline, vertical tab, backspace,
+carriage return, and form feed. Sather comments consist of two dashes
+@code{--} outside of a string (@pxref{String literal expressions}) or
+character literal (@pxref{Character literal expressions}) and all
+following text until the end of the line.
+
+Sather @emph{identifiers} are used to name class features and routine
+and iter arguments and local variables. Most consist of letters, decimal
+digits, and the underscore character, and begin with a letter. Iter
+names additionally end with the ``!'' character. Abstract type names and
+class names are similar, but the letters must be uppercase and abstract
+type names begin with ``$''. There are no restrictions on the lengths of
+Sather identifiers or class names. Identifiers, class names and keywords
+must be followed by a character other than a letter, decimal digit or
+underscore. This may force the use of white-space after an identifier.
+
+@example
+@var{identifier} @result{} @var{letter} @{@var{letter} | @var{decimal_digit} | _@}
+
+@var{uppercase_identifier} @result{} @var{uppercase_letter}
+   @{@var{uppercase_letter} | @var{decimal_digit} | _@}
+
+@var{abstract_type_name} @result{} $ @var{uppercase_letter}
+   @{@var{uppercase_letter} | @var{decimal_digit} | _@}
+
+@var{iter_name} @result{} [@var{identifier}]!
+
+@var{letter} @result{} @var{lowercase_letter} | @var{uppercase_letter}
+
+@var{lowercase_letter} @result{} a | b | c | d | e | f | g | h | i | j | k | l | m
+   | n | o | p | q | r | s | t | u | v | w | x | y | z
+
+@var{uppercase_letter} @result{} A | B | C | D | E | F | G | H | I | J | K | L | M
+   | N | O | P | Q | R | S | T | U | V | W | X | Y | Z
+
+@var{decimal_digit} @result{} 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+@end example
+
+Sather @emph{keywords} are used to identify the fundamental syntactic
+constructs and may not be used as identifiers. The keywords are:
+
+@example
+@var{keyword} @result{} and | assert | attr | break! | case | class | const
+   | else | elsif | end | exception | external | false | if
+   | include | initial | is | ITER | loop | new | or | post
+   | pre | private | protect | quit | raise | readonly | result
+   | return | ROUT | SAME | self | shared | then | true | type
+   | typecase | until! | value | void | when | while! | yield
+@end example
+
+The syntax also makes use of the following @emph{special symbols}:
+
+@example
+@var{special_symbol} @result{} ( | ) | [ | ] | @{ | @} | , | . | ; | : | $ | _ | +
+   | - | * | / | = | < | > | # | ^ | % | ~ | | | ! | /= | <=
+   | >= | := | :: | ->
+@end example
+
+In addition to the keywords @code{ROUT} and @code{ITER}, there are
+several reserved names which may not be used to name user classes. Some
+of these are the names of built-in library classes known to the
+compiler, others are used in special situations as described in
+@ref{Built-in Classes}.
+
+@example
+@var{special_classnames} @result{} $OB | ARRAY | AREF | AVAL | BOOL | CHAR | EXT_OB
+   | FLT | FLTD | FLTX | FLTDX | FLTI | INT | INTI | $REHASH | SAME
+   | STR | SYS
+@end example
+
+There are certain names in the feature namespace which are the
+translations of syntactic sugar expressions:
+
+@example
+@var{sugar_featurenames} @result{} aget | aset | div | is_eq | is_geq | is_gt | is_leq
+   | is_lt | is_neq | minus | mod | negate | not | plus | pow | times
+@end example
+
+@noindent
+and there are feature names which have a special effect when they are
+defined in a class:
+
+@example
+@var{special_featurenames} @result{} create | invariant | main
+@end example
+
+Finally, there are special lexical forms for literal expressions which
+define boolean, character, string, integer, and floating point values
+as described in the following sections.
+
+@menu
+* Boolean literal expressions::
+* Character literal expressions::
+* String literal expressions::
+* Integer literal expressions::
+* Floating point literal expressions::
+@end menu
+
+@node Boolean literal expressions, Character literal expressions, Lexical Structure, Lexical Structure
+@unnumberedsec Boolean literal expressions
+@cindex Boolean literal expressions
+@kwindex true
+@kwindex false
+
+Examples:
+
+@example
+true
+false
+@end example
+
+Syntax:
+
+@example
+@var{bool_literal_expression} @result{} true | false
+@end example
+
+@code{BOOL} objects represent boolean values (@pxref{Built-in
+Classes}). The two possible values are represented by the @emph{boolean
+literal expressions}: @code{true} and @code{false}.
+
+@node Character literal expressions, String literal expressions, Boolean literal expressions,  Lexical Structure
+@unnumberedsec Character literal expressions
+@cindex Character literal expressions
+@kwindex '
+@kwindex \
+
+Example:
+
+@example
+'a'
+@end example
+
+Syntax:
+
+@example
+@var{char_literal_expression} @result{} ' (@var{ISO_character} | \ @var{escape_seq}) '
+
+@var{escape_seq} @result{} a | b | f | n | r | t | v | \ | ' | " | @var{octal_digit} @{@var{octal_digit}@}
+@end example
+
+@code{CHAR} objects represent characters (@pxref{Built-in
+Classes}). @emph{Character literal expressions} begin and end with
+single quote marks. These may enclose either any single ISO-Latin-1
+printing character except single quote or backslash or an escape code
+starting with a backslash.
+
+The escape codes are interpreted as follows: @code{'\a'} is an
+@emph{alert} such as a bell, @code{'\b'} is the @emph{backspace}
+character, @code{'\f'} is the @emph{form feed} character, @code{'\n'} is
+the @emph{newline} character, @code{'\r'} is the @emph{carriage return}
+character, @code{'\t'} is the @emph{horizontal tab} character,
+@code{'\v'} is the @emph{vertical tab} character, @code{'\\'} is the
+@emph{backslash} character, @code{'\''} is the @emph{single quote}
+character, and @code{'\"'} is the @emph{double quote} character. A
+backslash followed by one or more octal digits represents the character
+whose octal representation is given. The mapping is implementation
+dependent.
+
+@node String literal expressions, Integer literal expressions, Character literal expressions, Lexical Structure
+@unnumberedsec String literal expressions
+@cindex String literal expressions
+@kwindex "
+
+Examples:
+
+@example
+"a string literal"
+"concat" "enation"
+@end example
+
+Syntax:
+
+@example
+@var{str_literal_expression} @result{} "@{@var{ISO_character}@}" @{"@{@var{ISO_character}@}"@}
+@end example
+
+@code{STR} objects represent strings (@pxref{Built-in
+Classes}). @emph{String literal expressions} begin and end with double
+quote marks. The characters making up the string are specified in this
+construct from left to right. A backslash starts an escape sequence as
+with character literals. All successive octal digits following a
+backslash are taken to define a single character. Individual
+double-quote-bounded segments of string literals may not extend beyond a
+single line in the source text. However, successive quote bounded
+segments are concatenated together to form a single string and can be
+used to allow string literals to span more than one line of source
+code. They may also be used to force the end of an octal encoded
+character. For example: @code{"\0367"} is a one character string, while
+@code{"\03""67"} is a three character string. Such segments may be
+separated by comments and whitespace.
+
+@node Integer literal expressions, Floating point literal expressions, String literal expressions, Lexical Structure
+@unnumberedsec Integer literal expressions
+@cindex Integer literal expressions
+@kwindex 0b
+@kwindex 0o
+@kwindex 0x
+
+Examples:
+
+@example
+14
+14i
+-4532
+39_832_983_298
+0b101011
+-0b_10111010_00101100_01010101
+0o372363i
+Ox_e98a_7c4d_65d7_6aa6_932d
+@end example
+
+Syntax:
+
+@example
+@var{int_literal_expression} @result{} [-] (@var{binary_int} | @var{octal_int}
+   | @var{decimal_int} | @var{hex_int}) [i]
+
+@var{binary_int} @result{} 0b @{@var{binary_digit} | _@}
+
+@var{binary_digit} @result{} 0 | 1
+
+@var{octal_int} @result{} 0o @{@var{octal_digit} | _@}
+
+@var{octal_digit} @result{} 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+@var{decimal_int} @result{} @var{decimal_digit} @{@var{decimal_digit} | _@}
+
+@var{hex_int} @result{} 0x @{@var{hex_digit} | _@}
+
+@var{hex_digit} @result{} @var{decimal_digit} | a | b | c | d | e | f
+@end example
+
+@code{INT} objects represent machine integers and @code{INTI} objects
+represent infinite precision integers (@pxref{Built-in Classes}). The
+literal form for @code{INTI} objects ends with a trailing @code{i}. A
+leading @code{-} sign is used to denote a negative integer. Integer
+literals can be represented in four bases: binary is base 2, octal is
+base 8, decimal is base 10 and hexadecimal is base 16. These are
+indicated by the prefixes: @code{0b}, @code{0o}, nothing, and @code{0x}
+respectively. Underscores may be used within integer literals to improve
+readability and are ignored. @code{INT} literals are only legal if they
+are in the representable range.
+
+@node Floating point literal expressions, , Integer literal expressions, Lexical Structure
+@unnumberedsec Floating point literal expressions
+@cindex Floating point literal expressions
+
+Examples:
+
+@example
+12.34
+3.4e-8d
+3.498_239_832_932_988_9e22x
+2.2i
+@end example
+
+Syntax:
+
+@example
+@var{flt_literal_expression} @result{} [-] @var{decimal_int} . @var{decimal_int}
+   [e [-] @var{decimal_int}] [d | x | dx | i]
+@end example
+
+@code{FLT}, @code{FLTD}, @code{FLTX}, and @code{FLTDX} objects represent
+floating point numbers according to the single, double, extended, and
+double extended representations defined by the IEEE-754-1985 standard
+and @code{FLTI} objects represent arbitrary precision floating point
+numbers (@pxref{Built-in Classes}).  @emph{Floating point literal
+expressions} of these types are indicated by the suffixes: nothing,
+@code{d}, @code{x}, @code{dx}, and @code{i}, respectively. The optional
+@code{e} portion is used to specify a power of 10 by which to multiply
+the decimal value. Underscores may be used within floating point
+literals to improve readability and are ignored. Literal values are only
+legal if they are within the range specified by the IEEE standard.
+
+@node Special Features, Built-in Classes, Lexical Structure, Top
+@unnumbered Special Features
+@cindex Special Features
+
+This section describes several features of classes that are
+automatically defined or have special properties.
+
+@menu
+* invariant::
+* main::
+@end menu
+
+@node invariant, main, Special Features, Special Features
+@unnumberedsec @code{invariant}
+@cindex invariant
+@kwindex invariant
+
+If a routine with the signature @code{invariant:BOOL}, appears in a
+class, it defines a class invariant. It is a fatal error for it to
+evaluate to false after any public routine or iter of the class returns
+or yields.
+
+@node main, , invariant, Special Features
+@unnumberedsec @code{main}
+@cindex main
+@kwindex main
+
+A non-parameterized value or reference class is specified when a Sather
+program is compiled. This class must define a routine named @code{main}.
+When the program executes, an object of the specified type is created
+and @code{main} is called on it. If @code{main} is declared to have an
+argument of type @code{ARRAY@{STR@}}, it will be passed an array of any
+command line specified when the program is called. If it is declared to
+have a return value of type @code{INT}, this will specify the exit code
+of the program when it finishes execution.
+
+@node Built-in Classes, Interfacing with other Languages, Special Features, Top
+@unnumbered Built-in Classes
+@cindex Built-in Classes
+@kwindex $OB
+@kwindex AREF
+@kwindex AVAL
+@kwindex ARRAY
+@kwindex TUP
+@kwindex BOOL
+@kwindex CHAR
+@kwindex STR
+@kwindex INT
+@kwindex INTI
+@kwindex FLT
+@kwindex FLT
+@kwindex FLTD
+@kwindex FLTX
+@kwindex FLTDX
+@kwindex FLTI
+@kwindex EXT
+@kwindex SYS
+@kwindex $REHASH
+
+This section provides a short description of classes that are a part of
+every Sather implementation and which may not be modified. The detailed
+semantics and precise interface are specified in the class library
+documentation.
+
+@itemize @bullet
+@item
+@code{$OB} is automatically a supertype of every type. Variables
+declared by this type may hold any object. It has no features.
+
+@item
+@code{AREF@{T@}} is a reference array class. Any reference class which
+includes it obtains an array of elements of type @code{T} in addition to
+any attributes it has defined. In such classes, @code{new} has a single
+integer argument that specifies the size of the array portion.  It
+defines routines and iters named: @code{asize}, @code{aget},
+@code{aset}, @code{aclear}, @code{acopy}, @code{aelts!},
+@code{aset_elts!}, and @code{ainds!}. Array indices start at zero.
+
+@item
+@code{AVAL@{T@}} is the value class analog of @code{AREF}. Classes which
+include @code{AVAL} must define @code{asize} as an integer constant
+which determines the size of the array portion.
+
+@item
+@code{ARRAY@{T@}} defines general purpose array objects. They may be
+directly constructed by array creation expressions (@pxref{Array
+creation expressions}).
+
+@item
+@code{TUP} names a set of parameterized value types called tuples, one
+for each number of parameters. Each has as many attributes as parameters
+and they are named @code{t1}, @code{t2}, etc. Each is declared by the
+type of the corresponding parameter (e.g. @code{TUP@{INT,FLT@}} has
+attributes @code{t1:INT} and @code{t2:FLT}). It defines @code{create}
+with an argument corresponding to each attribute.
+
+@item
+@code{BOOL} defines value objects which represent boolean values. The
+initial value is @code{false}.
+
+@item
+@code{CHAR} defines value objects which represent characters. The number
+of bits in a @code{CHAR} object must be less than or equal to the number
+in an @code{INT} object. The initial value is @code{'\0'}.
+
+@item
+@code{STR} defines reference objects which represent strings.
+
+@item
+@code{INT} defines value objects which represent machine-dependent
+integers. The size is implementation dependent but must be at
+least 32 bits. The two's complement representation is used to
+represent negative values. Bit operations are supported in addition to
+numerical operations.
+
+@item
+@code{INTI} defines reference objects which represent infinite precision
+integers.
+
+@item
+@code{FLT}, @code{FLTD}, @code{FLTX}, and @code{FLTDX} define value
+objects which represent floating point values according to the single,
+double, extended, and double extended representations defined by the
+IEEE-754-1985 standard.
+
+@item
+@code{FLTI} defines reference objects which represent arbitrary
+precision floating point objects.
+
+@item
+@code{EXT_OB} is used to refer to ``foreign pointers''. These might be
+used, for example, to hold references to C structures. Such pointers are
+never followed by Sather and are treated essentially as integers which
+disallow arithmetic operations. They may be passed to external routines.
+
+@item
+@code{SYS} defines a number of routines for accessing system
+information.  @code{tp(ob:$OB):TYPE} returns the type of an object.
+@code{destroy(ob:$OB)} explicitly deallocates an object (Sather is
+garbage collected and this is only done for efficiency reasons in
+special circumstances). @code{id(ob:$OB):INT} returns an integer id
+associated with a particular object.  @code{ob_eq(o1,o2:$OB):BOOL} is
+used to test two objects for equality.
+
+@item
+@code{$REHASH} defines the single routine @code{rehash}. Any class whose
+objects need to perform special operations when they are moved or copied
+should be a subtype of it. The @code{rehash} routine is called on such
+objects if the system changes their location during garbage collection.
+@end itemize
+
+@node Interfacing with other Languages, Acknowledgements, Built-in Classes, Top
+@unnumbered Interfacing with other Languages
+@cindex Interfacing with other Languages
+
+External classes are used to interface with code from other languages.
+Each external class is typically associated with an object file compiled
+from a language like C or Fortran. External classes do not support
+subtyping, implementation inheritance, or overloading. External class
+bodies consist of a list of routine definitions. Routines with no body
+specify the interface for Sather code to call external code. Routines
+with a body specify the interface for external code to call Sather code.
+
+Each routine name without a body may only appear once in any external
+class and the corresponding external object file must provide a
+conforming function definition. Sather code may call these external
+routines using a class call expression of the form
+@code{EXT_CLASS::ext_rout(5)}. External code may refer to an external
+routine with a body by concatenating the class name, an underscore, and
+the routine name (e.g. @code{EXT_CLASS_sather_rout}).
+
+Only a restricted set of types are allowed for the arguments and return
+values of these calls.  The built-in value types @code{BOOL},
+@code{CHAR}, @code{INT}, @code{FLT}, @code{FLTD}, @code{FLTX}, and
+@code{FLTDX} are allowed anywhere and on each machine have the format
+supported by the C compiler used to compile Sather for that machine. The
+type @code{EXT_OB} is also allowed anywhere and is used to reference
+storage allocated by the external language. Sather cannot follow these
+pointers.
+
+To enhance the efficiency of the interface, the arguments of external
+routines without bodies may also be declared by types which have include
+paths to @code{AREF@{CHAR@}}, @code{AREF@{INT@}}, @code{AREF@{FLT@}},
+@code{AREF@{FLTD@}}, @code{AREF@{FLTX@}}, @code{AREF@{FLTDX@}}, or
+@code{AREF@{EXT_OB@}}. When a Sather program calls such a routine, the
+external routine is passed a pointer into just the array portion of the
+object; if @code{void} is passed, the C routine will receive a
+@code{NULL} pointer.  The external routine may modify the contents of
+this array portion, but must not store the pointer. There is no
+guarantee that the pointer will remain valid after the external routine
+returns. These restrictions help to ensure that the Sather type system
+and garbage collector will not be corrupted by external code while not
+sacrificing efficiency for the most important cases.
+
+@node Acknowledgements, Concept Index, Interfacing with other Languages, Top
+@unnumbered Acknowledgements
+@cindex Acknowledgements
+
+Sather has adopted ideas from a number of other languages. Its primary
+debt is to Eiffel, designed by Bertrand Meyer, but it has also been
+influenced by C, C++, Cecil, CLOS, CLU, Common Lisp, Dylan, ML,
+Modula-3, Oberon, Objective C, Pascal, SAIL, School, Self, and
+Smalltalk. Many people have been involved in the language design
+discussions including: Subutai Ahmad, Krste Asanovic, Jonathan Bachrach,
+David Bailey, Joachim Beer, Jeff Bilmes, Peter Blicher, John Boyland,
+Matthew Brand, Henry Cejtin, Richard Durbin, Jerry Feldman, Carl
+Feynman, Ben Gomes, Gerhard Goos, Robert Griesemer, Hermann Haertig, Ari
+Huttunen, Roberto Ierusalimschy, Phil Kohn, Franz Kurfess, Chu-Cheow
+Lim, Franco Mazzanti, Stephan Murer, Thomas Rauber, Steve Renals, Noemi
+de La Rocque Rodriguez, Hans Rohnert, Heinz Schmidt, Carlo Sequin,
+Andreas Stolcke, David Stoutamire, Clemens Szyperski, Martin Trapp and
+Bob Weiner.
+
+@node Concept Index, Keyword and Built-in Index, Acknowledgements, Top
+@unnumbered Concept Index
+@printindex cp
+@node Keyword and Built-in Index, , Concept Index, Top
+@unnumbered Keyword and Built-in Index
+@printindex kw
+@summarycontents
+
+@contents
+@bye

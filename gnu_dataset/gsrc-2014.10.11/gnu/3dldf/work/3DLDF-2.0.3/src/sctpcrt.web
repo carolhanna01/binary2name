@@ -1,0 +1,6359 @@
+@q sctpcrt.web @>
+       
+@q * Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * |Scanner_Type::create|.@>
+@** {\bf Scanner\_Type} Create function.\quad ({\tt sctcrt\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2004.07.18.}
+Created this file.  
+\ENDLOG 
+
+@q * (1) Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.12.21.}
+Now including \filename{deftfncs.h}.  It contains function definitions for 
+|Definition_Info_Node|.
+\ENDLOG
+
+
+@<Include files@>=
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "gsltmplt.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++" 
+#include "pictures.h++"
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++"
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+#include "arc.h++"
+#include "helices.h++"
+#include "origami.h++"
+
+#if 0 
+   #include "patterns.h++"
+#endif 
+
+#include "solids.h++"
+#include "solfaced.h++"
+#include "cuboid.h++"
+#include "polyhed.h++"
+#include "ddchdrn.h++"
+#include "rhtchdrn.h++"
+#include "plyhdslc.h++"
+#include "cones.h++"
+#include "cylinder.h++" 
+#include "ellpsoid.h++"
+#include "spheres.h++"
+#include "sphrdevl.h++"
+#include "parabold.h++"
+#include "paraellp.h++"
+#include "parahypr.h++" 
+#include "glyphs.h++"
+#include "pctfncs0.h++"
+#include "utility.h++"
+#include "pntrvcf0.h++"
+#include "predctes.h++"
+#include "scanprse.h++"   
+#include "figures.h++"   
+#include "parser.h++"   
+#include "parser_1.h++"   
+#include "scan.h++"   
+#include "scanprsf.h++"   
+#include "imetfncs.h++"
+#include "deftfncs.h++"
+
+@q * (1) Pseudo-constructor for dynamic allocation.@>
+@* Pseudo-constructor for dynamic allocation.
+This function is declared in \filename{io.web}.  It must be defined
+here, because it calls |Color::initialize_colors| to write the
+|Color| definitions to the MetaPost output file. 
+\initials{LDF 2004.04.16.}
+
+|scanner_node->out[]->type| is always set to |Io_Struct::FILE_TYPE|  
+for the formats which are being used.   
+Currently, MetaPost is the only output format in use.
+\initials{LDF 2004.09.09.}
+
+\LOG
+\initials{LDF 2004.04.16.}  Moved this definition to this file from
+\filename{io.web}. 
+
+\initials{LDF 2004.04.16.}
+Now always setting |scanner_node->in->is_file| to |true| and 
+setting |scanner_node->out[]->is_file| to |true| for the formats
+which are being used.  Currently, MetaPost is the only output format
+in use. 
+
+
+\initials{LDF 2004.04.20.}  Moved this function definition from
+\filename{colors.web} to this file.  It needs to be here because it
+uses preprocessor macros defined in \filename{parser.w}.
+
+\initials{LDF 2004.04.20.} 
+Changed |Scanner_Node* scanner_node_ptr| to
+|Scanner_Node scanner_node|. 
+
+\initials{LDF 2004.04.20.}  
+Added |const bool top_level| argument.  If it's |true|, 
+then |scanner_node->id_map_node| will be initialized.  
+Just started working on this. 
+
+\initials{LDF 2004.04.20.}
+Removed the definition of |Scanner_Type::create| from
+\filename{colors.web} to this file.  This was necessary because it
+uses |LDF_TYPE|, which is declared in \filename{parser.w}.
+
+\initials{LDF 2004.05.09.}  
+Changed calls to
+|Scanner_Type::add_entry| to account for the addition of the 
+|cconst_flag| argument.
+
+\initials{LDF 2004.05.21.}  
+Changed the name of this function from
+|create_new| to |create|.  With the old name, it wasn't possible
+to call |create_new<Pen>|.  When I tried to call
+|std::create_new<Pen>|, I got the error message 
+``error: `create\_new' undeclared in namespace `std'{}''.  
+
+\initials{LDF 2004.06.02.}  
+Setting |scanner_node->draw_color_ptr|, |scanner_node->fill_color_ptr|, 
+|scanner_node->pen_ptr|, |scanner_node->dash_pattern_ptr|, 
+and |scanner_node->picture_ptr| to 0.  They're used in the rules for 
+\§drawing command>.  
+
+\initials{LDF 2004.07.05.}
+@:BUG FIX@> BUG FIX:  Removed default for |const Run_State& r|.  
+GCC didn't complain before, though.
+Moved local variable declarations to beginning of function, 
+because I'm now using a conditional to test whether |str| 
+is the empty string.  If I hadn't, the declarations would have been 
+local to the |if| section of the conditional.
+
+\initials{LDF 2004.08.28.}
+Added |Scanner_Node| argument to all calls to 
+|Scanner_Type::add_entry|.
+
+\initials{LDF 2004.08.29.}
+Changed all calls of |Scanner_Type::add_entry| to reflect the new
+calling convention.
+
+\initials{LDF 2004.08.29.}
+Now setting |scanner_node->color_vector_ptr|,
+|scanner_node->draw_color_vector_ptr|, and 
+|scanner_node->fill_color_vector_ptr| to 0.
+They are used in the parser rules for drawing |Solids|.
+\ENDLOG 
+
+@q ** Definition.    @>
+
+@<Define |Scanner_Type::create|@>=
+Scanner_Node
+Scanner_Type::create(string str,
+                     const Run_State& r,
+                     const bool top_level)
+{
+
+  volatile bool DEBUG = false; /* |true| */ @; 
+
+  stringstream cerr_strm;
+
+  string thread_name = "";
+
+#ifdef HAVE_PTHREAD_H  
+  Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+  thread_name = Thread_Info_Type::get_thread_name(thread_info);
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+#if DEBUG_COMPILE
+
+  if (DEBUG)
+    {
+      cerr_strm << "Entering Scanner_Type::create()\n";
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+    }
+#endif
+  
+
+@q ** (2) Set up input and output streams.@>      
+
+@*1  Set up input and output streams.
+\initials{LDF 2004.10.28.}
+
+@<Define |Scanner_Type::create|@>=
+
+  ifstream* in_file   = 0;
+  istream*  in_stream = 0;
+  
+  string in_filename;
+
+  string out_filename_metapost;
+  string out_filename_png;
+  string out_filename_libplot;
+  string out_filename;
+  ofstream* out_file; 
+  ofstream* out_file_metapost; 
+  ofstream* out_file_png; 
+  ofstream* out_file_libplot; 
+
+
+@q *** (3) Set input filename.@>      
+
+@*2  Set input filename.
+\initials{LDF 2004.10.28.}
+
+@<Define |Scanner_Type::create|@>=
+
+ if (str != "")
+  {
+
+    in_file = new ifstream;
+    in_filename = str;
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+      cerr << "in_filename == " << in_filename << endl;
+#endif
+
+  string::size_type s = in_filename.find('.');
+    if (s == string::npos)
+    {
+#if DEBUG_COMPILE
+      if (DEBUG) 
+        cerr << "No period." << "\n";@/@,@;
+#endif
+
+@q **** (4)    @>      
+@  Try ``\<str>\.{.ldf}'' first.   
+\initials{LDF 2004.03.28.}
+@<Define |Scanner_Type::create|@>=
+
+  in_filename += ".ldf";
+
+#if DEBUG_COMPILE
+      if (DEBUG)
+        cerr << "Trying " << in_filename<< ".\n";
+#endif
+      
+      in_file->open(in_filename.c_str());
+      if (*in_file)
+        {
+#if DEBUG_COMPILE
+          if (DEBUG)
+            cerr << in_filename << " exists!" << endl;
+#endif
+        }
+
+@q **** (4)     @>      
+@ If ``\<str>\.{.ldf}'' can't be opened, try  ``\<str>'' with no extension.
+\initials{LDF 2004.03.28.}
+@<Define |Scanner_Type::create|@>=
+      else 
+        {
+#if DEBUG_COMPILE
+          if (DEBUG)
+            cerr << in_filename << " doesn't exist!" << endl;
+#endif
+          in_filename = str;
+          in_file->open(in_filename.c_str());
+          if (!(*in_file))
+            {
+              cerr << "ERROR! In Scanner_Type::create():\n"
+                   << in_filename << " doesn't exist! "
+                   << "Returning 0. Will try to continue.\n\n";
+
+              delete in_file;
+              return 0;
+            }
+        }
+    } // |if|
+
+@q **** (4)     @>          
+@ There's at least one period in |str|, so we use it literally as the
+input filename.
+\initials{LDF 2004.03.28.}
+@<Define |Scanner_Type::create|@>=
+  else 
+    {
+#if DEBUG_COMPILE
+      if (DEBUG) 
+      {
+          cerr_mutex.lock(); 
+          cerr << "s == " << s << endl;
+          cerr_mutex.unlock(); 
+      }
+#endif
+
+      in_file->open(in_filename.c_str());
+      if (*in_file)
+        {
+#if DEBUG_COMPILE
+          if (DEBUG)
+            cerr << in_filename << " exists!" << endl;
+#endif
+        }
+      else
+        {
+          cerr << "ERROR! In Scanner_Type::create():\n"
+               << in_filename << " doesn't exist! "
+               << "Returning 0. Will try to continue.\n\n";
+          delete in_file;
+          return 0;
+        }
+    }
+  
+@q **** (4)  Check |in_filename|, return 0 upon failure.@>          
+@ Check |in_filename|, return 0 upon failure.
+\initials{LDF 2004.03.28.}
+
+\LOG
+\initials{LDF 2004.07.03.}
+Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+      @<Check |in_filename|, return 0 upon failure@>@;
+
+@q **** (4)    @>          
+@ Now set the output file names.  There might be multiple output
+files, if more than one output format is desired.  Currently, only
+MetaPost output is supported, but I plan to support PNG output and one
+or more of the formats supported by the GNU plotutils package.
+\initials{LDF 2004.03.28.}
+@<Define |Scanner_Type::create|@>=
+
+  string out_filename_base = str;
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    cerr << "out_filename_base == " << out_filename_base << endl;
+#endif
+
+
+  s = out_filename_base.find_last_of('.');
+  
+  if (s != string::npos)
+    out_filename_base.erase(s);
+
+#if DEBUG_COMPILE
+  if (DEBUG)   
+    cerr << "out_filename_base after erase == "
+         << out_filename_base << endl;
+#endif
+
+
+  if (r.do_output[Run_State::METAPOST])
+    {
+      out_file = 0;
+      out_filename_metapost = out_filename_base + ".mp";
+      out_filename = out_filename_metapost;
+      @<Check |out_filename|, return 0 upon failure@>@;
+      out_file_metapost = out_file;
+      out_file = 0;
+    }  
+
+
+  if (r.do_output[Run_State::PNG])
+    {
+      out_file = 0;
+      out_filename_png = out_filename_base + ".png";
+      out_filename = out_filename_png;
+      @<Check |out_filename|, return 0 upon failure@>@;
+      out_file_png = out_file;
+      out_file = 0;
+    }
+
+  if (r.do_output[Run_State::LIBPLOT])
+    {
+      out_file = 0;
+      out_filename_libplot = out_filename_base + ".lpt";
+      out_filename = out_filename_libplot;
+      @<Check |out_filename|, return 0 upon failure@>@;
+      out_file_libplot = out_file;
+      out_file = 0;
+    }
+
+
+  } /* if (str != "")  */
+
+
+@q *** (3)  Use |stdin| and default output files.@>      
+@*2  Use |stdin| and default output files.
+
+\LOG
+\initials{LDF 2004.08.08.}
+Added this section.
+
+\initials{LDF 2004.08.08.}
+This code works, but when I try to use it a memory fault error occurs in
+|yyparse|.  Currently, it's too hard to debug because it takes so long for
+\filename{parser.c++} to compile.  I'll try to debug it once I've removed more
+code from the parser rules and put it into functions.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+/* LDF 2004.09.18.   Working on this.  */
+
+  else /* (|str == ""|)  */
+    {
+
+      in_stream = &cin;
+
+#if 0 /* LDF 2004.09.18.  Commented-out.  */
+
+      if (r.do_output[Run_State::METAPOST])
+        {
+          out_file = 0;
+
+          out_filename_metapost = "3dldfput.mp";
+          out_filename = out_filename_metapost;
+
+          @<Check |out_filename|, return 0 upon failure@>@;
+          out_file_metapost = out_file;
+          out_file = 0;
+        }  
+
+      if (r.do_output[Run_State::PNG])
+        {
+          out_file = 0;
+          out_filename_png = "3dldfput.png";
+          out_filename = out_filename_png;
+          @<Check |out_filename|, return 0 upon failure@>@;
+          out_file_png = out_file;
+          out_file = 0;
+        }
+
+      if (r.do_output[Run_State::LIBPLOT])
+        {
+          out_file = 0;
+          out_filename_libplot = "3dldfput.lpt";
+          out_filename = out_filename_libplot;
+          @<Check |out_filename|, return 0 upon failure@>@;
+          out_file_libplot = out_file;
+          out_file = 0;
+        }
+
+#endif /* LDF 2004.09.18.  Commented-out.  */
+
+    } /* |else | (|str == ""|)  */
+
+
+@q **** (4) Success!  Allocate memory.  @>          
+
+@ Succeeded in setting the input filename and the output filenames.
+Allocate memory for a |Scanner_Node|, the |Input_Struct| and
+|Output_Structs|, set their |filename| members, and return the
+|Scanner_Node|.  The |Output_Struct| pointers for the unused
+output file formats are set to 0.
+\initials{LDF 2004.03.28.}
+
+\LOG
+\initials{LDF 2004.04.16.}  
+Now writing header with |in_filename|,
+|out_filename_metapost|,  
+and a datestamp to the beginning of the MetaPost output file.
+
+
+\initials{LDF 2004.05.02.}  
+Now setting |scanner_node->in->up| to 0.
+Added |Input_Struct* up| to |struct Input_Struct| today.
+
+\initials{LDF 2004.05.25.}  
+Removed references to the global variable 
+|out_stream|, which no longer exists.
+
+\initials{LDF 2004.06.03.}  
+Now setting |color_ptr| to 0.  Not doing this causes
+an error in the rule ``\§drawing command> $\longrightarrow$ 
+\§basic drawing command>  
+\§path expression> \§with clause list>'', which causes the program to exit
+(without a core dump).
+
+\initials{LDF 2004.07.09.}
+@:BUG FIX@> BUG FIX:  Now setting |scanner_node>run_state| to |r|.
+
+\initials{LDF 2004.07.15.} 
+Now setting |scanner_node->clear_ptr| and |scanner_node->endfig_ptr| to 0.
+
+\initials{LDF 2004.07.19.}
+Now setting |scanner_node->thread_info| to 0.
+
+\initials{LDF 2005.12.05.}
+Now setting |scanner_node->ulong_long_switch| to |false|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+
+  Scanner_Node scanner_node = new Scanner_Type;
+
+  scanner_node->run_state = r;
+  scanner_node->thread_info = 0;
+
+#ifdef HAVE_PTHREAD_H  
+  scanner_node->output_pending.value_0 = false;
+  scanner_node->output_pending.value_1 = 0;
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+  scanner_node->array_switch = false; 
+  scanner_node->known_switch = false;
+  scanner_node->action_switch = 0;
+  scanner_node->ulong_long_switch = false;
+  scanner_node->up = 0;
+  scanner_node->in = new Input_Struct;
+  scanner_node->in->up = 0;
+  
+  scanner_node->in->filename = in_filename;
+
+  if (in_file != static_cast<ifstream*>(0))
+    { 
+        scanner_node->in->stream_ptr = static_cast<istream*>(in_file);
+        scanner_node->in->type = Io_Struct::FILE_TYPE;
+        in_file = 0;
+
+    } /* |if (in_file != 0)|  */
+
+
+  else if (in_stream != static_cast<istream*>(0))
+     {
+        scanner_node->in->stream_ptr = in_stream;
+        scanner_node->in->type = Io_Struct::STDIN_TYPE;
+        in_stream = 0;
+
+     } /* |else if (in_stream != 0)|  */
+
+  else /* (|in_file == 0 && in_stream == 0|)  */
+     {
+          cerr_strm << thread_name << "ERROR! In `Scanner_Type::create()':"
+                    << endl 
+                    << "No input stream. "
+                    << "Returning 0 and will try to continue.";
+          cerr_message(cerr_strm); 
+          return 0;
+
+     } /* |else| (|in_file == 0 && in_stream == 0|)  */
+
+@q ***** (5) Test type of input stream and open output files, if appropriate.@> 
+@ Test type of input stream and open output files, if appropriate.
+If we open them, write headers to them.  
+Currently, the {\MP/} output file is the only one that's written,
+because other formats are not yet being used.
+\initials{LDF 2004.09.19.}
+
+\LOG
+\initials{LDF 2004.09.19.}
+Now testing |scanner_node->in->type| and only creating a new |ostream|
+for the appropriate member of |out| if it's |Io_Struct::FILE_TYPE|.
+This is done for |Scanner_Nodes| that read from standard input and
+write to the default output file in |main|.  
+
+\initials{LDF 2004.09.19.}
+Commented-out the call to
+``|Color::initialize_colors(out_file_metapost)|''.  It's no longer
+needed, because this function predefines variables for these |Colors|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+  time_t tt;
+  tm *lt;
+  tt = time(0);
+  lt =localtime(&tt);
+
+  string datestamp(asctime(lt));
+  datestamp.erase(datestamp.size() - 1); // Remove terminal line-feed.
+
+  if (      scanner_node->in->type 
+         == Io_Struct::FILE_TYPE 
+      && r.do_output[Run_State::METAPOST])
+    {
+      scanner_node->out[Run_State::METAPOST] = new Output_Struct;
+      scanner_node->out[Run_State::METAPOST]->filename = out_filename_metapost;
+      scanner_node->out[Run_State::METAPOST]->stream_ptr
+        = static_cast<ostream*>(out_file_metapost);
+
+      scanner_node->out[Run_State::METAPOST]->type = Io_Struct::FILE_TYPE;
+
+
+
+#ifdef __DECCXX
+  out_file_metapost->setf(ios_base::fixed, ios_base::floatfield);
+#else
+#ifdef __GNUC__ 
+  out_file_metapost->setf(ios::fixed, ios::floatfield);
+#endif 
+#endif 
+  
+      *out_file_metapost << "%%%% " << out_filename_metapost << "." << endl
+                         << "%%%% Generated on " << datestamp << endl 
+                         << "%%%% from " << in_filename << " by "
+                         << "GNU 3DLDF " << VERSION_3DLDF << "."
+                         << endl << endl << flush; 
+
+
+#if 0 
+    Color::initialize_colors(out_file_metapost);
+#endif 
+      
+      out_file_metapost = 0;
+    }
+  else
+    scanner_node->out[Run_State::METAPOST] = 0;
+
+
+
+  if (   scanner_node->in->type 
+      == Io_Struct::FILE_TYPE && r.do_output[Run_State::PNG])
+    {
+      scanner_node->out[Run_State::PNG] = new Output_Struct;
+      scanner_node->out[Run_State::PNG]->filename = out_filename_png;
+      scanner_node->out[Run_State::PNG]->stream_ptr
+        = static_cast<ostream*>(out_file_png);
+      scanner_node->out[Run_State::PNG]->type = Io_Struct::FILE_TYPE;
+
+
+      out_file_png = 0;
+   }
+
+  else
+    scanner_node->out[Run_State::PNG] = 0;
+
+  if (   scanner_node->in->type 
+      == Io_Struct::FILE_TYPE && r.do_output[Run_State::LIBPLOT])
+    {
+      scanner_node->out[Run_State::LIBPLOT] = new Output_Struct;
+      scanner_node->out[Run_State::LIBPLOT]->filename = out_filename_libplot;
+      scanner_node->out[Run_State::LIBPLOT]->stream_ptr
+        = static_cast<ostream*>(out_file_libplot);
+
+
+      scanner_node->out[Run_State::LIBPLOT]->type = Io_Struct::FILE_TYPE;
+
+      out_file_libplot = 0;
+    }
+  else
+    scanner_node->out[Run_State::LIBPLOT] = 0;
+
+
+
+@q ** (2) Assign initial values to data members.  @>          
+@*1 Assign initial values to data members.
+\initials{LDF 2004.06.28.}
+
+\LOG
+\initials{LDF 2004.06.28.}
+Added this section.
+
+\initials{LDF 2004.07.03.}
+Removed code for setting |scanner_node->thread_ctr|.  
+|thread_ctr| is now part of |thread_info|, which 
+contains thread-specific data. 
+
+\initials{LDF 2004.09.09.}
+Now setting |scanner_node->first_call_yylex| to |true|.
+
+\initials{LDF 2004.09.10.}
+Now setting |scanner_node->if_ctr| to 0.
+It's used in the parser rules for conditionals in \filename{pcondit.w}
+and |Scan_Parse::conditional|, which is defined in
+\filename{scanprsf.web}. 
+
+\initials{LDF 2004.09.12.}
+Now setting |scanner_node->group_ctr| and |scanner_node->loop_ctr| 
+to 0. 
+
+\initials{LDF 2004.09.13.}
+Now setting |scanner_node->loop_info_node| to 0. 
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->first_call_yylex = true;
+
+   scanner_node->if_ctr    = 0;
+   scanner_node->group_ctr = 0;
+   scanner_node->loop_ctr  = 0;
+
+   scanner_node->loop_info_node  = 0;
+
+@q *** (3) Pointers for setting non-|Shape|-types.@>
+@*2 Pointers for setting non-|Shape|-types.
+\initials{LDF 2007.09.19.}
+
+\LOG
+\initials{LDF 2007.09.19.}
+Added this section.  
+Setting |scanner_node->focus_options = 0|.
+
+\initials{LDF 2007.11.28.}
+Now setting |scanner_node->focus_options = 0|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->focus_options  = 0;
+   scanner_node->matrix_options = 0;
+
+@q *** (3) Pointers for setting |Shape|-types.@>
+@*2 Pointers for setting |Shape|-types.
+\initials{LDF 2005.05.20.}
+
+\LOG
+\initials{LDF 2005.05.20.}
+Added this section.  Setting |scanner_node->helix_set_option_struct = 0|.
+
+\initials{LDF 2005.11.14.}
+Now setting |scanner_node->parabola_set_option_struct| and
+|scanner_node->hyperbola_set_option_struct| to 0.
+
+\initials{LDF 2007.07.29.}
+Now setting |scanner_node->conic_section_lattice_options| to 0.
+
+\initials{LDF 2007.10.12.}
+Now setting |scanner_node->polyhedron_options| to 0.
+
+\initials{LDF 2012.04.10.}
+@:BUG FIX@> BUG FIX:  Now setting |scanner_node->arc_options|,
+|scanner_node->ellipsoid_set_option_struct|,
+|scanner_node->ellipsoid_set_option_struct|,
+|scanner_node->sphere_set_option_struct|,
+and
+|scanner_node->paraboloid_set_option_struct| to 0.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->helix_set_option_struct = 0;
+   scanner_node->parabola_set_option_struct = 0;
+   scanner_node->hyperbola_set_option_struct = 0;
+
+   scanner_node->conic_section_lattice_options = 0;
+
+   scanner_node->polyhedron_options = 0;
+
+   scanner_node->arc_options = 0;
+   scanner_node->ellipsoid_set_option_struct = 0;
+   scanner_node->sphere_set_option_struct = 0;
+   scanner_node->paraboloid_set_option_struct = 0;
+
+
+
+@q *** (3)  Pointers for |with_clause_draw|. @>
+@*2 Pointers for |with_clause_draw|.
+\initials{LDF 2004.06.28.} 
+
+\LOG
+\initials{LDF 2004.08.29.}
+Now setting |scanner_node->color_vector_ptr|,
+|scanner_node->draw_color_vector_ptr|, and 
+|scanner_node->fill_color_vector_ptr| to 0.
+They are used in the parser rules for drawing |Solids|.
+
+
+\initials{LDF 2005.03.18.}
+Now setting |scanner_node->pen_vector_ptr| and 
+|scanner_node->dash_pattern_vector_ptr| to 0.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->color_ptr         = 0;
+  scanner_node->color_vector_ptr  = 0;
+
+  scanner_node->draw_color_ptr    = 0;
+  scanner_node->draw_color_vector_ptr  = 0;
+
+  scanner_node->fill_color_ptr    = 0;
+  scanner_node->fill_color_vector_ptr  = 0;
+
+  scanner_node->pen_ptr           = 0;
+  scanner_node->pen_vector_ptr    = 0;
+
+  scanner_node->dash_pattern_ptr  = 0;
+  scanner_node->dash_pattern_vector_ptr  = 0;
+
+  scanner_node->picture_entry_ptr = 0;
+  scanner_node->clear_ptr         = 0;
+  scanner_node->endfig_ptr        = 0;
+
+@q *** (3) Pointers for |with_clause_output|. @>
+@*2 Pointers for |with_clause_output|.
+\initials{LDF 2004.06.28.}
+
+\LOG
+\initials{LDF 2004.06.28.}
+All of these variables are now of type |void*|.  Previously, only |focus_ptr|
+was a |void*| and the rest were |reals| or |ints|.
+
+\initials{LDF 2004.06.28.}
+Added ``|_ptr|'' to the end of the names of all of the variables in this
+section, except for |focus_ptr|, which already had it.
+
+\initials{LDF 2005.03.13.}
+Now setting |scanner_node->surface_hiding_value_ptr| to 0.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->focus_ptr       = 0;
+   scanner_node->projection_ptr  = 0;
+   scanner_node->factor_ptr      = 0;
+   scanner_node->sort_value_ptr  = 0;
+   scanner_node->min_x_proj_ptr  = 0;
+   scanner_node->max_x_proj_ptr  = 0;
+   scanner_node->min_y_proj_ptr  = 0;
+   scanner_node->max_y_proj_ptr  = 0;
+   scanner_node->min_z_proj_ptr  = 0;
+   scanner_node->max_z_proj_ptr  = 0;
+
+   scanner_node->surface_hiding_value_ptr = 0;
+
+
+
+@q *** (3) Pointers for |predicate_clause|. @>
+@*2 Pointers for |predicate_clause|.
+\initials{LDF 2005.10.26.}
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this section with the assignment to |scanner_node->tolerance|.
+\ENDLOG 
+
+@q ****** (6) Code.@>
+
+@<Define |Scanner_Type::create|@>=
+
+
+   scanner_node->tolerance = 0;
+
+
+@q *** (3) Initialize |thread_vector_mutex|.@>      
+@*2 Initialize |thread_vector_mutex|.
+
+
+
+\LOG
+\initials{LDF 2004.07.10.}
+Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << "In `Scanner_Type::create()':" << endl
+                 << "About to try to initialize "
+                 << "`scanner_node->thread_vector_mutex'."
+                 << endl;
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  int status = pthread_mutex_init(&scanner_node->thread_vector_mutex, 0);
+
+@ Deleting |scanner_node| will probably fail if the |Scanner_Type| destructor tries to 
+destroy |thread_vector_mutex|.
+\initials{LDF 2004.07.10.}
+
+@<Define |Scanner_Type::create|@>=
+
+  if (status != 0)
+    {
+      cerr_strm << "ERROR! In `Scanner_Type::create()':" << endl
+                << "`pthread_mutex_init()' failed. "
+                << "Deleting `scanner_node' and returning 0." << endl;
+
+      cerr_message(cerr_strm, true); 
+      cerr_strm.str("");
+      
+      delete scanner_node;
+
+      return 0;
+    }
+#if DEBUG_COMPILE
+  else if (DEBUG)
+    {
+      cerr_strm << "In `Scanner_Type::create()':" << endl
+                << "`pthread_mutex_init()' succeeded."  << endl;
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ***  Handle |id_map_node|.  @>          
+@*2 Allocate memory on the free store for |id_map_node| and initialize
+it. 
+\initials{LDF 2004.04.20.}
+
+\LOG
+\initials{LDF 2004.04.20.}  
+Added this section.
+
+\initials{LDF 2004.08.29.}
+Now setting |scanner_node->id_map_node->scanner_node = scanner_node|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+ scanner_node->id_map_node = new Id_Map_Type;
+ scanner_node->id_map_node->up  = 0;
+ scanner_node->id_map_node->scanner_node = scanner_node;
+ 
+ if (top_level)
+   {
+
+#if DEBUG_COMPILE
+     if (DEBUG)
+       cerr << "top_level == true.  Initializing scanner_node->id_map_node." 
+            << endl;
+#endif
+
+@q ***  Add entries to |id_map_node->id_map|.  @>          
+
+@*2 Add entries to |id_map_node->id_map|.\hfil\break
+
+@<Define |Scanner_Type::create|@>=
+
+  unsigned short spark = Id_Map_Entry_Type::SPARK;
+
+@q **** (4) General-Purpose Words and ``Syntactic Sugar''.@>
+@*3 General-Purpose Words and ``Syntactic Sugar''.
+\initials{LDF 2004.09.24.}
+
+
+\LOG
+\initials{LDF 2004.09.24.}
+Added this section with calls to |scanner_node->add_entry| for 
+|IN|, |BY|, and |AROUND|.
+
+\initials{LDF 2004.12.03.}
+Added call to |scanner_node->add_entry| for |OFF|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("off", OFF, spark);
+  scanner_node->add_entry("by", BY, spark);
+  scanner_node->add_entry("around", AROUND, spark);
+
+@q **** (4) Commands.  @>          
+
+@*3 Commands.
+
+\LOG
+\initials{LDF 2004.08.25.}
+Added calls to |scanner_node->add_entry| for 
+|PLUS_ASSIGN|, |MINUS_ASSIGN|, |TIMES_ASSIGN|, and |DIVIDE_ASSIGN|.
+
+
+\initials{LDF 2004.09.30.}
+Added a call to |scanner_node->add_entry| for |END_INPUT|
+and a call to |scanner_node->add_synonym| for |endinput|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("end", END, spark);
+
+  scanner_node->add_entry("end_input", END_INPUT, spark);
+  scanner_node->add_synonym("endinput", "end_input");
+
+@q **** (4) |Path| connectors.  @>          
+@*3 |Path| connectors.
+
+\LOG
+\initials{LDF 2004.05.13.}  Added calls to |scanner_node->add_entry|
+for |AMPERSAND|, |HYPHEN_PAIR|, |HYPHEN_TRIPLE|, and |CYCLE|.
+
+\initials{LDF 2004.05.13.}  Added calls to |scanner_node->add_entry|
+for |REVERSE|, |SUBPATH|, and |OF|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+   scanner_node->add_entry("&", AMPERSAND, spark);
+   scanner_node->add_entry("--", HYPHEN_PAIR, spark);
+   scanner_node->add_entry("---", HYPHEN_TRIPLE, spark);
+
+   scanner_node->add_entry("cycle", CYCLE, spark);
+   scanner_node->add_entry("reverse", REVERSE, spark);
+   scanner_node->add_entry("subpath", SUBPATH, spark);
+   scanner_node->add_entry("of", OF, spark);
+
+
+@q **** (4) Types defined in 3DLDF.  @>          
+@*3 Types defined in 3DLDF.
+
+\LOG
+\initials{LDF 2004.05.17.}  
+Added entry for |BOOLEAN_DECLARATOR|.
+
+\initials{LDF 2004.05.19.}  
+Added entry for |STRING_DECLARATOR|.
+
+\initials{LDF 2004.05.21.}  
+Added entries for |PEN_DECLARATOR|,
+|COLOR_DECLARATOR|, |FOCUS_DECLARATOR|, AND |PICTURE_DECLARATOR|.
+
+\initials{LDF 2004.08.23.}
+Added entry for |COLOR_VECTOR_DECLARATOR|.
+
+\initials{LDF 2004.08.27.}
+Added entry for |POINT_VECTOR_DECLARATOR|.
+
+\initials{LDF 2004.09.01.}
+Added entries for |BOOL_POINT_DECLARATOR| and 
+|BOOL_POINT_VECTOR_DECLARATOR|.
+
+\initials{LDF 2004.10.16.}
+Added calls to |scanner_node->add_synonym| for |bool|.
+
+\initials{LDF 2004.12.10.}
+Added calls to |scanner_node->add_entry| for
+|path_vector|, |triangle_vector|, |reg_polygon_vector|, 
+|rectangle_vector|, |square_vector|, 
+|ellipse_vector|, |circle_vector|,  |cuboid_vector|, 
+|tetrahedron_vector|, |octahedron_vector|, |dodecahedron_vector|, 
+|icosahedron_vector|, and |trunc_octahedron_vector|.
+
+\initials{LDF 2004.12.11.}
+Added calls to |scanner_node->add_entry| for
+|boolean_vector_declarator|, 
+|string_vector_declarator|, 
+|numeric_vector_declarator|, 
+|transform_vector_declarator|, 
+|pen_vector_declarator|, 
+|dash_pattern_vector_declarator|, 
+|focus_vector_declarator|, and
+|picture_vector_declarator|.
+
+\initials{LDF 2005.01.07.}
+@:BUG FIX@> BUG FIX:  Changed the strings
+|"boolean_vector_declarator"|, |"numeric_vector_declarator"|, etc.,
+to |"boolean_vector"|, |"numeric_vector"|, etc., in the 
+following calls to |scanner_node->add_entry|.
+
+\initials{LDF 2005.01.07.}
+Added call to |scanner_node->add_synonym| for |bool_vector|.
+
+\initials{LDF 2005.01.26.}
+TRANSFORMAdded calls to |scanner_node->add_entry| for
+|nurb| and |nurb_vector|.
+
+\initials{LDF 2005.02.04.}
+Added calls to |scanner_node->add_entry| for
+|origami_figure| and |origami_figure_vector|.
+
+\initials{LDF 2005.02.11.}
+Added calls to |scanner_node->add_entry| for
+|polygon| and |polygon_vector|.
+
+\initials{LDF 2005.03.29.}
+Added calls to |scanner_node->add_entry| for
+|ellipse_slice|, |ellipse_slice_vector|, |circle_slice|,
+|circle_slice_vector|, |polyhedron_slice|, and 
+|polyhedron_slice_vector|.
+
+\initials{LDF 2005.05.18.}
+Added calls to |scanner_node->add_entry| for
+|helix| and |helix_vector|.
+
+\initials{LDF 2005.05.25.}
+Added calls to |scanner_node->add_entry| for
+|cone|, |cone_vector|, |cylinder|, and |cylinder_vector|.
+
+\initials{LDF 2005.05.26.}
+Added calls to |scanner_node->add_entry| for
+|ellipsoid|, and |ellipsoid_vector|.
+
+\initials{LDF 2005.06.06.}
+Added calls to |scanner_node->add_entry| for
+|sphere|, and |sphere_vector|.
+
+\initials{LDF 2005.06.09.}
+Added calls to |scanner_node->add_entry| for
+|glyph| and |glyph_vector|.
+
+\initials{LDF 2005.10.30.}
+Added calls to |scanner_node->add_entry| for
+|plane| and |plane_vector|.
+
+\initials{LDF 2005.12.05.}
+Added calls to |scanner_node->add_entry| for
+|ulong_long| and |ulong_long_vector|.
+
+
+\initials{LDF 2007.11.28.}
+Added calls to |scanner_node->add_entry| for |matrix| (|MATRIX_DECLARATOR|),
+and |matrix_vector|.
+
+\initials{LDF 2007.12.04.}
+Added calls to |scanner_node->add_entry| for |complex| (|COMPLEX_DECLARATOR|),
+and |complex_vector|.
+
+\initials{LDF 2009.11.09.}
+Added calls to |scanner_node->add_entry| for |sphere_development| and 
+|sphere_development_vector|.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+     scanner_node->add_entry("boolean", BOOLEAN_DECLARATOR, spark);
+
+     scanner_node->add_entry("complex", COMPLEX_DECLARATOR, spark);
+     scanner_node->add_entry("matrix", MATRIX_DECLARATOR, spark);
+
+     scanner_node->add_synonym("bool", "boolean");
+
+     scanner_node->add_entry("bool_point", BOOL_POINT_DECLARATOR,
+                             spark);
+     scanner_node->add_entry("bool_point_vector",
+                             BOOL_POINT_VECTOR_DECLARATOR, spark); 
+
+     scanner_node->add_entry("string", STRING_DECLARATOR, spark);
+     scanner_node->add_entry("numeric", NUMERIC_DECLARATOR, spark);
+     scanner_node->add_entry("ulong_long", ULONG_LONG_DECLARATOR, spark);
+     scanner_node->add_entry("transform", TRANSFORM_DECLARATOR, spark);
+     scanner_node->add_entry("pen", PEN_DECLARATOR, spark);
+     scanner_node->add_entry("dash_pattern", DASH_PATTERN_DECLARATOR, spark);
+     scanner_node->add_synonym("dashpattern", "dash_pattern");
+     scanner_node->add_entry("color", COLOR_DECLARATOR, spark);
+     scanner_node->add_entry("color_vector", COLOR_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("focus", FOCUS_DECLARATOR, spark);
+     scanner_node->add_entry("picture", PICTURE_DECLARATOR, spark);
+     scanner_node->add_entry("origami_figure", ORIGAMI_FIGURE_DECLARATOR, spark);
+     scanner_node->add_entry("glyph", GLYPH_DECLARATOR, spark);
+
+     scanner_node->add_entry("plane", PLANE_DECLARATOR, spark);
+
+     scanner_node->add_entry("point", POINT_DECLARATOR, spark);
+     scanner_node->add_entry("nurb", NURB_DECLARATOR, spark);
+     scanner_node->add_entry("path", PATH_DECLARATOR, spark);
+     scanner_node->add_entry("triangle", TRIANGLE_DECLARATOR, spark);
+     scanner_node->add_entry("polygon", POLYGON_DECLARATOR, spark);
+     scanner_node->add_entry("reg_polygon", REG_POLYGON_DECLARATOR, spark);
+     scanner_node->add_entry("rectangle", RECTANGLE_DECLARATOR, spark);
+     scanner_node->add_entry("square", SQUARE_DECLARATOR, spark);
+     scanner_node->add_entry("ellipse", ELLIPSE_DECLARATOR, spark);
+     scanner_node->add_entry("circle", CIRCLE_DECLARATOR, spark);
+     scanner_node->add_entry("helix", HELIX_DECLARATOR, spark);
+     scanner_node->add_entry("cone", CONE_DECLARATOR, spark);
+     scanner_node->add_entry("cylinder", CYLINDER_DECLARATOR, spark);
+     scanner_node->add_entry("cuboid", CUBOID_DECLARATOR, spark);
+     scanner_node->add_entry("polyhedron", POLYHEDRON_DECLARATOR, spark);
+     scanner_node->add_entry("ellipsoid", ELLIPSOID_DECLARATOR, spark);
+
+     scanner_node->add_entry("sphere", SPHERE_DECLARATOR, spark);
+     scanner_node->add_entry("sphere_development", SPHERE_DEVELOPMENT_DECLARATOR, spark);
+
+     scanner_node->add_entry("point_vector", POINT_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("nurb_vector", NURB_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("path_vector", PATH_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("triangle_vector", TRIANGLE_VECTOR_DECLARATOR, 
+                              spark);
+     scanner_node->add_entry("polygon_vector", 
+                             POLYGON_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("reg_polygon_vector", 
+                             REG_POLYGON_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("rectangle_vector", 
+                             RECTANGLE_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("square_vector", SQUARE_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("ellipse_vector", ELLIPSE_VECTOR_DECLARATOR, 
+                             spark);
+     scanner_node->add_entry("circle_vector", CIRCLE_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("helix_vector", HELIX_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("cone_vector", CONE_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("cylinder_vector", CYLINDER_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("cuboid_vector", CUBOID_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("polyhedron_vector", 
+                             POLYHEDRON_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("ellipsoid_vector", ELLIPSOID_VECTOR_DECLARATOR, 
+                             spark);
+
+     scanner_node->add_entry("sphere_vector", SPHERE_VECTOR_DECLARATOR, 
+                             spark);
+
+     scanner_node->add_entry("sphere_development_vector", 
+                             SPHERE_DEVELOPMENT_VECTOR_DECLARATOR, 
+                             spark);
+
+     scanner_node->add_entry("boolean_vector", 
+                             BOOLEAN_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("complex_vector", 
+                             COMPLEX_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("matrix_vector", 
+                             MATRIX_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_synonym("bool_vector", "boolean_vector");
+
+     scanner_node->add_entry("string_vector", 
+                             STRING_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("numeric_vector", 
+                             NUMERIC_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("ulong_long_vector", 
+                             ULONG_LONG_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("transform_vector", 
+                             TRANSFORM_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("pen_vector", 
+                             PEN_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("dash_pattern_vector", 
+                             DASH_PATTERN_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("focus_vector", 
+                             FOCUS_VECTOR_DECLARATOR, spark);
+     scanner_node->add_entry("picture_vector", 
+                             PICTURE_VECTOR_DECLARATOR, spark);
+
+
+     scanner_node->add_entry("ellipse_slice", ELLIPSE_SLICE_DECLARATOR, spark);
+     scanner_node->add_entry("ellipse_slice_vector", 
+                             ELLIPSE_SLICE_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("circle_slice", CIRCLE_SLICE_DECLARATOR, spark);
+     scanner_node->add_entry("circle_slice_vector", 
+                             CIRCLE_SLICE_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("polyhedron_slice", POLYHEDRON_SLICE_DECLARATOR, spark);
+     scanner_node->add_entry("polyhedron_slice_vector", 
+                             POLYHEDRON_SLICE_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("origami_figure_vector", 
+                             ORIGAMI_FIGURE_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("glyph_vector", 
+                             GLYPH_VECTOR_DECLARATOR, spark);
+
+     scanner_node->add_entry("plane_vector", 
+                             PLANE_VECTOR_DECLARATOR, spark);
+
+
+@q **** (4)@> 
+@ 
+
+\LOG
+\initials{LDF 2005.11.07.}
+Added this section with calls to |scanner_node->add_entry| for
+|PARABOLA|, |HYPERBOLA|,
+|PARABOLOID|,  |HYPERBOLOID|, |PARABOLA_VECTOR|, |HYPERBOLA_VECTOR|,
+|PARABOLOID_VECTOR|, |HYPERBOLOID_VECTOR|,
+|PARABOLA_SLICE|, |HYPERBOLA_SLICE|, |PARABOLOID_SLICE|, 
+|HYPERBOLOID_SLICE|, |PARABOLA_SLICE_VECTOR|, 
+|HYPERBOLA_SLICE_VECTOR|, |PARABOLOID_SLICE_VECTOR|, 
+|HYPERBOLOID_SLICE_VECTOR|, 
+|IS_PARABOLA|, |IS_HYPERBOLA|,
+|IS_PARABOLOID|,  |IS_HYPERBOLOID|, |IS_PARABOLA_VECTOR|, |IS_HYPERBOLA_VECTOR|,
+|IS_PARABOLOID_VECTOR|, |IS_HYPERBOLOID_VECTOR|,
+|IS_PARABOLA_SLICE|, |IS_HYPERBOLA_SLICE|, |IS_PARABOLOID_SLICE|, 
+|IS_HYPERBOLOID_SLICE|, |IS_PARABOLA_SLICE_VECTOR|, 
+|IS_HYPERBOLA_SLICE_VECTOR|, |IS_PARABOLOID_SLICE_VECTOR|, 
+|IS_HYPERBOLOID_SLICE_VECTOR|,
+|IS_ON_PARABOLA|, |IS_ON_HYPERBOLA|, 
+|GET_PARABOLA|, and |GET_HYPERBOLA|.
+
+\initials{LDF 2005.11.07.}
+Added calls to |scanner_node->add_entry| for
+|is_paraboloidal| and |is_hyperboloidal|.
+
+\initials{LDF 2007.07.29.}
+Added calls to |scanner_node->add_entry| for |conic_section_lattice|,
+|conic_section_lattice_vector|, |is_conic_section_lattice|,
+and |is_conic_section_lattice_vector|.
+
+\initials{LDF 2007.07.29.}
+Added call to |scanner_node->add_entry| for |get_conic_section_lattice|.
+
+\initials{LDF 2007.10.13.}
+Added calls to |scanner_node->add_entry| for |arc| (|ARC_DECLARATOR|),
+|arc_vector|, |is_arc|, |is_arc_type|, |is_arc_vector| and |is_on_arc|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("parabola", PARABOLA_DECLARATOR, spark);
+   scanner_node->add_entry("hyperbola", HYPERBOLA_DECLARATOR, spark);
+
+   scanner_node->add_entry("arc", ARC_DECLARATOR, spark);
+
+   scanner_node->add_entry("paraboloid", PARABOLOID_DECLARATOR, spark);
+   scanner_node->add_entry("hyperboloid", HYPERBOLOID_DECLARATOR, spark);
+   scanner_node->add_entry("parabola_vector", PARABOLA_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("hyperbola_vector", HYPERBOLA_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("arc_vector", 
+                           ARC_VECTOR_DECLARATOR, 
+                           spark);
+
+   scanner_node->add_entry("paraboloid_vector", PARABOLOID_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("hyperboloid_vector", HYPERBOLOID_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("parabola_slice", PARABOLA_SLICE_DECLARATOR, spark);
+   scanner_node->add_entry("hyperbola_slice", HYPERBOLA_SLICE_DECLARATOR, spark);
+   scanner_node->add_entry("paraboloid_slice", PARABOLOID_SLICE_DECLARATOR, spark);
+   scanner_node->add_entry("hyperboloid_slice", HYPERBOLOID_SLICE_DECLARATOR, spark);
+   scanner_node->add_entry("parabola_slice_vector", 
+                           PARABOLA_SLICE_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("hyperbola_slice_vector", 
+                           HYPERBOLA_SLICE_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("paraboloid_slice_vector", 
+                           PARABOLOID_SLICE_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("hyperboloid_slice_vector", 
+                           HYPERBOLOID_SLICE_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("is_parabola", IS_PARABOLA, spark);
+   scanner_node->add_entry("is_hyperbola", IS_HYPERBOLA, spark);
+
+   scanner_node->add_entry("is_arc", IS_ARC, spark);
+   scanner_node->add_entry("is_arc_type", IS_ARC_TYPE, spark);
+
+   scanner_node->add_entry("is_paraboloid", IS_PARABOLOID, spark);
+   scanner_node->add_entry("is_hyperboloid", IS_HYPERBOLOID, spark);
+   scanner_node->add_entry("is_parabola_vector", IS_PARABOLA_VECTOR, spark);
+   scanner_node->add_entry("is_hyperbola_vector", IS_HYPERBOLA_VECTOR, spark);
+
+   scanner_node->add_entry("is_arc_vector", IS_ARC_VECTOR, spark);
+
+   scanner_node->add_entry("is_paraboloid_vector", IS_PARABOLOID_VECTOR, spark);
+   scanner_node->add_entry("is_hyperboloid_vector", IS_HYPERBOLOID_VECTOR, spark);
+   scanner_node->add_entry("is_parabola_slice", IS_PARABOLA_SLICE, spark);
+   scanner_node->add_entry("is_hyperbola_slice", IS_HYPERBOLA_SLICE, spark);
+   scanner_node->add_entry("is_paraboloid_slice", IS_PARABOLOID_SLICE, spark);
+   scanner_node->add_entry("is_hyperboloid_slice", IS_HYPERBOLOID_SLICE, spark);
+   scanner_node->add_entry("is_parabola_slice_vector", IS_PARABOLA_SLICE_VECTOR, spark);
+   scanner_node->add_entry("is_hyperbola_slice_vector", 
+                           IS_HYPERBOLA_SLICE_VECTOR, spark);
+   scanner_node->add_entry("is_paraboloid_slice_vector", 
+                           IS_PARABOLOID_SLICE_VECTOR, spark);
+   scanner_node->add_entry("is_hyperboloid_slice_vector", 
+                           IS_HYPERBOLOID_SLICE_VECTOR, spark);
+   scanner_node->add_entry("is_on_parabola", IS_ON_PARABOLA, spark);
+   scanner_node->add_entry("is_on_hyperbola", IS_ON_HYPERBOLA, spark);
+
+   scanner_node->add_entry("is_on_arc", IS_ON_ARC, spark);
+
+   scanner_node->add_entry("get_parabola", GET_PARABOLA, spark);
+   scanner_node->add_entry("get_hyperbola", GET_HYPERBOLA, spark);
+
+   scanner_node->add_entry("get_conic_section_lattice", 
+                           GET_CONIC_SECTION_LATTICE, 
+                           spark);
+
+   scanner_node->add_entry("is_paraboloidal", IS_PARABOLOIDAL, spark);
+   scanner_node->add_entry("is_hyperboloidal", IS_HYPERBOLOIDAL, spark);
+
+   scanner_node->add_entry("conic_section_lattice", 
+                           CONIC_SECTION_LATTICE_DECLARATOR, 
+                           spark);
+   scanner_node->add_entry("conic_section_lattice_vector", 
+                           CONIC_SECTION_LATTICE_VECTOR_DECLARATOR, 
+                           spark);
+   scanner_node->add_entry("is_conic_section_lattice", 
+                           IS_CONIC_SECTION_LATTICE, 
+                           spark);
+   scanner_node->add_entry("is_conic_section_lattice_vector", 
+                           IS_CONIC_SECTION_LATTICE_VECTOR, 
+                           spark);
+
+@q **** (4) System information.@>
+@*3 System information.
+\initials{LDF 2004.11.15.}
+
+\LOG
+\initials{LDF 2004.11.15.}
+Added this section with calls to |scanner_node->add_entry| for
+|is_big_endian| and |is_little_endian| 
+|scanner_node->add_synonym| for |is_bigendian| and 
+|is_littleendian|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("is_big_endian", IS_BIG_ENDIAN, spark);
+   scanner_node->add_entry("is_little_endian", IS_LITTLE_ENDIAN, spark);
+
+   scanner_node->add_synonym("is_bigendian", "is_big_endian");
+   scanner_node->add_synonym("is_littleendian", "is_little_endian");
+
+
+@q **** (4) Transformers and Transform Commands.  @>          
+@*3 Transformers and Transform Commands.
+
+\LOG
+\initials{LDF 2004.05.09.}  
+Added this section.
+
+\initials{LDF 2004.09.24.}
+Added calls to |scanner_node->add_entry| for the transform
+commands. 
+
+\initials{LDF 2004.10.04.}
+Changed |REFLECTED_IN| to |REFLECTED|.
+
+\initials{LDF 2004.10.13.}
+Added call to |scanner_node->add_entry| for |rotate_around| and to 
+|scanner_node->add_synonym| for |rotatearound|.
+
+\initials{LDF 2004.12.03.}
+Replaced |REFLECTED| with |REFLECTED_IN| and |REFLECTED_OFF|.
+
+\initials{LDF 2006.10.01.}
+Added call to |scanner_node->add_entry| for |align|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+
+  scanner_node->add_entry("align", ALIGN, spark);
+
+  scanner_node->add_entry("reflected_in", REFLECTED_IN, spark);
+  scanner_node->add_entry("reflected_off", REFLECTED_OFF, spark);
+  scanner_node->add_entry("rotated", ROTATED, spark);
+  scanner_node->add_entry("rotated_around", ROTATED_AROUND, spark);
+  scanner_node->add_entry("scaled", SCALED, spark);
+  scanner_node->add_entry("shifted", SHIFTED, spark);
+  scanner_node->add_entry("sheared", SHEARED, spark);
+  scanner_node->add_entry("transformed", TRANSFORMED, spark);
+  scanner_node->add_entry("xscaled", XSCALED, spark);
+  scanner_node->add_entry("yscaled", YSCALED, spark);
+  scanner_node->add_entry("zscaled", ZSCALED, spark);
+
+  scanner_node->add_entry("reflect", REFLECT, spark);
+  scanner_node->add_entry("rotate", ROTATE, spark);
+
+  scanner_node->add_entry("rotate_around", ROTATE_AROUND, spark);
+  scanner_node->add_synonym("rotatearound", "rotate_around");
+
+  scanner_node->add_entry("scale", SCALE, spark);
+  scanner_node->add_entry("shift", SHIFT, spark);
+  scanner_node->add_entry("shear", SHEAR, spark);
+  scanner_node->add_entry("transform_by", TRANSFORM_BY, spark);
+  scanner_node->add_entry("xscale", XSCALE, spark);
+  scanner_node->add_entry("yscale", YSCALE, spark);
+  scanner_node->add_entry("zscale", ZSCALE, spark);
+
+
+
+@q **** (4) Type Predicates.@>          
+@*3 Type Predicates.
+\initials{LDF 2004.10.02.}
+
+\LOG
+\initials{LDF 2004.10.02.}
+Added this section with calls to |scanner_node->add_entry| 
+for the following type predicates:\hfil\break
+|is_synonym|, |is_undeclared|, |is_boolean|, |is_bool_point|, 
+|is_bool_point_vector|, |is_string|, |is_numeric|, |is_pen|, 
+|is_dash_pattern|, |is_color|, |is_color_vector|, |is_picture|, 
+|is_transform|, |is_point|, |is_point_vector|, |is_focus|, 
+|is_path|, |is_triangle|, |is_reg_polygon|, |is_rectangle|, |is_square|,
+|is_ellipse|, |is_circle|, |is_cuboid|, |is_tetrahedron|, |is_octahedron|,
+|is_dodecahedron|, |is_icosahedron|, and |is_trunc_octahedron|.
+
+\initials{LDF 2004.10.14.}
+Moved the call to |scanner_node->add_entry| for |IS_SQUARE| from
+this section to ``Predicates for the characteristics of |Shapes|'',
+below.
+
+\initials{LDF 2004.12.10.}
+Added calls to |scanner_node->add_entry|
+for the following type predicates:\hfil\break
+|is_triangle_vector|, |is_reg_polygon_vector|, 
+|is_rectangle_vector|, |is_square_vector|, 
+|is_ellipse_vector|, |is_circle_vector|,  |is_cuboid_vector|, 
+|is_tetrahedron_vector|, |is_octahedron_vector|, |is_dodecahedron_vector|, 
+|is_icosahedron_vector|, and |is_trunc_octahedron_vector|.
+
+\initials{LDF 2004.12.11.}
+Added calls to |scanner_node->add_entry| 
+for the following type predicates:\hfil\break
+|is_boolean_vector|, 
+|is_string_vector|, 
+|is_numeric_vector|, 
+|is_transform_vector|, 
+|is_pen_vector|, 
+|is_dash_pattern_vector|, 
+|is_focus_vector|, and
+|is_picture_vector|.
+
+\initials{LDF 2005.01.26.}
+Added calls to |scanner_node->add_entry| for
+|is_nurb| and |is_nurb_vector|.
+
+
+\initials{LDF 2005.02.04.}
+Added calls to |scanner_node->add_entry| for
+|is_origami_figure| and |is_origami_figure_vector|.
+
+\initials{LDF 2005.02.11.}
+Added calls to |scanner_node->add_entry| for
+|is_polygon| and |is_polygon_vector|.
+
+\initials{LDF 2005.03.29.}
+Added calls to |scanner_node->add_entry| for
+|is_ellipse_slice|, |is_circle_slice|,
+|is_polyhedron_slice|, |is_ellipse_slice_vector|,
+|is_circle_slice_vector|, and |is_polyhedron_slice_vector|.
+
+\initials{LDF 2005.05.18.}
+Added calls to |scanner_node->add_entry| for |is_helix| and
+|is_helix_vector|.
+
+\initials{LDF 2005.05.25.}
+Added calls to |scanner_node->add_entry| for 
+|is_cone|, |is_cone_vector|, |is_cylinder|, 
+and |is_cylinder_vector|.
+
+\initials{LDF 2005.05.26.}
+Added calls to |scanner_node->add_entry| for 
+|is_ellipsoid|, 
+and |is_ellipsoid_vector|.
+
+\initials{LDF 2005.06.06.}
+Added calls to |scanner_node->add_entry| for 
+|is_sphere|, 
+and |is_sphere_vector|.
+
+\initials{LDF 2005.06.09.}
+Added calls to |scanner_node->add_entry| for
+|is_glyph| and |is_glyph_vector|.
+
+\initials{LDF 2005.10.30.}
+Added calls to |scanner_node->add_entry| for
+|is_plane| and |is_plane_vector|.
+
+\initials{LDF 2007.11.28.}
+Added calls to |scanner_node->add_entry| for |is_matrix| and 
+|is_matrix_vector|.
+
+\initials{LDF 2007.11.28.}
+Added calls to |scanner_node->add_entry| for |is_complex| and 
+|is_complex_vector|.
+
+
+\initials{LDF 2009.11.09.}
+Added calls to |scanner_node->add_entry| for 
+|is_sphere_development|, 
+and |is_sphere_development_vector|.
+\ENDLOG
+
+@q ***** (5).@> 
+
+@<Define |Scanner_Type::create|@>=
+
+     scanner_node->add_entry("is_synonym", IS_SYNONYM, spark);
+     scanner_node->add_entry("is_undeclared", IS_UNDECLARED, spark);
+     scanner_node->add_entry("is_boolean", IS_BOOLEAN, spark);
+
+     scanner_node->add_entry("is_complex", IS_COMPLEX, spark);
+     scanner_node->add_entry("is_matrix", IS_MATRIX, spark);
+
+     scanner_node->add_entry("is_bool_point", IS_BOOL_POINT, spark);
+     scanner_node->add_entry("is_bool_point_vector", IS_BOOL_POINT_VECTOR, spark);
+     scanner_node->add_entry("is_string", IS_STRING, spark);
+     scanner_node->add_entry("is_numeric", IS_NUMERIC, spark);
+     scanner_node->add_entry("is_ulong_long", IS_ULONG_LONG, spark);
+     scanner_node->add_entry("is_pen", IS_PEN, spark);
+     scanner_node->add_entry("is_dash_pattern", IS_DASH_PATTERN, spark);
+     scanner_node->add_entry("is_color", IS_COLOR, spark);
+     scanner_node->add_entry("is_color_vector", IS_COLOR_VECTOR, spark);
+     scanner_node->add_entry("is_picture", IS_PICTURE, spark);
+     scanner_node->add_entry("is_transform", IS_TRANSFORM, spark);
+     scanner_node->add_entry("is_point", IS_POINT, spark);
+     scanner_node->add_entry("is_point_vector", IS_POINT_VECTOR, spark);
+     scanner_node->add_entry("is_focus", IS_FOCUS, spark);
+     scanner_node->add_entry("is_origami_figure", IS_ORIGAMI_FIGURE, spark);
+     scanner_node->add_entry("is_glyph", IS_GLYPH, spark);
+
+     scanner_node->add_entry("is_plane", IS_PLANE, spark);
+
+     scanner_node->add_entry("is_nurb", IS_NURB, spark);
+     scanner_node->add_entry("is_path", IS_PATH, spark);
+     scanner_node->add_entry("is_triangle", IS_TRIANGLE, spark);
+     scanner_node->add_entry("is_polygon", IS_POLYGON, spark);
+     scanner_node->add_entry("is_reg_polygon", IS_REG_POLYGON, spark);
+     scanner_node->add_entry("is_rectangle", IS_RECTANGLE, spark);
+     scanner_node->add_entry("is_ellipse", IS_ELLIPSE, spark);
+     scanner_node->add_entry("is_circle", IS_CIRCLE, spark);
+     scanner_node->add_entry("is_helix", IS_HELIX, spark);
+     scanner_node->add_entry("is_cone", IS_CONE, spark);
+     scanner_node->add_entry("is_cylinder", IS_CYLINDER, spark);
+     scanner_node->add_entry("is_cuboid", IS_CUBOID, spark);
+     scanner_node->add_entry("is_polyhedron", IS_POLYHEDRON, spark);
+     scanner_node->add_entry("is_ellipsoid", IS_ELLIPSOID, spark);
+     scanner_node->add_entry("is_sphere", IS_SPHERE, spark);
+     scanner_node->add_entry("is_sphere_development", IS_SPHERE_DEVELOPMENT, spark);
+
+     scanner_node->add_entry("is_nurb_vector", IS_NURB_VECTOR, spark);
+     scanner_node->add_entry("is_path_vector", IS_PATH_VECTOR, spark);
+     scanner_node->add_entry("is_triangle_vector", IS_TRIANGLE_VECTOR, 
+                              spark);
+     scanner_node->add_entry("is_polygon_vector", 
+                             IS_POLYGON_VECTOR, spark);
+     scanner_node->add_entry("is_reg_polygon_vector", 
+                             IS_REG_POLYGON_VECTOR, spark);
+
+     scanner_node->add_entry("is_rectangle_vector", 
+                             IS_RECTANGLE_VECTOR, spark);
+     scanner_node->add_entry("is_square_vector", IS_SQUARE_VECTOR, spark);
+     scanner_node->add_entry("is_ellipse_vector", IS_ELLIPSE_VECTOR, 
+                             spark);
+     scanner_node->add_entry("is_circle_vector", IS_CIRCLE_VECTOR, spark);
+     scanner_node->add_entry("is_helix_vector", IS_HELIX_VECTOR, spark);
+     scanner_node->add_entry("is_cone_vector", IS_CONE_VECTOR, spark);
+     scanner_node->add_entry("is_cylinder_vector", IS_CYLINDER_VECTOR, spark);
+     scanner_node->add_entry("is_cuboid_vector", IS_CUBOID_VECTOR, spark);
+     scanner_node->add_entry("is_polyhedron_vector", 
+                             IS_POLYHEDRON_VECTOR, spark);
+     scanner_node->add_entry("is_ellipsoid_vector", IS_ELLIPSOID_VECTOR, 
+                             spark);
+
+     scanner_node->add_entry("is_sphere_vector", IS_SPHERE_VECTOR, 
+                             spark);
+
+     scanner_node->add_entry("is_sphere_development_vector", IS_SPHERE_DEVELOPMENT_VECTOR, 
+                             spark);
+
+     scanner_node->add_entry("is_boolean_vector", 
+                             IS_BOOLEAN_VECTOR, spark);
+
+     scanner_node->add_entry("is_matrix_vector", 
+                             IS_MATRIX_VECTOR, spark);
+
+     scanner_node->add_entry("is_complex_vector", 
+                             IS_COMPLEX_VECTOR, spark);
+
+     scanner_node->add_entry("is_string_vector", 
+                             IS_STRING_VECTOR, spark);
+     scanner_node->add_entry("is_numeric_vector", 
+                             IS_NUMERIC_VECTOR, spark);
+     scanner_node->add_entry("is_ulong_long_vector", 
+                             IS_ULONG_LONG_VECTOR, spark);
+     scanner_node->add_entry("is_transform_vector", 
+                             IS_TRANSFORM_VECTOR, spark);
+     scanner_node->add_entry("is_pen_vector", 
+                             IS_PEN_VECTOR, spark);
+     scanner_node->add_entry("is_dash_pattern_vector", 
+                             IS_DASH_PATTERN_VECTOR, spark);
+     scanner_node->add_entry("is_focus_vector", 
+                             IS_FOCUS_VECTOR, spark);
+     scanner_node->add_entry("is_picture_vector", 
+                             IS_PICTURE_VECTOR, spark);
+
+
+     scanner_node->add_entry("is_ellipse_slice", IS_ELLIPSE_SLICE, spark);
+
+     scanner_node->add_entry("is_circle_slice", IS_CIRCLE_SLICE, spark);
+
+     scanner_node->add_entry("is_polyhedron_slice", IS_POLYHEDRON_SLICE, 
+                             spark);
+
+     scanner_node->add_entry("is_ellipse_slice_vector", 
+                             IS_ELLIPSE_SLICE_VECTOR, spark);
+
+     scanner_node->add_entry("is_circle_slice_vector", 
+                             IS_CIRCLE_SLICE_VECTOR, spark);
+
+     scanner_node->add_entry("is_polyhedron_slice_vector", 
+                             IS_POLYHEDRON_SLICE_VECTOR, 
+                             spark);
+
+
+     scanner_node->add_entry("is_origami_figure_vector", 
+                             IS_ORIGAMI_FIGURE_VECTOR, spark);
+
+     scanner_node->add_entry("is_glyph_vector", 
+                             IS_GLYPH_VECTOR, spark);
+
+     scanner_node->add_entry("is_plane_vector", 
+                             IS_PLANE_VECTOR, spark);
+
+
+@q **** (4) Predicates for the characteristics of |Shapes|.@>          
+@*3 Predicates for the characteristics of {\bf Shapes}.
+\initials{LDF 2004.10.14.}
+
+\LOG
+\initials{LDF 2004.10.14.}
+Added this section.
+
+\initials{LDF 2004.10.14.}
+Moved the call to |scanner_node->add_entry| for |is_square| 
+from the section ``Type Predicates'', above, to this section.
+
+\initials{LDF 2004.10.14.}
+Added calls to |scanner_node->add_entry| for
+|is_elliptical|,
+|is_circular|,
+|is_reg_polygonal|,
+|is_triangular|,
+|is_quadratical|,
+|is_pentagonal|,
+|is_hexagonal|,
+|is_heptagonal|,
+|is_octagonal|,
+|is_nonagonal|,
+|is_decagonal|,
+|is_ondecagonal|,
+|is_dodecagonal|,
+|is_rectangular|,
+|is_convex|,
+|is_conical|,
+|is_parabolic|,
+|is_hyperbolic|,
+|is_trapezoidal|,
+|is_prismoidal|,
+|is_cuboidal|,
+|is_ellipsoidal|,
+|is_spheroidal|, and 
+|is_spherical|.
+
+\initials{LDF 2004.10.25.}
+Added call to |scanner_node->add_entry| for |is_planar|.
+
+\initials{LDF 2004.10.25.}
+Added call to |scanner_node->add_entry| for |is_linear|.
+
+\initials{LDF 2005.01.25.}
+Added call to |scanner_node->add_entry| for
+|is_quadrilateral|.
+
+\initials{LDF 2005.02.07.}
+Added call to |scanner_node->add_entry| for |is_convex_polygonal|.
+
+\initials{LDF 2005.02.11.}
+Added call to |scanner_node->add_entry| for |is_polygonal|.
+
+\initials{LDF 2005.05.18.}
+Added call to |scanner_node->add_entry| for
+|is_helical|.
+
+\initials{LDF 2005.05.25.}
+Added call to |scanner_node->add_entry| for
+|is_cylindrical|.
+
+\initials{LDF 2005.10.26.}
+Added calls to |scanner_node->add_entry| for
+|is_on_sphere| and |with_tolerance|.
+
+\initials{LDF 2005.11.02.}
+Added calls to |scanner_node->add_entry| for
+|is_on_ellipse|, |is_on_circle|, |is_on_parabola|, and
+|is_on_hyperbola|.
+
+\initials{LDF 2005.11.07.}
+Moved the calls to |scanner_node->add_entry| for a
+|is_on_parabola| and |is_on_hyperbola| to another section.
+
+\initials{LDF 2007.07.09.}
+Added call to |scanner_node->add_entry| for |are_on_conic_section|.
+
+\initials{LDF 2007.07.22.}
+Added call to |scanner_node->add_entry| for |are_distinct|.
+\ENDLOG 
+
+@q ***** (5).@> 
+
+@<Define |Scanner_Type::create|@>=
+
+
+   scanner_node->add_entry("is_linear", IS_LINEAR, spark);
+   scanner_node->add_entry("is_planar", IS_PLANAR, spark);
+
+   scanner_node->add_entry("is_square", IS_SQUARE, spark);
+   scanner_node->add_entry("is_elliptical", IS_ELLIPTICAL, spark);
+   scanner_node->add_entry("is_circular", IS_CIRCULAR, spark);
+   scanner_node->add_entry("is_helical", IS_HELICAL, spark);
+   scanner_node->add_entry("is_polygonal", IS_POLYGONAL, spark);
+   scanner_node->add_entry("is_reg_polygonal", IS_REG_POLYGONAL, spark);
+   scanner_node->add_entry("is_triangular", IS_TRIANGULAR, spark);
+   scanner_node->add_entry("is_quadratical", IS_QUADRATICAL, spark);
+   scanner_node->add_entry("is_pentagonal", IS_PENTAGONAL, spark);
+   scanner_node->add_entry("is_hexagonal", IS_HEXAGONAL, spark);
+   scanner_node->add_entry("is_heptagonal", IS_HEPTAGONAL, spark);
+   scanner_node->add_entry("is_octagonal", IS_OCTAGONAL, spark);
+   scanner_node->add_entry("is_nonagonal", IS_NONAGONAL, spark);
+   scanner_node->add_entry("is_decagonal", IS_DECAGONAL, spark);
+   scanner_node->add_entry("is_ondecagonal", IS_ONDECAGONAL, spark);
+   scanner_node->add_entry("is_dodecagonal", IS_DODECAGONAL, spark);
+   scanner_node->add_entry("is_rectangular", IS_RECTANGULAR, spark);
+   scanner_node->add_entry("is_quadrilateral", IS_QUADRILATERAL, spark);
+   scanner_node->add_entry("is_convex", IS_CONVEX, spark);
+   scanner_node->add_entry("is_convex_polygonal", IS_CONVEX_POLYGONAL, spark);
+   scanner_node->add_entry("is_parabolic", IS_PARABOLIC, spark);
+   scanner_node->add_entry("is_hyperbolic", IS_HYPERBOLIC, spark);
+   scanner_node->add_entry("is_trapezoidal", IS_TRAPEZOIDAL, spark);
+   scanner_node->add_entry("is_prismoidal", IS_PRISMOIDAL, spark);
+   scanner_node->add_entry("is_conical", IS_CONICAL, spark);
+   scanner_node->add_entry("is_cylindrical", IS_CYLINDRICAL, spark);
+   scanner_node->add_entry("is_cuboidal", IS_CUBOIDAL, spark);
+   scanner_node->add_entry("is_ellipsoidal", IS_ELLIPSOIDAL, spark);
+   scanner_node->add_entry("is_spheroidal", IS_SPHEROIDAL, spark);
+   scanner_node->add_entry("is_spherical", IS_SPHERICAL, spark);
+
+   scanner_node->add_entry("is_on_ellipse", IS_ON_ELLIPSE, spark);
+   scanner_node->add_entry("is_on_circle", IS_ON_CIRCLE, spark);
+
+   scanner_node->add_entry("are_distinct", 
+                            ARE_DISTINCT, 
+                            spark);
+
+   scanner_node->add_entry("are_on_conic_section", 
+                            ARE_ON_CONIC_SECTION, 
+                            spark);
+
+   scanner_node->add_entry("is_on_sphere", IS_ON_SPHERE, spark);
+   scanner_node->add_entry("with_tolerance", WITH_TOLERANCE, spark);
+
+
+@q **** (4) Predicates for geometric figures.@>          
+@*3 Predicates for geometric figures.
+\initials{LDF 2004.10.22.}
+
+\LOG
+\initials{LDF 2004.10.22.}
+Added this section with calls to |scanner_node->add_entry| for
+|is_on_segment|, |is_on_line|, |is_in_triangle|, |is_in_rectangle|, 
+and |location|.
+
+\initials{LDF 2004.10.23.}
+Added calls to |scanner_node->add_entry| for 
+|is_parallel|, |is_coplanar|, |is_skew|, |is_non_parallel|,
+|is_non_coplanar|, and |is_non_skew|.
+
+\initials{LDF 2004.10.23.}
+Added call to |scanner_node->add_entry| for |distance|.
+
+\initials{LDF 2004.10.23.}
+Changed |distance| to |distance_to_plane|.
+
+\initials{LDF 2004.10.25.}
+Added call to |scanner_node->add_entry| for 
+|distance_along_line|.
+
+\initials{LDF 2004.10.25.}
+Removed the calls to |scanner_node->add_entry| for |is_non_parallel|, 
+|is_non_coplanar|, and |is_non_skew|.
+
+\initials{LDF 2004.10.26.}
+Added call to |scanner_node->add_entry| for |is_colinear|.
+
+\initials{LDF 2007.08.03.}
+Added calls to |scanner_node->add_entry| for 
+|is_not_parallel|, 
+|are_parallel|, 
+|are_not_parallel|, 
+|is_perpendicular|,
+|is_not_perpendicular|,
+|are_perpendicular|,
+|are_not_perpendicular|,
+|is_not_coplanar|,
+|are_coplanar|,
+|are_not_coplanar|,
+|is_not_skew|, 
+|are_skew|,
+|are_not_skew|,
+|is_not_colinear|,
+|are_colinear|,
+and 
+|are_not_colinear|.
+
+\initials{LDF 2007.11.08.}
+Added calls to |scanner_node->add_entry| for |is_in_plane|,
+|is_in_reg_polygon| and |is_in_polygon| and a call to |scanner_node->add_synonym|
+for |is_on_plane|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("is_on_segment", IS_ON_SEGMENT, spark);
+  scanner_node->add_entry("is_on_line", IS_ON_LINE , spark);
+  scanner_node->add_entry("is_on_plane", IS_ON_PLANE, spark);
+
+  scanner_node->add_synonym("is_in_plane", "is_on_plane");
+
+  scanner_node->add_entry("is_in_triangle", IS_IN_TRIANGLE, spark);
+  scanner_node->add_entry("is_in_rectangle", IS_IN_RECTANGLE, spark);
+  scanner_node->add_entry("location", LOCATION, spark);
+
+  scanner_node->add_entry("is_in_reg_polygon", IS_IN_REG_POLYGON, spark);
+  scanner_node->add_entry("is_in_polygon", IS_IN_POLYGON, spark);
+
+  scanner_node->add_entry("distance_along_line", DISTANCE_ALONG_LINE, spark);
+  
+  scanner_node->add_entry("distance_to_plane", DISTANCE_TO_PLANE, spark);
+
+  scanner_node->add_entry("is_colinear", IS_COLINEAR, spark);
+  scanner_node->add_entry("is_not_colinear", IS_NOT_COLINEAR, spark);
+  scanner_node->add_entry("are_colinear", ARE_COLINEAR, spark);
+  scanner_node->add_entry("are_not_colinear", ARE_NOT_COLINEAR, spark);
+
+  scanner_node->add_entry("is_parallel", IS_PARALLEL, spark);
+  scanner_node->add_entry("is_not_parallel", IS_NOT_PARALLEL, spark);
+  scanner_node->add_entry("are_parallel", ARE_PARALLEL, spark);
+  scanner_node->add_entry("are_not_parallel", ARE_NOT_PARALLEL, spark);
+
+  scanner_node->add_entry("is_perpendicular", IS_PERPENDICULAR, spark);
+  scanner_node->add_entry("is_not_perpendicular", IS_NOT_PERPENDICULAR, spark);
+  scanner_node->add_entry("are_perpendicular", ARE_PERPENDICULAR, spark);
+  scanner_node->add_entry("are_not_perpendicular", ARE_NOT_PERPENDICULAR, spark);
+
+  scanner_node->add_entry("is_coplanar", IS_COPLANAR, spark); 
+  scanner_node->add_entry("is_not_coplanar", IS_NOT_COPLANAR, spark);
+  scanner_node->add_entry("are_coplanar", ARE_COPLANAR, spark);
+  scanner_node->add_entry("are_not_coplanar", ARE_NOT_COPLANAR, spark);
+
+  scanner_node->add_entry("is_skew", IS_SKEW, spark); 
+  scanner_node->add_entry("is_not_skew", IS_NOT_SKEW, spark);
+  scanner_node->add_entry("are_skew", ARE_SKEW, spark);
+  scanner_node->add_entry("are_not_skew", ARE_NOT_SKEW, spark);
+
+
+
+
+@q **** (4) Operators.  @>          
+@*3 Operators.
+
+
+\LOG
+\initials{LDF 2004.04.28.}  
+Added call to |add_entry| for |EQUALS|. 
+
+\initials{LDF 2004.05.05.} 
+Added call to |add_entry| for |MAGNITUDE|. 
+
+\initials{LDF 2004.05.05.} 
+Added call to |add_entry| for |ANGLE|. 
+
+
+\initials{LDF 2004.05.17.}  
+Added calls to |add_entry| for 
+|OR|, |AND|, |EQUAL|, |NOT_EQUAL|, |LESS|, 
+|LESS_OR_EQUAL|, |GREATER|, |GREATER_OR_EQUAL|, 
+|NOT|, and |EQUATE|.  Removed the call  for |EQUALS|.  
+
+\initials{LDF 2004.05.17.}  
+Added calls to |add_entry| for 
+|TRUE|, |FALSE|, |IS_ODD|, |IS_EVEN|, |IS_CYCLE|, |IS_KNOWN|, 
+|IS_UNKNOWN|, and |CHAREXISTS|.
+
+\initials{LDF 2004.05.17.}  
+Added calls to |add_synonym| for 
+``{\bf odd}'', ``{\bf even}'', ``{\bf known}'', and ``{\bf unknown}''.
+
+\initials{LDF 2004.08.20.}
+@:BUG FIX@> BUG FIX: 
+Removed redundant call 
+to |add_entry| for |EQUAL| (|==|).
+
+\initials{LDF 2004.10.02.}
+Added calls to |scanner_node->add_synonym| for |&&| (|and|), 
+``||||'' (|or|), and ``|!|'' (|not|).
+
+\initials{LDF 2004.10.05.}
+Added calls to |add_entry| for |dot_product| and |cross_product| and 
+calls to |add_synonym| for |dotproduct|, |dot_prod|, |dotprod|, 
+|crossproduct|, |cross_prod|, and |crossprod|. 
+
+\initials{LDF 2004.10.06.}
+Added calls to |add_entry| for |normal| and 
+|unit_vector| and a call to |add_synonym| for |unitvector|.
+
+\initials{LDF 2004.10.06.}
+Added calls to |add_entry| for |xxpart|, |xypart|, |xzpart|,
+|yxpart|, |yypart|, |yzpart|, |zxpart|, |zypart|, |zzpart|, and
+|wxpart|, |wypart|, |wzpart|.
+
+
+\initials{LDF 2004.10.07.}
+@:BUG FIX@> BUG FIX: 
+Added calls to |add_entry| for |wxpart|, |wypart|, and |wzpart|. 
+
+\initials{LDF 2004.11.09.}
+Added call to |add_entry| for |size|.
+
+\initials{LDF 2004.12.16.}
+Added calls to |add_entry| for |red_part|, |green_part|, 
+|blue_part|, |yellow_part|, |magenta_part|,
+|cyan_part|, |black_part|, |white_part|, |blue_violet_part|, 
+and |red_orange_part|.
+
+\initials{LDF 2005.11.21.}
+Added calls to |add_entry| for |is_valid| and |is_invalid|.
+
+\initials{LDF 2005.12.14.}
+Changed |normal| to |get_normal|.
+
+\initials{LDF 2007.02.06.}
+Added calls to |add_entry| for |tand|, |arcsind|, |arccosd|, and |arctand|.
+
+Added calls to |add_entry| for |tand|, |arcsind|, |arccosd|, and |arctand|.
+
+\initials{LDF 2007.11.08.}
+Added calls to |add_entry| for |get_perpendicular| and |get_perpendicular_base|.
+\ENDLOG 
+
+@q ***** (5) Code.@>
+
+@<Define |Scanner_Type::create|@>=
+
+     scanner_node->add_entry("*", TIMES, spark);
+     scanner_node->add_entry("/", OVER, spark);
+
+     scanner_node->add_entry("dot_product", DOT_PRODUCT, spark);
+     scanner_node->add_entry("cross_product", CROSS_PRODUCT, spark);
+
+     scanner_node->add_synonym("dotproduct", "dot_product");
+     scanner_node->add_synonym("dot_prod", "dot_product");
+     scanner_node->add_synonym("dotprod", "dot_product");
+
+     scanner_node->add_synonym("crossproduct", "cross_product");
+     scanner_node->add_synonym("cross_prod", "cross_product");
+     scanner_node->add_synonym("crossprod", "cross_product");
+
+     scanner_node->add_entry("angle", ANGLE, spark);
+
+     scanner_node->add_entry("get_normal", GET_NORMAL, spark);
+
+     scanner_node->add_entry("get_perpendicular", GET_PERPENDICULAR, spark);
+
+     scanner_node->add_entry("get_perpendicular_base", 
+                             GET_PERPENDICULAR_BASE, 
+                             spark);
+
+     scanner_node->add_entry("unit_vector", UNIT_VECTOR, spark);
+
+     scanner_node->add_synonym("unitvector", "unit_vector");
+
+     scanner_node->add_entry("+", PLUS, spark);
+     scanner_node->add_entry("-", MINUS, spark);
+
+     scanner_node->add_entry("sqrt", SQRT, spark); 
+
+     scanner_node->add_entry("sind", SIND, spark); 
+     scanner_node->add_entry("cosd", COSD, spark); 
+     scanner_node->add_entry("tand", TAND, spark); 
+
+     scanner_node->add_entry("arcsind", ARCSIND, spark); 
+     scanner_node->add_entry("arccosd", ARCCOSD, spark); 
+     scanner_node->add_entry("arctand", ARCTAND, spark); 
+
+     scanner_node->add_entry("mlog", MLOG, spark); 
+     scanner_node->add_entry("mexp", MEXP, spark);
+     scanner_node->add_entry("floor", FLOOR, spark);   
+     scanner_node->add_entry("uniformdeviate", UNIFORMDEVIATE, spark);
+
+     scanner_node->add_entry("xpart", XPART, spark); 
+     scanner_node->add_entry("ypart", YPART, spark); 
+     scanner_node->add_entry("zpart", ZPART, spark); 
+     scanner_node->add_entry("wpart", WPART, spark); 
+
+     scanner_node->add_entry("xxpart", XXPART, spark); 
+     scanner_node->add_entry("xypart", XYPART, spark); 
+     scanner_node->add_entry("xzpart", XZPART, spark); 
+
+     scanner_node->add_entry("yxpart", YXPART, spark); 
+     scanner_node->add_entry("yypart", YYPART, spark); 
+     scanner_node->add_entry("yzpart", YZPART, spark); 
+
+     scanner_node->add_entry("zxpart", ZXPART, spark); 
+     scanner_node->add_entry("zypart", ZYPART, spark); 
+     scanner_node->add_entry("zzpart", ZZPART, spark); 
+
+
+     scanner_node->add_entry("wxpart", WXPART, spark); 
+     scanner_node->add_entry("wypart", WYPART, spark); 
+     scanner_node->add_entry("wzpart", WZPART, spark); 
+
+
+
+     scanner_node->add_entry("++", PYTHAGOREAN_PLUS, spark);
+     scanner_node->add_entry("+-+", PYTHAGOREAN_MINUS, spark);
+
+     scanner_node->add_entry("or", OR, spark);
+     scanner_node->add_synonym("||", "or");
+
+     scanner_node->add_entry("and", AND, spark);
+     scanner_node->add_synonym("&&", "and");
+
+     scanner_node->add_entry("==", EQUAL, spark);
+     scanner_node->add_entry("<>", NOT_EQUAL, spark);
+     scanner_node->add_entry("<", LESS, spark);
+     scanner_node->add_entry("<=", LESS_OR_EQUAL, spark);
+     scanner_node->add_entry(">", GREATER, spark);
+     scanner_node->add_entry(">=", GREATER_OR_EQUAL, spark);
+
+     scanner_node->add_entry("not", NOT, spark);
+     scanner_node->add_synonym("!", "not");
+
+
+     scanner_node->add_entry("true", TRUE, spark);
+     scanner_node->add_entry("false", FALSE, spark);
+
+     scanner_node->add_entry("is_odd", IS_ODD, spark);
+     scanner_node->add_synonym("odd", "is_odd");
+
+     scanner_node->add_entry("is_even", IS_EVEN, spark);
+     scanner_node->add_synonym("even", "is_even");
+
+     scanner_node->add_entry("is_cycle", IS_CYCLE, spark);
+
+     scanner_node->add_entry("is_known", IS_KNOWN, spark);
+     scanner_node->add_synonym("known", "is_known");
+
+     scanner_node->add_entry("is_valid", IS_VALID, spark);
+
+     scanner_node->add_entry("is_invalid", IS_INVALID, spark);
+
+     scanner_node->add_entry("charexists", CHAREXISTS, spark);
+
+     scanner_node->add_entry(":=", ASSIGN, spark);
+     scanner_node->add_entry("=", EQUATE, spark);
+
+
+     scanner_node->add_entry(":", COLON, spark);
+
+     scanner_node->add_entry("+=", PLUS_ASSIGN, spark);
+     scanner_node->add_entry("-=", MINUS_ASSIGN, spark);
+     scanner_node->add_entry("*=", TIMES_ASSIGN, spark);
+     scanner_node->add_entry("/=", DIVIDE_ASSIGN, spark);
+
+     scanner_node->add_entry("length", LENGTH, spark);
+     scanner_node->add_entry("magnitude", MAGNITUDE, spark);
+     scanner_node->add_entry("size", SIZE, spark);
+
+     scanner_node->add_entry("red_part", RED_PART, spark);
+     scanner_node->add_entry("green_part", GREEN_PART, spark);
+     scanner_node->add_entry("blue_part", BLUE_PART, spark);
+     scanner_node->add_entry("yellow_part", YELLOW_PART, spark);
+     scanner_node->add_entry("magenta_part", MAGENTA_PART, spark);
+     scanner_node->add_entry("cyan_part", CYAN_PART, spark);
+     scanner_node->add_entry("black_part", BLACK_PART, spark);
+     scanner_node->add_entry("white_part", WHITE_PART, spark);
+     scanner_node->add_entry("blue_violet_part", BLUE_VIOLET_PART, spark);
+     scanner_node->add_entry("red_orange_part", RED_ORANGE_PART, spark);
+
+
+@q **** (4) Sparks for |numerics|.@>          
+@*3 Sparks for {\bf numerics}.
+\initials{LDF 2005.11.03.}
+
+\LOG
+\initials{LDF 2005.08.29.}
+Added the call to |add_entry| for |measure_text|.
+
+\initials{LDF 2005.11.03.}
+Added this section and moved the call to 
+|add_entry| for |measure_text| to it.
+
+\initials{LDF 2005.11.03.}
+Added the call to |add_entry| for |with_precision|.
+\ENDLOG
+
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("measure_text", MEASURE_TEXT, spark);
+   scanner_node->add_entry("with_precision", WITH_PRECISION, spark);
+
+@q **** (4) Sparks for prime numbers.@>          
+@*3 Sparks for prime numbers.
+\initials{LDF 2005.12.06.}
+
+\LOG
+\initials{LDF 2005.12.05.}
+Added calls to |scanner_node->add_entry| for |is_prime|, |is_composite|, 
+|get_prime|, |get_nearest_prime|, and |get_prime_factors|.
+
+\initials{LDF 2005.12.06.}
+Added this section.  Moved the existing calls to |scanner_node->add_entry| to
+here from where they were before.
+
+\initials{LDF 2005.12.06.}
+Added calls to |scanner_node->add_entry| for 
+|get_prime_vector|,
+|get_fermat_prime|, |get_fermat_prime_vector|,
+|get_gauss_prime|, |get_gauss_prime_vector|,
+|get_mersenne_prime|, |get_mersenne_prime_vector|,
+|is_prime_vector|,
+|is_fermat_prime|, |is_fermat_prime_vector|,
+|is_gauss_prime|, |is_gauss_prime_vector|,
+|is_mersenne_prime|, and |is_mersenne_prime_vector|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+     scanner_node->add_entry("is_prime", IS_PRIME, spark);
+     scanner_node->add_entry("is_composite", IS_COMPOSITE, spark);
+
+     scanner_node->add_entry("get_prime", GET_PRIME, spark);
+     scanner_node->add_entry("get_nearest_prime", GET_NEAREST_PRIME, spark);
+     scanner_node->add_entry("get_prime_factors", GET_PRIME_FACTORS, spark);
+
+     scanner_node->add_entry("get_prime_vector", GET_PRIME_VECTOR, spark);
+     scanner_node->add_entry("is_prime_vector", IS_PRIME_VECTOR, spark);
+
+     scanner_node->add_entry("is_composite_vector", IS_COMPOSITE_VECTOR, spark);
+
+     scanner_node->add_entry("get_fermat_prime", GET_FERMAT_PRIME, spark);
+     scanner_node->add_entry("get_fermat_prime_vector", GET_FERMAT_PRIME_VECTOR, spark);
+     scanner_node->add_entry("is_fermat_prime", IS_FERMAT_PRIME, spark);
+     scanner_node->add_entry("is_fermat_prime_vector", IS_FERMAT_PRIME_VECTOR, spark);
+
+     scanner_node->add_entry("get_gauss_prime", GET_GAUSS_PRIME, spark);
+     scanner_node->add_entry("get_gauss_prime_vector", GET_GAUSS_PRIME_VECTOR, spark);
+     scanner_node->add_entry("is_gauss_prime", IS_GAUSS_PRIME, spark);
+     scanner_node->add_entry("is_gauss_prime_vector", IS_GAUSS_PRIME_VECTOR, spark);
+
+     scanner_node->add_entry("get_mersenne_prime", GET_MERSENNE_PRIME, spark);
+     scanner_node->add_entry("get_mersenne_prime_vector", GET_MERSENNE_PRIME_VECTOR, spark);
+     scanner_node->add_entry("is_mersenne_prime", IS_MERSENNE_PRIME, spark);
+     scanner_node->add_entry("is_mersenne_prime_vector", IS_MERSENNE_PRIME_VECTOR, spark);
+
+@q **** (4) Sparks for matrix types.@>          
+@*3 Sparks for matrix types.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+
+\initials{LDF 2007.11.29.}
+Removed the suffix ``\.{\_type}'' from the string arguments to |scanner_node->add_entry|
+in this section.  @:!!@> !!  I may have to change this, if I decide to add support for 
+the corresponding types in the parser.
+
+\initials{LDF 2007.11.29.}
+Added calls to |scanner_node->add_entry| for |identity_matrix|,
+|zero_matrix| and |one_matrix|.
+
+\initials{LDF 2007.11.29.}
+Added calls to |scanner_node->add_entry| for |is_identity|, |is_zero|, |is_one|, 
+|is_multipliable|, and |is_singular|.
+
+\initials{LDF 2007.12.18.}
+Added the suffix ``\.{\_type}'' to the string arguments to |scanner_node->add_entry|
+for the type names in this section again.  I needed to do this because 
+``complex'' is the name of a 3DLDF type.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("double_type", DOUBLE_TYPE_MATRIX, spark);
+   scanner_node->add_entry("float_type", FLOAT_TYPE_MATRIX, spark);
+   scanner_node->add_entry("long_double_type", LONG_DOUBLE_TYPE_MATRIX, spark);
+   scanner_node->add_entry("int_type", INT_TYPE_MATRIX, spark);
+   scanner_node->add_entry("uint_type", UINT_TYPE_MATRIX, spark);
+   scanner_node->add_entry("long_type", LONG_TYPE_MATRIX, spark);
+   scanner_node->add_entry("ulong_type", ULONG_TYPE_MATRIX, spark);
+   scanner_node->add_entry("short_type", SHORT_TYPE_MATRIX, spark);
+   scanner_node->add_entry("ushort_type", USHORT_TYPE_MATRIX, spark);
+   scanner_node->add_entry("char_type", CHAR_TYPE_MATRIX, spark);
+   scanner_node->add_entry("uchar_type", UCHAR_TYPE_MATRIX, spark);
+   scanner_node->add_entry("complex_type", COMPLEX_TYPE_MATRIX, spark);
+   scanner_node->add_entry("complex_float_type", COMPLEX_FLOAT_TYPE_MATRIX, spark);
+   scanner_node->add_entry("complex_long_double_type", 
+                           COMPLEX_LONG_DOUBLE_TYPE_MATRIX, spark);
+
+   scanner_node->add_entry("identity_matrix", IDENTITY_MATRIX, spark);
+   scanner_node->add_entry("zero_matrix", ZERO_MATRIX, spark);
+   scanner_node->add_entry("one_matrix", ONE_MATRIX, spark);
+
+   scanner_node->add_entry("is_identity", IS_IDENTITY, spark);
+   scanner_node->add_entry("is_zero", IS_ZERO, spark);
+   scanner_node->add_entry("is_one", IS_ONE, spark);
+   scanner_node->add_entry("is_multipliable", IS_MULTIPLIABLE, spark);
+   scanner_node->add_entry("is_singular", IS_SINGULAR, spark);
+
+@q **** (4) Sparks for |strings|.@>          
+@*3 Sparks for {\bf strings}.
+\initials{LDF 2005.09.08.}
+
+\LOG
+\initials{LDF 2005.09.08.}
+Added this section with a call to |add_entry| for |DECIMAL|.
+
+\initials{LDF 2005.09.08.}
+Added calls to |add_entry| for |BINARY|, |OCTAL|, and |HEXADECIMAL|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("binary", BINARY, spark);
+   scanner_node->add_entry("octal", OCTAL, spark);
+   scanner_node->add_entry("decimal", DECIMAL, spark);
+   scanner_node->add_entry("hexadecimal", HEXADECIMAL, spark);
+
+@q **** (4) Sparks for drawing.  @>          
+@*3 Sparks for drawing.
+
+\LOG
+\initials{LDF 2004.05.21.}  
+Added this section.
+
+\initials{LDF 2004.06.07.}  
+Removed call to |add_entry| for |with_dots|, and
+call to |add_synonym| for |withdots|.  |with_dots| is now a predefined
+constant defined in |Scanner_Type::create|, and |withdots| is a synonym for
+the former. 
+
+\initials{LDF 2004.06.08.}  Added a call to |add_entry| for 
+|with_projection| and a call to |add_synonym| for |withprojection|.
+
+
+\initials{LDF 2004.06.26.}  Added a call to |add_entry| for 
+|with_factor| and a call to |add_synonym| for |withfactor|.
+
+\initials{LDF 2004.06.28.}
+Added calls to |add_entry| for 
+|no_sort|, |max_z_sort|, |min_z_sort|, |mean_z_sort|,
+|with_min_x_proj|, |with_max_x_proj|, |with_min_y_proj|, 
+|with_max_y_proj|, |with_min_z_proj|, and |with_max_z_proj|.
+
+\initials{LDF 2004.06.29.}
+@:BUG FIX@> BUG FIX: 
+Added ``|spark|'' to the argument list for the calls to 
+|add_entry| for 
+|no_sort|, |max_z_sort|, |min_z_sort|, |mean_z_sort|,
+|with_min_x_proj|, |with_max_x_proj|, |with_min_y_proj|, 
+|with_max_y_proj|, |with_min_z_proj|, and |with_max_z_proj|.
+
+\initials{LDF 2004.06.29.}
+Changed |with_min_x_proj| to |min_x_proj| and |WITH_MIN_X_PROJ| to 
+|MIN_Y_PROJ|.  Did the same for
+|max_x_proj|, |MAX_X_PROJ|, |min_y_proj|, |MIN_Y_PROJ|, etc.
+
+\initials{LDF 2004.08.23.}
+Added calls to |add_entry| for 
+|with_color_vector|, |with_draw_color_vector|, and |with_fill_color_vector|.
+Added calls to |add_synonym| for |withcolorvector|, |withdrawcolorvector|, 
+and |withfillcolorvector|.
+
+\initials{LDF 2004.11.05.}
+Added calls to |add_entry| for |drawdot_if|, 
+|drawdot_unless|, |undrawdot_if|, and |undrawdot_unless|.
+
+\initials{LDF 2004.11.07.}
+Added calls to |add_entry| for |drawdblarrow| and 
+|undrawdblarrow|.
+
+\initials{LDF 2004.11.11.}
+Added calls to |add_entry| for |pickup|, |drop_color|, 
+|drop_dash_pattern|, and |drop_pen|.
+
+\initials{LDF 2004.11.12.}
+Added calls to |add_entry| for 
+|pickup_draw_color|, |pickup_fill_color|, |drop_draw_color|, and 
+|drop_fill_color|.
+
+\initials{LDF 2004.11.14.}
+Added call to |add_entry| for |drop_all|.
+
+\initials{LDF 2005.01.29.}
+Added calls to |scanner_node->add_entry| for 
+|with_text_color| and |with_dot_color|
+and calls to |scanner_node->add_synonym| for 
+|withtextcolor| and |withdotcolor|.
+
+\initials{LDF 2005.03.18.}
+Added calls to |scanner_node->add_entry| for 
+|with_pen_vector| and |with_dash_pattern_vector|.
+Added a call to |scanner_node->add_synonym| for 
+|with_dash_pattern|.  It's a synonym for |dashed|.
+
+\initials{LDF 2005.04.11.}
+Added calls to |add_entry| for |cmy|, |cmyk|, and |rgb|.
+
+\initials{LDF 2005.08.16.}
+Added a call to |add_entry| for |clip_to| and a call to 
+|add_synonym| for |clipto|.
+
+\initials{LDF 2005.11.14.}
+Added a calls to |add_entry| for
+|with_focus_0| and |with_focus_1|, and 
+calls to |add_synonym| for
+|with_focus0|, |withfocus_0|, |withfocus0|, |with_focus1|, 
+|withfocus_1|, and |withfocus1|.
+
+\initials{LDF 2005.11.15.}
+Removed the calls to |add_entry| for
+|with_focus_0| and |with_focus_1| and
+the calls to |add_synonym| for their synonyms.
+The matching strings can't be used
+in input because of the numerals.
+\ENDLOG 
+
+@q ***** (5) Code.  @>          
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("drawdot", DRAWDOT, spark);
+  scanner_node->add_entry("draw", DRAW, spark);
+  scanner_node->add_entry("fill", FILL, spark);
+  scanner_node->add_entry("filldraw", FILLDRAW, spark);
+  scanner_node->add_entry("drawarrow", DRAWARROW, spark);
+  scanner_node->add_entry("drawdblarrow", DRAWDBLARROW, spark);
+
+  scanner_node->add_entry("clip_to", CLIP_TO, spark);
+  scanner_node->add_synonym("clipto", "clip_to");
+
+
+  scanner_node->add_entry("undrawdot", UNDRAWDOT, spark);
+  scanner_node->add_entry("undraw", UNDRAW, spark);
+  scanner_node->add_entry("unfill", UNFILL, spark);
+  scanner_node->add_entry("unfilldraw", UNFILLDRAW, spark);
+  scanner_node->add_entry("undrawarrow", UNDRAWARROW, spark);
+  scanner_node->add_entry("undrawdblarrow", UNDRAWDBLARROW, spark);
+
+  scanner_node->add_entry("drawdot_if", DRAWDOT_IF, spark);      
+  scanner_node->add_entry("drawdot_unless", DRAWDOT_UNLESS, spark);  
+  scanner_node->add_entry("undrawdot_if", UNDRAWDOT_IF, spark);    
+  scanner_node->add_entry("undrawdot_unless", UNDRAWDOT_UNLESS, spark);
+
+  scanner_node->add_entry("pencircle", PENCIRCLE, spark);
+  scanner_node->add_entry("penrazor", PENRAZOR, spark);
+  scanner_node->add_entry("penspeck", PENSPECK, spark);
+  scanner_node->add_entry("pensquare", PENSQUARE, spark);
+
+
+  scanner_node->add_entry("with_pen", WITH_PEN, spark);
+  scanner_node->add_synonym("withpen", "with_pen");
+
+  scanner_node->add_entry("with_pen_vector", WITH_PEN_VECTOR, spark);
+
+  scanner_node->add_entry("with_color", WITH_COLOR, spark);
+  scanner_node->add_synonym("withcolor", "with_color");
+
+  scanner_node->add_entry("with_draw_color", WITH_DRAW_COLOR, spark);
+  scanner_node->add_synonym("withdrawcolor", "with_draw_color");
+
+  scanner_node->add_entry("with_fill_color", WITH_FILL_COLOR, spark);
+  scanner_node->add_synonym("withfillcolor", "with_fill_color");
+
+  scanner_node->add_entry("with_text_color", WITH_TEXT_COLOR, spark);
+  scanner_node->add_synonym("withtextcolor", "with_text_color");
+
+  scanner_node->add_entry("with_dot_color", WITH_DOT_COLOR, spark);
+  scanner_node->add_synonym("withdotcolor", "with_dot_color");
+
+  scanner_node->add_entry("with_color_vector", WITH_COLOR_VECTOR, spark);
+  scanner_node->add_synonym("withcolorvector", "with_color_vector");
+
+  scanner_node->add_entry("with_draw_color_vector", WITH_DRAW_COLOR_VECTOR, spark);
+  scanner_node->add_synonym("withdrawcolorvector", "with_draw_color_vector");
+
+  scanner_node->add_entry("with_fill_color_vector", WITH_FILL_COLOR_VECTOR, spark);
+  scanner_node->add_synonym("withfillcolorvector", "with_fill_color_vector");
+
+
+  scanner_node->add_entry("with_weight", WITH_WEIGHT, spark);
+  scanner_node->add_synonym("withweight", "with_weight");
+
+  scanner_node->add_entry("with_focus", WITH_FOCUS, spark);
+  scanner_node->add_synonym("withfocus", "with_focus");
+
+  scanner_node->add_entry("with_projection", WITH_PROJECTION, spark);
+  scanner_node->add_synonym("withprojection", "with_projection");
+
+  scanner_node->add_entry("with_factor", WITH_FACTOR, spark);
+  scanner_node->add_synonym("withfactor", "with_factor");
+
+
+  scanner_node->add_entry("no_sort",     NO_SORT,     spark);
+  scanner_node->add_entry("max_z_sort",  MAX_Z_SORT,  spark);
+  scanner_node->add_entry("min_z_sort",  MIN_Z_SORT,  spark);
+  scanner_node->add_entry("mean_z_sort", MEAN_Z_SORT, spark);
+  scanner_node->add_entry("min_x_proj",  MIN_X_PROJ,  spark);
+  scanner_node->add_entry("max_x_proj",  MAX_X_PROJ,  spark);
+  scanner_node->add_entry("min_y_proj",  MIN_Y_PROJ,  spark);
+  scanner_node->add_entry("max_y_proj",  MAX_Y_PROJ,  spark);
+  scanner_node->add_entry("min_z_proj",  MIN_Z_PROJ,  spark);
+  scanner_node->add_entry("max_z_proj",  MAX_Z_PROJ,  spark);
+
+  scanner_node->add_entry("dashed", DASHED, spark);
+  scanner_node->add_synonym("with_dash_pattern", "dashed");
+
+  scanner_node->add_entry("with_dash_pattern_vector", WITH_DASH_PATTERN_VECTOR, spark);
+
+  scanner_node->add_entry("on_picture", ON_PICTURE, spark);
+  scanner_node->add_synonym("onpicture", "on_picture");
+  scanner_node->add_synonym("with_picture", "on_picture");
+  scanner_node->add_synonym("withpicture", "on_picture");
+
+  scanner_node->add_entry("pickup", PICKUP, spark);
+  scanner_node->add_entry("drop_color", DROP_COLOR, spark);
+  scanner_node->add_entry("drop_dash_pattern", DROP_DASH_PATTERN, spark);
+  scanner_node->add_entry("drop_pen", DROP_PEN, spark); 
+
+  scanner_node->add_entry("cmy", CMY, spark); 
+  scanner_node->add_entry("cmyk", CMYK, spark); 
+  scanner_node->add_entry("rgb", RGB, spark); 
+
+  scanner_node->add_entry("pickup_draw_color", PICKUP_DRAW_COLOR, spark);
+  scanner_node->add_entry("pickup_fill_color", PICKUP_FILL_COLOR, spark);
+  scanner_node->add_entry("drop_draw_color", DROP_DRAW_COLOR, spark);
+  scanner_node->add_entry("drop_fill_color", DROP_FILL_COLOR, spark);
+
+  scanner_node->add_entry("drop_all", DROP_ALL, spark);
+
+
+@q **** (4) Sparks for projections.@>
+@*3 Sparks for projections.
+\initials{LDF 2005.04.15.}
+
+\LOG
+\initials{LDF 2005.04.15.}
+Added this section with the call to |scanner_node->add_entry| for
+|project|.
+
+\initials{LDF 2005.04.18.}
+Added the call to |scanner_node->add_entry| for
+|projected|.
+
+\initials{LDF 2005.04.19.}
+Added the call to |scanner_node->add_entry| for
+|with_z|
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("project", PROJECT, spark);
+  scanner_node->add_entry("projected", PROJECTED, spark);
+  scanner_node->add_entry("with_z", WITH_Z, spark);
+
+
+@q **** (4) Sparks for setting.  @>
+@*3 Sparks for setting.
+
+\LOG
+\initials{LDF 2004.06.08.}  
+Added this section, with a call to |scanner_node->add_entry| 
+for |set|.
+
+\initials{LDF 2004.11.01.}
+Added calls to |scanner_node->add_entry| 
+for |with_center|, |with_point_count|, and |with_normal|.
+
+\initials{LDF 2004.11.01.}
+Added calls to |scanner_node->add_entry| for 
+|with_axis_h|, |with_axis_v|, and |with_diameter|.
+
+\initials{LDF 2004.11.02.}
+Added call to |scanner_node->add_entry| for |with_sides|.
+
+\initials{LDF 2005.05.19.}
+Added calls to |scanner_node->add_entry| for 
+|with_start_diameter|, |with_points_per_cycle|, |with_cycles|, 
+and |with_vector|.
+
+\initials{LDF 2005.05.21.}
+Added calls to |scanner_node->add_entry| for 
+|with_type|, |null_type|, |logarithmic|, |archimedean|,
+|parabolic|, and |hyperbolic|.
+
+\initials{LDF 2005.05.24.}
+Added calls to |scanner_node->add_entry| for |elliptical|, 
+|cylindrical|, |conical|, |circular|, |with_curve|, |with_path|, 
+and |with_envelope|.
+
+\initials{LDF 2005.10.19.}
+Added calls to |scanner_node->add_entry| for |with_divisions|,
+|with_divisions_vertical|, and |with_divisions_horizontal|.
+
+\initials{LDF 2005.10.28.}
+Added call to |scanner_node->add_entry| for |with_radius|.
+
+\initials{LDF 2005.10.31.}
+Added calls to |scanner_node->add_entry| for 
+|with_axis_x|, |with_axis_y|, and |with_axis_z|.
+
+\initials{LDF 2005.10.31.}
+Added calls to |scanner_node->add_entry| for |with_divisions_x|,
+|with_divisions_y|, and |with_divisions_z|.
+
+\initials{LDF 2006.11.09.}
+Added calls to |scanner_node->add_entry| for |single_napped| 
+and |double_napped|.
+
+\initials{LDF 2006.11.09.}
+Added calls to |scanner_node->add_synonym| for |single_nap| and |double_nap|.
+
+\initials{LDF 2009.11.18.}
+Added calls to |scanner_node->add_entry| for |with_divisions_latitude|,
+|with_divisions_longitude| and |with_segment_count| and
+calls to |scanner_node->add_synonym| for 
+|with_divisions_lat|, |with_divisions_long| and |with_segments|.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("set", SET, spark);
+   scanner_node->add_entry("with_center", WITH_CENTER, spark);
+   scanner_node->add_entry("with_point_count", WITH_POINT_COUNT, spark);
+   scanner_node->add_entry("with_normal", WITH_NORMAL, spark);
+   scanner_node->add_entry("with_axis_h", WITH_AXIS_H, spark);
+   scanner_node->add_entry("with_axis_v", WITH_AXIS_V, spark);
+   scanner_node->add_entry("with_diameter", WITH_DIAMETER, spark);
+   scanner_node->add_entry("with_radius", WITH_RADIUS, spark);
+
+   scanner_node->add_entry("with_axis_x", WITH_AXIS_X, spark);
+   scanner_node->add_entry("with_axis_y", WITH_AXIS_Y, spark);
+   scanner_node->add_entry("with_axis_z", WITH_AXIS_Z, spark);
+
+   scanner_node->add_entry("with_divisions", WITH_DIVISIONS, spark);
+   scanner_node->add_entry("with_divisions_vertical", WITH_DIVISIONS_VERTICAL, spark);
+   scanner_node->add_entry("with_divisions_horizontal", WITH_DIVISIONS_HORIZONTAL, spark);
+
+   scanner_node->add_entry("with_divisions_x", WITH_DIVISIONS_X, spark);
+   scanner_node->add_entry("with_divisions_y", WITH_DIVISIONS_Y, spark);
+   scanner_node->add_entry("with_divisions_z", WITH_DIVISIONS_Z, spark);
+
+   scanner_node->add_entry("with_divisions_latitude", WITH_DIVISIONS_LATITUDE, spark);
+   scanner_node->add_entry("with_divisions_longitude", WITH_DIVISIONS_LONGITUDE, spark);
+
+   scanner_node->add_synonym("with_divisions_lat", "with_divisions_latitude");
+   scanner_node->add_synonym("with_divisions_long", "with_divisions_longitude");
+
+   scanner_node->add_entry("with_segment_count", WITH_SEGMENT_COUNT, spark);
+
+   scanner_node->add_synonym("with_segments", "with_segment_count");
+
+   scanner_node->add_entry("with_start_diameter", WITH_START_DIAMETER, spark);
+   scanner_node->add_entry("with_points_per_cycle", WITH_POINTS_PER_CYCLE, 
+                           spark);
+   scanner_node->add_entry("with_cycles", WITH_CYCLES, spark);
+   scanner_node->add_entry("with_direction_vector", 
+                           WITH_DIRECTION_VECTOR, 
+                           spark);
+
+   scanner_node->add_entry("with_sides", WITH_SIDES, spark);
+
+   scanner_node->add_entry("null_type", NULL_TYPE, spark);
+   scanner_node->add_entry("with_type", WITH_TYPE, spark);
+   scanner_node->add_entry("logarithmic", LOGARITHMIC, spark);
+   scanner_node->add_entry("archimedean", ARCHIMEDEAN, spark);
+   scanner_node->add_entry("parabolic", PARABOLIC, spark);
+   scanner_node->add_entry("hyperbolic", HYPERBOLIC, spark);
+
+   scanner_node->add_entry("elliptical", ELLIPTICAL, spark);
+   scanner_node->add_entry("circular", CIRCULAR, spark);
+   scanner_node->add_entry("cylindrical", CYLINDRICAL, spark);
+   scanner_node->add_entry("conical", CONICAL, spark);
+
+   scanner_node->add_entry("single_napped", SINGLE_NAPPED, spark);
+   scanner_node->add_synonym("single_nap", "single_napped");
+
+   scanner_node->add_entry("double_napped", DOUBLE_NAPPED, spark);
+   scanner_node->add_synonym("double_nap", "double_napped");
+
+   scanner_node->add_entry("with_curve", WITH_CURVE, spark);
+   scanner_node->add_entry("with_path", WITH_PATH, spark);
+   scanner_node->add_entry("with_envelope", WITH_ENVELOPE, spark);
+
+
+@q **** (4) Types for labels.  @>
+@*3 Types for labels.
+
+\LOG
+\initials{LDF 2004.06.30.}  
+Added this section, with calls to |add_entry| for
+|label|, |rt|, |lft|, |top|, |bot|, |urt|, |ulft|, |lrt|, and |llft|.
+
+\initials{LDF 2004.06.30.}
+Added call to |add_entry| for |dotlabel|.
+
+\initials{LDF 2004.10.22.}
+Added calls to |add_entry| for |suppress_labels| and
+|unsuppress_labels|.
+
+\initials{LDF 2004.10.22.}
+Added call to |add_entry| for |kill_labels|.
+
+\initials{LDF 2004.11.06.}
+Added calls to |add_entry| for |label_if|, |label_unless|, 
+|dotlabel_if|, and |dotlabel_unless|.
+
+\initials{LDF 2004.11.10.}
+Added calls to |add_entry| for |labels|, |labels_if|, |labels_unless|, 
+|dotlabels|, |dotlabels_if|, and |dotlabels_unless|.
+
+\initials{LDF 2004.12.01.}
+Added a call to |scanner_node->add_entry| for 
+|scantokens| and a call to |scanner_node->add_synonym| for 
+|scan_tokens|.
+
+\initials{LDF 2004.12.13.}
+Added a call to |scanner_node->add_entry| for 
+|verbatim_metapost|.
+
+\initials{LDF 2005.01.25.}
+Added a call to |scanner_node->add_entry| for |let|.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("label", LABEL, spark);
+  scanner_node->add_entry("dotlabel", DOTLABEL, spark);
+  scanner_node->add_entry("rt", RT, spark);
+  scanner_node->add_entry("lft", LFT, spark);
+  scanner_node->add_entry("top", TOP, spark);
+  scanner_node->add_entry("bot", BOT, spark);
+  scanner_node->add_entry("urt", URT, spark);
+  scanner_node->add_entry("ulft", ULFT, spark);
+  scanner_node->add_entry("lrt", LRT, spark);
+  scanner_node->add_entry("llft", LLFT, spark);
+
+  scanner_node->add_entry("suppress_labels", SUPPRESS_LABELS, spark);
+  scanner_node->add_entry("unsuppress_labels", UNSUPPRESS_LABELS, spark);
+  scanner_node->add_entry("kill_labels", KILL_LABELS, spark);
+
+  scanner_node->add_entry("label_if", LABEL_IF, spark);
+  scanner_node->add_entry("label_unless", LABEL_UNLESS, spark);
+  scanner_node->add_entry("dotlabel_if", DOTLABEL_IF, spark);
+  scanner_node->add_entry("dotlabel_unless", DOTLABEL_UNLESS, spark);
+
+
+  scanner_node->add_entry("labels", LABELS, spark);
+  scanner_node->add_entry("labels_if", LABELS_IF, spark);
+  scanner_node->add_entry("labels_unless", LABELS_UNLESS, spark);
+  scanner_node->add_entry("dotlabels_if", DOTLABELS_IF, spark);
+  scanner_node->add_entry("dotlabels_unless", DOTLABELS_UNLESS, spark);
+
+  scanner_node->add_entry("scantokens", SCANTOKENS, spark);
+  scanner_node->add_synonym("scan_tokens", "scantokens");
+
+  scanner_node->add_entry("verbatim_metapost", 
+                          VERBATIM_METAPOST, spark);
+
+  scanner_node->add_entry("let", LET, spark);
+
+@q **** (4) Types for messages.  @>
+@*3 Types for messages.
+
+\LOG
+\initials{LDF 2004.09.22.}  
+Added this section, with calls to |add_entry| for
+|message| and |errmessage|.
+
+\initials{LDF 2004.09.22.}
+Added call to |add_entry| for |pause|.
+
+\initials{LDF 2004.10.20.}
+Added call to |add_entry| for |MEDIATE|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+
+  scanner_node->add_entry("message", MESSAGE, spark);
+  scanner_node->add_entry("errmessage", ERRMESSAGE, spark);
+  scanner_node->add_entry("pause", PAUSE, spark);
+
+  scanner_node->add_entry("mediate", MEDIATE, spark);
+
+
+
+
+@q **** (4) Types for |Focuses|.  @>
+@*3 Types for |Focuses|.
+\initials{LDF 2004.06.08.}  
+
+\LOG
+\initials{LDF 2004.06.08.}  
+Added this section.  It initially contains calls 
+to |add_entry| for |with_position|, |with_direction|, 
+|with_distance|, |with_angle|, |with_axis|,
+|x_axis|, |y_axis|, and |z_axis|.
+It also initially contains calls to 
+|add_synonym| for |withposition|,
+|withdirection|, |withdistance|, |withangle|, and |withaxis|.
+
+\initials{LDF 2004.06.08.}
+Added calls to |add_entry| for |perspective|,
+|parallel_x_y|, |parallel_x_z|, |parallel_z_y|, |axonometric|, 
+|isometric|, and |suppress|.
+
+\initials{LDF 2007.09.02.}
+Added calls to |add_entry|  for 
+|get_position|,
+|get_direction|,
+|get_distance|,
+|get_up|
+and
+|get_perspective_transform|.
+|get_transform| is already declared elsewhere.
+
+\initials{LDF 2007.09.02.}
+Added call to |add_entry| for |reset_angle|.
+
+\initials{LDF 2007.09.17.}
+Added calls to |add_entry| for |pan|, |panned|, |zoom|, and |zoomed|.
+
+\initials{LDF 2007.09.19.}
+Added calls to |add_entry| for |WITH_FOCUS_AXES| and |WITH_MAIN_AXES|.
+
+\initials{LDF 2007.09.24.}
+Added calls to |add_entry| for |tilt| and |tilted|.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("with_position", WITH_POSITION, spark);
+  scanner_node->add_entry("with_direction", WITH_DIRECTION, spark); 
+  scanner_node->add_entry("with_distance", WITH_DISTANCE, spark);
+  scanner_node->add_entry("with_angle", WITH_ANGLE, spark);
+  scanner_node->add_entry("with_axis", WITH_AXIS, spark); 
+  scanner_node->add_entry("x_axis", X_AXIS, spark); 
+  scanner_node->add_entry("y_axis", Y_AXIS, spark); 
+  scanner_node->add_entry("z_axis", Z_AXIS, spark); 
+
+  scanner_node->add_entry("with_focus_axes", WITH_FOCUS_AXES, spark);
+  scanner_node->add_entry("with_main_axes", WITH_MAIN_AXES, spark);
+
+  scanner_node->add_synonym("withposition", "with_position");
+  scanner_node->add_synonym("withdirection", "with_direction");
+  scanner_node->add_synonym("withdistance", "with_distance");
+  scanner_node->add_synonym("withangle", "with_angle");
+  scanner_node->add_synonym("withaxis", "with_axis");
+
+  scanner_node->add_entry("perspective", PERSPECTIVE, spark);
+  scanner_node->add_entry("parallel_x_y", PARALLEL_X_Y, spark);
+  scanner_node->add_entry("parallel_x_z", PARALLEL_X_Z, spark);
+  scanner_node->add_entry("parallel_z_y", PARALLEL_Z_Y, spark);
+  scanner_node->add_entry("axonometric", AXONOMETRIC, spark);
+  scanner_node->add_entry("isometric", ISOMETRIC, spark);
+  scanner_node->add_entry("suppress", SUPPRESS, spark);
+
+  scanner_node->add_entry("get_position", GET_POSITION, spark);
+  scanner_node->add_entry("get_direction", GET_DIRECTION, spark);
+  scanner_node->add_entry("get_distance", GET_DISTANCE, spark);
+  scanner_node->add_entry("get_up", GET_UP, spark);
+  /* |add_entry| is already called for |get_transform| elsewhere.  
+     \initials{LDF 2007.09.02.}  */@/
+  scanner_node->add_entry("get_perspective_transform", GET_PERSPECTIVE_TRANSFORM, spark);
+
+  scanner_node->add_entry("reset_angle", RESET_ANGLE, spark);
+
+  scanner_node->add_entry("pan", PAN, spark);
+  scanner_node->add_entry("panned", PANNED, spark);
+  scanner_node->add_entry("zoom", ZOOM, spark);
+  scanner_node->add_entry("zoomed", ZOOMED, spark);
+
+  scanner_node->add_entry("tilt", TILT, spark);
+  scanner_node->add_entry("tilted", TILTED, spark);
+
+@q **** (4) Types for modifying |Shapes|.@>
+@*3 Types for modifying |Shapes|.
+\initials{LDF 2004.11.01.}
+
+\LOG
+\initials{LDF 2004.11.01.}
+Added this section with a 
+call to |scanner_node->add_entry| for |clear_connectors|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("clear_connectors", CLEAR_CONNECTORS, spark);
+
+@q **** (4) Types for outputting |Pictures|.  @>
+@*3 Types for outputting |Pictures|.
+
+\LOG
+\initials{LDF 2004.06.07.}  Added this section.
+
+\initials{LDF 2004.07.14.}
+Added call to |add_entry| for |CLEAR|.
+
+\initials{LDF 2005.03.13.}
+Added calls to |add_entry| for |WITH_SURFACE_HIDING| and
+|WITHOUT_SURFACE_HIDING|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("output", OUTPUT, spark);
+  scanner_node->add_entry("clear", CLEAR, spark);
+
+  scanner_node->add_entry("with_surface_hiding", WITH_SURFACE_HIDING, spark);
+  scanner_node->add_entry("without_surface_hiding", WITHOUT_SURFACE_HIDING, spark);
+
+@q **** (4) Types for inputting files.  @>
+@*3 Types for inputting files.
+
+\LOG
+\initials{LDF 2004.09.14.}  
+Added this section with a call to |add_entry| for |INPUT|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+
+  scanner_node->add_entry("input", INPUT, spark);
+
+@q **** (4) Types for figures.  @>
+@*3 Types for figures.
+
+\LOG
+\initials{LDF 2004.06.19.}  
+Added this section with calls to 
+|scanner_node->add_entry|for |beginfig| and |endfig|. 
+
+\initials{LDF 2005.06.11.}
+Added calls to |scanner_node->add_entry|for |beginchar| and 
+|endchar| and calls to |scanner_node->add_synonym| for 
+|begin_fig|, |end_fig|, |begin_char|, and |end_char|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+
+  scanner_node->add_entry("beginfig", BEGINFIG, spark);
+  scanner_node->add_entry("endfig", ENDFIG, spark);
+
+  scanner_node->add_entry("beginchar", BEGINCHAR, spark);
+  scanner_node->add_entry("endchar", ENDCHAR, spark);
+
+  scanner_node->add_synonym("begin_fig", "beginfig");
+  scanner_node->add_synonym("end_fig", "endfig");
+
+  scanner_node->add_synonym("begin_char", "beginchar");
+  scanner_node->add_synonym("end_char", "endchar");
+
+@q **** (4) Types for showing objects referenced by variables.  @>
+@*3 Types for showing objects referenced by variables.
+
+\LOG
+\initials{LDF 2004.06.09.}  
+Added this section with call to
+|scanner_node->add_entry| for |SHOW|. 
+
+\initials{LDF 2005.09.13.}
+Added the call to |scanner_node->add_entry| for |FIXED|. 
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+  scanner_node->add_entry("show", SHOW, spark);
+  scanner_node->add_entry("fixed", FIXED, spark);
+
+
+
+@q **** (4) Types for intersections.  @>          
+@*3 Types for intersections.
+
+\LOG
+\initials{LDF 2004.09.05.}
+Added this section with calls to |scanner_node->add_entry| for
+|intersection_point| and |intersection_points| and calls to
+|scanner_node->add_synonym| for |intersectionpoint| and
+|intersectionpoints|.
+
+\initials{LDF 2005.10.28.}
+Added call to |scanner_node->add_entry| for |intersection|.
+\ENDLOG
+
+@q ***** (5) Code.  @>          
+
+@<Define |Scanner_Type::create|@>=
+
+
+  scanner_node->add_entry("intersection", INTERSECTION, spark);
+  scanner_node->add_entry("intersection_point", INTERSECTION_POINT, spark);
+  scanner_node->add_entry("intersection_points", INTERSECTION_POINTS, spark);
+
+  scanner_node->add_synonym("intersectionpoint", "intersection_point");
+  scanner_node->add_synonym("intersectionpoints", "intersection_points");
+
+
+@q **** (4) Types for conditionals.  @>
+@*3 Types for conditionals.
+
+\LOG
+\initials{LDF 2004.09.09.}
+Added this section with calls to |scanner_node->add_entry| for 
+|IF|, |ELSE|, |ELSEIF|, and |FI|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("if", IF, spark);
+   scanner_node->add_entry("else", ELSE, spark);
+   scanner_node->add_entry("elseif", ELSEIF, spark);
+   scanner_node->add_entry("fi", FI, spark);
+
+
+
+@q **** (4) Types for loops.  @>
+@*3 Types for loops.
+
+\LOG
+\initials{LDF 2004.09.09.}
+Added this section with calls to |scanner_node->add_entry| for 
+|FOR|, |FORSUFFIXES|, |FOREVER|, |EXITIF|, |STEP|, |UNTIL|, 
+and |ENDFOR|. 
+
+\initials{LDF 2004.09.13.}
+Added call to |scanner_node->add_entry| for 
+|END_LOOP_PREFIX|.
+
+\initials{LDF 2004.09.14.}
+Removed call to |scanner_node->add_entry| for 
+|END_LOOP_PREFIX|.
+
+\initials{LDF 2004.09.22.}
+Changed |exitif| to |exit_if|.  Added a call to
+|scanner_node->add_entry| for |exit_unless| and calls to
+|scanner_node->add_synonym| for |exitif| and |exitunless|.
+
+\initials{LDF 2004.09.22.}
+Changed |forsuffixes| to |for_suffixes| and |endfor| to |end_for|.
+Added calls to |scanner_node->add_synonym| for |forsuffixes| and
+|endfor|. 
+
+\initials{LDF 2004.11.26.}
+Added calls to |scanner_node->add_entry| for |upto| and |downto|, 
+and calls to |scanner_node->add_synonym| for |up_to| and |down_to|. 
+
+\initials{LDF 2005.01.18.}
+Added call to |scanner_node->add_entry| for 
+|for_suffixes_internal|.
+
+\initials{LDF 2005.01.19.}
+Added call to |scanner_node->add_entry| for 
+|for_suffixes_internal_start|.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+
+  scanner_node->add_entry("for", FOR, spark);
+  scanner_node->add_entry("for_suffixes", FOR_SUFFIXES, spark);
+  scanner_node->add_synonym("forsuffixes", "for_suffixes");
+  scanner_node->add_entry("forever", FOREVER, spark);
+  scanner_node->add_entry("for_suffixes_internal", 
+                          FOR_SUFFIXES_INTERNAL, spark);
+  scanner_node->add_entry("for_suffixes_internal_start", 
+                          FOR_SUFFIXES_INTERNAL_START, spark);
+  scanner_node->add_entry("exit_if", EXIT_IF, spark);
+  scanner_node->add_synonym("exitif", "exit_if");
+  scanner_node->add_entry("exit_unless", EXIT_UNLESS, spark);
+  scanner_node->add_synonym("exitunless", "exit_unless");
+  scanner_node->add_entry("step", STEP, spark);
+  scanner_node->add_entry("until", UNTIL, spark);
+  scanner_node->add_entry("end_for", END_FOR, spark);
+  scanner_node->add_synonym("endfor", "end_for");
+
+
+  scanner_node->add_entry("upto", UPTO, spark);
+  scanner_node->add_synonym("up_to", "upto");
+
+  scanner_node->add_entry("downto", DOWNTO, spark);
+  scanner_node->add_synonym("down_to", "downto");
+
+
+@q **** (4) Types for transformations.@>
+@*3 Types for transformations.
+\initials{LDF 2005.04.16.}
+
+\LOG
+\initials{LDF 2005.04.16.}
+Added this section with calls to |scanner_node->add_entry|
+for |inverse| and |invert|.
+
+\initials{LDF 2007.10.14.}
+Added calls to |scanner_node->add_entry| for 
+|transpose| and |transposed|. 
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("inverse", INVERSE, spark);
+   scanner_node->add_entry("invert", INVERT, spark);
+
+   scanner_node->add_entry("transpose", TRANSPOSE, spark);
+   scanner_node->add_entry("transposed", TRANSPOSED, spark);
+
+@q **** (4) Types for groups.  @>
+@*3 Types for groups.
+
+\LOG
+\initials{LDF 2004.09.12.}
+Added this section with calls to |scanner_node->add_entry| for 
+|begin_group|, |end_group|, and |save|, and calls to 
+|scanner_node->add_synonym| for |begingroup| and |endgroup|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+
+  scanner_node->add_entry("begin_group", BEGIN_GROUP, spark);
+  scanner_node->add_entry("end_group", END_GROUP, spark);
+  scanner_node->add_entry("save", SAVE, spark);
+
+  scanner_node->add_synonym("begingroup", "begin_group");
+  scanner_node->add_synonym("endgroup", "end_group");
+
+
+@q **** (4) Types for extracting sub-objects.@>
+@*3 Types for extracting sub-objects.
+\initials{LDF 2004.10.08.}
+
+\LOG
+\initials{LDF 2004.10.08.}
+Added this section with calls to |scanner_node->add_entry| for 
+|get_transform|,
+|get_point|,
+|get_points|,
+|get_connector|,
+|get_connectors|,
+|get_pen|,
+|get_dash_pattern|,
+|get_dash_pattern|,
+|get_drawdot_color|,
+|get_draw_color|,
+|get_fill_color|,
+|get_colors|,
+|get_circle|,
+|get_ellipse|,
+|get_path|,
+|get_rectangle|, and
+|get_reg_polygon|.
+
+\initials{LDF 2004.10.09.}
+Added a call to |scanner_node->add_entry| for |get_center|.
+
+\initials{LDF 2004.11.13.}
+Added calls to |scanner_node->add_entry| for 
+|half|, |quarter|, and |segment|.
+
+\initials{LDF 2004.11.25.}
+Added calls to |scanner_node->add_entry| for 
+|with_start|, |with_end|, |with_size|, and |with_fraction|.
+
+\initials{LDF 2004.11.25.}
+Added call to |scanner_node->add_entry| for 
+|with_closed|.
+
+\initials{LDF 2005.03.17.}
+Removed the call to |scanner_node->add_entry| 
+for |get_drawdot_color|.
+
+\initials{LDF 2005.11.09.}
+Added calls to |scanner_node->add_entry| for |get_vertex|,|get_focus|, |get_focus_0|, 
+|get_focus_1|, |get_directrix|, |get_parameter|, |get_linear_eccentricity|, 
+|get_numerical_eccentricity|, |get_type|, |get_shape_type|, and
+|get_conic_section_type|.
+
+\initials{LDF 2005.11.09.}
+Added the call to |scanner_node->add_entry| for |get_last_point|.
+
+\initials{LDF 2005.11.17.}
+Added calls to |scanner_node->add_entry| 
+for |discriminant|, |tangent|, 
+and |curvature|.
+
+\initials{LDF 2005.11.18.}
+Added call to |scanner_node->add_entry| for |standardize|.
+
+\initials{LDF 2006.11.06.}
+Added calls to |scanner_node->add_entry| for |get_base_center| and 
+|get_cap_center|.
+
+\initials{LDF 2006.11.09.}
+Added calls to |scanner_node->add_entry| for 
+|get_apex|, |get_base|, and |get_cap|.
+
+\initials{LDF 2007.07.09.}
+Added call to |scanner_node->add_entry| for |get_branch|.
+
+\initials{LDF 2007.08.03.}
+Added call to |scanner_node->add_entry| for |get_path_point|.
+
+\initials{LDF 2007.08.16.}
+Added calls to |scanner_node->add_entry| for |get_approx_center|,
+|get_true_center|, and |get_point_six|.
+
+\initials{LDF 2007.08.17.}
+Added calls to |scanner_node->add_entry| 
+for 
+|get_polygon|,
+|get_pentagon|,
+|get_hexagon|,
+|get_heptagon|,
+|get_octagon|,
+|get_nonagon|,
+|get_decagon|,
+|get_hendecagon|,
+and 
+|get_dodecagon|.
+
+\initials{LDF 2007.08.19.}
+Added calls to |scanner_node->add_entry| for 
+|get_pascal_point|, |get_pascal_points|, and 
+|get_pascal_line|.
+
+\initials{LDF 2007.08.21.}
+Added calls to |scanner_node->add_entry| for |set_transform|,
+|reset_transform| and |delete_transform|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("get_transform", GET_TRANSFORM, spark);
+   scanner_node->add_entry("set_transform", SET_TRANSFORM, spark);
+   scanner_node->add_entry("reset_transform", RESET_TRANSFORM, spark);
+   scanner_node->add_entry("delete_transform", DELETE_TRANSFORM, spark);
+
+   scanner_node->add_entry("get_point", GET_POINT, spark);
+   scanner_node->add_entry("get_last_point", GET_LAST_POINT, spark);
+   scanner_node->add_entry("get_points", GET_POINTS, spark);
+   scanner_node->add_entry("get_path_point", GET_PATH_POINT, spark);
+   scanner_node->add_entry("get_connector", GET_CONNECTOR, spark);
+   scanner_node->add_entry("get_connectors", GET_CONNECTORS, spark);
+   scanner_node->add_entry("get_pen", GET_PEN, spark);
+   scanner_node->add_entry("get_dash_pattern", GET_DASH_PATTERN, spark);
+   scanner_node->add_entry("get_draw_color", GET_DRAW_COLOR, spark);
+   scanner_node->add_entry("get_fill_color", GET_FILL_COLOR, spark);
+   scanner_node->add_entry("get_colors", GET_COLORS, spark);
+   scanner_node->add_entry("get_circle", GET_CIRCLE, spark);
+
+   scanner_node->add_entry("get_pascal_point", GET_PASCAL_POINT, spark);
+   scanner_node->add_entry("get_pascal_points", GET_PASCAL_POINTS , spark);
+   scanner_node->add_entry("get_pascal_line", GET_PASCAL_LINE, spark);
+
+   scanner_node->add_entry("get_center", GET_CENTER, spark);
+
+   scanner_node->add_entry("get_approx_center", GET_APPROX_CENTER, spark);
+   scanner_node->add_entry("get_true_center", GET_TRUE_CENTER, spark);
+   scanner_node->add_entry("get_point_six", GET_POINT_SIX, spark);
+
+   scanner_node->add_entry("get_ellipse", GET_ELLIPSE, spark);
+   scanner_node->add_entry("get_path", GET_PATH, spark);
+   scanner_node->add_entry("get_rectangle", GET_RECTANGLE, spark);
+   scanner_node->add_entry("get_reg_polygon", GET_REG_POLYGON, spark);
+
+   scanner_node->add_entry("get_polygon", GET_POLYGON, spark); 
+   scanner_node->add_entry("get_pentagon", GET_PENTAGON, spark);
+   scanner_node->add_entry("get_hexagon", GET_HEXAGON, spark); 
+   scanner_node->add_entry("get_heptagon", GET_HEPTAGON, spark); 
+   scanner_node->add_entry("get_octagon", GET_OCTAGON, spark); 
+   scanner_node->add_entry("get_nonagon", GET_NONAGON, spark);
+   scanner_node->add_entry("get_decagon", GET_DECAGON, spark);
+   scanner_node->add_entry("get_hendecagon", GET_HENDECAGON, spark);
+   scanner_node->add_entry("get_dodecagon", GET_DODECAGON, spark);
+
+   scanner_node->add_entry("get_base", GET_BASE, spark);
+   scanner_node->add_entry("get_cap", GET_CAP, spark);
+   scanner_node->add_entry("get_apex", GET_APEX, spark);
+
+   scanner_node->add_entry("get_base_center", GET_BASE_CENTER, spark);
+   scanner_node->add_entry("get_cap_center", GET_CAP_CENTER, spark);
+
+   scanner_node->add_entry("get_vertex", GET_VERTEX, spark);
+   scanner_node->add_entry("get_focus", GET_FOCUS, spark);
+
+   scanner_node->add_entry("discriminant", DISCRIMINANT, spark);
+   scanner_node->add_entry("tangent", TANGENT, spark);
+   scanner_node->add_entry("curvature", CURVATURE, spark);
+
+   scanner_node->add_entry("standardize", STANDARDIZE, spark);
+
+   scanner_node->add_entry("get_directrix", GET_DIRECTRIX, spark);
+   scanner_node->add_entry("get_parameter", GET_PARAMETER, spark);
+   scanner_node->add_entry("get_linear_eccentricity", GET_LINEAR_ECCENTRICITY, spark);
+   scanner_node->add_entry("get_numerical_eccentricity", GET_NUMERICAL_ECCENTRICITY, spark);
+   scanner_node->add_entry("get_type", GET_TYPE, spark);
+   scanner_node->add_entry("get_shape_type", GET_SHAPE_TYPE, spark);
+   scanner_node->add_entry("get_conic_section_type", GET_CONIC_SECTION_TYPE, spark);
+
+   scanner_node->add_entry("get_branch", GET_BRANCH, spark);
+
+   scanner_node->add_entry("half", HALF, spark);
+   scanner_node->add_entry("quarter", QUARTER, spark);
+   scanner_node->add_entry("segment", SEGMENT, spark);
+
+   scanner_node->add_entry("with_start", WITH_START, spark);
+   scanner_node->add_entry("with_end", WITH_END, spark);
+   scanner_node->add_entry("with_size", WITH_SIZE, spark);
+   scanner_node->add_entry("with_fraction", WITH_FRACTION, spark);
+   scanner_node->add_entry("with_closed", WITH_CLOSED, spark);
+
+
+@q **** (4) Types for generating objects.@>
+@*3 Types for generating objects.
+\initials{LDF 2007.07.20.}
+
+\LOG
+\initials{LDF 2007.07.20.}
+Added this section with calls to |scanner_node->add_entry| for 
+|with_test|, |with_no_test|, |with_rectify|, and |with_no_rectify|.
+
+\initials{LDF 2007.07.27.}
+Added calls to |scanner_node->add_entry| for |with_cull| and |with_no_cull|.
+
+\initials{LDF 2007.08.03.}
+Added calls to |scanner_node->add_entry| for |with_transform| and |with_no_transform|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("with_test", WITH_TEST, spark);
+   scanner_node->add_entry("with_no_test ", WITH_NO_TEST , spark);
+
+   scanner_node->add_entry("with_cull", WITH_CULL, spark);
+   scanner_node->add_entry("with_no_cull", WITH_NO_CULL, spark);
+
+   scanner_node->add_entry("with_rectify", WITH_RECTIFY, spark);
+   scanner_node->add_entry("with_no_rectify", WITH_NO_RECTIFY, spark);
+
+   scanner_node->add_entry("with_transform", WITH_TRANSFORM, spark);
+   scanner_node->add_entry("with_no_transform", WITH_NO_TRANSFORM, spark);
+
+@q **** (4) Types for macros.@>
+@*3 Types for macros.
+\initials{LDF 2004.12.16.}
+
+\LOG
+\initials{LDF 2004.12.16.}
+Added this section with calls to |scanner_node->add_entry| for
+|macro_type|,
+|vardef_type|,
+|primarydef_type|,
+|secondarydef_type|,
+|tertiarydef_type|,
+|defmacro|,
+|vardef|,
+|primarydef|, 
+|secondarydef|, 
+|tertiarydef|, 
+|enddef|, 
+|suffix|, 
+|text|, and
+|expr|.
+
+\initials{LDF 2004.12.20.}
+Changed |defmacro| to |def|.
+
+\initials{LDF 2004.12.21.}
+Added call to |scanner_node->add_entry| for |defun|.
+
+\initials{LDF 2004.12.28.}
+Removed the calls to |scanner_node->add_entry| for 
+|macro_type|, 
+|vardef_type|, 
+|primarydef_type|, 
+|secondarydef_type|, 
+|tertiarydef_type|, 
+|def|, 
+|vardef|, 
+|suffix|, 
+|text|, and
+|expr|.
+%
+Changed the calls to |scanner_node->add_entry| for 
+|macro|, 
+|primarydef|,
+|secondarydef|, and
+|tertiarydef| so that the |type| argument is |MACRO_DECLARATOR|, 
+|PRIMARYDEF_DECLARATOR|, etc.
+
+\initials{LDF 2004.12.28.}
+Added calls to |scanner_node->add_entry| for 
+|macro_vector|,
+|primarydef_vector|,
+|secondarydef_vector|, and
+|tertiarydef_vector|.
+
+\initials{LDF 2004.12.29.}
+Added call to |scanner_node->add_entry| for |def| again.
+
+\initials{LDF 2004.12.29.}
+Changed the calls to |scanner_node->add_entry| for |primarydef|,
+|secondarydef|, and |tertiarydef|, so that the |type| arguments are 
+|PRIMARYDEF|, |SECONDARYDEF|, AND |TERTIARYDEF|, respectively.
+
+\initials{LDF 2005.06.09.}
+Removed the call to |scanner_node->add_entry| for |defun|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+
+   scanner_node->add_entry("macro", MACRO_DECLARATOR, spark);
+
+   scanner_node->add_entry("primarydef", PRIMARYDEF, spark);
+   scanner_node->add_entry("secondarydef", SECONDARYDEF, spark);
+   scanner_node->add_entry("tertiarydef", TERTIARYDEF, spark);
+
+   scanner_node->add_entry("macro_vector", MACRO_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("primarydef_vector", PRIMARYDEF_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("secondarydef_vector", SECONDARYDEF_VECTOR_DECLARATOR, spark);
+   scanner_node->add_entry("tertiarydef_vector", TERTIARYDEF_VECTOR_DECLARATOR, spark);
+
+
+   scanner_node->add_entry("def", DEF, spark);
+   scanner_node->add_entry("enddef", ENDDEF, spark);
+
+@q **** (4) Types for enclosed and enclosing figures.@>
+@*3 Types for enclosed and enclosing figures.
+\initials{LDF 2004.11.16.}
+
+\LOG
+\initials{LDF 2004.11.16.}
+Added this section with calls to |scanner_node->add_entry| for
+|in_circle|, 
+|out_circle|, 
+|in_ellipse|, 
+|out_ellipse|, 
+|in_rectangle|, 
+|out_rectangle|, 
+|in_sphere|, 
+|out_sphere|, 
+|in_ellipsoid|, 
+|out_ellipsoid|, 
+|in_cuboid|, and
+|out_cuboid|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+    scanner_node->add_entry("in_circle", IN_CIRCLE, spark);
+    scanner_node->add_entry("out_circle", OUT_CIRCLE, spark);
+
+    scanner_node->add_entry("in_ellipse", IN_ELLIPSE, spark);
+    scanner_node->add_entry("out_ellipse", OUT_ELLIPSE, spark);
+
+    scanner_node->add_entry("in_rectangle", IN_RECTANGLE, spark);
+    scanner_node->add_entry("out_rectangle", OUT_RECTANGLE, spark);
+ 
+    scanner_node->add_entry("in_sphere", IN_SPHERE, spark);
+    scanner_node->add_entry("out_sphere", OUT_SPHERE, spark);
+
+    scanner_node->add_entry("in_ellipsoid", IN_ELLIPSOID, spark);
+    scanner_node->add_entry("out_ellipsoid", OUT_ELLIPSOID, spark);
+
+    scanner_node->add_entry("in_cuboid", IN_CUBOID, spark);
+    scanner_node->add_entry("out_cuboid", OUT_CUBOID, spark);
+
+@q **** (4) Types for vector-type objects.@>
+@*3 Types for vector-type objects.
+\initials{LDF 2005.01.05.}
+
+\LOG
+\initials{LDF 2005.01.05.}
+Added this section with calls to |scanner_node->add_entry| for
+|push_back| and |pop_back| and calls to 
+|scanner_node->add_synonym| for |push| and |pop|.
+
+\initials{LDF 2005.01.07.}
+Added a call to |scanner_node->add_entry| for |last|.
+
+\initials{LDF 2007.07.22.}
+Added a call to |scanner_node->add_entry| for |cull|.
+
+\initials{LDF 2007.07.27.}
+Added calls to |scanner_node->add_entry| for |culled|, 
+|rectify|, and |rectified|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+
+    scanner_node->add_entry("cull", CULL, spark);
+    scanner_node->add_entry("culled", CULLED, spark);
+
+    scanner_node->add_entry("last", LAST, spark);
+
+    scanner_node->add_entry("pop_back", POP_BACK, spark);
+    scanner_node->add_synonym("pop", "pop_back");
+
+    scanner_node->add_entry("push_back", PUSH_BACK, spark);
+    scanner_node->add_synonym("push", "push_back");
+
+    scanner_node->add_entry("rectify", RECTIFY, spark);
+    scanner_node->add_entry("rectified", RECTIFIED, spark);
+
+@q **** (4) Tokens for |planes|.@>
+@*3 Tokens for {\bf planes}.
+\initials{LDF 2007.10.02.}
+
+\LOG
+\initials{LDF 2007.10.02.}
+Added this section with the call to |scanner_node->add_entry| for
+|get_plane|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("get_plane", GET_PLANE, spark);
+
+
+@q **** (4) Tokens for |triangles|.@>
+@*3 Tokens for {\bf triangles}.
+\initials{LDF 2005.01.20.}
+
+\LOG
+\initials{LDF 2005.01.20.}
+Added this section with calls to |scanner_node->add_entry| for
+|with_sss|, |with_sas|, |with_saa|, |with_asa|, 
+|with_ssa_b|, |with_ssa_l|, and |with_ssa_s|. 
+
+\initials{LDF 2005.01.23.}
+Added call to |scanner_node->add_entry| for
+|with_ssa_a|.  I'd forgotten it before.
+
+\initials{LDF 2005.01.23.}
+Removed the calls to |scanner_node->add_entry| for 
+|with_ssa_a| and |with_ssa_b|.
+
+\initials{LDF 2005.01.23.}
+Added call to |scanner_node->add_entry| for |with_points|.
+
+
+\initials{LDF 2005.10.25.}
+Removed the calls to |scanner_node->add_entry| for 
+|with_sss|, |with_sas|, |with_saa|, |with_asa|, |with_ssa_l|,
+and |with_ssa_s|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("with_points", WITH_POINTS, spark);
+
+@q *** (3) Tokens for conic sections.@>
+@*2 Tokens for conic sections.
+\initials{LDF 2005.11.07.}
+
+\LOG
+\initials{LDF 2005.11.07.}
+Added this section with calls to |scanner_node->add_entry| for 
+|with_vertex|, |with_directrix|, |with_parameter|,
+|with_linear_eccentricity|, and |with_numerical_eccentricity|.
+
+\initials{LDF 2005.11.07.}
+Added the call to |scanner_node->add_entry| for |with_half_parameter|.
+
+\initials{LDF 2005.11.09.}
+Added calls to |scanner_node->add_entry| for |with_increment_value| 
+and |with_max_extent| and calls to |scanner_node->add_synonym| for
+|with_increment| and |with_extent|.
+
+\initials{LDF 2005.11.14.}
+Added calls to |scanner_node->add_entry| for 
+|with_vertex_0| and |with_vertex_1| and calls to 
+|scanner_node->add_synonym| for 
+|withvertex0|, |with_vertex0|, |withvertex_0|, |withvertex1|, 
+|with_vertex1|, |withvertex_1|, and |withdirectrix|.
+
+\initials{LDF 2005.11.15.}
+Added calls to |scanner_node->add_entry| for 
+|with_major_axis_length|, |with_half_major_axis_length|,
+|with_minor_axis_length|, and |with_half_minor_axis_length|.
+
+\initials{LDF 2005.11.15.}
+Removed the calls to |add_entry| for
+|get_vertex_0| and |get_vertex_1| and 
+the calls to |add_synonym| for their synonyms.
+The matching strings can't be used
+in input because of the numerals.
+
+\initials{LDF 2007.07.30.}
+Added call to |scanner_node->add_entry| for |traverse|.
+
+\initials{LDF 2007.08.03.}
+Added calls to |scanner_node->add_entry| for 
+|get_lattice_point|, 
+|get_lattice_points|, 
+|get_next_point|, 
+|get_cycle_value|, 
+|draw_lattice|, 
+|label_lattice|, 
+and
+|with_cycle_value|.
+
+\initials{LDF 2007.08.03.}
+Changed |with_increment_value| to |with_increment|
+and removed call to |scanner_node->add_synonym| for the latter.
+
+\initials{LDF 2007.08.03.}
+Added calls to |scanner_node->add_entry| for 
+|get_angle_point| and |get_parallel|.
+
+\initials{LDF 2007.08.05.}
+Added call to |scanner_node->add_entry| for |with_increments|.
+
+\initials{LDF 2007.08.07.}
+Added calls to |scanner_node->add_entry| for |SHIFT_LATTICE|,
+|WITH_SHIFT| and |WITH_NO_SHIFT|.
+
+\initials{LDF 2007.08.16.}
+Added call to |scanner_node->add_entry| for |dotlabel_lattice|.
+
+\initials{LDF 2007.11.04.}
+Added calls to |scanner_node->add_entry| for |get_radius| and |get_diameter|.
+
+\initials{LDF 2009.09.16.}
+Added call to |scanner_node->add_entry| for |circumference|.
+\ENDLOG
+
+@q **** (4) Code@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("with_vertex", WITH_VERTEX, spark); 
+   scanner_node->add_synonym("withvertex", "with_vertex");
+
+   scanner_node->add_entry("with_directrix", WITH_DIRECTRIX, spark); 
+   scanner_node->add_synonym("withdirectrix", "with_directrix");
+
+   scanner_node->add_entry("with_parameter", WITH_PARAMETER, spark); 
+
+   scanner_node->add_entry("with_half_parameter", WITH_HALF_PARAMETER, spark); 
+
+   scanner_node->add_entry("with_major_axis_length", WITH_MAJOR_AXIS_LENGTH, spark);
+   scanner_node->add_entry("with_half_major_axis_length", 
+                           WITH_HALF_MAJOR_AXIS_LENGTH, 
+                           spark);
+
+   scanner_node->add_entry("with_minor_axis_length", 
+                           WITH_MINOR_AXIS_LENGTH, 
+                           spark);
+
+   scanner_node->add_entry("with_half_minor_axis_length", 
+                           WITH_HALF_MINOR_AXIS_LENGTH, 
+                           spark);
+
+   scanner_node->add_entry("with_linear_eccentricity", 
+                           WITH_LINEAR_ECCENTRICITY, spark); 
+
+   scanner_node->add_entry("with_numerical_eccentricity", 
+                           WITH_NUMERICAL_ECCENTRICITY, 
+                           spark); 
+
+   scanner_node->add_entry("with_increment", 
+                           WITH_INCREMENT,
+                           spark);
+
+   scanner_node->add_entry("with_increments", 
+                           WITH_INCREMENTS,
+                           spark);
+
+   scanner_node->add_entry("with_max_extent",
+                           WITH_MAX_EXTENT,
+                           spark);
+
+   scanner_node->add_synonym("with_extent", 
+                             "with_max_extent");
+
+   scanner_node->add_entry("traverse", TRAVERSE, spark);
+
+   scanner_node->add_entry("shift_lattice", SHIFT_LATTICE, spark);
+   scanner_node->add_entry("with_shift ", WITH_SHIFT , spark);
+   scanner_node->add_entry("with_no_shift", WITH_NO_SHIFT, spark);
+
+   scanner_node->add_entry("get_lattice_point", GET_LATTICE_POINT, spark);
+   scanner_node->add_entry("get_lattice_points", GET_LATTICE_POINTS, spark);
+
+   scanner_node->add_entry("get_angle_point", GET_ANGLE_POINT, spark);
+   scanner_node->add_entry("get_parallel", GET_PARALLEL, spark);
+
+   scanner_node->add_entry("get_next_point", GET_NEXT_POINT, spark);
+
+   scanner_node->add_entry("get_cycle_value", GET_CYCLE_VALUE, spark);
+   scanner_node->add_entry("draw_lattice", DRAW_LATTICE, spark);
+
+   scanner_node->add_entry("with_cycle_value", WITH_CYCLE_VALUE, spark);
+
+   scanner_node->add_entry("label_lattice", LABEL_LATTICE, spark);
+   scanner_node->add_entry("dotlabel_lattice", DOTLABEL_LATTICE, spark);
+
+   scanner_node->add_entry("circumference", CIRCUMFERENCE, spark);
+
+   scanner_node->add_entry("get_radius", GET_RADIUS, spark);
+   scanner_node->add_entry("get_diameter", GET_DIAMETER, spark);
+
+@q *** (3) Tokens for quadric surfaces.@>
+@*2 Tokens for quadric surfaces.
+\initials{LDF 2005.10.25.}
+
+\LOG
+\initials{LDF 2005.10.25.}
+Added this section with calls to |scanner_node->add_entry| for 
+|GLOBE_TYPE| and |PANEL_TYPE|.
+
+\initials{LDF 2005.10.25.}
+Changed |GLOBE_TYPE| and |PANEL_TYPE| to |SPHERE_GLOBE_TYPE| 
+and |SPHERE_PANEL_TYPE|, respectively.  Added calls to 
+|scanner_node->add_synonym| for |globe_type| and |panel_type|.
+
+\initials{LDF 2007.08.06.}
+Added calls to |scanner_node->add_entry| for |intrude|, |extrude|, 
+|intruded|, and |extruded|.
+
+\initials{LDF 2009.11.03.}
+Added calls to |scanner_node->add_entry| for |map| and |develop|.
+\ENDLOG
+
+@q **** (4) Code.@>   
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("sphere_globe_type", SPHERE_GLOBE_TYPE, spark);
+   scanner_node->add_synonym("globe_type", "sphere_globe_type");
+
+   scanner_node->add_entry("sphere_panel_type", SPHERE_PANEL_TYPE, spark);
+   scanner_node->add_synonym("panel_type", "sphere_panel_type");
+
+   scanner_node->add_entry("intrude",  INTRUDE, spark);
+   scanner_node->add_entry("extrude",  EXTRUDE, spark);
+   scanner_node->add_entry("intruded", INTRUDED, spark);
+   scanner_node->add_entry("extruded", EXTRUDED, spark);
+
+   scanner_node->add_entry("develop", DEVELOP, spark);
+
+   scanner_node->add_entry("map", MAP, spark);
+
+
+@q **** (4) Entries for |Polyhedra|.@>   
+
+@*3 Entries for {\bf Polyhedra}.
+\initials{LDF 2005.12.20.}
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2007.10.12.}
+Decide whether |with_tabs| is needed and delete it, if it isn't.
+\ENDTODO 
+
+\LOG
+\initials{LDF 2005.12.20.}
+Added this section with the calls to |scanner_node->add_entry| 
+for |get_net|, |with_half|, and |great_rhombicosidodecahedron|.
+
+\initials{LDF 2005.12.20.}
+Added calls to |scanner_node->add_entry| for
+|tetrahedron|, |cube|, |octahedron|,
+|dodecahedron|, |icosahedron|, and |trunc_octahedron|.
+
+\initials{LDF 2007.10.02.}
+Added the calls to |scanner_node->add_entry| for
+|with_tabs|.
+
+\initials{LDF 2007.10.12.}
+Added the call to |scanner_node->add_entry| for |get_tabs|.  
+|with_tabs| may not be needed, but I'm leaving it here for the present.
+
+\initials{LDF 2007.10.12.}
+Added the calls to |scanner_node->add_entry| for |with_stitch_lines|,
+|with_no_stitch_lines|, and |with_stitch_divisions|.
+
+\initials{LDF 2007.10.22.}
+Added the call to |scanner_node->add_entry| for 
+|rhombic_triacontahedron|.
+
+\initials{LDF 2007.10.24.}
+Added the call to |scanner_node->add_entry| for |with_rhombus_side_length|.
+
+\initials{LDF 2007.10.26.}
+Added the calls to |scanner_node->add_entry| for 
+|get_rhombus| and |with_side_length|.
+\ENDLOG
+
+@q **** (4).@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("get_net",  GET_NET, spark);
+   scanner_node->add_entry("get_tabs",  GET_TABS, spark);
+   scanner_node->add_entry("get_rhombus", GET_RHOMBUS, spark);
+
+   scanner_node->add_entry("tetrahedron", TETRAHEDRON, spark);
+   scanner_node->add_entry("cube", CUBE, spark);
+   scanner_node->add_entry("octahedron", OCTAHEDRON, spark);
+   scanner_node->add_entry("dodecahedron", DODECAHEDRON, spark);
+   scanner_node->add_entry("icosahedron", ICOSAHEDRON, spark);
+   scanner_node->add_entry("trunc_octahedron", TRUNC_OCTAHEDRON, spark);
+
+   scanner_node->add_entry("great_rhombicosidodecahedron",  
+                           GREAT_RHOMBICOSIDODECAHEDRON, 
+                           spark);
+
+   scanner_node->add_entry("rhombic_triacontahedron",  
+                           RHOMBIC_TRIACONTAHEDRON,
+                           spark);
+
+   scanner_node->add_entry("with_half",  WITH_HALF, spark);
+   scanner_node->add_entry("with_tabs",  WITH_TABS, spark);
+
+   scanner_node->add_entry("with_side_length", WITH_SIDE_LENGTH, spark);
+   scanner_node->add_entry("with_rhombus_side_length",  
+                           WITH_RHOMBUS_SIDE_LENGTH, 
+                           spark);
+
+   scanner_node->add_entry("with_stitch_lines", WITH_STITCH_LINES, spark);
+   scanner_node->add_entry("with_no_stitch_lines", 
+                            WITH_NO_STITCH_LINES, 
+                            spark);
+   scanner_node->add_entry("with_stitch_divisions", WITH_STITCH_DIVISIONS, spark);
+
+@q **** (4) Entries for surface hiding.@>   
+
+@*3 Entries for surface hiding.
+\initials{LDF 2005.01.24.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Added this section with calls to |scanner_node->add_entry| 
+for |decompose| and |with_level|.
+
+\initials{LDF 2005.04.14.}
+Added the call to |scanner_node->add_entry| for
+|with_rectangles|.
+\ENDLOG
+
+@q **** (4).@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("decompose",  DECOMPOSE, spark);
+   scanner_node->add_entry("with_level", WITH_LEVEL, spark);
+   scanner_node->add_entry("with_rectangles", WITH_RECTANGLES, spark);
+
+@q **** (4) Entries for |Nurbs|.@>   
+
+@*3 Entries for {\bf Nurbs}.
+\initials{LDF 2005.01.26.}
+
+\LOG
+\initials{LDF 2005.01.26.}
+Added this section with calls to |scanner_node->add_entry| 
+for |knot|, |weight|, |with_knots|, and |with_weights|.
+
+\initials{LDF 2005.01.27.}
+Added calls to |scanner_node->add_entry|  
+for |with_time_parameter|, |with_order|, and |generate|.
+
+\initials{LDF 2005.01.27.}
+Added call to |scanner_node->add_synonym| for |with_time|.
+It's a synonym of |with_time_parameter|.
+
+\initials{LDF 2005.01.28.}
+Changed |with_order| to |with_power|.
+\ENDLOG
+
+@q ***** (5).@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("knot", KNOT, spark);
+   scanner_node->add_entry("weight", WEIGHT, spark);
+   scanner_node->add_entry("with_knots", WITH_KNOTS, spark);
+   scanner_node->add_entry("with_weights", WITH_WEIGHTS, spark);
+   scanner_node->add_entry("with_time_parameter", WITH_TIME_PARAMETER, spark); 
+   scanner_node->add_entry("with_power", WITH_POWER, spark); 
+
+   scanner_node->add_entry("generate", GENERATE, spark); 
+
+   scanner_node->add_synonym("with_time", "with_time_parameter");
+
+
+@q **** (4) Entries for |Polygons|.@>   
+
+@*3 Entries for {\bf Polygons}.
+\initials{LDF 2006.01.20.}
+
+\LOG
+\initials{LDF 2006.01.20.}
+Added this section with the call to |scanner_node->add_entry| 
+for |disentangle|.
+\ENDLOG
+
+@q ***** (5)@> 
+
+@<Define |Scanner_Type::create|@>=
+
+   scanner_node->add_entry("disentangle", DISENTANGLE, spark); 
+
+@q **** (4) Internal quantities.  @>          
+@*3 Internal quantities.
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+Set values of |YEAR|, |MONTH|, |DAY|, and |TIME|.
+\initials{LDF 2004.04.28.} 
+\ENDTODO 
+
+\LOG
+\initials{LDF 2004.04.28.}  
+Added this section.
+
+\initials{LDF 2004.04.29.}
+Changed the following calls to |add_entry| for the |internal_quantities|:
+Now for each one, I allocate memory on the free store for a new |real|, set it
+to 0, and pass a pointer to it to |add_entry| as the latter's
+|oobject| argument.
+
+\initials{LDF 2004.11.07.}
+Changed the |type| argument in all of the calls to 
+|scanner_node->add_entry| in this section to |NUMERIC|.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+  { /* Beginning of group for |INTERNALS|.  */
+
+    const unsigned short internal = Id_Map_Entry_Type::INTERNAL;
+    bool not_array = false;
+    bool not_const = false;
+
+
+    void* v;
+    real* r;
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+
+    scanner_node->add_entry("tracingtitles", NUMERIC,
+                            internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v); 
+
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingequations", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v); 
+
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingcapsules", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingchoices", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingspecs", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingpens", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingcommands", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingrestores", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingmacros", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingedges", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingoutput", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingonline", NUMERIC, internal,
+                            not_const, not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("tracingstats", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("pausing", NUMERIC, internal, not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("showstopping", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("fontmaking", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("proofing", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("turningcheck", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("warningcheck", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("smoothing", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("autorounding", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("granularity", NUMERIC, internal,
+                            not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("fillin", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("year", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("month", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("day", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("time", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("charcode", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("charext", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("charwd", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("charht", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("chardp", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("charic", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("chardx", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("chardy", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("designsize", NUMERIC, internal, not_const,
+                            not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("hppp", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("vppp", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("xoffset", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+    
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("yoffset", NUMERIC, internal, not_const, not_array,
+                          Id_Map_Entry_Type::KNOWN, v);
+
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("boundarychar", NUMERIC, internal, not_const,
+                            not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+
+
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("curr_y", NUMERIC, internal, not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+
+    r = new real;
+    *r = 0;
+    v = static_cast<void*>(r);
+    scanner_node->add_entry("curr_z", NUMERIC, internal, not_const, not_array,
+                            Id_Map_Entry_Type::KNOWN, v);
+
+
+
+  } /* End of group for |INTERNALS|.  */
+
+
+@q **** (4) True internal quantities.@>          
+@*3 Internal quantities.
+
+\LOG
+\initials{LDF 2004.11.11.}
+Added this section.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<Define |Scanner_Type::create|@>=
+
+  { /* Beginning of group for |TRUE_INTERNALS|.  */
+
+    const unsigned short true_internal = Id_Map_Entry_Type::TRUE_INTERNAL;
+    bool not_array = false;
+    bool not_const = false;
+    void* v;
+    Id_Map_Entry_Node entry;
+
+@q ****** (6) |Pens|.@> 
+@ {\bf Pens}.
+\initials{LDF 2004.11.11.}
+
+\LOG
+\initials{LDF 2004.11.11.}
+Added this section.
+
+\initials{LDF 2004.11.12.}
+Added a call to |add_entry| for |default_pen| and
+a call to |add_synonym| for |defaultpen|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+
+@q ******* (7) |current_pen|.@> 
+
+    entry = scanner_node->add_entry("current_pen", 
+                                    PEN,
+                                    true_internal,
+                                    not_const, 
+                                    not_array, 
+                                    Id_Map_Entry_Type::INDEPENDENT, 
+                                    0); 
+
+    scanner_node->add_synonym("currentpen", "current_pen");
+    
+
+    v = &(entry->object);
+
+    scanner_node->current_pen = static_cast<Pen**>(v);
+
+@q ******* (7) |default_pen|.@> 
+
+
+
+    entry = scanner_node->add_entry("default_pen", 
+                                    PEN,
+                                    true_internal,
+                                    not_const, 
+                                    not_array, 
+                                    Id_Map_Entry_Type::INDEPENDENT, 
+                                    0); 
+
+    scanner_node->add_synonym("defaultpen", "default_pen");
+    
+
+    v = &(entry->object);
+
+    scanner_node->default_pen = static_cast<Pen**>(v);
+
+
+@q ****** (6) |Colors|.@> 
+
+@ {\bf Colors}.
+\initials{LDF 2004.11.12.}
+
+\LOG
+\initials{LDF 2004.11.12.}
+Added this section with calls to |scanner_node->add_entry| for
+|current_color|, |current_draw_color|, and |current_fill_color|, and
+a call to |add_synonym| for |currentcolor|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+  
+@q ******* (7) |current_color|.@> 
+
+    entry = scanner_node->add_entry("current_color", 
+                                    COLOR,
+                                    true_internal,
+                                    not_const, 
+                                    not_array, 
+                                    Id_Map_Entry_Type::INDEPENDENT, 
+                                    0); 
+
+    scanner_node->add_synonym("currentcolor", "current_color");
+
+    v = &(entry->object);
+
+    scanner_node->current_color = static_cast<Color**>(v);
+
+
+@q ******* (7) |current_draw_color|.@> 
+
+    entry = scanner_node->add_entry("current_draw_color", 
+                                    COLOR,
+                                    true_internal,
+                                    not_const, 
+                                    not_array, 
+                                    Id_Map_Entry_Type::INDEPENDENT, 
+                                    0); 
+
+    v = &(entry->object);
+
+    scanner_node->current_draw_color = static_cast<Color**>(v);
+
+
+@q ******* (7) |current_fill_color|.@> 
+
+    entry = scanner_node->add_entry("current_fill_color", 
+                                    COLOR,
+                                    true_internal,
+                                    not_const, 
+                                    not_array, 
+                                    Id_Map_Entry_Type::INDEPENDENT, 
+                                    0); 
+
+    v = &(entry->object);
+
+    scanner_node->current_fill_color = static_cast<Color**>(v);
+
+@q ****** (6) |Dash_Patterns|.@> 
+
+@ {\bf Dash\_Patterns}.
+\initials{LDF 2004.11.12.}
+
+\LOG
+\initials{LDF 2004.11.12.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+
+@q ******* (7) |current_dash_pattern|.@> 
+
+    entry = scanner_node->add_entry("current_dash_pattern", 
+                                    DASH_PATTERN,
+                                    true_internal,
+                                    not_const, 
+                                    not_array, 
+                                    Id_Map_Entry_Type::INDEPENDENT, 
+                                    0); 
+
+
+    scanner_node->add_synonym("current_dashpattern", "current_dash_pattern");
+
+    v = &(entry->object);
+
+    scanner_node->current_dash_pattern = static_cast<Dash_Pattern**>(v);
+
+@q ****** (6) @> 
+
+  } /* End of group for |INTERNALS|.  */
+
+
+
+@q **** (4) Predefined variables and constants.  @>          
+@*3 Predefined variables and constants.
+
+\LOG
+\initials{LDF 2004.05.21.}  
+Added call to |scanner_node->add_entry| 
+for |current_picture| with the synonym |currentpicture|. 
+
+\initials{LDF 2004.07.09.}
+Now declaring |Point p(0, 0, 0)| once for use in constructing
+all of the predefined variables and constants.
+
+\initials{LDF 2004.10.23.}
+Added call to |scanner_node->add_entry| 
+for |INVALID_NUMERIC|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+  {
+
+    unsigned short regular = Id_Map_Entry_Type::REGULAR;
+    void* v;
+
+    const bool is_constant = true;
+    const bool not_constant = false;
+    const bool not_array = false;
+
+    Point p(0, 0, 0);
+
+@q ***** (5) |Predicates|.  @>          
+@*4 |Predicates|.
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+
+\initials{LDF 2007.11.28.}
+Commented-out the code in this section.
+\ENDLOG
+
+@q ****** (6) |is_quadrilateral_type|.@>          
+@ |is_quadrilateral_type|.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+
+\initials{LDF 2007.11.28.}
+Commented-out this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+#if 0 
+  {  /* Beginning of group (|Predicates|)  */
+    
+    Predicate* p = new Predicate;  
+    p->func_0 = &is_quadrilateral_type;
+
+    v = static_cast<void*>(p);
+    
+    scanner_node->add_entry("is_quadrilateral_type", PREDICATE, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+  }  /* End of group (|Predicates|)  */
+#endif 
+
+@q ***** (5) |Reals|.  @>          
+@*4 |Reals|.
+\initials{LDF 2004.10.23.}
+
+\LOG
+\initials{LDF 2004.10.23.}
+Added this section with a call to |add_entry| for |INVALID_NUMERIC|.
+
+\initials{LDF 2004.11.15.}
+No longer wrapping call to |new real| for 
+|INVALID_NUMERIC| in a |try|---|catch| block. 
+Calls to this function should be wrapped in such blocks.
+
+\initials{LDF 2004.11.15.}
+Added call to |add_entry| for |register_width|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+
+    {
+
+
+       real* r;
+   
+@q ****** (6) |INVALID_REAL|.@> 
+@ |INVALID_REAL|.
+\initials{LDF Undated.}
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+
+       *r = INVALID_REAL;        
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("INVALID_NUMERIC",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+@q ****** (6) |register_width|.@> 
+
+@ |register_width|.
+\initials{LDF Undated.}
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = static_cast<real>(System::get_register_width()); 
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("register_width",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+@q ****** (6) |pt|.@> 
+@ |pt|.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = 2.54 / 72.27;
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("pt",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+@q ****** (6) |pc|.@> 
+@ |pc|.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = 12 * 2.54 / 72.27;
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("pc",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+
+@q ****** (6) |in|.@> 
+@ |in|.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = 2.54;
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("in",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+@q ****** (6) |bp|.@> 
+@ |bp|.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = 2.54 / 72;
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("bp",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+
+@q ****** (6) |cm|.@> 
+@ |cm|.
+\initials{LDF 2005.01.06.}
+
+This is trivial, since 3DLDF always uses centimeters for the
+dimensions it writes to its output files.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = 1;
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("cm",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+
+@q ****** (6) |mm|.@> 
+@ |mm|.
+\initials{LDF 2005.01.06.}
+
+This is almost as trivial as |cm|.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = .1;
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("mm",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+@q ****** (6) |dd|.@> 
+@ |dd|.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = (1238 * (2.54 / 72.27)) / 1157;
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("dd",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+@q ****** (6) |cc|.@> 
+@ |cc|.
+\initials{LDF 2005.01.06.}
+
+\LOG
+\initials{LDF 2005.01.06.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+       r = new real;
+
+       *r = 12 * ((1238 * (2.54 / 72.27)) / 1157);
+
+       v = static_cast<void*>(r); 
+
+       scanner_node->add_entry("cc",
+                               NUMERIC,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+@q ****** (6).@> 
+@
+@<Define |Scanner_Type::create|@>=
+
+    } /* End of group.  */
+   
+
+@q ***** (5) |Strings|.  @>          
+@*4 |Strings|.
+\initials{LDF 2004.12.13.}
+
+\LOG
+\initials{LDF 2004.12.13.}
+Added this section with a call to |add_entry| for |new_line|
+and a call to |add_synonym| for |newline|.
+
+\initials{LDF 2004.12.13.}
+Added call to |add_entry| for |ditto|.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=
+
+    {
+       string* s;
+   
+       s = new string;
+
+
+       *s = "\n";
+
+       v = static_cast<void*>(s); 
+
+       scanner_node->add_entry("new_line",
+                               STRING,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+      scanner_node->add_synonym("newline", "new_line");
+
+      s = new string;
+
+      *s = "\"";
+
+
+       v = static_cast<void*>(s); 
+
+       scanner_node->add_entry("ditto",
+                               STRING,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+
+      s = new string;
+
+      *s = "";
+
+      v = static_cast<void*>(s); 
+
+      scanner_node->add_entry("measure_text_header",
+                              STRING,
+                              regular,
+                              not_constant,
+                              not_array,
+                              Id_Map_Entry_Type::KNOWN,
+                              v);
+
+
+    } /* End of group.  */
+
+
+@q ***** (5) |Colors|.  @>          
+@*4 |Colors|.
+
+@q ****** (6) default_color (color).  @>          
+|default_color|.
+
+\LOG
+\initials{LDF 2004.06.03.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+  {
+
+    Color* c = create_new<Color>(0);  
+    *c = Colors::black;
+
+    v = static_cast<void*>(c);
+    
+    scanner_node->add_entry("default_color",
+                            COLOR,
+                            regular,
+                            not_constant,
+                            not_array,
+                            Id_Map_Entry_Type::KNOWN,
+                            v);
+  }
+
+@q ****** (6) background_color (color).  @>          
+@ |background_color|.
+
+\LOG
+\initials{LDF 2004.06.07.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+  {
+
+    Color* c = create_new<Color>(0);  
+    *c = Colors::white;
+
+    v = static_cast<void*>(c);
+    
+    scanner_node->add_entry("background_color",
+                            COLOR,
+                            regular,
+                            not_constant,
+                            not_array,
+                            Id_Map_Entry_Type::KNOWN,
+                            v);
+  }
+
+@q ****** (6) help_color (color).  @>          
+@ |help_color|.
+
+\LOG
+\initials{LDF 2004.06.07.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+  {
+
+    Color* c = create_new<Color>(0);  
+    *c = Colors::green;
+
+    v = static_cast<void*>(c);
+    
+    scanner_node->add_entry("help_color", COLOR, 
+                            regular, not_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+  }
+
+
+@q ****** (6) Other colors.@>          
+@ Other colors.
+
+\LOG
+\initials{LDF 2004.06.18.}  
+Added this section.
+
+\initials{LDF 2004.11.13.}
+Added calls to |scanner_node->add_entry| for |black| and |white|.
+
+\initials{LDF 2005.11.21.}
+Added call to |scanner_node->add_entry| for |dark_gray|.
+
+\initials{2009.01.09.}
+Added call to |scanner_node->add_entry| for |dark_green|.
+
+\initials{LDF 2010.12.17.}
+Added calls to |scanner_node->add_synonym| for |grey|, |dark_grey| and |light_grey|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+
+ {
+
+   Color* c;
+
+   c = create_new<Color>(0);  
+   *c = Colors::black;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("black", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+ 
+
+   c = create_new<Color>(0);  
+   *c = Colors::white;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("white", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::red;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("red", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+ 
+
+  c = create_new<Color>(0);  
+   *c = Colors::green;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("green", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::blue;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("blue", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   c = create_new<Color>(0);  
+   *c = Colors::pink;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("pink", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::yellow;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("yellow", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   c = create_new<Color>(0);  
+   *c = Colors::cyan;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("cyan", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   c = create_new<Color>(0);  
+   *c = Colors::magenta;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("magenta", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   c = create_new<Color>(0);  
+   *c = Colors::orange;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("orange", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   c = create_new<Color>(0);  
+   *c = Colors::violet;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("violet", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   c = create_new<Color>(0);  
+   *c = Colors::purple;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("purple", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::yellow_green;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("yellow_green", COLOR, 
+                           regular, is_constant,
+                           not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::green_yellow;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("green_yellow", COLOR, 
+                           regular, is_constant,
+                           not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::dark_green;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("dark_green", COLOR, 
+                           regular, is_constant,
+                           not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::blue_violet;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("blue_violet", COLOR, 
+                           regular, is_constant,
+                           not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::gray;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("gray", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+  
+   c = create_new<Color>(0);  
+   *c = Colors::light_gray;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("light_gray", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+
+   c = create_new<Color>(0);  
+   *c = Colors::dark_gray;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("dark_gray", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+
+   scanner_node->add_synonym("grey", "gray");
+   scanner_node->add_synonym("dark_grey", "dark_gray");
+   scanner_node->add_synonym("light_grey", "light_gray");
+ 
+   c = create_new<Color>(0);  
+   *c = Colors::violet_red;
+
+   v = static_cast<void*>(c);
+    
+   scanner_node->add_entry("violet_red", COLOR, regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+ }  /* End of group.  */
+
+
+@q ***** (5) |Color_Vectors|.  @>          
+@*4 |Color_Vectors|.
+
+@q ****** (6) default_color_vector (color_vector).  @>          
+|default_color_vector|.
+
+\LOG
+\initials{LDF 2004.08.30.}
+Added this section.
+\ENDLOG 
+
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.08.30.}
+Add error handling.
+\ENDTODO 
+
+@<Define |Scanner_Type::create|@>=
+  
+   {  /* Begin group:  Create |default_color_vector|  */
+
+     Id_Map_Entry_Node array_entry
+       = scanner_node->add_entry("default_color_vector-",
+                                 COLOR,
+                                 Id_Map_Entry_Type::REGULAR,  
+                                 false, /* not |const|  */
+                                 true, /* is array  */
+                                 Id_Map_Entry_Type::KNOWN,
+                                 0);
+
+
+     Color* c = new Color;
+     *c = Colors::black;
+
+     Id_Map_Entry_Node array_member_entry
+       = scanner_node->get_array_entry("default_color_vector[0]", array_entry);
+     
+     array_member_entry->object = static_cast<Color*>(c); 
+     array_member_entry->known_state = Id_Map_Entry_Type::KNOWN;
+
+     typedef Pointer_Vector<const Color> Pvc;
+     Pvc* pvc = new Pvc;
+
+     pvc->v.push_back(c);
+     pvc->ctr++;
+
+  Id_Map_Entry_Node vector_entry
+    = scanner_node->add_entry("default_color_vector",
+                              COLOR_VECTOR, /* |type|  */
+                              Id_Map_Entry_Type::REGULAR, /* |category|  */
+                              false, /* not |const|  */
+                              false, /* not array  */
+                              Id_Map_Entry_Type::KNOWN,
+                              static_cast<void*>(pvc), 
+                                       /* |object|  */ 
+                              static_cast<Id_Map_Entry_Node>(0),
+                                 /* |up|  */ 
+                              static_cast<Id_Map_Entry_Node>(0),
+                                 /* |left|  */ 
+                              static_cast<Id_Map_Entry_Node>(0),
+                                 /* |right|  */ 
+                              static_cast<Id_Map_Entry_Node>(0), 
+                                 /* |superordinate_vector|  */ 
+                              array_entry /* |subordinate_array|  */
+                              );
+
+
+      status = array_entry->set_superordinate_vector(vector_entry);
+      status = array_member_entry->set_superordinate_vector(vector_entry);
+
+   } /* End group:  Create |default_color_vector|  */
+
+
+@q ****** (6) background_color_vector (color_vector).  @>          
+@ |background_color_vector|.
+
+\LOG
+\initials{LDF 2004.08.30.}
+Added this section.
+\ENDLOG 
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.08.30.}
+Add error handling.
+\ENDTODO 
+
+@<Define |Scanner_Type::create|@>=
+  
+   {  /* Begin group:  Create |background_color_vector|  */
+
+     Id_Map_Entry_Node array_entry
+       = scanner_node->add_entry("background_color_vector-",
+                                 COLOR,
+                                 Id_Map_Entry_Type::REGULAR,  
+                                 false, /* not |const|  */
+                                 true, /* is array  */
+                                 Id_Map_Entry_Type::KNOWN,
+                                 0);
+
+
+     Color* c = new Color;
+     *c = Colors::white;
+
+     Id_Map_Entry_Node array_member_entry
+       = scanner_node->get_array_entry("background_color_vector[0]", array_entry);
+     
+     array_member_entry->object = static_cast<Color*>(c); 
+     array_member_entry->known_state = Id_Map_Entry_Type::KNOWN;
+
+     typedef Pointer_Vector<const Color> Pvc;
+     Pvc* pvc = new Pvc;
+
+     pvc->v.push_back(c);
+     pvc->ctr++;
+
+  Id_Map_Entry_Node vector_entry
+    = scanner_node->add_entry("background_color_vector",
+                              COLOR_VECTOR, /* |type|  */
+                              Id_Map_Entry_Type::REGULAR, /* |category|  */
+                              false, /* not |const|  */
+                              false, /* not array  */
+                              Id_Map_Entry_Type::KNOWN,
+                              static_cast<void*>(pvc), 
+                                       /* |object|  */ 
+                              static_cast<Id_Map_Entry_Node>(0),
+                                 /* |up|  */ 
+                              static_cast<Id_Map_Entry_Node>(0),
+                                 /* |left|  */ 
+                              static_cast<Id_Map_Entry_Node>(0),
+                                 /* |right|  */ 
+                              static_cast<Id_Map_Entry_Node>(0), 
+                                 /* |superordinate_vector|  */ 
+                              array_entry /* |subordinate_array|  */
+                              );
+
+
+      status = array_entry->set_superordinate_vector(vector_entry);
+
+      status = array_member_entry->set_superordinate_vector(vector_entry);
+
+   } /* End group:  Create |background_color_vector|  */
+
+
+
+@q ***** (5) |Pens|.  @>          
+@*4 |Pens|.
+
+@q ****** (6) |null_pen|.  @>          
+@ |null_pen|.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.04.04.}
+Now setting the type of |*p| to |Pen::NULL_PEN|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=
+  {
+
+
+    
+    Pen* p = create_new<Pen>(0);  
+    p->set_type(Pen::NULL_PEN);
+
+    v = static_cast<void*>(p);
+
+    
+    
+    scanner_node->add_entry("null_pen", PEN, regular, is_constant,
+                              not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("nullpen", "null_pen");
+
+  }
+
+
+@q ***** (5) |Pictures|.  @>          
+@*4 |Pictures|.
+
+@q ****** (6) |current_picture|.  @>          
+|current_picture|.
+@<Define |Scanner_Type::create|@>=
+  {
+    
+    Picture* p = new Picture;
+    p->clear();
+
+    v = static_cast<void*>(p);
+
+    scanner_node->add_entry("current_picture", PICTURE, 
+                            regular, not_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("currentpicture", "current_picture");
+
+  }
+
+@q ****** (6) |null_picture|.  @>          
+@ |null_picture|.
+
+\LOG
+\initials{LDF 2004.05.21.}  Added this section.
+\ENDLOG 
+@<Define |Scanner_Type::create|@>=
+  {
+    
+    Picture* p = new Picture;
+    p->clear();
+
+    v = static_cast<void*>(p);
+
+    scanner_node->add_entry("null_picture", PICTURE, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("nullpicture", "null_picture");
+
+  }
+
+@q ***** (5) |Transforms|.  @>
+@*4 |Transforms|.
+
+@q ****** (6) |identity|.  @>
+
+|identity|.
+
+\LOG
+\initials{LDF 2004.11.05.}
+@:BUG FIX@> BUG FIX: 
+Now calling |t->reset|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+    Transform* t = new Transform;
+
+    t->reset();
+
+    v = static_cast<void*>(t); 
+    scanner_node->add_entry("identity", TRANSFORM, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+  }
+
+@q ***** (5) |Dash_Patterns|.  @>
+@*3 |Dash_Patterns|.
+
+
+\LOG
+\initials{LDF 2004.06.07.}  Added this section.
+\ENDLOG 
+
+@q ****** (6) |evenly|.  @>
+|evenly|.
+
+
+\LOG
+\initials{LDF 2004.06.07.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+    Dash_Pattern* d = create_new<Dash_Pattern>(0);
+    d->set_type(Dash_Pattern::EVENLY);
+    v = static_cast<void*>(d); 
+    scanner_node->add_entry("evenly", DASH_PATTERN, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+  }
+
+@q ****** (6) |with_dots|.  @>
+@ |with_dots|.
+
+\LOG
+\initials{LDF 2004.06.07.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+    Dash_Pattern* d = create_new<Dash_Pattern>(0);
+    d->set_type(Dash_Pattern::WITH_DOTS);
+    v = static_cast<void*>(d); 
+    scanner_node->add_entry("with_dots", DASH_PATTERN, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("withdots", "with_dots");
+
+  }
+
+@q ****** (6) |help_dash_pattern|.  @>
+@ |help_dash_pattern|.
+
+\LOG
+\initials{LDF 2004.06.07.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+    Dash_Pattern* d = create_new<Dash_Pattern>(0);
+    d->set_type(Dash_Pattern::EVENLY);
+    v = static_cast<void*>(d); 
+    scanner_node->add_entry("help_dash_pattern", DASH_PATTERN,
+                            regular, not_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+  }
+
+@q ***** (5) |Points|.  @>
+@*4 |Points|.
+
+\LOG
+\initials{LDF 2004.06.08.}  
+Added this section.
+\ENDLOG 
+
+@q ****** (6) |origin|.  @>
+
+|origin|.
+
+\LOG
+\initials{LDF 2004.06.08.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+
+    Point p(0, 0, 0);
+    Point* q = create_new<Point>(p);
+    v = static_cast<void*>(q); 
+    scanner_node->add_entry("origin", POINT, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+  }
+
+@q ***** (5) |Paths|.  @>
+@*4 |Paths|.
+
+\LOG
+\initials{LDF 2006.03.03.}
+Added this section with the call to |scanner_node->add_entry|
+for |null_path| and the call to |scanner_node->add_synonym|
+for |nullpath|.
+\ENDLOG 
+
+@q ****** (6) |origin|.  @>
+
+|origin|.
+
+\LOG
+\initials{LDF 2004.06.08.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+    Path* p = create_new<Path>(0);
+    v = static_cast<void*>(p); 
+    scanner_node->add_entry("null_path", PATH, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("nullpath", "null_path");
+
+  }
+
+
+@q ***** (5) |Focuses|.  @>
+@*4 |Focuses|.
+
+\LOG
+\initials{LDF 2004.06.08.}  Added this section.
+\ENDLOG 
+
+@q ****** (6) |default_focus|.  @>
+
+|default_focus|.
+
+
+\LOG
+\initials{LDF 2004.06.08.}  
+Added this section.
+
+\initials{LDF 2004.07.15.}
+@:BUG FIX@> BUG FIX:  
+Fixed z-coordinate of |direction Point|. 
+
+\initials{LDF 2004.10.25.}
+Changed the y-coordinates of |position| and |direction| from 10 to 0.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+
+    Focus a(0, 0, -10, 0, 0, 10, 20); 
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_mutex.lock(); 
+       a.show("a:");
+       cerr_mutex.unlock(); 
+
+   }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+    Focus* f = create_new<Focus>(a);
+
+    v = static_cast<void*>(f); 
+
+    scanner_node->add_entry("default_focus", FOCUS, 
+                            regular, not_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+  }
+
+
+@q ***** (5) |Ellipses|.  @>
+@*4 |Ellipses|.
+
+\LOG
+\initials{LDF 2004.06.17.}  Added this section.
+\ENDLOG 
+
+@q ****** (6) |unit_ellipse|.  @>
+|unit_ellipse|.
+
+
+\LOG
+\initials{LDF 2004.07.09.}  
+Added this section.
+
+\initials{LDF 2004.11.06.}
+Changed |axis_h| and |axis_v| arguments to 2 from 1.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+    Ellipse* e = create_new<Ellipse>(0);
+
+    e->set(p, 2, 2);
+
+    v = static_cast<void*>(e); 
+
+    scanner_node->add_entry("unit_ellipse", ELLIPSE, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("unitellipse", "unit_ellipse");
+  
+
+
+  }
+
+@q ***** (5) |Circles|.  @>
+@*4 |Circles|.
+
+\LOG
+\initials{LDF 2004.06.17.}  Added this section.
+\ENDLOG 
+
+@q ****** (6) |unit_circle|.  @>
+
+|unit_circle|.
+
+
+\LOG
+\initials{LDF 2004.06.17.}  Added this section.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+    Circle* c_pt = create_new<Circle>(0);
+
+    c_pt->set(p, 2);
+
+    v = static_cast<void*>(c_pt); 
+
+    scanner_node->add_entry("unit_circle", CIRCLE, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("unitcircle", "unit_circle");
+  
+
+
+  }
+
+
+@q ***** (5) |Rectangles|.  @>
+@*4 |Rectangles|.
+
+\LOG
+\initials{LDF 2004.06.30.}  Added this section.
+\ENDLOG 
+
+@q ****** (6) |unit_square|.  @>
+
+|unit_square|.
+
+|unit_square| is currently a |Rectangle|, because I haven't implemented 
+|class Square| yet.
+
+\LOG
+\initials{LDF 2004.06.30.}  Added this section.
+
+\initials{LDF 2004.07.06.}
+Added |unit_rectangle| and |unitrectangle|.  They are synonyms of 
+|unit_square|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+
+    Rectangle* r = create_new<Rectangle>(0);
+
+    r->set(p, 1, 1);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_square", RECTANGLE, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+    scanner_node->add_synonym("unitsquare", "unit_square");
+    scanner_node->add_synonym("unit_rectangle", "unit_square");
+    scanner_node->add_synonym("unitrectangle", "unit_square");
+
+  }
+
+
+@q ***** (5) |Reg_Polygons|.  @>
+@*4 |Reg_Polygons|.
+
+\LOG
+\initials{LDF 2004.07.06.}  Added this section with 
+calls to |scanner_node::add_entry| for |unit_triangle|,
+|unit_pentagon|, |unit_hexagon|, |unit_heptagon|, |unit_octagon|,
+|unit_nonagon|, |unit_decagon|, |unit_ondecagon|, and |unit_dodecagon|.
+\ENDLOG 
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.07.06.}
+Find out whether ``ondecagon'' is correct!
+\ENDTODO 
+
+@<Define |Scanner_Type::create|@>=          
+  {
+
+@q ****** (6) |unit_triangle|.  @>
+@ |unit_triangle|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    Reg_Polygon* r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 3, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_triangle", REG_POLYGON,
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+@q ****** (6) |unit_pentagon|.  @>
+@ |unit_pentagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 5, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_pentagon", REG_POLYGON,
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+@q ****** (6) |unit_hexagon|.  @>
+@ |unit_hexagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 6, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_hexagon", REG_POLYGON, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+@q ****** (6) |unit_heptagon|.  @>
+@ |unit_heptagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 7, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_heptagon", REG_POLYGON,
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+@q ****** (6) |unit_octagon|.  @>
+@ |unit_octagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 8, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_octagon", REG_POLYGON, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+@q ****** (6) |unit_nonagon|.  @>
+@ |unit_nonagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 9, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_nonagon", REG_POLYGON, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+
+
+@q ****** (6) |unit_decagon|.  @>
+@ |unit_decagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 10, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_decagon", REG_POLYGON, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+
+
+@q ****** (6) |unit_ondecagon|.  @>
+@ |unit_ondecagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 11, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_ondecagon", REG_POLYGON, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+
+@q ****** (6) |unit_dodecagon|.  @>
+@ |unit_dodecagon|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    r = create_new<Reg_Polygon>(0);
+
+    r->set(p, 12, 2);
+
+    v = static_cast<void*>(r); 
+
+    scanner_node->add_entry("unit_dodecagon", REG_POLYGON, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+    
+
+    
+
+  }
+
+@q ***** (5) |Cuboids| and |Polyhedra|.  @>
+@*4 |Cuboids| and |Polyhedra|.
+
+\LOG
+\initials{LDF 2004.07.07.}
+Added this section.
+\ENDLOG 
+
+@q ****** (6) |unit_cuboid|.  @>
+
+|unit_cuboid|.
+
+\LOG
+\initials{LDF 2004.07.07.}
+Added |unit_cuboid|.
+\ENDLOG 
+
+@<Define |Scanner_Type::create|@>=          
+
+   {
+
+    Cuboid c(p, 1, 1, 1);
+
+    Cuboid* d = create_new<Cuboid>(c);
+
+    v = static_cast<void*>(d); 
+
+    scanner_node->add_entry("unit_cuboid", CUBOID, 
+                            regular, is_constant,
+                            not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   }
+
+
+@q ****** (6) |unit_tetrahedron|.  @>
+@ |unit_tetrahedron|.
+
+@<Define |Scanner_Type::create|@>=          
+
+   {
+
+       Tetrahedron* t = create_new<Tetrahedron>(0);
+
+       t->set(p, 2);
+
+       v = static_cast<void*>(t); 
+
+       scanner_node->add_entry("unit_tetrahedron", POLYHEDRON, 
+                               regular, is_constant,
+                               not_array, Id_Map_Entry_Type::KNOWN, v);
+       
+   }
+
+@q ****** (6) |unit_octahedron|.  @>
+@ |unit_octahedron|.
+
+\LOG
+\initials{LDF 2004.10.08.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=          
+
+
+
+   {
+
+     Octahedron a(p, 2);
+     Octahedron* b = create_new<Octahedron>(a);
+
+     v = static_cast<void*>(b); 
+
+     scanner_node->add_entry("unit_octahedron", POLYHEDRON, 
+                             regular, is_constant,
+                             not_array, Id_Map_Entry_Type::KNOWN, v);
+       
+   }
+
+
+
+@q ****** (6) |unit_dodecahedron|.  @>
+@ |unit_dodecaahedron|.
+
+@<Define |Scanner_Type::create|@>=          
+
+{
+
+       Dodecahedron d(p, 2);
+
+       Dodecahedron* e = create_new<Dodecahedron>(d);
+
+       v = static_cast<void*>(e); 
+
+       scanner_node->add_entry("unit_dodecahedron", POLYHEDRON, 
+                               regular, is_constant,
+                               not_array, Id_Map_Entry_Type::KNOWN, v);
+
+   }
+
+
+@q ****** (6) |unit_icosahedron|.  @>
+@ |unit_icosacahedron|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    {
+
+       Icosahedron i(p, 2);
+       Icosahedron* j = create_new<Icosahedron>(i);
+
+       v = static_cast<void*>(j); 
+
+       scanner_node->add_entry("unit_icosahedron",
+                               POLYHEDRON,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+   }
+
+
+@q ****** (6) |unit_trunc_octahedron|.  @>
+@ |unit_icosacahedron|.
+
+@<Define |Scanner_Type::create|@>=          
+
+    {
+
+       Trunc_Octahedron i(p, 2);
+       Trunc_Octahedron* j = create_new<Trunc_Octahedron>(i);
+
+       v = static_cast<void*>(j); 
+
+       scanner_node->add_entry("unit_trunc_octahedron",
+                               POLYHEDRON,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+   }
+
+
+
+
+@q ****** (6) |unit_great_rhombicosidodecahedron|.@>
+@ |unit_icosacahedron|.
+\initials{LDF 2005.12.14.}
+
+Another name for the Great Rhombicosidodecahedron is
+``Truncated Icosidodecahedron''.
+\initials{LDF 2005.12.14.}
+
+\LOG
+\initials{LDF 2005.12.14.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type::create|@>=          
+
+    {
+
+       Great_Rhombicosidodecahedron i(p, 2);
+       Great_Rhombicosidodecahedron* j 
+          = create_new<Great_Rhombicosidodecahedron>(i);
+
+       v = static_cast<void*>(j); 
+
+       scanner_node->add_entry("unit_great_rhombicosidodecahedron",
+                               POLYHEDRON,
+                               regular,
+                               is_constant,
+                               not_array,
+                               Id_Map_Entry_Type::KNOWN,
+                               v);
+
+      scanner_node->add_synonym("unit_truncated_icosidodecahedron",
+                                "unit_great_rhombicosidodecahedron");
+
+      scanner_node->add_synonym("unit_trunc_icosidodecahedron",
+                                "unit_great_rhombicosidodecahedron");
+
+   }
+
+@q ***** (5) End of group for ``Predefined variables and constants''.  @>          
+@ End of group for ``Predefined variables and constants''.
+
+@<Define |Scanner_Type::create|@>=          
+
+ } 
+
+  
+@
+@<Define |Scanner_Type::create|@>=
+
+#if 0 
+#if DEBUG_COMPILE
+     if (DEBUG)
+       {
+         int i = 0;
+         for (Id_Map_Sub_Type::iterator iter
+              = scanner_node->id_map_node->id_map.begin();
+              iter != scanner_node->id_map_node->id_map.end();
+              ++iter)
+           {
+             if (DEBUG) 
+               cerr << "Entry " << i++ << ": " << iter->first
+                    << endl;
+           }
+       }
+#endif /* |DEBUG_COMPILE|  */
+#endif /* 0  */
+ 
+
+   } /* |if (top_level)|  */
+ 
+ else 
+   {
+#if DEBUG_COMPILE
+     if (DEBUG)
+       cerr << "top_level == false.  Not initializing scanner_node->id_map_node." 
+            << endl;
+#endif
+ 
+     
+   } /* |else| (|!top_level|)  */
+   
+@q **  End of |Scanner_Node::create|.  @>
+@ End of |Scanner_Node::create|. 
+@<Define |Scanner_Type::create|@>=
+#if DEBUG_COMPILE
+  if (DEBUG)
+    cerr << "Exiting Scanner_Node::create()\n";
+#endif
+  return scanner_node;
+
+}
+
+@q ** Check |in_filename|, return 0 upon failure. @>
+@*1 Check {\bf in\_filename}, return 0 upon failure.  
+
+This section is used in |Scanner_Node::create|. 
+\initials{LDF 2004.07.03.}
+
+\LOG
+\initials{LDF 2004.07.03.}
+Added this section.
+\ENDLOG 
+
+@<Check |in_filename|, return 0 upon failure@>=
+
+ {  /* Beginning of group.  */@;
+
+   using namespace Scan_Parse;
+
+#if DEBUG_COMPILE
+   if (DEBUG) 
+   cerr << "In `Check in_filename' section:" << endl
+        << "in_filename == " << in_filename << endl
+        << "in_filename == " << in_filename << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+@q *** (3) Check whether |in_filename| is already on |in_filename_vector|.@>
+@ Check whether |in_filename| is already on |in_filename_vector|.
+\initials{LDF 2004.07.02.}
+
+\LOG
+\initials{LDF 2004.07.02.}
+Added this section.  It prevents multiple input of files specified as command
+line arguments.  It wouldn't make sense to input them more than once.  On the
+other hand, it {\it would\/} make sense to include them in other input files 
+by means of {\bf input}, so this will be allowed (I haven't implemented 
+the |input| command yet).
+\ENDLOG 
+
+@<Check |in_filename|, return 0 upon failure@>=
+    
+     vector<string>::iterator iter;
+     for (iter  = in_filename_vector.begin();
+        iter != in_filename_vector.end();
+        ++iter)
+        {
+          if (*iter == in_filename)
+            {
+ 
+              cerr << "ERROR! In `Scanner_Node::create()':"
+                   << endl 
+                   << in_filename << " is already on "
+                   << "`in_filename_vector'."
+                   << endl  
+                   << "Won't input `" << in_filename << "' twice." 
+                   << endl  
+                   << "Returning 0. Will try to continue.\n\n";
+
+              delete in_file;
+       
+
+              return 0;
+            }
+        } /* |for|  */    
+
+   if (iter == in_filename_vector.end())
+      {
+
+#if DEBUG_COMPILE
+        if (DEBUG) 
+          cerr << in_filename << " not found on `in_filename_vector'." 
+               << endl << "Adding it."  
+               << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+        in_filename_vector.push_back(in_filename);
+      }     
+
+}  /* End of group.  */@;
+
+
+@q *** Check |out_filename|, return 0 upon failure. @>
+@ Check {\bf out\_filename}, return 0 upon failure.  
+
+This section is used in |Scanner_Node::create|. 
+\initials{LDF 2004.04.16.}
+
+@<Check |out_filename|, return 0 upon failure@>=
+
+ {  /* Beginning of group.  */@;
+
+   using namespace Scan_Parse;
+
+#if DEBUG_COMPILE
+   if (DEBUG) 
+   cerr << "In `Check out_filename' section:" << endl
+        << "in_filename == " << in_filename << endl
+        << "out_filename == " << out_filename << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+@q *** (3) Check whether |out_filename| is already on |out_filename_vector|.@>
+@ Check whether |out_filename| is already on |out_filename_vector|.
+\initials{LDF 2004.07.02.}
+
+\LOG
+\initials{LDF 2004.07.02.}
+Added this section.  It prevents multiple input of files specified as command
+line arguments.  It wouldn't make sense to input them more than once.  On the
+other hand, it {\it would\/} make sense to include them in other input files 
+by means of {\bf input}, so this will be allowed (I haven't implemented 
+the |input| command yet).
+\ENDLOG 
+
+@<Check |out_filename|, return 0 upon failure@>=
+    
+     vector<string>::iterator iter;
+     for (iter  = out_filename_vector.begin();
+        iter != out_filename_vector.end();
+        ++iter)
+        {
+          if (*iter == out_filename)
+            {
+ 
+              cerr << "ERROR! In `Scanner_Node::create()':"
+                   << endl 
+                   << out_filename << " is already on "
+                   << "`out_filename_vector'."
+                   << endl  
+                   << "Won't input `" << in_filename << "' twice." 
+                   << endl  
+                   << "Returning 0. Will try to continue.\n\n";
+
+              delete in_file;
+       
+
+              return 0;
+            }
+        } /* |for|  */    
+
+   if (iter == out_filename_vector.end())
+      {
+
+#if DEBUG_COMPILE
+        if (DEBUG) 
+          cerr << out_filename << " not found on `out_filename_vector'." 
+               << endl << "Adding it."  
+               << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+        out_filename_vector.push_back(out_filename);
+      }     
+
+
+@q *** (3) Try to open |out_file|.@>
+@ Try to open |out_file|.
+\initials{LDF 2004.07.02.}
+
+@<Check |out_filename|, return 0 upon failure@>=
+
+   out_file = new ofstream;
+   out_file->open(out_filename.c_str());
+   if (!(*out_file))
+     {
+       cerr << "ERROR! In `Scanner_Node::create()':\n"
+         << out_filename << " doesn't exist! "
+           << "Returning 0. Will try to continue.\n\n";
+       delete in_file;
+       delete out_file;
+       return 0;
+     }
+   else
+     {
+#if DEBUG_COMPILE
+       if (DEBUG)
+         cerr << "Succeeded in opening " << out_filename << ".\n";
+
+#endif
+     }
+
+ } /* End of group.  */@;
+
+
+@q * Putting |Scanner_Type::create| together.@>
+@* Putting {\bf Scanner\_Type::create()} together.
+  
+@ This is what's compiled.
+@c
+@<Include files@>@;
+@<Define |Scanner_Type::create|@>@;
+
+@ This is what's written to \filename{scanner.h}.
+@(sctpcrt.h@>=
+
+/* Nothing.  */
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 80))    @>
+
+
+
+
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

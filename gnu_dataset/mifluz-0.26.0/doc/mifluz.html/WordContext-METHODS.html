@@ -1,0 +1,310 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>Mifluz: WordContext METHODS</title>
+
+<meta name="description" content="Mifluz: WordContext METHODS">
+<meta name="keywords" content="Mifluz: WordContext METHODS">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Concept-Index.html#Concept-Index" rel="index" title="Concept Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="WordContext.html#WordContext" rel="up" title="WordContext">
+<link href="WordContext-ENVIRONMENT.html#WordContext-ENVIRONMENT" rel="next" title="WordContext ENVIRONMENT">
+<link href="WordContext-CONFIGURATION.html#WordContext-CONFIGURATION" rel="previous" title="WordContext CONFIGURATION">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="WordContext-METHODS"></a>
+<div class="header">
+<p>
+Next: <a href="WordContext-ENVIRONMENT.html#WordContext-ENVIRONMENT" accesskey="n" rel="next">WordContext ENVIRONMENT</a>, Previous: <a href="WordContext-CONFIGURATION.html#WordContext-CONFIGURATION" accesskey="p" rel="previous">WordContext CONFIGURATION</a>, Up: <a href="WordContext.html#WordContext" accesskey="u" rel="up">WordContext</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="WordContext-METHODS-1"></a>
+<h4 class="subsection">10.8.5 WordContext METHODS</h4>
+
+<dl compact="compact">
+<dt>&lsquo;<samp>WordContext()</samp>&rsquo;</dt>
+<dd><p>Constructor. Read the configuration parameters from the
+environment.  If the environment variable
+<strong>MIFLUZ_CONFIG
+</strong> is
+set to a pathname, read it as a configuration file. If
+<strong>MIFLUZ_CONFIG
+</strong> is not set, try to read the
+<code>~/.mifluz
+</code>
+configuration file or
+<code>/usr/etc/mifluz.conf
+</code>. See the mifluz
+manual page for a complete list of the configuration attributes.
+</p></dd>
+<dt>&lsquo;<samp>WordContext(const Configuration &amp;config)</samp>&rsquo;</dt>
+<dd><p>Constructor. The
+<strong>config
+</strong> argument must contain all the configuration
+parameters, no configuration file is loaded from the environment.
+</p></dd>
+<dt>&lsquo;<samp>WordContext(const ConfigDefaults *array)</samp>&rsquo;</dt>
+<dd><p>Constructor. The
+<strong>array
+</strong> argument holds configuration parameters
+that will override their equivalent in the configuration file read 
+from the environment.
+</p></dd>
+<dt>&lsquo;<samp>void Initialize(const Configuration &amp;config)</samp>&rsquo;</dt>
+<dd><p>Initialize the WordContext object. This method is called by 
+every constructor.
+</p>
+<p>When calling
+<strong>Initialize
+</strong> a second time, one must ensure
+that all WordList and WordCursor objects have been
+destroyed. WordList and WordCursor internal state depends on the
+current WordContext that will be lost by a second call.
+</p>
+
+<p>For those interested by the internals, the
+<strong>Initialize
+</strong> function
+maintains a Berkeley DB environment (DB_ENV) in the following way:
+</p>
+<p>First invocation:
+</p><div class="example">
+<pre class="example">Initialize -&gt; new DB_ENV (thru WordDBInfo)
+</pre></div>
+
+<p>Second invocation:
+</p><div class="example">
+<pre class="example">Initialize -&gt; delete DB_ENV -&gt; new DB_ENV (thru WordDBInfo)
+</pre></div>
+</dd>
+<dt>&lsquo;<samp>int Initialize(const ConfigDefaults* config_defaults = 0)</samp>&rsquo;</dt>
+<dd><p>Initialize the WordContext object.
+Build a
+<code>Configuration
+</code> object from the file pointed to by the 
+MIFLUZ_CONFIG environment variable or ~/.mifluz or /usr/etc/mifluz.conf.
+The
+<strong>config_defaults
+</strong> argument, if provided, is passed to
+the
+<code>Configuration
+</code> object using the
+<strong>Defaults
+</strong> method.
+The
+<strong>Initialize(const Configuration &amp;)
+</strong> method is then called
+with the
+<code>Configuration
+</code> object.
+Return OK if success, NOTOK otherwise.
+Refer to the
+<code>Configuration
+</code> description for more information.
+</p></dd>
+<dt>&lsquo;<samp>int ReInitialize()</samp>&rsquo;</dt>
+<dd><p>Destroy internal state except the
+<code>Configuration
+</code> object and
+rebuild it. May be used when the configuration is changed to
+take these changes in account.
+Return OK if success, NOTOK otherwise.
+</p></dd>
+<dt>&lsquo;<samp>const WordType&amp; GetType() const</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordType
+</strong> data member of the current object as a const.
+</p></dd>
+<dt>&lsquo;<samp>WordType&amp; GetType()</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordType
+</strong> data member of the current object.
+</p></dd>
+<dt>&lsquo;<samp>const WordKeyInfo&amp; GetKeyInfo() const</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordKeyInfo
+</strong> data member of the current object
+as a const.
+</p></dd>
+<dt>&lsquo;<samp>WordKeyInfo&amp; GetKeyInfo()</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordKeyInfo
+</strong> data member of the current object.
+</p></dd>
+<dt>&lsquo;<samp>const WordRecordInfo&amp; GetRecordInfo() const</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordRecordInfo
+</strong> data member of the current
+object as a const.
+</p></dd>
+<dt>&lsquo;<samp>WordRecordInfo&amp; GetRecordInfo()</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordRecordInfo
+</strong> data member of the current object.
+</p></dd>
+<dt>&lsquo;<samp>const WordDBInfo&amp; GetDBInfo() const</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordDBInfo
+</strong> data member of the current object as
+a const.
+</p></dd>
+<dt>&lsquo;<samp>WordDBInfo&amp; GetDBInfo()</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordDBInfo
+</strong> data member of the current object.
+</p></dd>
+<dt>&lsquo;<samp>const WordMonitor* GetMonitor() const</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordMonitor
+</strong> data member of the current object
+as a const.  The pointer may be NULL if the word_monitor
+attribute is false.
+</p></dd>
+<dt>&lsquo;<samp>WordMonitor* GetMonitor()</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>WordMonitor
+</strong> data member of the current object.
+The pointer may be NULL if the word_monitor attribute is false.
+</p></dd>
+<dt>&lsquo;<samp>const Configuration&amp; GetConfiguration() const</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>Configuration
+</strong> data member of the current object
+as a const.
+</p></dd>
+<dt>&lsquo;<samp>Configuration&amp; GetConfiguration()</samp>&rsquo;</dt>
+<dd><p>Return the
+<strong>Configuration
+</strong> data member of the current object.
+</p></dd>
+<dt>&lsquo;<samp>WordList* List()</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordList
+</strong> object, using the 
+WordList(WordContext*) constructor. It is the responsibility of the
+caller to delete this object before the WordContext object is
+deleted. Refer to the
+<strong>wordlist_multi
+</strong> configuration parameter
+to know the exact type of the object created.
+</p></dd>
+<dt>&lsquo;<samp>WordReference* Word()</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordReference
+</strong> object, using the
+WordReference(WordContext*) constructor. It is the responsibility of the
+caller to delete this object before the WordContext object is
+deleted.
+</p></dd>
+<dt>&lsquo;<samp>WordReference* Word(const String&amp; key0, const String&amp; record0)</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordReference
+</strong> object, using the
+WordReference(WordContext*, const String&amp;, const&amp; String)
+constructor. It is the responsibility of the
+caller to delete this object before the WordContext object is
+deleted.
+</p></dd>
+<dt>&lsquo;<samp>WordReference* Word(const String&amp; word)</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordReference
+</strong> object, using the
+WordReference(WordContext*, const String&amp;)
+constructor. It is the responsibility of the
+caller to delete this object before the WordContext object is
+deleted.
+</p></dd>
+<dt>&lsquo;<samp>WordRecord* Record()</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordRecord
+</strong> object, using the
+WordRecord(WordContext*) constructor. It is the responsibility of the
+caller to delete this object before the WordContext object is
+deleted.
+</p></dd>
+<dt>&lsquo;<samp>WordKey* Key()</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordKey
+</strong> object, using the
+WordKey(WordContext*) constructor. It is the responsibility of the
+caller to delete this object before the WordContext object is
+deleted.
+</p></dd>
+<dt>&lsquo;<samp>WordKey* Key(const String&amp; word)</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordKey
+</strong> object, using the
+WordKey(WordContext*, const String&amp;) constructor. It is the
+responsibility of the caller to delete this object before the
+WordContext object is deleted.
+</p></dd>
+<dt>&lsquo;<samp>WordKey* Key(const WordKey&amp; other)</samp>&rsquo;</dt>
+<dd><p>Return a new
+<strong>WordKey
+</strong> object, using the
+WordKey(WordContext*, const WordKey&amp;) constructor. It is the
+responsibility of the caller to delete this object before the
+WordContext object is deleted.
+</p></dd>
+<dt>&lsquo;<samp>static String ConfigFile()</samp>&rsquo;</dt>
+<dd><p>Return the full pathname of the configuration file. The configuration
+file lookup first searches for the file pointed by the
+<strong>MIFLUZ_CONFIG
+</strong> environment variable then
+<strong>~/.mifluz
+</strong> and
+finally
+<strong>/usr/etc/mifluz.conf
+</strong>. If no configuration file is found,
+return the empty string.
+</p></dd>
+</dl>
+
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="WordContext-ENVIRONMENT.html#WordContext-ENVIRONMENT" accesskey="n" rel="next">WordContext ENVIRONMENT</a>, Previous: <a href="WordContext-CONFIGURATION.html#WordContext-CONFIGURATION" accesskey="p" rel="previous">WordContext CONFIGURATION</a>, Up: <a href="WordContext.html#WordContext" accesskey="u" rel="up">WordContext</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

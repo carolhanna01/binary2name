@@ -1,0 +1,361 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- $AM_CONST: Supertype for compiler constants.
+-- AM_CONST: Implementation to be included by $AM_CONST nodes.
+-- AM_VOID_CONST: Representation of "void".
+-- AM_ARR_CONST: Representation of constant ARRAY{T} objects.
+-- AM_BOOL_CONST: Representation of constant BOOL's.
+-- AM_CHAR_CONST: Representation of constant CHAR objects. 
+-- AM_STR_CONST: Representation of constant strings. 
+-- AM_INT_CONST: Representation of constant INT objects. 
+-- AM_INTI_CONST: Representation of constant INTI objects.
+-- AM_FLT_CONST: Representation of constant FLT objects. 
+-- AM_FLTD_CONST: Representation of constant FLTD objects.
+-- AM_FLTX_CONST: Representation of constant FLTX objects.
+-- AM_FLTDX_CONST: Representation of constant FLTDX.
+-- AM_FLTI_CONST: Representation of constant FLTI objects.
+
+abstract class $AM_CONST < $AM_EXPR is
+   -- Supertype for compiler constants.
+end;
+
+-------------------------------------------------------------------
+class AM_CONST < $AM_CONST is
+   -- Implementation to be included by $AM_CONST nodes.   
+   include AM_EXPR;
+
+   attr tp_at:$TP;      
+   
+   tp:$TP is return tp_at end;   
+
+   copy:SAME is return self end;
+
+   -- all constants can be optimized
+   can_invar_opt(prog:PROG):BOOL is return true end;
+end;
+
+-------------------------------------------------------------------
+class AM_VOID_CONST < $AM_CONST is
+   -- Representation of "void".
+
+   include AM_CONST;
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_VOID_CONST then return true;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return 12648273;  -- some constant random for hashing this
+   end;
+end;
+   
+-------------------------------------------------------------------
+class AM_ARR_CONST < $AM_CONST is
+   -- Representation of constant ARRAY{T} objects.
+   include AM_CONST;
+   
+   attr elt_tp:TP_CLASS;	-- The type of the contained elements.
+   attr elts:ARRAY{$AM_CONST};	-- The array elements.
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_ARR_CONST then 
+	 if elts.asize /= a.elts.asize then return false end;
+	 loop i::=elts.asize.times!;
+	    if ~(elts[i]=a.elts[i]) then return false end;
+	 end;
+	 return true;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      htemp ::= 21857;  -- some random hash start value
+      loop i::= elts.asize.times!;
+	 htemp := htemp.hash; -- mix up the hash value a bit
+	 htemp := htemp.bxor(elts[i].hash);
+      end;
+      return htemp;
+   end;
+end;
+ 
+-------------------------------------------------------------------
+class AM_BOOL_CONST < $AM_CONST is
+   -- Representation of constant BOOL's.
+   include AM_CONST;
+   
+   attr val:BOOL;		-- The boolean value.
+   
+   create(src:SFILE_ID):SAME is
+      -- Create a new boolean constant with source `src'.
+      r::=new; r.source:=src; return r end;
+
+   is_eq(a:$OB): BOOL is
+      typecase a 
+      when AM_BOOL_CONST then return val = a.val;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      if val then
+	 return 1294812094; -- return two different const hash values
+      else
+	 return 1284721945; 
+      end;
+   end;
+end;   
+
+-------------------------------------------------------------------
+class AM_CHAR_CONST < $AM_CONST is
+   -- Representation of constant CHAR objects. Uses `bval' if the program 
+   -- being compiled uses the same sized characters as the compiler, 
+   -- val otherwise. Can tell by checking whether `val' is void.
+   include AM_CONST;
+   
+   attr bval:CHAR;		-- The character, if the compiled
+      -- program uses the same representation as the compiler.
+   attr val:INTI;		-- The value of the char, if non-void.
+   
+   create(t:AS_CHAR_LIT_EXPR):SAME is
+      -- Create a new character constant for the tree form `t'. Must 
+      -- change this if the target has a different format.
+      r::=new; r.source:=t.source; r.bval:=t.val.char; return r end;
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_CHAR_CONST then 
+	 if void(val) then
+	    return bval = a.bval;
+	 else
+	    return val = a.val;
+	 end;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      if void(val) then
+	 return bval.hash;
+      else
+	 return val.hash;
+      end;
+   end;
+end;
+
+-------------------------------------------------------------------   
+class AM_STR_CONST < $AM_CONST is
+   -- Representation of constant strings. 
+   include AM_CONST;
+   
+   attr bval:STR;		-- The string if the compiler's are 
+      -- the same as the compiled program.
+
+   create:SAME is return new; end;
+   
+   create(t:AS_STR_LIT_EXPR):SAME is 
+      -- Create a string constant for tree form `t'. Must change this
+      -- if the target has a different format.
+      r::=new; r.source:=t.source; r.bval:=t.s; return r end;
+   
+   create_from_str(src:SFILE_ID, str:STR):SAME is 
+      -- Create a string constant for tree form `t'. Must change this
+      -- if the target has a different format.
+      r::=new; r.source:=src; r.bval:=str; return r end;
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_STR_CONST then return bval = a.bval;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return bval.hash;
+   end;
+
+end;
+   
+-------------------------------------------------------------------
+class AM_INT_CONST < $AM_CONST is
+   -- Representation of constant INT objects. Uses `bval' if the program 
+   -- being compiled uses the same sized integers as the compiler, 
+   -- val otherwise. Can tell by checking whether `val' is void.
+   include AM_CONST;
+   
+   attr val:INTI;		-- The bits of the integer, if non-void.
+
+   create(t:AS_INT_LIT_EXPR):SAME is
+      -- Create a new integer constant for the tree form `t'. Must 
+      -- change this is the target has a different format.
+      r::=new; r.source:=t.source; r.val:=t.val; return r end;
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_INT_CONST then 
+	 return val = a.val;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return val.hash;
+   end;
+end;
+
+-------------------------------------------------------------------
+class AM_INTI_CONST < $AM_CONST is
+   -- Representation of constant INTI objects.
+   include AM_CONST;
+   
+   attr val:INTI;		-- The integer.
+   
+   create(t:AS_INT_LIT_EXPR):SAME is
+      -- Create a new infinite precision integer constant for the
+      -- tree form `t'
+      r::=new; r.source:=t.source; r.val:=t.val; return r end;
+
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_INTI_CONST then return val = a.val;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return val.hash;
+   end;
+end;
+   
+-------------------------------------------------------------------
+class AM_FLT_CONST < $AM_CONST is
+   -- Representation of constant FLT objects. 
+   include AM_CONST;
+
+   attr val:RAT;		-- The value.
+   
+   create(t:AS_FLT_LIT_EXPR):SAME is
+      -- Create a new floating point constant for the tree form `t'. 
+      r::=new; r.source:=t.source; r.val:=t.val;
+      return r end;
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_FLT_CONST then return val = a.val;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return val.hash;
+   end;
+end;
+
+-------------------------------------------------------------------
+class AM_FLTD_CONST < $AM_CONST is
+   -- Representation of constant FLTD objects.
+   include AM_CONST;
+   
+   attr val:RAT;		-- The value.
+   
+   create(t:AS_FLT_LIT_EXPR):SAME is
+      -- Create a new floating point constant for the tree form `t'. 
+      r::=new; r.source:=t.source; r.val:=t.val;
+      return r end;
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_FLTD_CONST then return val = a.val;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return val.hash;
+   end;
+end;
+
+-------------------------------------------------------------------
+class AM_FLTX_CONST < $AM_CONST is
+   -- Representation of constant FLTX objects by their mantissa and 
+   -- exponent.
+   include AM_CONST;
+   
+   attr val:RAT;		-- The value.
+   
+   create(t:AS_FLT_LIT_EXPR):SAME is
+      -- Create a new floating point constant for the tree form `t'. 
+      r::=new; r.source:=t.source; r.val:=t.val;
+      return r end;
+
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_FLTX_CONST then return val = a.val;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return val.hash;
+   end;
+end;
+
+-------------------------------------------------------------------
+class AM_FLTDX_CONST < $AM_CONST is
+   -- Representation of constant FLTDX objects by their mantissa and 
+   -- exponent.
+   include AM_CONST;
+
+   attr val:RAT;		-- The value.
+   
+   create(t:AS_FLT_LIT_EXPR):SAME is
+      -- Create a new floating point constant for the tree form `t'. 
+      r::=new; r.source:=t.source; r.val:=t.val;
+      return r end;
+
+
+   is_eq(a:$OB):BOOL is
+      typecase a 
+      when AM_FLTDX_CONST then return val = a.val;
+      else return false;
+      end;
+   end;
+
+   hash:INT is
+      return val.hash;
+   end;
+end;
+   
+-------------------------------------------------------------------
+class AM_FLTI_CONST < $AM_CONST is
+   -- Representation of constant FLTI objects by their mantissa and 
+   -- exponent.
+   include AM_CONST;
+
+   attr val:RAT;		-- The value.
+   
+   create(t:AS_FLT_LIT_EXPR):SAME is
+      -- Create a new floating point constant for the tree form `t'. 
+      r::=new; r.source:=t.source; r.val:=t.val;
+      return r end;
+end;
+   
+-------------------------------------------------------------------
+
+

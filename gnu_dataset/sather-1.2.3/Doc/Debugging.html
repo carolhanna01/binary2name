@@ -1,0 +1,601 @@
+<title> Debugging </title>
+<body bgcolor=white>
+<center><h1>Debugging Sather/pSather</h1></center>
+
+<h2>Introduction</h2>
+	Currently, we don't have a native debugger that understands
+Sather types and function names. (There is a project going at ICSI to
+patch gdb so that it "knows" about Sather).  In the meantime, we have
+to use a C debugger which is surprisingly easy to do. Here a short
+description on how this works.
+<ul>
+<li><a href=#SUMMARY>Summary of environmental variables and commands</a>
+<li><a href=#COMPILING>Compiling your program for debugging </a>
+<li><a href=#STARTING>Running gdb </a>
+<ul>
+	<li><a href=#SAMPLE>A sample raw gdb session</a>
+	<li><a href=#EMACS>gdb in Emacs</a>
+</ul>
+<li><a href=#BREAKPOINTS>Setting Breakpoints </a>
+<li><a href=#VIEWING>Viewing Data, Stack etc. </a>
+<li><a href=#VARIABLES>Variables that control object display</a>
+<li><a href=#GRAPHICAL>Using the graphical interface</a>
+<li><a href=#CALLING>Calling the debugging interface from Sather</a>
+</ul>
+
+<hr>
+<a name=SUMMARY>
+<h2> Summary </h2>
+
+Note: every option described here works for pSather and Sather,
+      unless it explicitly states that it does not.
+
+<h3>Environment variables</h3>
+<table>
+<tr valign="top">
+<td>START_GDB</td>
+<td>		if defined, it will start gdb if a fatal error occurs
+		(access to void, bound error, deadlock). You should
+		compile your program with "-check all" to catch all
+		possible errors. GDB will also come up if you 'QUIT'
+		the program (see SIGNAL(2)). This works only for Sather
+		programs.
+</td>
+<tr valign="top">
+<td>
+DEBUG_PSATHER</td>
+<td>		works only for pSather: starts for each cluster a gdb
+		session. You need a special .gdbinit file for this, see
+		below for more information
+</td>
+</table>
+
+<h3>Compiler options</h3>
+
+<table>
+<tr valign="top">
+<td>-debug
+<td>		Textual display of data structures and stack frames
+<tr valign="top">
+<td>-debug_graphical
+<td>		Graphical display of data structures and stack frames
+		(does not work for pSather yet)
+<tr valign="top">
+<td>-debug_source		
+<td>		step through Sather code (instead of C code)
+<tr valign="top">
+<td>-debug_C -pretty	
+<td>		step through C code (sather line numbers are embedded
+		in C comments).  "-pretty" improves the readability of
+		the generated code.
+</table>
+
+<h3> Command Summary for -debug and -debug_graphical for use in gdb </h3>
+	Functions ending with a G are graphical versions of the standard
+function.
+<table>
+<tr valign="top">
+<th> Function Name	<th> Arguments	<th> Purpose <th> Example
+<tr valign="top">
+<td> PT/PTG			 	<td>&FF		
+<td> Prints out the stack trace / The stack trace as a graphical object where  each line indicates a frame <td> p PT(&FF)
+<tr valign="top">
+<td>PT/PTG		 <td>pFF 		<td>If you are in an unbox function i.e. one that unboxes a value and callsthe real function.
+<td> p PT(&FF)
+<tr valign="top">					
+<td>PF/PFG			 <td>&FF		<td>Print out current frame. In the graphical version, each line indicates a local.
+<td>p PF(&FF)
+<tr valign="top">
+<td>PO/POG		<td>object name	<td>Print out the object, or graphically display it, one attribute per line.
+<td> p PO(self)
+
+</table>
+
+<h3>Summary of Graphical Commands for -debug_graphical </h3>
+<table>
+<tr valign="top">
+<td>Single click on object component:	<td>Make referenced object visible
+<tr valign="top">
+<td>Double click on object tag:		<td>Hide object
+<tr valign="top">
+<td>Drag on object tag:			<td>Move the object
+<tr valign="top">
+<td>Third button click on object component:	<td>Display component details in
+					lower window
+<tr valign="top">
+<td>Resume button:				<td>Transfer control back to gdb
+<tr valign="top">
+<td>Refresh button:				
+<td>Re-fetch and draw all currently	visible objects
+</table>
+
+
+<hr>
+<a name=COMPILING>
+<h2>Compiling your program for debugging</h2>
+
+You have several choices, each has its advantages and
+disadvantages
+
+<h4>  -debug_source  versus  -debug_C </h4>
+   The first flag enables you to step through your Sather
+   program and set breakpoints relative to the Sather source.  The
+   disadvantage is that you won't see the C source code generated, so you
+   cannot inspect intermediat results, as you don't know the name of the
+   locals involved.  Moreover, sometimes you will get completely bogus
+   lines (this happens for example if you use -g together with -pretty).
+   It gets especially nasty if you use optimizations.
+
+<p>
+   "-debug_C -pretty" on the other hand gives you in most cases
+   the correct C location, and will inform you about the Sather source
+   lines in C-comments. This is especially handy when you believe that
+   the compiler produced bogus code.
+
+<h4>  -debug versus -debug_graphical </h4>
+
+The first flag gives you the ability to print out Sather structures
+and function frames as text, and the other one will give you a
+graphical data structure browser.  -debug slows the compilation
+process by about 5%, while -debug_graphical adds about 5% plus 1min
+(on my 4 Processor Sparc 10).  Both functions also add special classes
+that can be called from within your program to display data structures
+and function frames.  
+<p> 
+Both flags add a special function that comes in handy to set
+breakpoints (see below). In both cases you will also get automatic
+backtraces whenever a fatal error occurs (bound error or void access),
+iff you compiled the program with -check all
+
+
+<h4> -chk </h4>
+   This option ensures that all possible errors are caught by the
+   program (like array bound errors, attribute access to void, and (for
+   pSather) deadlocks. You can turn on checks for individual classes,
+   please refer to the sacomp man page for more details.
+
+<hr>
+<a name=STARTING>
+<h2>Starting GDB</h2>
+
+Starting the program under control of gdb
+
+<h3> Sather</h3>		
+
+start the program under gdb as you would fo it
+for a C program. Example:
+<pre>			gdb sather_program </pre>
+
+		If you did not use -debug, but -debug_C you may
+		have to add the code directory to get the C source
+		files:
+<pre>			dir sather_program.code </pre>
+		You can set breakpoints, start the program and evaluate
+		data structures.
+
+<h3>pSather</h3>
+
+If you run your program on only one cluster, you can
+		use gdb the same way as for Sather, provided that your
+		.gdbfile has the following lines (they are only needed
+		for solaris):
+<pre>
+			handle SIGWAITING nostop noprint
+			handle SIGUSR1 nostop noprint
+			handle SIGLWP nostop noprint
+
+</pre>
+		If you run more than one cluster, you should define the
+		external variable DEBUG_PSATHER and run X (and make sure
+		that DISPLAY points to the correct screen). Your .gdbinit
+		file should look as follows:
+<pre>
+			handle SIGWAITING nostop noprint
+			handle SIGUSR1 nostop noprint
+			handle SIGLWP nostop noprint
+			p debug_am=0
+</pre>
+		Now you can start your program as before (not under the
+		control of gdb) as
+<pre>
+			sather_program
+</pre>
+		It will open up one xterm per cluster, and each xterm
+		will be running gdb. Each cluster will be stopped in the
+		middle of the initialization code. You can now set your
+		breakpoints and restart each cluster with the 'cont'
+		command (of course, you cann add the breakpoints to your
+		.gdbinit file and restart each cluster automatically by
+		adding the cont command to the .gdbinit file).
+
+		Unfortunatly, gdb does not know about threads, so you
+		cannot get a list of threads or look which thread waits
+		for which lock.
+
+<a name=SAMPLE>
+<h3>A sample gdb session</h3>
+	For those of you not familiar with standard gdb, here's a
+sample gdb session debugging the raw C, not using any of the tools
+mentioned in the rest of this document.
+<pre>
+(gdb) info locals
+  Prints out all the locals currently visible
+(gdb) print self
+Prints out the pointer to the current self 
+Eg: $16 = (struct FMULTIMAPSTRINT_struct *) 0x57ed8
+(gdb) print *self
+Prints out the value of self
+$17 = {header = {tag = 4, destroyed = 0}, hsize = 3, n_targets = 50, 
+  asize = 17, arr_part = {{t2 = 0x0, t1 = 0x0}}}
+(gdb) print *self->arr_part@3
+$15 = {"gar"}
+Printing out a string/array of three elements
+(gdb) bt
+Print out the current contents of the stack.
+(gdb) up
+Go up a level in the stack. You normally start out too low (in some
+abort routine). Keep going up until you hit a sather line
+(gdb) down 
+Go down a stack level
+(gdb) break
+Set a breakpoint (easier to do from within emacs)
+(gdb) break sather_main
+Set a break point at the sather main.
+(gdb) step
+Go into the next line/call
+(gdb) next
+Go through the next line/call
+(gdb) finish
+Execute till end of current function.
+(gdb) continue
+Continue till the next break point 
+</pre>
+
+
+<a name=EMACS>
+<h3>Running gdb under emacs</h3>
+     Emacs provides good support for debugging with gdb. Type M-x gdb
+in emacs and supply the sather executable. Going upwards to the correct
+line will take you to the sather code as soon as you hit a sather line.
+You can set breakpoints by hitting "C-x Space" in the sather code.
+
+TAB does symbol name completion and ESC-? provides a list of completions
+(useful for finding mangled function and variable names). There is
+currently some work being done to provide name mangling under gdb. 
+
+<hr>
+<a name=BREAKPOINTS>
+<h2> Setting Breakpoints </h2>
+
+	GDB allows you to set breakpoints by specifying a file and
+line number, or by giving a function name. 
+<p>
+	In the first approach, if you compile with <b>-debug_C</b> you can
+use a C file name. If you compile with -debug, then you must use a
+sather file name and line number, which can be trivially done by using
+C-x space in emacs. However, this won't always work. In the case of
+either included or parametrized classes, a single Sather source line
+will correspond to multiple C source lines, for every different class
+parametrization or every different way the code was included.
+Setting a break point in the Sather source will arbitrarily choose *one*
+of these parametrizations or inclusions!  Hence, you will appear to
+get erratic behavior, since the break point will work in one context
+but not in another i.e. for one parametrization but not others.  With
+such code, you are better off finding out the C function name, as
+described below, and setting the break points appropriately.
+Alternately, if the parametrized class calls into some other function
+that is not parametrized, you may set the break point in the
+non-parametrized class and then go "up" to the parametrized code.
+
+<p>
+	The second approach requires you to know the C-function
+name. You can try to guess it. (it starts with the class name,
+followed by an underscore and the function name, followed by all
+argument types and the return type.)  While entering the function
+name, you can press <ESC>-? to display a list of names that start with
+the characters you have already entered.
+
+	There is in fact an easier way to get the function name, if
+you used -PO or -POG. If you call the function C() with a sting, it
+will give you a list of all Sather functions that start with that
+name.  Example:
+<pre>	(gdb) p C("STR::") </pre>
+returns a list of all functions defined in STR (and that are
+used in your program). There is also the inverse function,
+called S(). It gives you the Sather name of a function, as in
+<pre>	(gdb) p C(FSTR_create_FSTR) </pre>
+	If you want to break at the very beginning of your code, you
+should break on sather_main. This function is the name of the main
+function in your MAIN class.
+
+
+<hr>
+<a name=VIEWING>
+<h2>Viewing Commands </h2>
+
+<h3>Backtrace </h3>
+
+If you stop your program while it runs under gdb (either with a
+breakpoint, a signal or a watchpoint), you can get a list
+of the stack frames by typing
+<pre>	(gdb) bt  </pre>
+Unfortunatly, this gives you only the C function names. To get
+Sather function names, you have to compile the program with -PO
+or -POG. In this case, you can type
+<pre>	(gdb) p PT(&FF)</pre>
+to get an ascii listing, and
+<pre>	(gdb) p PTG(&FF) </pre>
+to start the graphical data browser
+(T stays for 'Trace', G for 'Graphically' and FF for
+'Function Frame')
+
+<h4> Several caveats </h4>
+
+This assumes that the local variable FF has been initiallized
+correctly. If you see the C Code, you have the step until you see the
+code
+<pre>		void *_local_frame...... </pre>
+
+If you have passed this line you are safe.  If you see Sather code,
+you should be safe if you stepped passed the 'is' of the function
+definition. You know that you should not have called this function,
+when your program gets a segmentation fault.  However, the print code
+knows about those problems, and you can recover by 'cont'inuing your
+program in gdb.
+
+<p>		
+If you are in an 'unbox' function, you have to   say 
+<pre>		(gdb) p PT(pFF) </pre>
+or
+<pre>		(gdb) p PTG(pFF) </pre>
+
+or, even better, single step until the actual function is called. You
+know that you are in an unbox function if you get a 'No symbol "FF" in
+current context.' error from gdb.
+
+
+<h3>Function Frames</h3>
+If you need to know all locals and attributes of a function
+frame, you can either click on the corrsponding function frame
+in the Graphical Data Browser, or type
+<pre>	(gdb) p PF(&FF) </pre>
+The problems mentioned above are valid too.
+
+	
+
+<h3>Displaying Objects</h3>
+Whenever you know the address of a reference object, you can either
+display it graphically, or as text dump. Use the following command in
+gdb:
+<pre>	(gdb) p PO(object) </pre>
+or
+<pre>	(gdb) p POG(object) </pre>
+
+If you want to display a value type, you have to know its
+class tag. You can get it by executing
+<pre>	(gdb) p TAG("classname")</pre>
+Now you can use
+<pre>	(gdb) p POV(&object,tag)</pre>
+This does not work for the graphical browser though (for various
+reasons).
+
+<hr>
+<a name=VARIABLES>
+<h2>Variables that control object display</h2>
+
+There are several variables that can be set to change the way objects are
+displayed. Most of them affect only the text display.
+
+Setting a variable in gdb:    
+<pre>set print_depth = 2 </pre>
+Printing a variable in gdb:  
+<pre> p print_depth </pre>
+
+In the table below note that the variable values follow the C
+convention, where 1 indicates true and 0 indicates false.
+
+<table>
+<tr valign="top">
+<th>Function Name <th> Default <th> <th>Description
+<tr valign="top">
+<td>print_pointer 	<td> 0 <td>PO 
+	<td>prints the C-pointer of reference objects
+<tr valign="top">
+<td>print_id 	<td> 1 <td>PO 
+	<td>prints the ID of Sather reference objects
+<tr valign="top">
+<td>print_type	<td> 0 <td>PO 
+	<td>prints the Sather type name of attributes
+<tr valign="top">
+<td>print_c_type	<td> 0 <td>PO 
+	<td>prints the C type name of objects
+<tr valign="top">
+<td>print_attr	<td> 1 <td>PO 
+	<td>prints the Sather attribute name
+<tr valign="top">
+<td>print_c_attr	<td> 0 <td>PO 
+	<td>prints the C attribute name
+<tr valign="top">
+<td>print_real	<td> 1 <td>PO 
+	<td>prints the Sather type name of objects (same as print_type,
+	unless the attribute is abstract. Setting both to one will print
+	one type unless the attr type and object type are different).
+<tr valign="top">
+<td>print_c_real	<td> 1 <td>PO 
+	<td>print real C types
+<tr valign="top">
+<td>print_void	<td> 0 <td>PO/POG 
+	<td>prints void elements of arrays
+<tr valign="top">
+<td>print_index	<td> 10 <td>PO 
+	<td>The number of array elements to print
+<tr valign="top">
+<td>print_gdb	<td> 1 <td>PO 
+	<td>print the command to display data in gdb
+	This is handy if your terminal supports cut and paste with a
+mouse. 
+
+<tr valign="top">
+<td>print_depth	<td> 1 <td>PO 
+	<td>depth of the tree to be printed
+<tr valign="top">
+<td>print_str_len	<td> 80 <td>PO
+	<td>The number of characters to be printed for strings
+<tr valign="top">
+<td>print_func	<td> 20 <td>PO/POG
+	<td>Number of functions to print for PF/PFG
+<tr valign="top">
+<td>print_lines	<td> 15 <td>(POG)
+	<td>Number of lines to print per object (if an object has more
+	attributes, you can open several windows per object, each one
+	with print_lines lines).
+<tr valign="top">
+<td>print_declared_source <td> 1 <td>PO
+	<td>Prints the file and line where an attribute, variable or
+	function has been declared
+<tr valign="top">
+<td>print_class_source    <td> 0 <td>PO
+	<td>Prints the line and file number of the class definition of
+	attributes and variables
+<tr valign="top">
+<td>print_short_source:    <td> 1 <td>PO/POG
+	<td>prints only the file name of sather files, not their path.
+	If off, it will print the full path as used by the sather
+	compiler.
+</table>
+
+<hr>
+<a name=GRAPHICAL>
+<h2>	Using the Graphical Interface </h2>
+
+	When using the graphical interface, control must alternate
+between gdb and the interface.  As soon as a graphical command is
+issued (POG, PFG or PTG) control is transferred to the user
+interface. You can then manipulate anything within the user interface
+as described below.
+
+<p>
+<b>Resume</b> When you are done, you must transfer control back to the
+program running under gdb by hitting the "Resume" button.
+<p>
+<b>Refresh</b> The next time you come back to the user interface by calling
+one of the graphical functions, you can use the "Refresh" button to
+update the previously displayed objects. BEWARE! if some objects are
+no longer valid - often true of stack frames - things can and probably
+will break.
+<p>
+<b>Quit</b> Will terminate the gui process. 
+
+<p>
+	The graphical interface shows each object in its own window,
+with one component per line:
+<table border>
+<tr valign="top">
+<th>Object Type <th>Invoked By	<th>	Components
+
+<tr valign="top"><td>Stack Trace    <td>PTG	<td>Function frames
+<tr valign="top"><td>Function Frame <td>PFG	<td>Local variables
+<tr valign="top"><td>Sather Object  <td>POG	<td>Object attributes
+</table>
+	At the top of the window is a "tag" which indicates the
+object type.
+
+<p>	
+	If a component is a value type, its value will be displayed
+in place.  If the component is a reference pointer there are 2 cases:
+<ul>
+<li> if the referenced object is currently visible, there will be an
+arrow between the pointer and the referenced object.
+
+<li> if the referenced object is not visible (and the pointer is not
+void), there is a stub line to the left of the object indicating that
+the pointer can be expanded by a single left mouse click. Once
+the pointer is expanded, an arrow is drawn between the pointer
+and the object it references.
+</ul>
+	The color of the stub or arrow indicates the type of 
+the field, as described below.
+
+An object may be <b> hidden </b> by double clicking on the object "tag". 
+<p>
+An object may be <b> moved</b> around by dragging on its "tag" with
+the middle mouse button. It is frequently useful to move around objects
+to get reasonable placement and display of arrows.
+
+
+<h3>Displaying Large Objects</h3>
+	Large objects are displayed a few components at a time.  The
+bottom of the object will be a piece of red text "Next part of
+object". Clicking on this will reveal the next section of the array.
+
+<h3>Viewing a component in detail</h3>
+	Clicking on any object component with the third mouse button
+will display details about the component in the lower window.
+The first two lines will indicate the component's name and value.
+The following lines indicate the
+<ul>
+<li> Sather declaration of the attribute.
+	In brackets, the actual type, if the sather type is abstract.
+<li> C declaration of the attribute.
+	In brackets, the actual C type, if the sather type is abstract.
+<li> Sather id if the object is a reference type.
+<li> C pointer if the object is a reference type.
+</ul>
+
+<h3>Color Scheme</h3>
+<font color=red>Red </font> indicates auxilliary information, not part of the object. Bluish codes for arguments and purplish for locals.
+<p>
+Arguments/Attributes
+<table border>
+<tr valign="top">		<td>Value Types<td> 			<font color=darkslateblue>Dark slate blue</font>
+<tr valign="top">		<td>Built-in<td>			<font color=royalblue>royal blue</font>
+<tr valign="top">		<td>Reference, Bound routines, external objects<td> 
+	<font color=blue> blue </font>
+</table>
+
+<p>
+Locals have a similar color scheme in reddish colors	
+<table border>	
+<tr valign="top">		<td>Value types<td> 			<font color="mediumvioletred">medium violet red</font>
+<tr valign="top">		<td>Built-in<td>			<font color="purple">purple</font>
+<tr valign="top">		<td>Reference, Bound routines, external objects<td> <font color=magenta>magenta</font>
+</table>
+<p>
+
+<hr>
+<a name=CALLING>
+<h3>Calling PO/POG in Sather</h3>
+
+If you compile your program with -PO or -POG, you can use a special
+Sather class named PO to change any of the variables defined above and to
+display objects and function frames.
+
+<p>	
+To change variables, use for example
+<pre>	PO::print_depth:=2 </pre>
+Note that each cluster has its own copy of those variables, and if you
+want to change them for all clusters, you need a loop like
+<pre>
+	loop
+	   cl::=clusters!;
+	   PO::print_depth(2)@cl;
+	end;
+</pre>
+To display objects textually, use
+<pre>
+	PO::PO(object)   and   PO::POG(object)
+</pre>
+(This works for value types too). If you want to use a special
+print_depth for just one object, you can say
+<pre>
+	PO::PO(object,print_depth)
+</pre>
+To print a function frame, use
+<pre>	PO::PF   and   PO::PFG </pre>
+
+and a back trace can be displayed with
+<pre>	PO::PT   and   PO::PTG </pre>
+	
+If you prefer to get a string back, you can say
+<pre>	s::=PO::PO(object) </pre>
+This works for PF and PT too.

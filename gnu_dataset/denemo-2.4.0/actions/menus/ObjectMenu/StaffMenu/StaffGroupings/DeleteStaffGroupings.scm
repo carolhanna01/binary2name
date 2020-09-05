@@ -1,0 +1,10 @@
+(d-DirectiveDelete-staff "GroupStaffStart")
+(d-DirectiveDelete-staff "PianoStaffStart")
+(d-DirectiveDelete-staff "ChoirStaffStart")
+(d-DirectiveDelete-staff "GrandStaffStart")
+(d-DirectiveDelete-staff "BraceEnd")
+;;;legacy tags
+(d-DirectiveDelete-staff "ContextGrandStaff")
+(d-DirectiveDelete-staff "ContextGroupStaff")
+(d-DirectiveDelete-staff "ContextPianoStaff")
+(d-DirectiveDelete-staff "ContextChoirStaff")

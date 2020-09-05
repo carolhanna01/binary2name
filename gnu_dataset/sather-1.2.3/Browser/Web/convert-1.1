@@ -1,0 +1,201 @@
+#!/usr/bin/tclsh
+#------------------------------>  Tcl - script  <-----------------------------#
+#- Copyright (C) 199x by International Computer Science Institute            -#
+#- This file is part of the GNU Sather package. It is free software; you may -#
+#- redistribute  and/or modify it under the terms of the  GNU General Public -#
+#- License (GPL)  as  published  by the  Free  Software  Foundation;  either -#
+#- version 3 of the license, or (at your option) any later version.          -#
+#- This  program  is distributed  in the  hope that it will  be  useful, but -#
+#- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY -#
+#- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        -#
+#- The license text is also available from:  Free Software Foundation, Inc., -#
+#- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     -#
+#------------->  Please email comments to <bug-sather@gnu.org>  <-------------#
+
+# Usage once-change <file name>
+proc debugPuts { msg } {
+#    puts "once-change ${msg}"
+}
+	
+proc getAllFile { fname } {
+    set ret ""
+    if { [file exists ${fname}] } {
+	set f [open ${fname} r]
+	set ret [read $f]
+	close $f
+    } else {
+	puts "No File found: $fname"
+	set ret "No File Found:${fname}"
+    }
+    return $ret
+}
+
+
+proc run { } {
+    puts "This script will attempt to convert all .sa files here to 1.1"
+    puts "The result will be files stored with suffixes of .1.1"
+    set fileList [ makeFileList ]
+    processFiles ${fileList}
+}
+
+# Running consists of converting all sather files in the current directory
+# into lined-<sather-file-name>.gen.html which has the html version of the file
+proc processFiles { allFiles } {
+    puts "Number of files:"
+    puts [ llength ${allFiles} ]
+    foreach fname ${allFiles} {
+	# debugPuts "Once change: ${fname} to ${fname}.new"
+	set infile [open ${fname} r]
+	set fileNameOnly ${fname}
+	set outfilename "${fileNameOnly}.1.1"
+	puts "***********Generating ${fileNameOnly}"
+	set outfile [open $outfilename w]
+	set txt [read $infile]
+	close $infile
+	markupSather $txt $outfile ${fname}
+	close $outfile
+    }
+}
+
+# puts "Sourcing makeFileList"
+proc makeFileList { } {
+    # Return a list of files from the module
+    global gClassDef
+    
+    set fileList [glob -nocomplain -- *.sa]
+    return ${fileList}
+}
+# puts "Sourcing markupSather"
+# ######################## MAIN ROUTINE #################################
+# Split up file into lines
+# Split each line into a header and rest
+# by getting confused by stuff in pre and comments
+proc markupSather { txt outFile fileName } {
+    
+    puts ${outFile} "---------------------------> Sather 1.1 source file <--------------------------"
+    set txtl [ split $txt "\n" ]
+    set txtlsize [ llength $txtl ] 
+    # debugPuts "split text"
+    
+    set firstline [lindex ${txtl} 0]
+    set convertPt [string first "Sather 1.1 source file" ${firstline}]
+    if { $convertPt != -1 } {
+	puts "Warning! File ${fileName} seems to have already been converted"
+	puts $outFile ${txt}
+	return 
+    }
+    set lineno 0
+    while { $lineno < $txtlsize } {
+	set thisline [ lindex $txtl $lineno ]
+	set comPt [string first "--" ${thisline} ]
+	if {$comPt == -1 } {
+	    # No comment on this line
+	    set codePart ${thisline}
+	} else {
+	    if {$comPt == 0 } {
+		set codePart ""
+	    } else {
+		set codePart [string range ${thisline} 0 [expr ${comPt} - 1]]
+	    }
+	}
+	set abstractPt [string first "abstract" ${codePart}]
+	if {$abstractPt != -1 } {
+	    puts "abstract is a keyword. Fix line ${lineno} of ${fileName}"
+	    puts "$thisline"
+	}
+	regsub "^type " ${thisline} "abstract class " thisline
+	set immutablePt [string first "immutable" ${codePart}]
+	if {$immutablePt != -1 } {
+	    puts "immutable is a keyword. Fix line ${lineno} of ${fileName}"
+	}
+	regsub "^value class " ${thisline} "immutable class " thisline
+	set bindPt [string first ".bind" ${codePart}]
+	if {$bindPt != -1 } {
+	    puts "bind is now a keyword. Fix line ${lineno} of ${fileName}"
+	}
+	set bindPt [string first "bind(" ${codePart}]
+	if {$bindPt != -1 } {
+	    puts "bind is now a keyword. Fix line ${lineno} of ${fileName}"
+	}
+	regsub "#ROUT" ${thisline} "bind" thisline
+	set oncePt [string first "once" ${codePart}]
+	if {$oncePt != -1 } {
+	    puts "once is now a keyword. Fix line ${lineno} of ${fileName}"
+	}
+
+        set isPt [string first "is" ${thisline}]
+	set prePt [string first "pre" ${thisline}]
+	set postPt [string first "post" ${thisline}]
+	set rest ""
+	set codePart ${thisline}
+	if {$prePt != -1 } {
+	    set rest [string range ${codePart} ${prePt}  end]
+	    set codePart  [string range ${codePart} 0 [expr $prePt -1]]
+	} elseif {$postPt != -1 } {
+	    set rest [string range ${codePart} ${postPt}  end]
+	    set codePart  [string range ${codePart} 0 [expr $postPt -1]]
+	} elseif {$isPt != -1 } {
+	    set rest [string range ${codePart} ${isPt}  end]
+	    set codePart  [string range ${codePart} 0 [expr $isPt -1]]
+	}
+	set newCode [changeCode ${codePart} ]
+	incr lineno
+	puts $outFile "${newCode}${rest}"
+    }
+}
+
+debugPuts "souring htmlifycode"
+proc changeCode { codePart  } {
+    set retVal ${codePart}
+
+    set match [regexp {^  ( |  )end;.*$} ${codePart} ]
+    if { ${match} } {
+	return ${codePart}
+    }   
+    set match [regexp {^  ( |  )(private )*([a-z][a-zA-Z_0-9!]*!\((.*)\))} ${codePart} ]
+    if { ${match} } {
+	puts "Matched:${codePart}"
+	
+	regsub  {^  ( |  )(private )*([a-z][a-zA-Z_0-9!]*!)\((.*)\)(.*)$} ${codePart}\
+		"\\4" argsVal
+
+	set args [split ${argsVal} ","]
+	set resArgs ""
+	set first true
+	foreach arg ${args} {
+	    # puts stdout "${arg}-->" nonewline
+	    set match [regexp "!" ${arg}]
+	    if { ${match} } {
+		regsub "!" ${arg} "" newArg
+	    } else {
+		set newArg "once ${arg}"
+	    }
+	    # puts "${newArg}" 
+	    if { ${first} } {
+		set resArgs "${resArgs} ${newArg}"
+		set first "false"
+	    } else {
+		set resArgs "${resArgs},${newArg}"
+	    }
+	}
+	regsub  {^  ( |  )(private )*([a-z][a-zA-Z_0-9!]*!)\((.*)\)(.*)$} ${codePart}\
+		"  \\1\\2\\3(${resArgs})\\5" returnVal
+
+	# puts "Args:${resArgs}"
+	puts "Converted to:${returnVal}"
+	return ${returnVal}
+    }   
+
+    return ${codePart}
+}
+
+
+
+debugPuts "ready to run"
+
+
+
+run
+
+
+

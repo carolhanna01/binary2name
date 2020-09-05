@@ -1,0 +1,129 @@
+<html>
+<head>
+</head>
+<body bgcolor=white>
+<h1> The HTML based Web Browser </h1>
+	If you wish to generate HTML pages displaying your source, like
+the library that is available from:
+<a href="http://www.icsi.berkeley.edu/~sather/Documentation/Library/LibraryBrowser/">
+http://www.icsi.berkeley.edu/~sather/Documentation/Library/LibraryBrowser/
+</a><br>
+you can try running the script Bin/gen_html Test/test-all.module (you can run it
+on any module file of your choice). It generates hundreds of files, so make sure
+you run it in a dedicated directory.
+
+<h2> The HTML converter vs. the Interactive Browser </h2>
+	The HTML converter is based on the interactive
+browser. However, it does its work off-line (using tcl) and tries to
+do a lot more code formatting using regular expressions. This process
+can be quite slow. The interactive browser, on the other hand, should
+take significantly less time than a standard compile (it just parses
+the code). Furthermore, the interactive browser provides a lot more
+information on subtyping and include graphs, and allows the user to
+show and hide features and edges in many different ways.
+
+<p>
+<h2> What the Browser Recognizes </h2>
+<p>
+	The browser recognizes the following
+<ul>
+<li> Comments that come directly after a class or routine declaration. 
+The preconditions must be either on the same line as the declaration or they 
+must be <em> after </em> the comment. That is, it supports:
+<pre>
+	foo(a: A) pre test_something post test_other is
+	  -- Comment 
+	  -- 
+	  end;
+</pre>	  
+or
+<pre>
+	foo(a: A) 
+	-- Comment
+	-- 
+	   pre test_something post test_other 
+	is
+
+	end;
+</pre>
+Slight variations may also work...
+
+<li> Comment lines that start with more than one space are rendered in
+a fixed size font.  Thus, if a code fragment in a comment is
+indented, it will be displayed appropriately.
+<li> Blank comment lines are treated as paragraph breaks.
+<li> URLs such as http://www.icsi.berkeley.edu/~sather are translated
+into links.  mailto and ftp URLs are also recognized.
+</ul>
+
+	The html converter has problems with the following:
+<ul>
+<li> Only a single module file must be specified. All options must be
+in this module file.
+<li> The module file must not contain -verbose
+<li> Multliple attributes declared on the same line (the attribute
+declaration will appear to be repeated, once for every underlying signature).
+In such cases, if the private/public nature of one of the attributes has
+been changed, the resulting display could look erroneous.
+<li> Multi-line class or routine declarations.
+<li> Single line class definitions (it erroneously looks at the
+next line for a comment)
+<pre>
+	class FOO is end;
+</pre>
+<li> Since it gets the signature of routines directly from the source
+code, if an included routine used type parameters which are resolved
+in the descendant, the original parameter name will appear, rather than
+the replaced type.
+</ul>
+	Let us (bug-sather@gnu.org) know of other
+problems. This browser is mostly meant for our internal use in
+generating our web pages at ICSI, and is not really
+supported. However, we will try to fix problems if time permits.
+Suggestions for other features are also welcome, but are only likely
+to be incorporated if you implement them and send them to us!
+
+<h2> Generating HTML </h2>
+<ul>
+<li> Make a new directory, say weblib. 
+<li> Run the following: <tt><a href="../Bin/gen_html">gen_html</a>
+<a href="../Browser/test.sa">$SATHER_HOME/Browser/test.sa </a></tt>
+</ul>
+
+	This should generate a large number of files in the weblib
+directory, along with a file index.html which indexes into them. You
+can move this directory somewhere into your public html pages then.
+You might need to change the permissions on the generated files.
+<p>
+	<b> Make sure you run this script in a new directory</b>,
+since it generates a very large number of files. It generates
+approximately one per class (called shortflat-<em>classname</em>.html)+one
+per file (called lined-<em>file name</em>.sa.html). In addition, it generates
+the top level file, called "index.html" which specifies the frames
+and a list of classes and modules called "Classes_index.html".
+
+<p>
+The execution of the script <a href="../Bin/gen_html">gen_html</a>
+is described in some detail in <a href="../Browser/Web/README">Browser/Web/README</a>
+<p>
+
+Note that you should not modify any of the sather source files while
+the process is runing, because it will confused about line numbers.
+After the html has been generated, you can delete the (usually large)
+file gen_bs_info_raw_dump.tcl.
+
+<p>
+Note that the script gen_html calls a large number of other scripts,
+which may or may not work on your system. In particular, it tries to
+call the "dot" program to render the graphs. The script will still
+work without dot, but you won't see the typegraphs. 
+<p>
+dot is available (at no cost) from:
+   <a href="http://www.research.att.com:80/orgs/ssr/book/reuse/">
+	http://www.research.att.com:80/orgs/ssr/book/reuse/
+</a><br>
+Look under Binary for graph visualization.  It is available for free,
+but cannot be redistributed by ICSI (they want you to agree to some terms).
+</body>
+</html>
+

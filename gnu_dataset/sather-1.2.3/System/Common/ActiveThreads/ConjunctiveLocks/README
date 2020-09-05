@@ -1,0 +1,103 @@
+This is the first (slow) version of a lock manager for mutexes and
+reader/writer locks. It handles conjunctives requests of mutextes
+and conjunctive requests of readers and writers.
+
+
+The following data types are used:
+at_mutex_c_lock_t - type of a mutex lock
+at_rw_c_lock_t    - type containing a combination of reader and writer lock
+
+Both are "subtypes" of at_generic_c_lock_t, which means that pointers to
+at_mutex_c_lock_t or at_rw_c_lock_t can safely be converted to pointers
+to at_generic_c_lock_t.
+
+at_rw_c_lock_t is a struct containing the elements 'reader' and 'writer'.
+There are two ways to create mutexes and rw locks:
+
+The following functions return pointers to new, already initialized locks:
+at_mutex_c_lock_t* at_mutex_c_lock_create(); 
+at_rw_c_lock_t* at_rw_c_lock_create();
+
+The following functions initialize locks created by the user:
+void at_mutex_c_lock_init(at_mutex_c_lock_t*);
+void at_rw_c_lock_init(at_rw_c_lock_t*);
+
+
+A single mutex or rw lock can be acquired, tried, and released by:
+void at_acquire_single_c_lock(at_generic_c_lock_t*);
+int at_tryacquire_single_c_lock(at_generic_c_lock_t*);
+void at_release_single_c_lock(at_generic_c_lock_t*);
+
+The try function returns 1 if the locks has been acquired and 0 otherwise.
+
+Conjunctions of mutexes or rw locks can be acquired, tried, and released by:
+void at_acquire_c_locks(at_generic_c_lock_t**, int);
+int at_tryacquire_c_locks(at_generic_c_lock_t**, int);
+at_c_lock_manager_t* at_release_c_locks(at_generic_c_lock_t**, int);
+int at_c_lock_manager_split(at_c_lock_manager_t*, at_generic_c_lock_t**, int);
+int at_release_c_locks_and_split_manager(at_generic_c_lock_t**, int);
+
+The try function returns 1 if the locks has been acquired and 0 otherwise.
+at_release_c_locks() returns the manager of this action. It can be used
+as argument for at_c_lock_manager_split().
+at_c_lock_manager_split() splits the manager created to manage a conjunctive
+locking request. The return value is 0 if the manager has been split
+and 1 otherwise.
+at_release_c_locks_and_split_manager() combines at_release_c_locks() and
+at_c_lock_manager_split() atomically.
+
+The second last parameter of these methods is a pointer to an array of
+pointers to locks. The second parameter specifies the length of the array.
+
+Alternatively, the following macros can be used for acquiring and releasing:
+AT_ACQUIRE_COMB_LOCKS_1( at_generic_c_lock_t*);
+AT_ACQUIRE_COMB_LOCKS_2( at_generic_c_lock_t*, at_generic_c_lock_t*);
+AT_ACQUIRE_COMB_LOCKS_3( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*);
+AT_ACQUIRE_COMB_LOCKS_4( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*);
+AT_ACQUIRE_COMB_LOCKS_5( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*);
+AT_ACQUIRE_COMB_LOCKS_6( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*);
+AT_ACQUIRE_COMB_LOCKS_7( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*);
+AT_ACQUIRE_COMB_LOCKS_8( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*);
+
+AT_RELEASE_COMB_LOCKS_1( at_generic_c_lock_t*);
+AT_RELEASE_COMB_LOCKS_2( at_generic_c_lock_t*, at_generic_c_lock_t*);
+AT_RELEASE_COMB_LOCKS_3( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*);
+AT_RELEASE_COMB_LOCKS_4( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*);
+AT_RELEASE_COMB_LOCKS_5( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*);
+AT_RELEASE_COMB_LOCKS_6( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*);
+AT_RELEASE_COMB_LOCKS_7( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*);
+AT_RELEASE_COMB_LOCKS_8( at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*,
+                         at_generic_c_lock_t*, at_generic_c_lock_t*);
+
+To increase performance pools of queue entries (storing requests of blocked
+threads) and managers are available:
+void at_c_locks_init_pools();
+void at_c_locks_destroy_pools();
+
+at_c_locks_init_pools() initializes the pools and at_c_locks_destroy_pools()
+destroys them. Both functions may only be called, when definitely no manager
+and no queue entry has been allocated.
+

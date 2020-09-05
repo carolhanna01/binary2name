@@ -1,0 +1,95 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- The general container abstraction and a partial class
+-- Author: Benedict A. Gomes <gomes@tiramisu.ICSI.Berkeley.EDU>
+
+abstract class $CONTAINER{ETP} < $ELT{ETP},$STR is
+   -- The basic abstract container type
+   -- Does not have a create:SAME method, since this does not make sense
+   -- for arrays and other indexible types, where the create should 
+   -- take SAME as an argument
+   -- Inherits: elt!, str
+
+   is_empty:BOOL;
+   -- Returns true if the size of the container = 0
+
+   size: INT;
+   -- Number of elements contained
+   
+   copy: SAME;
+    -- Return a copy of the current container
+
+   has(e: ETP): BOOL;
+   -- pre ~void(self)
+   -- True if the container contains the element "e"
+   
+   elt!:ETP;
+   -- Yield all the elements of self. The order is not defined.
+   -- From $ELT{ETP}
+   
+   str:STR;
+   -- Yield a string version of self
+   -- From STR
+   
+   
+end;
+-------------------------------------------------------------------   
+partial class CONTAINER_INCL{ETP} is
+   -- Partial class that provides some of the functionality of a 
+   -- container in terms of the basic operation elt! 
+   
+   include COMPARE{ETP};   
+
+   stub elt!:ETP;
+   
+   is_empty:BOOL is 
+      -- Return true if the size = 0. 
+      loop discard ::= elt!; return true end;
+      return false;
+   end;
+   
+   size:INT is 
+      -- Return the number of elements contained.
+      -- Inefficient
+      res:INT := 0; loop e ::= elt!; res := res+1; end; return res 
+   end;
+   
+   has(e:ETP):BOOL pre ~void(self) is
+      -- True if the container contains the element "e"
+      -- Inefficient
+      loop elem ::= elt!;
+	 if elt_eq(e,elem) then return true; end;
+      end;
+      return false;
+   end;
+   
+   as_array:ARRAY{ETP} is
+      -- Return the pelements of the container as an array
+      res ::= #ARRAY{ETP}(size);
+      loop res.set!(elt!) end;
+      return res;
+   end;
+
+   str: STR is return ELT_ALG::str(self); end;
+   -- Return a string representation of self 
+
+   count(e:ETP):INT is 
+      -- Return the number of occurences of 'e' in self
+      res:INT := 0;
+      loop i ::= elt!; if elt_eq(e,i) then res := res+1; end;  end;
+      return res;
+   end;
+   
+end;
+-------------------------------------------------------------------

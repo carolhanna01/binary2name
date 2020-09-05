@@ -1,0 +1,439 @@
+@c gsdlpt.texi
+ 
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+
+@node Drawing and Labeling Points, Paths, Transforms, Top
+@chapter Drawing and Labeling Points
+
+@menu
+* Drawing Points Intro::        
+* Labeling Points Intro::       
+@end menu
+  
+@node Drawing Points Intro, Labeling Points Intro, Drawing and Labeling Points, Drawing and Labeling Points
+@section Drawing Points
+
+@cindex drawing and filling 
+@c
+It's all very well to declare @code{Points}, place them at particular
+locations, print their locations to standard output, and transform them,
+but none of these operations produce any MetaPost output. 
+In order to do this, the first step is to use @dfn{drawing and
+filling commands}.  The drawing and filling commands in 3DLDF are
+modelled on those in Metafont.  
+
+@cindex pens
+The following example demonstrates how to draw a dot specifying a 
+@code{Color} (@pxref{Color Reference}) and a 
+@c
+@dfn{pen}@c
+@c
+@footnote{Pens are a concept from Metafont.  In 3DLDF,
+there is currently no type ``@code{Pen}''.  Pen arguments to functions
+are simply @code{strings}, and are written unaltered to @code{out_stream}.
+For more information about
+Metafont's @code{pens}, see
+Knuth, @cite{The Metafontbook}, Chapter 4.}.
+
+
+@example 
+Point P(0, 1); 
+P.drawdot(Colors::black, "pencircle scaled 3mm");
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point P(0, 1);}
+\immediate\write\examples{P.drawdot(Colors::black, "pencircle scaled 3mm");} 
+\immediate\write\examples{Point p0(P);p0.shift(0, .5);p0.label("$P$","");}
+\immediate\write\examples{Point mid;}
+\immediate\write\examples{mid = P.mediate(p0);}
+\immediate\write\examples{Point pt[4];}
+\immediate\write\examples{for (int i = 0; i < 4; ++i)}
+\immediate\write\examples{  pt[i] = mid;}
+\immediate\write\examples{pt[0].shift(-.5, -.5);}
+\immediate\write\examples{pt[1].shift(.5, -.5);}
+\immediate\write\examples{pt[2].shift(.5, .5);}
+\immediate\write\examples{pt[3].shift(-.5, .5);}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF3.png"
+alt="[Figure 3. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 3.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 3 not displayed.]
+@end ifinfo
+
+In @code{drawdot()}, a @code{Color} argument precedes the 
+@code{string} argument for the pen, so ``@code{Colors::black}'' must be
+specified as a placeholder in the call to 
+@c
+@code{drawdot()}.@c 
+@c
+@footnote{@code{Colors} are declared in the
+namespace @code{Colors}, so if you have
+a ``@code{using}'' declaration in the function where you use
+@code{drawdot()}, you can write ``@code{black}'' instead of
+``@code{Colors::black}''.  For more information about namespaces, see
+Stroustrup,  @cite{The @cpp{} Programming Language}, Chapter 8.}
+
+
+The following example ``undraws'' a dot at the same location using a
+smaller pen. @code{undraw()} does not take a @code{Color} argument.
+
+@example
+p.undrawdot("pencircle scaled 2mm");
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point P(0, 1);}
+\immediate\write\examples{P.drawdot(black, "pencircle scaled 3mm");} 
+\immediate\write\examples{P.undrawdot("pencircle scaled 2mm");} 
+\immediate\write\examples{Point p0(P);p0.shift(0, .5);p0.label("$P$", "");} 
+\immediate\write\examples{Point mid;}
+\immediate\write\examples{mid = P.mediate(p0);}
+\immediate\write\examples{Point pt[4];}
+\immediate\write\examples{for (int i = 0; i < 4; ++i)}
+\immediate\write\examples{  pt[i] = mid;}
+\immediate\write\examples{pt[0].shift(-.5, -.5);}
+\immediate\write\examples{pt[1].shift(.5, -.5);}
+\immediate\write\examples{pt[2].shift(.5, .5);}
+\immediate\write\examples{pt[3].shift(-.5, .5);}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF4.png"
+alt="[Figure 4. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 4.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 4 not displayed.]
+@end ifinfo
+
+@noindent
+For complete descriptions of @code{drawdot()} and @code{undrawdot()}, 
+see @ref{Point Drawing Functions,,Point Reference; Drawing}.
+
+
+@cindex drawing and filling
+@cindex lines, drawing
+@c
+@cindex connecting @code{Points} 
+@cindex @code{Points}, connecting 
+@c
+Drawing and undrawing dots is not very exciting.  In order to make a
+proper drawing it is necessary to @emph{connect} the @code{Points}.  The most 
+basic way of doing this is to use the @code{Point} member function
+@code{draw()} with a @code{Point} argument:
+
+@example
+Point p0;
+Point p1(2, 2);
+p0.draw(p1);
+@end example
+
+@iftex 
+@tex 
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point p0;}
+\immediate\write\examples{Point p1(2, 2);}
+\immediate\write\examples{p0.draw(p1);}
+\immediate\write\examples{p0.dotlabel("$p_0$", "lft");}
+\immediate\write\examples{p1.dotlabel("$p_1$", "rt");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF5.png"
+alt="[Figure 5. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 5.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 5 not displayed.]
+@end ifinfo
+
+@noindent
+@code{p0.draw(p1)} is equivalent in its effect to 
+@code{p1.draw(p0)}.
+
+The function @code{Point::draw()} takes a required @code{Point&}
+argument (a @dfn{reference}@c
+@c 
+@footnote{``A @dfn{reference} is an alternative name for an object.  The
+main use of references is for specifying arguments and return values for
+functions in general and for overloaded operators (Chapter 11) in
+particular.''  Stroustrup, @cite{The @cpp{} Programming Language},
+@SECT{}5.5, p.@: 97.} 
+@c
+to a @code{Point}) an optional @code{Color}
+argument, and optional @code{string} arguments for  
+the dash pattern and the 
+pen.  The @code{string} arguments, if present, are passed unchanged to
+the output file. 
+The empty @code{string} following the
+argument @code{p1} is a placeholder for the dash pattern argument, which
+isn't used here.
+
+@example
+p0.draw(p1, Colors::gray, "", "pensquare scaled .5cm rotated 45");
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP 
+\immediate\write\examples{Point p0;}
+\immediate\write\examples{Point p1(2, 2);}
+\immediate\write\examples{p0.draw(p1, Colors::gray, "",} 
+\immediate\write\examples{"pensquare scaled .5cm rotated 45");}
+\immediate\write\examples{p0.dotlabel("$p_0$", "lft");}
+\immediate\write\examples{p1.dotlabel("$p_1$", "rt");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF6.png"
+alt="[Figure 6. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 6.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 6 not displayed.]
+@end ifinfo
+
+The function @code{Point::undraw()} takes a required @code{Point&}
+argument and
+optional @code{string} arguments for the dash pattern and the
+pen.  Unlike @code{Point::draw()}, a @code{Color} argument would have no
+meaning for @code{Point::undraw()}.
+The @code{string} arguments are passed unchanged to the output file.
+
+@code{undraw()} can be used to ``hollow out'' the region
+drawn in @PREFIG{}.  Since a dash pattern is used, portions
+of the middle of the region are not undrawn.
+
+@example
+p0.undraw(p1, "evenly scaled 6", "pencircle scaled .2cm");
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP 
+\immediate\write\examples{Point p0;}
+\immediate\write\examples{Point p1(2, 2);}
+\immediate\write\examples{p0.draw(p1, Colors::gray, "evenly",} 
+\immediate\write\examples{"pensquare scaled .5cm rotated 45");}
+\immediate\write\examples{p0.undraw(p1, "evenly scaled 6", "pencircle scaled .2cm");}
+\immediate\write\examples{p0.dotlabel("$p_0$", "lft");}
+\immediate\write\examples{p1.dotlabel("$p_1$", "rt");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF7.png"
+alt="[Figure 7. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 7.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 7 not displayed.]
+@end ifinfo
+
+For complete descriptions of @code{draw()} and @code{undraw()}, 
+see @ref{Point Drawing Functions,,Point Reference; Drawing}.
+
+@node Labeling Points Intro,  , Drawing Points Intro, Drawing and Labeling Points
+@section Labeling Points
+
+The labels in the previous examples were made by using the functions
+@code{Point::label()} and @code{Point::dotlabel()}, which make it
+possible to include @TeX{} text in a drawing.  
+
+@code{label()} and @code{dotlabel()} take @code{string} arguments for
+the text of the label and the position of the label with respect to the
+@code{Point}.  The label text is formatted using @TeX{}, so it can contain
+math mode material between dollar signs.  Please note that double backslashes
+must be used, where a single backslash would suffice in a file of
+MetaPost code, for example, for @TeX{} control sequences.
+Alternatively, a @code{short} argument can be used for the label.  
+
+The position argument is optional, with @code{"top"} as the default.  If
+the empty @code{string} @code{""} is used, the label will centered about
+the @code{Point} itself.  This will usually only make sense for
+@code{label()}, because it would otherwise interfere with the dot.
+Valid arguments for the
+position are the same as in MetaPost: @code{"top"}, @code{"bot"}
+(bottom), @code{"lft"} (left), @code{"rt"} (right), 
+@code{"ulft"} (upper left), @code{"urt"} (upper right), 
+@code{"llft"} (lower left), and @code{"lrt"} (lower right).
+
+@example
+Point p0;
+Point p1(1);
+Point p2(2);
+Point p3(p0);
+Point p4(p1);
+Point p5(p2);
+p3 *= p4 *= p5.shift(0, 1);
+p0.draw(p1);
+p1.draw(p2);
+p2.draw(p5);
+p5.draw(p4);
+p4.draw(p3);
+p3.draw(p0);
+p0.label($p_0$, "");
+p1.dotlabel(1);
+p2.dotlabel("p2", "bot"); 
+p3.dotlabel("This is $p_3$", "lft"); 
+p4.label(4);
+p5.label("$\\leftarrow p_5$", "rt"); 
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point p0;}
+\immediate\write\examples{Point p1(1);}
+\immediate\write\examples{Point p2(2);}
+\immediate\write\examples{Point p3(p0);}
+\immediate\write\examples{Point p4(p1);}
+\immediate\write\examples{Point p5(p2);}
+\immediate\write\examples{p3 *= p4 *= p5.shift(0, 1);}
+\immediate\write\examples{p0.draw(p1);}
+\immediate\write\examples{p1.draw(p2);}
+\immediate\write\examples{p2.draw(p5);}
+\immediate\write\examples{p5.draw(p4);}
+\immediate\write\examples{p4.draw(p3);}
+\immediate\write\examples{p3.draw(p0);}
+\immediate\write\examples{p0.label("$p_0$", "");}
+\immediate\write\examples{p1.dotlabel(1);}
+\immediate\write\examples{p2.dotlabel("p2", "bot"); }
+\immediate\write\examples{p3.dotlabel("This is $p_3$", "lft"); }
+\immediate\write\examples{p4.label(4);}
+\immediate\write\examples{p5.label("$\DBKS{leftarrow} p_5$", "rt"); }
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF8.png"
+alt="[Figure 8. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 8.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 8 not displayed.]
+@end ifinfo
+
+For complete descriptions of @code{Point::label()} and
+@code{Point::dotlabel()}, see @ref{Labelling Points,,Points; Labelling}.
+
+

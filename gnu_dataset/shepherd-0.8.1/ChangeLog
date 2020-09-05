@@ -1,0 +1,2756 @@
+2020-06-03  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Bump to version 0.8.1.
+	* configure.ac: Bump to version 0.8.1.
+
+	Update 'NEWS'.
+
+2020-06-02  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Factorize list of handled signals.
+	Suggested by Mathieu Othacehe <othacehe@gnu.org>.
+
+	* modules/shepherd/service.scm (%precious-signals): Export.
+	* modules/shepherd.scm (handle-SIGINT): Turn into a thunk.
+	(signal-handler): New procedure.
+	(handle-signal-port): Replace 'cond' by a call to 'signal-handler'.
+	(main): Pass %PRECIOUS-SIGNALS to 'maybe-signal-port'.
+	Replace three explicit calls to 'sigaction' by 'for-each' +
+	'signal-handler' calls.
+
+2020-05-30  Ludovic Courtès  <ludo@gnu.org>
+
+	service: 'fork+exec-command' blocks handled signals before forking.
+	This is a followup to d190773751ddeddbe0daa8e4a43f76b73c4fd7ac, which
+	addressed only SIGTERM instead of all of %PRECIOUS-SIGNALS.
+	Furthermore, setting the SIGTERM handler introduced a window in the
+	shepherd process during which SIGTERM instances would be lost.
+
+	* modules/shepherd/service.scm (%precious-signals): New variable.
+	(fork+exec-command): Remove calls to 'sigaction' for SIGTERM.  Wrap
+	'let' in 'with-blocked-signals'.  Restore default signal handlers in the
+	child before unblocking signals.
+
+2020-05-30  Ludovic Courtès  <ludo@gnu.org>
+
+	system: Add 'with-blocked-signals'.
+	* configure.ac: Compute and substitute 'SIG_SETMASK'.
+	* modules/shepherd/system.scm.in (SIG_SETMASK): New variable.
+	(set-blocked-signals, call-with-blocked-signals): New procedures.
+	(with-blocked-signals): New macro.
+
+	system: 'sigprocmask' returns the previous set of blocked signals.
+	* modules/shepherd/system.scm.in (sigismember, sigset->list): New
+	procedures.
+	(sigprocmask): Return the old set of signals.
+
+	system: Throw an exception when 'sigprocmask' fails.
+	* modules/shepherd/system.scm.in (sigprocmask): Check the result and
+	call 'throw' upon error.
+
+2020-05-30  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Remove "Runlevel evolution".
+	What's discussed in there is less and less relevant to the actual code.
+
+	* doc/shepherd.texi (Runlevel evolution): Remove.
+
+2020-05-27  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update sv translation.
+
+2020-05-26  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Use 'signalfd' when possible.
+	This eliminates possible race conditions related to signal delivery and
+	'select', which in turn means we can pass 'select' an infinite timeout
+	without any risk of missing a signal.  It also allows us to structure
+	the code around a single event loop.
+
+	* modules/shepherd.scm (maybe-signal-port, handle-SIGINT): New procedures.
+	(main): Use it and define 'signal-port'.  Add 'ports' argument to
+	'next-command'.  Pass it to 'select'.  Change the timeout argument of
+	'select' to #f when SIGNAL-PORT is true.
+	* modules/shepherd/service.scm (fork+exec-command): Call
+	'unblock-signals' in the child process, right before 'exec-command'.
+
+2020-05-24  Ludovic Courtès  <ludo@gnu.org>
+
+	system: Add support for 'signalfd'.
+	* configure.ac: Add 'AC_CHECK_SIZEOF' calls for 'struct
+	signalfd_siginfo' and 'sigset_t'.  Add 'AC_COMPUTE_INT' for
+	'SFD_CLOEXEC', 'SIG_BLOCK', and 'SIG_UNBLOCK'.  Substitute the results.
+	* modules/shepherd/system.scm.in (allocate-sigset, sigemptyset)
+	(sigaddset, sigset): New procedures.
+	(%sizeof-struct-signalfd-siginfo, SFD_CLOEXEC): New variables.
+	(signalfd, consume-signalfd-siginfo): New procedures.
+	(SIG_BLOCK, SIG_UNBLOCK): New variables.
+	(sigprocmask, block-signals, unblock-signals): New procedures.
+
+2020-05-23  Ludovic Courtès  <ludo@gnu.org>
+
+	system: 'syscall->procedure' throws ENOSYS for functions not found.
+	* modules/shepherd/system.scm.in (syscall->procedure): Throw to
+	'system-error instead of calling 'error'.
+	(prctl): Remove now unneeded 'if'.
+
+2020-05-23  Ludovic Courtès  <ludo@gnu.org>
+
+	system: Remove errno handling code for Guile < 2.0.12.
+	This is a followup to 766c4dccfa6e956a41d6e4d42d08d9b13a880d21.
+
+	* modules/shepherd/system.scm.in (syscall->procedure): Remove
+	'wrong-number-of-args' catch.
+	(%libc-errno-pointer, errno): Remove.
+
+2020-05-11  Mathieu Othacehe  <m.othacehe@gmail.com>
+
+	service: Fix 'make-kill-destructor' when PGID is zero.
+	Fixes <https://bugs.gnu.org/40981>.
+
+	When a process is forked, and before its GID is changed in "exec-command",
+	it will share the parent GID, which is 0 for Shepherd. In that case, use
+	the PID instead of the PGID.
+
+	Also make sure to reset the SIGTERM handler before forking a process. Failing
+	to do so, will result in stopping Shepherd if a SIGTERM is received between
+	fork and execv calls. Restore the SIGTERM handler once the process has been
+	forked.
+
+	* modules/shepherd/service.scm (fork+exec-command): Save the current SIGTERM
+	handler and reset it before forking. Then, restore it on the parent after
+	forking.
+	(make-kill-destructor): Handle the case when PGID is zero, between the process
+	fork and exec.
+
+2020-04-28  Diego Nicola Barbato  <dnbarbato@posteo.de>
+
+	tests: Test #:file-creation-mask option of 'make-forkexec-constructor'.
+	This is a followup to 4b5f958035426e1a4fce1ada19be68b62d7b75df.
+
+	* tests/file-creation-mask.sh: New file.
+	* Makefile.am (TESTS): Add it.
+
+2020-04-22  guy fleury iteriteka  <gfleury@disroot.org>
+
+	doc: Remove 'call/cc' and 'call/ec'.
+	This is a followup to commit 6b0e1e1923107bdf5073f87649a724b7375808b0.
+
+	* doc/shepherd.texi (call/cc, call/ec): Remove documentation.
+
+2020-04-21  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Bump to version 0.8.0.
+	* configure.ac: Bump to version 0.8.0.
+
+	Update 'NEWS'.
+
+2020-04-20  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Increase PID file timeout in 'forking-service.sh'.
+	* tests/forking-service.sh: Call 'default-pid-file-timeout'.
+
+	shepherd: Resolve 'handle-SIGCHLD' upfront.
+	* modules/shepherd.scm (main): Call 'handle-SIGCHLD' before entering
+	the 'next-command' loop.
+
+2020-04-20  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: No longer send SIGALRM every second.
+	This kludge was mostly unnecessary since commit
+	0ce1076eab9659c29c74bb6aeafb2fec6ef1efd8 on Guile 2.2+.
+
+	* modules/shepherd.scm (main): Remove calls to 'sigaction' and 'alarm'.
+	Call 'handle-SIGCHLD' each time 'select' returns.
+	* modules/shepherd/service.scm (waitpid*): Remove warning in exception
+	handler.
+	(handle-SIGCHLD): Make 'signum' optional.
+	* modules/shepherd/system.scm.in <top level> [guile-2.0]: Replace
+	'select'.
+
+	fixlet
+
+2020-04-20  Ludovic Courtès  <ludo@gnu.org>
+
+	system: 'without-automatic-finalization' accepts several expressions on 2.0.
+	* modules/shepherd/system.scm.in (without-automatic-finalization)
+	[!guile-2.2]: Add ellipsis.
+
+	Augment '.gitignore'.
+
+2020-04-19  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Shut down finalization thread before closing file descriptors.
+	This addresses the infamous:
+
+	  error in the finalization thread: Bad file descriptor
+
+	messages that we've been seeing since Guile 2.2.
+
+	* modules/shepherd/service.scm (exec-command): Wrap 'loop' in
+	'without-automatic-finalization'.  Remove inner loop over (fdes->ports i).
+
+2020-04-19  Ludovic Courtès  <ludo@gnu.org>
+
+	system: Add 'without-automatic-finalization'.
+	* modules/shepherd/system.scm.in (%set-automatic-finalization-enabled?!):
+	New procedure.
+	(without-automatic-finalization): New macro.
+
+2020-04-19  Matthew Kraai  <kraai@ftbfs.org>
+
+	Fix typo.
+	* doc/shepherd.texi (Jump Start): Fix typo.
+
+2020-04-19  Diego Nicola Barbato  <dnbarbato@posteo.de>
+
+	service: Add #:file-creation-mask to 'make-forkexec-constructor'.
+	* modules/shepherd/service.scm (exec-command): Add #:file-creation-mask
+	  parameter and honor it.
+	  (fork+exec-command): Add #:file-creation-mask parameter and pass it to
+	  exec-command.
+	  (make-forkexec-constructor): Add #:file-creation-mask parameter and pass it
+	  to fork+exec-command.
+	* doc/shepherd.texi (Service De- and Constructors): Adjust accordingly.
+
+	service: Create log files as non-world-readable.
+	* modules/shepherd/service.scm (exec-command): Create log-file with file
+	  permissions #o640.
+
+2020-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	system: Fix typo in 'getpgid'.
+	* modules/shepherd/system.scm.in (getpgid): Check whether RESULT is -1,
+	not 1.
+
+2020-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	service: 'make-forkexec-constructor' no longer supports the 0.1 form.
+	This is a followup to 53435801fa7a4d1c5ce65d328bc29c2c044388d4.
+
+	* modules/shepherd/service.scm (make-forkexec-constructor): Remove
+	support for the calling convention that was deprecated in version 0.1.
+
+2020-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Introduce 'default-pid-file-timeout'.
+	* modules/shepherd/service.scm (default-pid-file-timeout): New variable.
+	(%pid-file-timeout): Remove.
+	(read-pid-file, make-forkexec-constructor): Use it as the default
+	 #:pid-file-timeout.
+	* doc/shepherd.texi (Service De- and Constructors): Document it.
+
+	service: 'make-kill-destructor' kills the process group.
+	* modules/shepherd/service.scm (make-kill-destructor): Change the
+	argument of 'kill' to (getpgid (- pid)).  Use 'define*' instead of
+	'lambda*' and add a docstring.
+	* doc/shepherd.texi (Service De- and Constructors): Adjust accordingly.
+	* tests/pid-file.sh: Change '%command' to a shell script.
+	Define '%daemon-command-successful' and use it for 'test-works'.
+
+	system: Add 'getpgid'.
+	* modules/shepherd/system.scm.in (getpgid): New procedure.
+
+2020-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Terminate the progress group when the PID file doesn't show up.
+	Fixes <https://bugs.gnu.org/40672>.
+
+	Previously, we'd just terminate the initial process, which was typically
+	already dead (because it had deamonized), thus potentially leaving the
+	actual daemon running in the background.
+
+	* modules/shepherd/service.scm (make-forkexec-constructor): When
+	PID-FILE is true and 'read-pid-file' returns #f, pass (- PID) as the
+	argument to 'kill'.
+	* tests/pid-file.sh: Add test with 'test-daemonizes' service.
+
+2020-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	service: 'check-for-dead-services' uses 'catch-system-error'.
+	* modules/shepherd/service.scm (check-for-dead-services)[process-exists?]:
+	Use 'catch-system-error' instead of 'catch #t'.
+
+2020-04-16  guy fleury iteriteka  <gfleury@disroot.org>
+
+	support: Remove local 'call/ec' definition.
+	* modules/shepherd/args.scm: Import (ice-9 control).
+	* modules/shepherd/service.scm: Likewise.
+	* modules/shepherd/support.scm (call/ec): Remove.
+
+2020-04-01  Leo Famulari  <leo@famulari.name>
+
+	doc: Replace "GuixSD" with "Guix System".
+	* doc/shepherd.texi (Internals): Replace "GuixSD" with "Guix System".
+
+	doc: Fix typo in Jump start.
+	* doc/shepherd.texi (Jump start): Fix typo in documentation of special action
+	'doc'.
+
+2020-03-08  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Mention "daemonizing" processes for 'make-forkexec-constructor'.
+	Suggested by Maxim Cournoyer <maxim.cournoyer@gmail.com>.
+	It was found confusing as noted in <https://bugs.gnu.org/39708>.
+
+	* doc/shepherd.texi (Service De- and Constructors): Add note about
+	processes that daemonize.
+
+2020-03-07  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Fix typos in @copying block.
+	This is a followup to d5da712a5605a0cdaa4cf3bd64621a95a54520c0.
+
+	* doc/shepherd.texi: Fix typos in @copying block.
+
+2020-03-07  Jan Nieuwenhuizen  <janneke@gnu.org>
+	    Ludovic Courtès  <ludo@gnu.org>
+
+	system: Support compilation on the Hurd.
+	* modules/shepherd/system.scm.in (prctl): Wrap 'dynamic-func' call in
+	'false-if-exception'.
+
+2020-03-06  Brice Waegeneire  <brice@waegenei.re>
+
+	.dir-locals.el: End sentence with a double space.
+	* .dir-locals.el (nil): Add variable 'sentence-end-double-space'.
+
+	doc: Fix wolfgangj example.
+	* doc/examples/wolfgangj.scm: Use module SRFI-1. Replace "dmd" by "shepherd".
+
+	doc: Expand the part on special action 'doc'.
+	* doc/shepherd.texi (Jump start): Rewrite paragraph about special action
+	'doc'.
+
+	service: Fix typos.
+	* modules/shepherd/service.scm (root-service): Replace "safe" by "save".
+
+	doc: Fix typos.
+	* doc/shepherd.texi (Jump start): Lower case after a colon. Remove
+	"the".
+
+2020-03-06  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Rebuild man pages when 'configure.ac' changes.
+	Fixes <https://bugs.gnu.org/39694>.
+	Reported by Efraim Flashner <efraim@flashner.co.il>.
+
+	This ensures that man pages are rebuilt when the version number is
+	changed in 'configure.ac'.
+
+	* Makefile.am (doc/shepherd.1, doc/%.1, doc/%.8): Add dependency on
+	'configure.ac'.
+
+2020-02-16  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Bump to version 0.7.0.
+	* configure.ac: Bump to version 0.7.0.
+
+	Update 'NEWS'.
+	* NEWS: Change "0.6.2" to "0.7.0".
+
+2020-02-03  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'NEWS'.
+
+	service: Export 'default-environment-variables'.
+	* modules/shepherd/service.scm (default-environment-variables): Turn
+	into a parameter and export.
+	* doc/shepherd.texi (Service De- and Constructors): Document it.
+
+2020-01-20  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update uk translation.
+
+2020-01-02  Ludovic Courtès  <ludo@gnu.org>
+
+	support: Update copyright year in '--version' output.
+	* modules/shepherd/support.scm (display-version): Update to 2020.
+
+	service: Adjust 'action' exception handler to Guile 3.0.
+	* modules/shepherd/service.scm (action): Adjust 'catch' handler
+	wrt. SRFI-34 exceptions to Guile 2.9.7/2.9.8 by checking whether KEY is
+	'%exception and using 'raise-exception' instead of 'throw' to re-throw
+	the exception.
+
+2019-12-30  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update sv translation.
+
+2019-12-09  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'NEWS'.
+
+2019-12-09  Ludovic Courtès  <ludo@gnu.org>
+
+	Add SIGSEGV/SIGABRT "crash" handler.
+	This allows shepherd to dump core when it's running as PID 1 on
+	GNU/Linux.
+
+	* etc/crash-handler.c: New file.
+	* configure.ac: Define 'BUILD_CRASH_HANDLER' Automake conditional.
+	* Makefile.am (EXTRA_DIST): Add 'etc/crash-handler.c'.
+	(all-local, install-crash-handler, etc/crash-handler.so) [BUILD_CRASH_HANDLER]:
+	New targets.
+	(CLEANFILES) [BUILD_CRASH_HANDLER]: Add 'etc/crash-handler.so'.
+	(install-exec-hook): Depend on 'install-crash-handler'.
+	(uninstall-hook): Delete $(pkglibdir)/crash-handler.so.
+	(instantiate): Substitute "%pkglibdir%".
+	* modules/shepherd/config.scm.in (%pkglibdir): New variable.
+	* modules/shepherd.scm (main): Attempt to load "crash-handler.so".
+
+2019-06-21  Ludovic Courtès  <ludo@gnu.org>
+
+	service: 'make-forkexec-constructor' no longer deletes the log file.
+	* modules/shepherd/service.scm (make-forkexec-constructor): Remove call
+	to 'clean-up' for LOG-FILE.
+
+2019-06-06  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Disable reboot on ctrl-alt-del before loading the config file.
+	Reported by Florian Pelz <pelzflorian@pelzflorian.de>
+	in <https://bugs.gnu.org/35996>.
+
+	* modules/shepherd.scm (main): Move 'sigaction' and
+	'disable-reboot-on-ctrl-alt-del' calls before 'load-in-user-module'.
+	This ensures a clean reboot if the user presses ctrl-alt-del before the
+	config file has been fully loaded (on Guix System, the config file is
+	fully loaded once all the services have been started).
+
+2019-05-11  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Bump to version 0.6.1.
+	* configure.ac: Bump to version 0.6.1.
+
+	Update 'NEWS'.
+
+	nls: Update es, fr, and pt_BR translations.
+
+	nls: Add de translation.
+
+	nls: Add sk translation.
+
+2019-05-08  Ludovic Courtès  <ludo@gnu.org>
+
+	herd: Distinguish between stopped and one-shot services.
+	* modules/shepherd/scripts/herd.scm (display-status-summary): Partition
+	STOPPED into STOPPED and ONE-SHOT.  Add an extra call to
+	'display-services' for one-shot services.
+	(display-service-status): Distinguish between "stopped" and
+	"stopped (one-shot)".
+	* tests/one-shot.sh: Test it all.
+
+	comm: Send clients the 'one-shot?' property when it is true.
+	* modules/shepherd/service.scm (service->sexp): Send the 'one-shot?'
+	property when SERVICE is one-shot.
+
+	comm: Add 'herd load' test for exceptions containing records.
+	* tests/basic.sh: Add 'herd load' test with throw to 'what?!.
+
+2019-05-08  Ludovic Courtès  <ludo@gnu.org>
+
+	comm: Serialize pairs.
+	Fixes <https://bugs.gnu.org/35631>.
+	Reported by Gábor Boskovits <boskovits@gmail.com>.
+
+	Previously shepherd would die on 'syntax-error exceptions: its arguments
+	include an alist for the source location, and there was no
+	'result->sexp' method for pairs.
+
+	* modules/shepherd/comm.scm (result->sexp <pair>): New method.
+	* tests/basic.sh: Add test.
+
+2019-05-08  Ludovic Courtès  <ludo@gnu.org>
+
+	services: 'read-pid-file' optionally ensures it read a valid PID.
+	* modules/shepherd/service.scm (read-pid-file): Add #:validate-pid?
+	parameter and honor it.
+	(make-forkexec-constructor): Pass #:validate-pid? #t.
+
+2019-05-06  Ludovic Courtès  <ludo@gnu.org>
+
+	services: 'read-pid-file' always exits its busy loop.
+	* modules/shepherd/service.scm (read-pid-file): Factorize retrial in
+	'try-again'.  This avoids the direct and unconditional call to 'loop'
+	introduced in 72631752149d000c8c98ae0cc66e0b0c2eda94ef.
+
+2019-05-04  Ludovic Courtès  <ludo@gnu.org>
+
+	services: Gracefully handle PID files not created atomically.
+	Prompted by <https://bugs.gnu.org/35550>.
+
+	* modules/shepherd/service.scm (read-pid-file): Loop when
+	'string->number' returns #f.
+	* tests/pid-file.sh: Define 'test-works' service that checks for PID
+	files not created atomically.
+
+2019-05-03  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update da translation.
+
+2019-04-23  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Bump to version 0.6.0.
+	* configure.ac: Bump to version 0.6.0.
+
+	Update 'NEWS'.
+
+	nls: Update da, es, fr, pt_BR, sv, ta, uk, zh_CN.
+
+2019-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	Ignore tests/*.log and tests/*.trs.
+
+	support: Improve i18n for the '--version' output.
+	* modules/shepherd/support.scm (display-version): Split output in two
+	strings, and make the year an parameter.
+
+	support: Update copyright year in '--version' output.
+	* modules/shepherd/support.scm (display-version): Update to 2019.
+
+	service: Add one-shot services.
+	* modules/shepherd/service.scm (<service>)[one-shot?]: New field.
+	(start): Always set the 'running slot of a one-shot service to #f, but
+	always return the value returned by the service's 'start' method.
+	* tests/one-shot.sh: New file.
+	* Makefile.am (TESTS): Add it.
+	* doc/shepherd.texi (Slots of services): Document it.
+	(Methods of services): Add 'one-shot?'.
+
+2019-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Don't fail if the socket file has already been removed.
+	This is a followup to f260b2f90ed9ea9a1529e5a58db8df3a886d9c10.
+
+	In the test suite, for example, we'd usually explicitly remove the
+	socket file, possibly before 'shepherd' has exited.  This would cause a
+	'system-error' exception when 'shepherd' tries to delete it.
+
+	* modules/shepherd.scm (call-with-server-socket): Wrap 'delete-file'
+	call in 'catch-system-error'.
+
+2019-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	'report-error' now translates messages.
+	Until now, messages passed to 'report-error' would never be passed to
+	gettext.
+
+	* modules/shepherd/support.scm (report-error): Guard now checks that P
+	is actually L10N.  Add call to 'l10n' on MESSAGE and remove
+	expansion-time format string modification.
+
+2019-04-18  Ludovic Courtès  <ludo@gnu.org>
+
+	herd: Add comment about confusing message.
+	Suggested by pelzflorian (Florian Pelz) <pelzflorian@pelzflorian.de>.
+
+	* modules/shepherd/scripts/herd.scm (display-service-status): Add
+	"TRANSLATORS" comment.
+
+2019-04-08  宋文武  <iyzsong@member.fsf.org>
+
+	shepherd: Delete the socket file upon exit.
+	Fixes <https://bugs.gnu.org/34407>.
+
+	* modules/shepherd.scm (call-with-server-socket): New procedure.
+	(main): Use it instead of 'open-server-socket'.
+
+2019-03-31  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Add ta translation.
+
+2019-03-16  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Adjust "herd stop" test.
+	This is a followup to 5368ee4a9f0e71a091883c0b6bddbcf33ab1ecf8.
+
+	* tests/basic.sh: Avoid $(...) form, quote the output of "$herd stop
+	test", and redirect stderr or "herd stop" to stdout so we actually
+	capture it.
+
+2019-03-16  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Correctly handle 'quit' exception with an associated value.
+	* modules/shepherd.scm (quit-exception-handler): Add optional 'value'
+	parameter.
+
+2019-02-05  Ricardo Wurmus  <rekado@elephly.net>
+
+	service: Don't raise error when stopping an already stopped service.
+	* modules/shepherd/service.scm (stop): If a service by the given name exists
+	and is already stopped, then don't raise an error.
+	* tests/basic.sh: Add test.
+
+2019-01-31  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Mitigate timing issue.
+	Partly fixes <https://bugs.gnu.org/30299>.
+	Reported by Mark H Weaver <mhw@netris.org>
+	and Andreas Enge <andreas@enge.fr>.
+
+	* tests/pid-file.sh: Set #:pid-file-timeout to 6 seconds.
+
+2018-11-26  Florian Dold  <flo@dold.me>
+
+	build: set gettext version to make bootstrap work
+	* configure.ac: add AM_GNU_GETTEXT_VERSION
+
+2018-11-16  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Provide complete socket file name under /run/user.
+	Reported by Danny Milosavljevic <dannym@scratchpost.org>.
+
+	* doc/shepherd.texi (Invoking shepherd): Add "/socket" to "/run/user/…".
+
+2018-11-14  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Explain where /run/user comes from.
+	Suggested by Marius Bakke <mbakke@fastmail.com>
+	in <https://bugs.gnu.org/33260>.
+
+	* doc/shepherd.texi (Invoking shepherd): Explain where /run/user comes
+	from.
+
+2018-11-13  Ludovic Courtès  <ludo@gnu.org>
+
+	herd: Exit with non-zero when a custom action returns false.
+	* modules/shepherd/scripts/herd.scm (run-command): Call (exit 1) unless
+	all the values of RESULT are true.
+	* tests/basic.sh: Test it.
+
+2018-11-07  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update uk translation.
+
+2018-10-08  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Fix typos.
+	Fixes <https://bugs.gnu.org/32985>.
+	Reported by Meiyo Peng <meiyo.peng@gmail.com>.
+
+	* doc/shepherd.texi (The root and unknown services): Replace "safe" by
+	"save".
+
+2018-09-28  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Simplify 'register-services'.
+	* modules/shepherd/service.scm (register-services)[register-single-service]:
+	Simplify by using 'assert'.
+
+	doc: Add missing @command markup.
+	* doc/shepherd.texi (Invoking herd, Invoking reboot)
+	(Invoking halt): Use @command in the section title.
+
+	service: Use 'else' in 'cond'.
+	* modules/shepherd/service.scm (register-services)[register-single-service]:
+	Use 'else', not '#:else' (in practice it makes no difference other than
+	aesthetically.)
+
+2018-09-26  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Ignore reboot(2) errors in containers.
+	* modules/shepherd.scm (main): Ignore EINVAL and EPERM raised by
+	'disable-reboot-on-ctrl-alt-del'.
+
+	build: Bump to version 0.5.0.
+	* configure.ac: Bump to version 0.5.0.
+
+	Update 'NEWS'.
+
+	build: Accept Guile 3.0.
+	* configure.ac: Add 3.0 to 'GUILE_PKG'.
+
+	Fix bogus 'cond-expand'.
+	* modules/shepherd/support.scm (initialize-cli): Use 'if-2.0' instead of
+	a bogus 'cond-expand'.
+
+	Avoid uses of the _IO* constants on Guile >= 2.2.
+	* modules/shepherd/support.scm (if-2.0, buffering-mode): New macros.
+	(initialize-cli): Use 'buffering-mode' instead of _IO*.
+	* modules/shepherd/comm.scm (open-connection): Likewise.
+	* modules/shepherd.scm (main): Likewise.
+	* tests/misbehaved-client.sh: Likewise.
+
+	nls: Update fr translation.
+
+	nls: Update sv translation.
+
+	nls: Update pt_BR translation.
+
+2018-09-21  Rafael Fontenelle  <rafaelff@gnome.org>
+
+	Fix typographical errors.
+	* configure.ac: procude -> produce.
+	* doc/shepherd.texi: Fix several typos.
+	* modules/shepherd/args.scm: ambigous -> ambiguous.
+	* modules/shepherd/service.scm: childs -> children.
+
+2018-09-19  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Add sv translation.
+
+	service: Update use of long gone 'apply-to-args'.
+	* modules/shepherd/service.scm (handle-unknown): Use 'apply', not
+	'apply-to-args'.
+
+2018-09-19  Ludovic Courtès  <ludo@gnu.org>
+
+	Remove runlevels.
+	This feature was never fully implemented and there's little interest in
+	having it nowadays.
+
+	* modules/shepherd/runlevel.scm: Remove.
+	* Makefile.am (dist_shepherdsub_DATA): Remove it.
+	* doc/shepherd.texi (Runlevels): Remove node.
+	* modules/shepherd.scm: Remove use of (shepherd runlevel).
+	* modules/shepherd.scm (start-in-order): New procedure, salvaged from
+	runlevel.scm.
+
+2018-09-19  Ludovic Courtès  <ludo@gnu.org>
+
+	comm: Do not introduce empty lines in the log.
+	Fixes a regression introduced in
+	329cec8b6fcc57f945e748793470f573b2b449a3 whereby regular "has been
+	started" etc. lines in the log would be followed by an empty line.
+
+	* modules/shepherd/comm.scm (make-shepherd-output-port): Use
+	'string-index' in a loop instead of 'string-split' to detect newlines in
+	STR.
+	* tests/basic.sh: Check for zero empty lines in $log.
+
+2018-09-19  Ludovic Courtès  <ludo@gnu.org>
+
+	i18n: Add missing calls to 'l10n'.
+	* modules/shepherd/support.scm (local-output): Remove useless 'gettext'
+	call.
+	Add missing 'l10n' call around strings passed to 'local-output'.
+	* modules/shepherd/service.scm, modules/shepherd.scm: Likewise.
+
+	Make sure ctrl-alt-del is handled by PID 1.
+	* configure.ac: Set RB_DISABLE_CAD to "#f" on GNU/Hurd and other OSes.
+	Substitute it.
+	* modules/shepherd.scm (main): Call 'disable-reboot-on-ctrl-alt-del'
+	when running as PID 1.  In SIGINT handler, catch 'quit to make sure we
+	reboot.
+	(quit-exception-handler): New procedure.
+	(process-command): Use it.
+	* modules/shepherd/system.scm.in (RB_DISABLE_CAD): New variable.
+	(disable-reboot-on-ctrl-alt-del): New procedure.
+
+2018-09-19  Carlo Zancanaro  <carlo@zancanaro.id.au>
+	    Ludovic Courtès  <ludo@gnu.org>
+
+	Remove EINTR-safe, and all references to it.
+	This fixes commit 2756a929d96725d837738e396619072d50b366cc by removing
+	leftover #:replace in (shepherd service), which had the effect of
+	leaving 'system' and 'system*' unbound.
+
+	* modules/shepherd/support.scm (EINTR-safe): Remove procedure and its export.
+	* modules/shepherd/service.scm (system*, system*): Remove now-unnecessary
+	procedures, and remove corresponding #:replace.
+	(waitpid*): Remove references to EINTR-safe.
+	* modules/shepherd.scm (main): Remove references to EINTR-safe.
+
+2018-08-26  Carlo Zancanaro  <carlo@zancanaro.id.au>
+
+	service: Restart dependent services on service restart
+	* modules/shepherd/service.scm (required-by?): New procedure.
+	(stop): Return a list of canonical-names for stopped dependent services,
+	including transitive dependencies.
+	(action)[restart]: Start services based on the return value of stop.
+	(fold-services): New procedure.
+	* doc/shepherd.texi (Jump Start): Clarify details about new behaviour of
+	restart.
+	* tests/restart.sh: New file.
+	* Makefile.am (TESTS): Add tests/restart.sh.
+
+	Revert "Remove EINTR-safe, and all references to it."
+	This reverts commit 2756a929d96725d837738e396619072d50b366cc.
+
+2018-08-23  Carlo Zancanaro  <carlo@zancanaro.id.au>
+
+	service: Add a replacement slot for delayed service replacement.
+	* modules/shepherd/service.scm (<service>): Add replacement slot
+	(replace-service): New procedure.
+	(stop): Call replace-service after stopping a service.
+	(register-services): Replace existing services where possible, setting the new
+	replacement slot if they are currently running.
+	* tests/replacement.sh: Add a test for it.
+	* Makefile.am (TESTS): Add the new test.
+	* doc/shepherd.texi (Slots of services): Document it.
+
+2018-07-13  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Let users invoke actions even on services that don't run.
+	Suggested by Clément Lassieur <clement@lassieur.org>
+	in <https://bugs.gnu.org/32128>.
+
+	* modules/shepherd/service.scm (action): Call PROC unconditionally.
+
+2018-07-11  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Preserve empty lines in action messages.
+	Previously, "herd hi test-2" in the example added by this commit would
+	lack the empty line between "start" and "end".
+
+	* modules/shepherd.scm (%not-newline): Remove.
+	(process-command)[get-messages]: Use 'string-split' plus some
+	post-processing instead of 'string-tokenize'.
+	* modules/shepherd/comm.scm (%not-newline): Remove.
+	(make-shepherd-output-port): Use 'string-split' instead of
+	'string-tokenize'.
+	* tests/basic.sh: Add #:actions in 'test-2' and test the new action.
+
+2018-07-11  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Make forbidden pattern stricter.
+	Somehow, with Guile 2.2.4, we were now getting:
+
+	  configure:6899: error: possibly undefined macro: GUILE_PKG_ERRORS
+
+	* configure.ac: Make forbidden pattern stricter.
+
+2018-05-10  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Add es translation.
+
+2018-04-23  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update pt_BR translation.
+
+2018-04-10  Carlo Zancanaro  <carlo@zancanaro.id.au>
+
+	Remove EINTR-safe, and all references to it.
+	* modules/shepherd/support.scm (EINTR-safe): Remove procedure and its export.
+	* modules/shepherd/service.scm (system*, system*): Remove now-unnecessary
+	  procedures.
+	  (waitpid*): Remove references to EINTR-safe.
+	* modules/shepherd.scm (main): Remove references to EINTR-safe.
+
+	Update Guile dependency to 2.0.13 or later
+	* README (Requirements): Change 2.x to 2.0.13 or later.
+	* configure.ac: Check for 2.0.13 or later if Guile 2.0 is detected.
+
+2018-03-22  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'NEWS'.
+
+	build: Bump to version 0.4.0.
+	* configure.ac: Bump to version 0.4.0.
+
+	service: 'exec-command' closes file descriptors as its last action.
+	* modules/shepherd/service.scm (exec-command): Move
+	file-descriptor-closing loop as the last action before 'execl'.
+
+	nls: Add missing translatable files.
+	* po/POTFILES.in: Add modules/scripts/*.scm.
+
+2018-03-15  Ludovic Courtès  <ludo@gnu.org>
+
+	Use syslog for logging when running as root.
+	* modules/shepherd/comm.scm (call-with-syslog-port, syslog-output-port):
+	New procedures.
+	* modules/shepherd.scm (main): Set 'log-output-port'
+	to (syslog-output-port) when running as root.
+	* doc/shepherd.texi (Invoking shepherd): Adjust accordingly.
+
+	Simplify 'make-shepherd-output-port'.
+	* modules/shepherd/comm.scm (%not-newline): New variable.
+	(make-shepherd-output-port): Rewrite second method to simplify and make
+	a single 'display' call per line.
+
+	Turn 'log-output-port' into a parameter.
+	* modules/shepherd/comm.scm (log-output-port): Turn into a parameter and
+	publish it.
+	(start-logging, stop-logging): Adjust accordingly and mark as deprecated.
+	(make-shepherd-output-port): Adjust accordingly.
+	* modules/shepherd/support.scm (default-logfile): Remove.
+	(user-default-log-file): New procedure.
+	(default-logfile-date-format): Remove 'if'.
+	* modules/shepherd.scm (main): Have LOGFILE default to #f.  Parameterize
+	'log-output-port' and 'current-output-port'.
+
+2018-03-12  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update fr translation.
+
+2018-03-05  Danny Milosavljevic  <dannym@scratchpost.org>
+	    Ludovic Courtès  <ludo@gnu.org>
+
+	Log to /dev/kmsg when running as root on GNU/Linux.
+	* modules/shepherd/support.scm (default-logfile): Set /dev/kmsg when it
+	exists and we're root.
+	(default-logfile-date-format): Adjust format when using /dev/kmsg.
+	* modules/shepherd.scm (main): Redirect 'current-output-port' to the
+	bitbucket when LOGFILE is /dev/kmsg.
+	* doc/shepherd.texi (Invoking shepherd): Document the new behavior when
+	'--log-file' is omitted.
+
+	comm: Expose 'make-shepherd-output-port' in lieu of 'shepherd-output-port'.
+	* modules/shepherd/comm.scm (make-shepherd-output-port): Make
+	'original-output-port' optional, and make public.
+	(shepherd-output-port): Remove.
+	* modules/shepherd.scm (main): Adjust accordingly.
+
+	Make date format in the log file configurable.
+	* modules/shepherd/support.scm (default-logfile-date-format): New
+	variable.
+	* modules/shepherd/comm.scm (%current-logfile-date-format): New
+	variable.
+	(make-shepherd-output-port): Use it.
+
+2018-03-05  Ludovic Courtès  <ludo@gnu.org>
+
+	system: Adjust error case of 'prctl'.
+	* modules/shepherd/system.scm.in (prctl): Remove reference to 'name' in
+	call to 'throw'.
+
+2018-03-05  Carlo Zancanaro  <carlo@zancanaro.id.au>
+
+	Poll every 0.5s to find dead forked services if prctl fails.
+	* modules/shepherd.scm (open-server-socket): Set socket to be
+	  non-blocking.
+	  (main): If we are unable to use prctl/PR_SET_CHILD_SUBREAPER, then poll for
+	  service processes between client connections, or every 0.5 seconds.
+	* modules/shepherd/service.scm (fork+exec-command): Install handle-SIGCHLD as
+	  signal handler.
+	  (respawn-service): Separate logic for respawning services from handling
+	  SIGCHLD.
+	  (handle-SIGCHLD, check-for-dead-services): New exported procedures.
+	* tests/basic.sh, tests/status-sexp.sh: Replace constant integers with
+	  symbols.
+	* doc/shepherd.texi (Slots of services): Add note about service running slot
+	  being a process id.
+
+2018-03-05  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Update fr translation.
+
+	nls: Add da translation.
+
+	nls: Add zh_CN translation.
+
+2018-03-04  Carlo Zancanaro  <carlo@zancanaro.id.au>
+
+	Handle forked process SIGCHLD signals.
+	* tests/forking-service.sh: New file.
+	* Makefile.am (TESTS): Add tests/forking-service.sh.
+	* modules/shepherd.scm: Set the child subreaper attribute of main shepherd
+	  process (as long as we're not pid 1).
+	* modules/shepherd/service.scm (root-service)[daemonize]: Set the child
+	  subreaper attribute of newly forked shepherd process.
+
+	Add prctl syscall wrapper along with with PR_SET_CHILD_SUBREAPER.
+	* configure.ac: Detect and substitute PR_SET_CHILD_SUBREAPER.
+	* modules/shepherd/system.scm.in (PR_SET_CHILD_SUBREAPER): Add new variable
+	  and export it.
+	  (prctl): Add new procedure and export it.
+
+2018-03-02  Ludovic Courtès  <ludo@gnu.org>
+
+	nls: Add pt_BR translation.
+
+	nls: Add fr translation.
+
+2018-03-02  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Fix typo.
+	Fixes a regression introduced in
+	6dd27d2925fc4fe589e5b2632df5307c41fba1bf.
+
+	* Makefile.am (AM_TESTS_ENVIRONMENT): Fix typo.
+
+2018-03-02  Ludovic Courtès  <ludo@gnu.org>
+
+	args: Invite translators to add a bug report address.
+	* modules/shepherd/args.scm (process-args): Add TRANSLATORS comment.
+
+	Augment '.gitignore'.
+
+	nls: Add uk translation.
+	* po/LINGUAS, po/uk.po: New files.
+
+	args: Add missing 'l10n' annotations.
+	* modules/shepherd/args.scm (process-args): Add missing 'l10n' calls.
+
+	Complete i18n support.
+	* Makefile.am (instantiate): Substitute '%localedir%'.
+	(AM_TESTS_ENVIRONMENT): Clear l10n-related variables.
+	* modules/shepherd/config.scm.in (%localedir): New variable.
+	* modules/shepherd/support.scm (%gettext-domain): New variable.
+	(initialize-cli): New procedure.
+	* modules/shepherd.scm (main): Use 'initialize-cli' instead of
+	'setlocale'.
+	* modules/shepherd/scripts/halt.scm (main): Likewise.
+	* modules/shepherd/scripts/herd.scm (main): Likewise.
+	* modules/shepherd/scripts/reboot.scm (main): Likewise.
+
+2018-03-02  Ludovic Courtès  <ludo@gnu.org>
+
+	service: 'exec-command' opens #:log-file in append mode.
+	Fixes <https://bugs.gnu.org/30649>.
+	Reported by Andreas Enge <andreas@enge.fr>.
+
+	* modules/shepherd/service.scm (exec-command): Open LOG-FILE with
+	O_APPEND.  Avoid second 'open-fdes' call for stderr.
+	* doc/shepherd.texi (Service De- and Constructors): Adjust accordingly.
+
+2018-03-01  Ludovic Courtès  <ludo@gnu.org>
+
+	Adjust strings for Translation Project submission.
+	Suggested by Benno Schulenberg <coordinator@translationproject.org>.
+
+	* modules/shepherd.scm (main): Add missing comma.
+	* modules/shepherd/comm.scm (report-command-error): Add "TRANSLATORS"
+	comment.
+
+2018-03-01  Carlo Zancanaro  <carlo@zancanaro.id.au>
+
+	Terminate all services upon SIGTERM or SIGHUP
+	* modules/shepherd.scm (main): Add SIGTERM and SIGHUP handlers which stop
+	  root-service.
+	* tests/sigint.sh: Rename to...
+	* tests/signals.sh: ... this, and add tests for SIGTERM and SIGUP.
+
+2018-02-04  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Add i18n infrastructure.
+	* Makefile.am (EXTRA_DIST): Add build-aux/config.rpath.
+	(SUBDIRS, ACLOCAL_AMFLAGS): New variables.
+	* configure.ac: Use 'AM_GNU_GETTEXT'.  Instantiate po/Makefile.in.
+	* po/Makevars, po/POTFILES.in: New files.
+
+	Use 'l10n' where it's missing.
+	* modules/shepherd.scm (main): Use 'l10n' for option arguments and all.
+	* modules/shepherd/scripts/herd.scm (main): Likewise.
+	* modules/shepherd/args.scm (process-args): Use 'l10n' for the last few
+	lines of '--help'.
+
+	support: Update copyright year in '--version' output.
+	* modules/shepherd/support.scm (display-version): Update to 2018.
+
+2018-02-04  Ludovic Courtès  <ludo@gnu.org>
+
+	herd: 'herd status' now sorts the result.
+	Partly fixes <https://bugs.gnu.org/30299>.
+	Reported by Mark H Weaver <mhw@netris.org>.
+
+	Previously 'tests/basic.sh' could occasionally fail on:
+
+	  test "`$herd status`" == "$pristine_status"
+
+	because the order of stopped services were not always the same.  Indeed,
+	those services come from 'service-list' on the shepherd side, which uses
+	'hash-fold' to traverse the service hash table, and the traversal order
+	of 'hash-fold' is undefined.
+
+	* modules/shepherd/scripts/herd.scm (display-status-summary)[service<?]:
+	New procedure.
+	[display-services]: Call 'sort' and use the above.
+
+2017-12-03  Ludovic Courtès  <ludo@gnu.org>
+
+	service: In 'exec-command', close open ports before 'execl'.
+	This gets rid of annoying "Bad file descriptor" warnings from shepherd.
+
+	* modules/shepherd/service.scm (exec-command): In 'loop', invoke
+	'close-port' and the ports returned by (fdes->ports i).
+
+2017-09-07  Jelle Licht  <jlicht@fsfe.org>
+
+	Lazily register SIGCHLD hander on first call to 'fork+exec-command'.
+	* modules/shepherd.scm (main): Move unconditional top-level call to 'sigaction' to...
+	* modules/shepherd/service.scm (fork+exec-command): here. Use new variable.
+	(%sigchld-handler-installed?): New variable.
+
+2017-07-10  宋文武  <iyzsong@member.fsf.org>
+
+	service: Fix arguments passing in the 'restart' action.
+	* modules/shepherd/service.scm (action): Use 'apply' to invoke the 'start'
+	procedure in the 'restart' action.
+
+2017-06-16  Danny Milosavljevic  <dannym@scratchpost.org>
+	    Ludovic Courtès  <ludo@gnu.org>
+
+	Use XDG_RUNTIME_DIR for the shepherd socket.
+	* modules/shepherd/support.scm (%user-runtime-dir): New variable.
+	(default-socket-dir): Use it.
+	* doc/shepherd.texi (Invoking shepherd): Document it.
+
+	Make sure that shepherd does not serve already-served sockets.
+	* modules/shepherd.scm (open-server-socket): Remove call to
+	'delete-file'.
+	* tests/basic.sh: Remove "$socket" before spawning a new 'shepherd'.
+
+2017-01-14  Benz Schenk  <benz.schenk@uzh.ch>
+
+	doc: Fix typo "Jump Start".
+	* doc/shepherd.texi (Jump Start): Fix typo.
+
+2016-12-04  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'NEWS'.
+
+	build: Bump to 0.3.2.
+	* configure.ac: Bump to version 0.3.2.
+
+	build: 'make clean' removes 'modules/shepherd.go'.
+	* Makefile.am (CLEANFILES): Add $(nodist_guileobject_DATA).
+
+2016-12-04  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Make sure installed .scm files are older than installed .go files.
+	This is a followup to 657387546ecf20b28632394be58a4ec43eb08d19.
+
+	* Makefile.am (shepherd_install_go_files): Set to
+	'install-nodist_guileobjectDATA'.
+	(shepherdsub_install_go_files): Set to
+	'install-nodist_shepherdgosubDATA'.  Add dependency on
+	'install-nodist_shepherdsubDATA' to account for shepherd/config.scm.
+	(scripts_install_go_files): Set to 'install-nodist_scriptsgoDATA'.
+
+2016-11-26  Ludovic Courtès  <ludo@gnu.org>
+
+	services: Kill the process that did not create its PID file.
+	Reported by iyzsong@member.fsf.org (宋文武)
+	at <https://lists.gnu.org/archive/html/guix-devel/2016-11/msg00947.html>.
+
+	* modules/shepherd/service.scm (read-pid-file): Return #f upon ENOENT
+	after MAX-DELAY has expired.
+	(make-forkexec-constructor): When 'read-pid-file' returns #f,
+	do (kill pid SIGTERM).
+	* tests/pid-file.sh: New file.
+	* Makefile.am (TESTS): Add it.
+
+2016-11-26  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Add #:pid-file-timeout parameter to 'make-forkexec-constructor'.
+	* modules/shepherd/service.scm (%pid-file-timeout): New variable.
+	(make-forkexec-constructor): Add #:pid-file-timeout parameter and pass
+	it to 'read-pid-file'.
+
+2016-11-26  Christopher Allan Webber  <cwebber@dustycloud.org>
+	    Ludovic Courtès  <ludo@gnu.org>
+
+	herd: Have status display services as a bulleted list.
+	* modules/shepherd/scripts/herd.scm (display-status-summary)
+	[display-services]: New procedure.
+	Display services as an ASCII bulleted list.
+	* tests/basic.sh: Adjust accordingly.
+
+2016-11-21  Ludovic Courtès  <ludo@gnu.org>
+
+	Register SIGCHLD handler in (sherpherd) rather than at the top level.
+	* modules/shepherd/service.scm: Move top-level call to 'sigaction' to...
+	* modules/shepherd.scm (main): ... here.
+
+2016-10-21  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Refer to $(guileobjectdir) in installed scripts.
+	This is a followup to 657387546ecf20b28632394be58a4ec43eb08d19.
+
+	* Makefile.am (install-exec-hook): Adjust to new 'guileobjectdir'.
+
+2016-10-20  Ludovic Courtès  <ludo@gnu.org>
+
+	system: Use #:return-errno? when it's available.
+	* modules/shepherd/system.scm.in (syscall->procedure): New procedure.
+	(%libc-reboot): Use it.  Adjust call to PROC accordingly.
+	(sysconf): Likewise.
+
+	build: Install '.go' files under LIBDIR.
+	* configure.ac: Define and substitute 'guileobjectdir'.
+	* Makefile.am (nodist_guileobject_DATA): New variable.
+	(nodist_guilemodule_DATA): Remove.
+	(nodist_shepherdsub_DATA): Remove 'modules/shepherd/system.scm'.
+	(nodist_shepherdgosub_DATA, shepherdgosubdir)
+	(scriptsgodir, nodist_scriptsgo_DATA): New variables.
+	(nodist_scripts_DATA): Remove.
+	(CLEANFILES): Add $(nodist_shepherdgosub_DATA) and
+	$(nodist_scriptsgo_DATA).  Remove $(nodist_scripts_DATA).
+
+	build: Support Guile 2.2.
+	* configure.ac: Use 'GUILE_PKG'.  Remove explicit Guile version check
+	and check for 'guild'.  Honor $GUILE_EFFECTIVE_VERSION in
+	'guilemoduledir'.
+
+2016-10-16  Ludovic Courtès  <ludo@gnu.org>
+
+	service: 'enable' and other actions now have a fixed arity.
+	* modules/shepherd/service.scm (action)[default-action]: Return
+	fixed-arity procedures for 'status', 'enable', and 'disable'.
+	* tests/basic.sh: Add test.
+
+2016-10-16  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Protect against wrong number of arguments to 'enable' etc.
+	Fixes <http://bugs.gnu.org/24684>.
+	Reported by Caleb Ristvedt <caleb.ristvedt@cune.org>.
+
+	* modules/shepherd/service.scm (action)[default-action]: Add 'enable',
+	'disable', and 'doc'.
+	Move 'catch' form around the 'cond' expression.
+	(action) <symbol>: Invoke the other 'action' method.
+	* tests/basic.sh: Add test.
+
+2016-09-11  David Craven  <david@craven.ch>
+
+	service: Honor #:log-file in make-forkexec-constructor.
+	* modules/shepherd/service.scm (exec-command): Redirect stdout and
+	  stderr to log-file.
+	  (fork+exec-command): Pass log-file to exec-command.
+	  (make-forkexec-constructor): Cleanup log-file. Pass log-file to
+	  fork+exec-command.
+	* doc/shepherd.texi (@deffn): Update documentation.
+
+2016-03-23  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'NEWS'.
+
+	Update 'NEWS'.
+
+	build: Bump to 0.3.1.
+	* configure.ac: Bump to version 0.3.1.
+
+2016-03-23  Ludovic Courtès  <ludo@gnu.org>
+
+	herd: Display the last respawn time.
+	Suggested by Danny Milosavljevic <dannym@scratchpost.org>.
+
+	* modules/shepherd/scripts/herd.scm (display-service-status): Display
+	'last-respawns'.
+	* tests/respawn-throttling.sh: Test it.
+
+2016-03-23  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Improve wording of 'waitpid' "error" message.
+	* modules/shepherd/service.scm (waitpid*): Change "error" message to
+	"warning", and improve wording.
+
+	service: Choose a respawn limit slightly more lax.
+	* modules/shepherd/service.scm (respawn-limit): Change to '(5 . 7).
+
+2016-03-23  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Make sure the respawn limit is honored.
+	This fixes a bug whereby services would be respawned forever because the
+	'start' method would reset the 'last-respawns' field each time it
+	respawns a service.  Regression introduced in version 0.3 (commit
+	063d09b2a29768e957a3d867fca5f2f7cd2489ab.)
+
+	Reported by Danny Milosavljevic <dannym@scratchpost.org>
+	at <http://debbugs.gnu.org/cgi/bugreport.cgi?bug=23064>.
+
+	* modules/shepherd/service.scm (start): Leave the 'last-respawns' field
+	unchanged.
+	(stop): Reset the 'last-respawns' field.
+	* tests/respawn-throttling.sh: New file.
+	* Makefile.am (TESTS): Add it.
+
+2016-03-23  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Fix harmless typo.
+	* modules/shepherd/service.scm (root-service): Fix typo.
+
+2016-02-06  Ludovic Courtès  <ludo@gnu.org>
+
+	support: Adjust 'mkdir-p' to GNU/Hurd behavior.
+	Reported by David Michael <fedora.dm0@gmail.com>.
+
+	* modules/shepherd/support.scm (mkdir-p): If we get an error other than
+	EEXIST but PATH exists and is a directory, keep going.
+
+2016-02-05  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Export '&action-runtime-error'.
+	* modules/shepherd/service.scm: Export &action-runtime-error and related
+	bindings.
+
+2016-02-04  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Add test with exception thrown in 'start'.
+	* tests/basic.sh: Add test with service 'broken'.
+
+2016-01-28  Mathieu Lirzin  <mthl@gnu.org>
+
+	doc: Move man pages to the 'doc' directory.
+	* Makefile.am (man-page-target): Delete function.
+	(dist_man1_MANS, dist_man8_MANS): Prefix each element with 'doc/'.
+	(shepherd.1): Rename to ...
+	(doc/shepherd.1): ... this.
+	(doc/%.1, doc/%.8): New targets.
+	(gen_man): New variable.
+	* .gitignore: Update it.
+
+	doc: Move manual to the 'doc' directory.
+	* doc/shepherd.texi: Moved from the root directory.
+	* doc/fdl-1.3.texi: Likewise.
+	* Makefile.am (info_TEXINFOS): Add a 'doc/' prefix to 'shepherd.texi'.
+	(EXTRA_DIST): Remove 'fdl-1.3.texi'.
+	(doc_shepherd_TEXINFOS): New variable.
+	* .gitignore: Update it.
+
+	doc: Move examples to the 'doc/examples' directory.
+	* doc/examples/README: moved from 'examples' directory.
+	* doc/examples/_unknown.scm: Likewise.
+	* doc/examples/wolfgangj.scm: Likewise.
+	* shepherd.texi (Jump Start): Adapt a reference to those examples.
+	* examples/Makefile.am: Delete file.
+	* configure.ac (AC_CONFIG_FILES): Adapt to it.
+	* Makefile.am (EXTRA_DIST): Add files from "doc/examples" directory.
+	(SUBDIRS): Delete variable.
+
+2016-01-27  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Unset 'GUILE_LOAD_COMPILED_PATH' while building.
+	* Makefile.am (%.go): Unset GUILE_LOAD_COMPILED_PATH.
+
+	services: Add 'eval' action to 'root'.
+	* modules/shepherd/support.scm (eval-in-user-module): New procedure.
+	* modules/shepherd/service.scm (root-service): Add 'eval' action.
+	* tests/basic.sh: Add tests.
+	* modules/shepherd/scripts/herd.scm (run-command): Add special case for
+	'eval'.
+	* shepherd.texi (The root and unknown services): Document it.
+	* NEWS: Mention it.
+
+	Update 'NEWS'.
+
+	doc: Improve the introduction.
+	* shepherd.texi (Introduction): Mention "GNU Daemon Shepherd"; reword a
+	few things.
+
+	doc: Document the sexp protocol.
+	* shepherd.texi (Communication): Document the sexp protocol.
+
+	comm: Buffer the communication socket on the server side.
+	* modules/shepherd.scm (main): Add 'setvbuf' call.
+	* modules/shepherd/comm.scm (write-reply): Add 'force-output' call.
+
+	comm: Buffer the communication socket on the client side.
+	* modules/shepherd/comm.scm (open-connection): Add 'setvbuf' call.
+	(write-command): Add 'force-output' call.
+
+	comm: The 'arguments' of a command is a list.
+	* modules/shepherd/comm.scm (read-command): Expect 'arguments' to be a
+	list.
+	(write-command): Send 'arguments' as a list instead of splicing it.
+
+	build: Really make sure installed .go files are newer.
+	* Makefile.am (shepherd_install_go_files): Remove 'nobase_'.
+	(shepherdsub_install_go_files, scripts_install_go_files): New variables
+	and targets.
+
+	Default system-wide config file is now /etc/shepherd.scm.
+	* modules/shepherd/support.scm (default-config-file): Remove ".conf".
+	* shepherd.texi (Jump Start): Adjust accordingly.
+
+	build: Build man pages.
+	* Makefile.am (AM_V_HELP2MAN, AM_V_HELP2MAN_, AM_V_HELP2MAN_0)
+	(HELP2MANFLAGS): New variables.
+	(man-page-target): New function.
+	(shepherd.1): New target.
+	(dist_man1_MANS, dist_man8_MANS): New variables.
+	* configure.ac: Use AM_MISSING_PROG for 'HELP2MAN'.
+
+	build: Install Guile modules to the usual place.
+	* Makefile.am (shepherddir): Remove.
+	(dist_shepherd_DATA): Rename to...
+	(dist_guilemodule_DATA): ... this.
+	(nodist_shepherd_DATA): Rename to...
+	(nodist_guilemodule_DATA): ... this.
+	* configure.ac: Define and substitute 'guilemoduledir'.
+
+	Move commands to (shepherd scripts xyz).
+	* Makefile.am (dist_shepherd_DATA): Remove {herd,halt,reboot}.scm.
+	(scriptsdir, dist_scripts_DATA, nodist_scripts_DATA): New variables.
+	(CLEANFILES): Add $(nodist_scripts_DATA).
+	* modules/halt.scm, modules/herd.scm, modules/reboot.scm: Move to...
+	* modules/scripts/{halt,herd,reboot}.scm: ... here.
+	* halt.in, herd.in, reboot.in: Adjust accordingly.
+
+	Add the list of conflicting services to the status sexp.
+	* modules/shepherd/service.scm (service->sexp): Add 'conflicts'.
+	* modules/herd.scm (display-service-status): Display it.
+	* tests/status-sexp.sh: Adjust accordingly.
+
+	Canonicalize the running value to valid read syntax.
+	* modules/shepherd/service.scm (service->sexp): Pass the 'running' value
+	through 'result->sexp'.
+	* tests/basic.sh: Add test.
+
+2016-01-27  Alex Kost  <alezost@gmail.com>
+
+	service: 'conflicts-with' returns a list of services.
+	This fixes a regression introduced in commit
+	cb168150d4581ffbc357ab6cdcd45d59051ee821.
+
+	If 'conflicts-with' returns a list of names, 'conflicts-with-running'
+	fails because 'running?' cannot be applied to a symbol.
+
+	* modules/shepherd/service.scm (conflicts-with): Return a list of
+	  services instead of names.
+	  (start): Adjust accordingly.
+
+2016-01-26  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Do not fail when $HOME or $XDG_CONFIG_HOME are erroneous.
+	* tests/sigint.sh: Specify --log.  This is useful when $XDG_CONFIG_HOME
+	happens to be unusable.
+
+	Add record type for service actions.
+	* modules/shepherd/service.scm (<action>): New record type.
+	(make-actions): Use 'make-action' instead of 'cons'.
+	(action:name, action:proc, action:doc): Remove.  Adjust callers to use
+	'action-name', 'action-procedure', and 'action-documentation' instead.
+	(lookup-action): Adjust to use 'find'.
+	(action): Remove 'apply-if-proc', use 'and=>' instead.
+
+2016-01-26  Alex Kost  <alezost@gmail.com>
+
+	Remove utils.
+	* utils/Makefile.am: Remove file.
+	* utils/dmd-gettext.scm: Remove file.
+	* utils/sysvconfig.scm: Remove file.
+	* Makefile.am (SUBDIRS): Remove 'utils'.
+	* configure.ac: Remove 'utils/Makefile'.
+	* .gitignore: Likewise.
+
+	Replace "dmd" with "shepherd" in comments and strings.
+	* modules/shepherd/support.scm: Use "shepherd" instead of "dmd"
+	  everywhere.
+	* configure.ac: Likewise.
+	* tests/no-home.sh: Likewise.
+	* tests/sigint.sh: Likewise.
+
+	support: Rename state file.
+	* modules/shepherd/support.scm (default-persistency-state-file): Use
+	  "shepherd" instead of "dmd".
+
+	Rename default system configuration file.
+	* modules/shepherd/support.scm (default-config-file): Rename
+	  "dmdconf.scm" to "shepherd.conf.scm".
+	* shepherd.texi (Jump Start): Likewise.
+
+	support: Rename 'make-dmd-user-module' to 'make-user-module'.
+	* modules/shepherd/support.scm (make-dmd-user-module): Rename to...
+	(make-user-module): ... this.
+	(load-in-user-module): Adjust accordingly.
+
+	ChangeLog: Rename git repository.
+	* ChangeLog: Use shepherd source.
+
+	tests: Rename 'dmd_pid' to 'shepherd_pid'.
+	* tests/basic.sh: Rename 'dmd_pid' to 'shepherd_pid'.
+	* tests/misbehaved-client.sh: Likewise.
+	* tests/no-home.sh: Likewise.
+	* tests/respawn.sh: Likewise.
+	* tests/status-sexp.sh: Likewise.
+
+2016-01-26  Alex Kost  <alezost@gmail.com>
+
+	tests: misbehaved-client: Rename 'dmd' to 'root'.
+	This is a followup to commit cddf6a5aed5c66f91b93a84afa4b5dadde743b13.
+
+	* tests/misbehaved-client.sh: Use 'root' service name instead of 'dmd'.
+
+2016-01-26  Alex Kost  <alezost@gmail.com>
+
+	service: Improve 'service-list'.
+	* modules/shepherd/service.scm (service-list): Use
+	  'lookup-canonical-service' on each name instead of removing duplicates
+	  from the final list.
+
+2016-01-25  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Make the "Internals" section less personal.
+	* shepherd.texi (Internals): Remove the personal introduction.  Replace
+	it by a paragraph pointing to mailing lists.
+	(Coding standards): Xref "Coding Style" in Guix.
+	(Design decisions, Runlevel evolution): Add note to mention that it's
+	historical material.
+
+2016-01-25  Ludovic Courtès  <ludo@gnu.org>
+
+	Use 'with-directory-excursion' for user-supplied directories.
+	Before that the directory supplied in the command would change that
+	current working directory of shepherd, and it would not be changed
+	back.
+
+	* modules/shepherd/support.scm (with-directory-excursion): New macro.
+	* modules/shepherd.scm (process-command): Remove 'chdir' call.  Use
+	'with-directory-excursion' instead.
+	* tests/basic.sh: Test 'herd load root some-conf.scm'.
+
+2016-01-25  Alex Kost  <alezost@gmail.com>
+
+	Update .gitignore.
+	This is a followup to commit 9f902c716537be551eadecd4c30118fc9ad12b60.
+
+	* .gitignore: Add files for "misbehaved-client.sh" test.
+
+2016-01-25  Alex Kost  <alezost@gmail.com>
+
+	reboot, halt: Rename 'dmd' to 'root'.
+	This is a followup to commit cddf6a5aed5c66f91b93a84afa4b5dadde743b13.
+
+	* modules/halt.scm (main): Use 'root' service name instead of 'dmd'.
+	* modules/reboot.scm (main): Likewise.
+
+2016-01-25  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Add #:pid-file to 'make-forkexec-constructor'.
+	* modules/shepherd/service.scm (read-pid-file): New procedure.
+	(make-forkexec-constructor): Add #:pid-file parameter and honor it.
+	* tests/respawn.sh: Change 'test2' to use #:pid-file.  Use 'test -f'
+	instead of 'wait_for_file' for $service2_pid.
+	* shepherd.texi (Service De- and Constructors): Adjust accordingly.
+
+2016-01-24  Ludovic Courtès  <ludo@gnu.org>
+
+	'herd help' displays a help message.
+	* modules/shepherd/service.scm (root-service): Add 'help' action.
+	* modules/herd.scm (run-command): Add special-case for 'help'.
+	(main): Allow 'herd help' without a service name.
+
+	Update 'AUTHORS'.
+
+2016-01-24  Alex Kost  <alezost@gmail.com>
+
+	Rename 'dmd' service to 'root'.
+	* modules/shepherd/service.scm (dmd-service): Rename to...
+	(shepherd-service): ... this.  Provide both 'root' and 'shepherd' names.
+	Adjust the rest file accordingly.
+	* modules/shepherd.scm: Likewise.
+	* modules/herd.scm: Likewise.
+	* modules/halt.scm: Likewise.
+	* modules/reboot.scm: Likewise.
+	* modules/shepherd/support.scm (make-bare-init-file): Likewise.
+	* shepherd.texi: Likewise.
+	* tests/basic.sh: Likewise.
+	* tests/no-home.sh: Likewise.
+	* tests/status-sexp.sh: Likewise.
+
+	service: Add docstring to 'lookup-services'.
+	* modules/shepherd/service.scm (lookup-services): Use docstring instead
+	  of a comment.
+
+	service: 'service-list' returns unique services.
+	* modules/shepherd/service.scm (service-list): Remove duplicates from
+	  the final list.
+
+	service: Improve style of 'for-each-service'.
+	* modules/shepherd/service.scm (lookup-canonical-service): New procedure.
+	(for-each-service): Use it.  Use 'hash-for-each' instead of 'hash-fold'.
+
+	service: Rename 'services' variable to '%services'.
+	* modules/shepherd/service.scm (services): Rename to...
+	(%services): ... this.
+	(for-each-service, service-list, find-service, lookup-services,
+	register-services, deregister-service): Adjust accordingly.
+
+2016-01-23  Ludovic Courtès  <ludo@gnu.org>
+
+	Asking for the doc of unknown actions raises an error.
+	* modules/shepherd/service.scm (doc): Raise &unknown-action-error when
+	asked for the doc of an unknown action.
+	* tests/basic.sh: Add test.
+
+	comm: Add missing quotes in error message.
+	* modules/shepherd/comm.scm (report-command-error): Quote action name.
+
+	shepherd: Protect against unrecognized sexps.
+	* modules/shepherd/comm.scm (read-command): Return #f for anything that
+	doesn't match the expected form.
+	* tests/misbehaved-client.sh: Add test.
+
+	shepherd: Protect against 'read' errors.
+	* modules/shepherd/comm.scm (read-command): Catch 'read-error'
+	exceptions.  Return #f upon EOF.
+	* modules/shepherd.scm (process-connection): Adjust accordingly.
+	* tests/misbehaved-client.sh: Add test with invalid sexp.
+
+2016-01-23  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Do not leave processes behind.
+	Before that, shepherd processes were left behind because we would always
+	remove the PID file before checking for its existence.
+
+	* tests/basic.sh, tests/misbehaved-client.sh, tests/no-home.sh,
+	tests/respawn.sh, tests/sigint.sh, tests/status-sexp.sh: Remove $pid
+	only after it has been used to kill the daemon.
+
+2016-01-23  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Check for client EOF.
+	* modules/shepherd/comm.scm (read-command): Check for 'eof-object?' and
+	return it as is when it occurs.
+	* modules/shepherd.scm (process-connection): Likewise.
+	* tests/misbehaved-client.sh: Add test.
+
+2016-01-23  Alex Kost  <alezost@gmail.com>
+
+	Rename 'dmd-command' to 'shepherd-command'.
+	* modules/shepherd/comm.scm (<dmd-command>): Rename record type and its
+	accessors to...
+	(<shepherd-command>): ... this.
+	(read-command, write-command): Adjust accordingly.
+	* modules/halt.scm (main): Likewise.
+	* modules/herd.scm (run-command): Likewise.
+	* modules/reboot.scm (main): Likewise.
+	* modules/shepherd.scm (process-command, process-textual-commands): Likewise.
+	* tests/status-sexp.sh, tests/misbehaved-client.sh: Likewise.
+	* shepherd.texi (Communication): Likewise.
+
+	Rename 'dmd-output-port' to 'shepherd-output-port'.
+	* modules/shepherd/comm.scm (make-dmd-output-port): Rename to...
+	(make-shepherd-output-port): ... this.
+	(dmd-output-port): Rename to...
+	(shepherd-output-port): ... this.
+	* modules/shepherd.scm (main): Adjust accordingly.
+
+2016-01-23  Ludovic Courtès  <ludo@gnu.org>
+
+	shepherd: Ignore SIGPIPE.
+	* modules/shepherd.scm (main): Call 'sigaction' to ignore SIGPIPE.
+	* tests/misbehaved-client.sh: New file.
+	* Makefile.am (TESTS): Add it.
+
+2016-01-22  Ludovic Courtès  <ludo@gnu.org>
+
+	reboot, halt: Adjust to sexp replies.
+	* modules/reboot.scm (main): Read the reply in sexp format.
+	* modules/halt.scm (main): Ditto.
+
+	comm: Add 'report-command-error'.
+	* modules/herd.scm (run-command): Move error interpretation to...
+	* modules/shepherd/comm.scm (report-command-error): ... here.  New
+	procedure.
+
+	support: Add 'display-line'.
+	* modules/shepherd/support.scm (display-line): New procedure.
+	* modules/herd.scm (println): Remove.
+	(run-command): Use 'display-line' instead of 'println'.
+
+	Move 'report-error' to (shepherd support).
+	* modules/herd.scm (program-name): Remove.
+	(report-error): Remove.
+	(main): Parametrize 'program-name'.
+	* modules/reboot.scm (program-name): Remove.
+	(main): Parametrize 'program-name'.
+	* modules/halt.scm (program-name): Remove.
+	(main): Parametrize 'program-name'.
+	* modules/shepherd.scm (program-name): Remove.
+	* modules/shepherd/support.scm (display-version): #:program-name
+	defaults to (program-name).
+	(program-name): New variable.
+	(report-error): New macro, moved from herd.scm.
+
+	herd: Report errors according to the GNU standards.
+	* modules/herd.scm (service-list-error): Remove.
+	(report-error): New macro.
+	(run-command): Use it instead of 'format'.
+
+2016-01-20  Ludovic Courtès  <ludo@gnu.org>
+
+	Add '&action-runtime-error'.
+	* modules/shepherd/service.scm (&action-runtime-error): New error
+	condition type.
+	(report-exception): New procedure.
+	(condition->sexp): Handle it.
+	(start): Use 'report-exception' instead of 'caught-error'.
+	(action): Remove use of 'can-apply?'.  Use 'report-exception' instead of
+	'caught-error'.
+	(load-config): Remove 'catch'.
+	* modules/shepherd/support.scm (can-apply?): Remove.
+	* modules/herd.scm (run-command): Handle 'action-exception' errors.
+	* tests/basic.sh: Test the exit code of 'herd' for wrong-arg-num and
+	system-error exceptions.
+
+	doc: Mention exit code of 'herd'.
+	* shepherd.texi (Invoking herd): Mention exit code.
+
+	herd: Interpret 'start' failures as an error.
+	* modules/shepherd/service.scm (launch-service): Return #f on failure.
+	Remove 'local-output' call.
+	* modules/herd.scm (run-command): Add case to interpret the result of
+	'start'.
+	* tests/basic.sh: Test exit code with disable/start/enable.
+
+	Add '&unknown-action-error'.
+	* modules/shepherd/service.scm (&unknown-action-error): New error
+	condition type.
+	(condition->sexp): Handle it.
+	(action)[default-action]: Raise it instead of using 'local-output'.
+	Adjust body so that SRFI-34 exception is not swallowed.
+	* modules/shepherd.scm (process-command): Guard against 'service-error?'
+	in general.
+	* modules/herd.scm (run-command): Handle 'action-not-found' errors.
+
+	Command replies are always sexps.
+	* modules/shepherd/comm.scm (<command-reply>): New type.
+	(write-reply): New procedure.
+	(result->sexp): New generic function.
+	* modules/shepherd/service.scm (condition->sexp): New procedure.
+	(action) <status>: Return OBJ instead of calling 'local-output'.
+	(service->sexp): Turn into a regular procedure.
+	(result->sexp): New method.
+	(action): Return the list of results.
+	(dmd-service) <status>: Return the service list.  Remove 'local-output'
+	call.
+	* modules/shepherd.scm (process-connection): Remove 'paramterize' form.
+	(%not-newline): New variable.
+	(process-command): Add 'port' parameter. Parametrize
+	%CURRENT-CLIENT-SOCKET to a string output port.  Use 'write-reply' to
+	send the reply.
+	(process-textual-commands): Pass PORT to 'process-command'.
+	* modules/herd.scm (display-status-summary): Expect SERVICES to be a
+	regular list.
+	(display-detailed-status): Likewise.
+	(display-service-status): Remove 'error' cases.
+	(println): New procedure.
+	(run-command): Match against 'reply' sexp.
+	* tests/basic.sh: Check the return code of "herd start" and "herd stop"
+	in addition to "herd status" for nonexistent services.
+	* tests/status-sexp.sh: Adjust to new protocol.
+
+2016-01-18  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Raise specific error conditions for missing services.
+	This fixes a regression introduced in 2f204c9 whereby
+	"herd status does-not-exist" would spit out a backtrace on a 'match'
+	error.
+
+	* modules/shepherd/service.scm (&service-error, &missing-service-error):
+	New error conditions.
+	(launch-service, stop, action, deregister-service): Raise it instead of
+	using 'local-output' when the designated service is missing.
+	* modules/shepherd.scm (process-command): Guard against
+	&missing-service-error and handle it.
+	* modules/herd.scm (display-service-status): Handle 'error' sexps.
+	* tests/basic.sh: Test exit code of "herd status does-not-exist".
+	* tests/status-sexp.sh: Test sexp returned for nonexistent services.
+
+2016-01-18  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Poll less aggressively.
+	Among other things, this makes test logs *much* shorter.
+
+	* tests/basic.sh: Use "sleep 0.3" instead of ":" in loops that poll for
+	"$pid".
+	* tests/no-home.sh: Likewise.
+	* tests/status-sexp.sh: Likewise.
+
+2016-01-18  Mathieu Lirzin  <mthl@gnu.org>
+
+	support: Rename user-dmddir to %user-config-dir.
+	* modules/shepherd/support.scm (user-dmddir): Rename to ...
+	(%user-config-dir): ... this.  Honor XDG_CONFIG_HOME and use
+	'$HOME/.config/shepherd' as default value.  All consumers changed.
+	(mkdir-p): New procedure.  Export it.
+	(default-config-file): Use it.
+	(verify-dir): Likewise.
+	* shepherd.texi (Jump Start, Invoking shepherd): Document the new user
+	configuration directory.
+	* tests/basic.sh: Check if XDG_CONFIG_HOME is honored.
+	* Makefile.am (AM_TESTS_ENVIRONMENT): Unset it.
+
+2016-01-18  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Rewrite 'conflicts-with' in functional style.
+	* modules/shepherd/service.scm (conflicts-with): Rewrite using
+	'append-map' and 'filter-map'.
+	(conflicts-with-running): Rewrite in terms of 'conflicts-with'.
+
+	Change "dmd" to "Shepherd" in README.
+	* README: Adjust.
+
+2016-01-17  Mathieu Lirzin  <mthl@gnu.org>
+
+	support: Add a keyword argument '#:secure?' to verify-dir.
+	* modules/shepherd.scm (verify-dir): Replace argument INSECURE by a
+	keyword argument #:SECURE?.  All callers changed.  Improve the logic of
+	the implementation.
+
+	maint: Add .dir-locals.el.
+	* .dir-locals.el: New file.
+
+	maint: Fix version checking for Guile.
+	* configure.ac: Replace an ocurrence of "major-version" with
+	"minor-version".
+
+	maint: Update .gitignore.
+	*.gitignore: Replace dmd with shepherd in .gitignore.
+
+	build: Improve display for silent rules.
+	* Makefile.am (AM_V_INSTANTIATE, AM_V_INSTANTIATE_, AM_V_INSTANTIATE_0):
+	Delete variables.
+	(%): Use the predefined variable AM_V_GEN instead of AM_V_INSTANTIATE.
+	(AM_V_GUILEC_0): Fix spacing between the command and the file name.
+	(%.go): Close standard output when silent rules are enabled, to prevent
+	'guild compile' to make any noise.
+
+2016-01-17  Fabian Harfert  <fhmgufs@web.de>
+	    Ludovic Courtès  <ludo@gnu.org>
+
+	Rename 'deco' command to 'herd'.
+	* deco.in: Rename to...
+	* herd.in: ... this.
+	* modules/deco.scm: Rename to...
+	* modules/herd.scm: ... this.
+	* modules/shepherd.scm, modules/shepherd/comm.scm,
+	modules/shepherd/service.scm, modules/shepherd/support.scm,
+	tests/basic.sh, tests/no-home.sh, tests/respawn.sh,
+	tests/sigint.sh, tests/status-sexp.sh: Adjust accordingly.
+	* Makefile.am (bin_SCRIPTS, template, dist_shepherd_DATA): Adjust
+	accordingly.
+	* shepherd.texi: Change 'deco' to 'herd'.
+	(Invoking herd): Rename to...
+	(Invoking deco): ... this.
+	(deco and shepherd): Rename to...
+	(herd and shepherd): ... this.  Explain the name 'herd' and mention
+	'deco' in a footnote.
+
+2016-01-17  Mathieu Lirzin  <mthl@gnu.org>
+
+	build: Add missing backslash in AM_TESTS_ENVIRONMENT.
+	* Makefile.am (AM_TESTS_ENVIRONMENT): Add missing backslash.
+
+2016-01-13  Ludovic Courtès  <ludo@gnu.org>
+
+	Remove manual hash table resizing code.
+	* modules/shepherd/service.scm (services-max-cnt, services-cnt): Remove.
+	(register-services)[register-single-service]: Remove manual hash table
+	resizing code.
+	(deregister-service)[deregister]: Likewise.
+	* modules/shepherd/support.scm (copy-hashq-table): Remove.
+
+	service: Improve style of 'lookup-running-or-providing'.
+	* modules/shepherd/service.scm (lookup-running-or-providing): Rewrite
+	using 'match'.
+	(service?): New procedure.
+
+	service: Rewrite 'launch-service' in functional style.
+	* modules/shepherd/service.scm (launch-service): Rewrite in a functional
+	style.
+
+2016-01-12  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Support silent rules; enable them by default.
+	* Makefile.am (AM_V_INSTANTIATE, AM_V_INSTANTIATE_)
+	(AM_V_INSTANTIATE_0): New variables.
+	(%: %.in): Use it.
+	(AM_V_GUILEC, AM_V_GUILEC_, AM_V_GUILEC_0): New variables.
+	(%.go: %.scm): Use it.
+	* configure.ac: Use 'AM_SILENT_RULES'.
+
+	Avoid uses of 'call/ec'.
+	* modules/shepherd/args.scm (process-args)[find-short-option]: Use
+	'find' instead of 'call/ec' + 'for-each'.
+	* modules/shepherd/service.scm (start, launch-service): Likewise.
+	(depends-resolved?): Use 'every' instead of 'call/ec'.
+
+	Update copyright year in --version output.
+	* modules/shepherd/support.scm (display-version): Update copyright
+	year.  Replace people's names with "the Shepherd authors".
+
+	shepherd: Remove undocumented 'dmd-status' command.
+	* modules/shepherd.scm (process-command): Remove 'dmd-status' case.
+
+	Rename state directory and log file.
+	* Makefile.am (install-data-local): Change "/run/dmd" to
+	"/run/shepherd".
+	* modules/shepherd/support.scm (%system-socket-dir): Likewise.
+	(default-logfile): Change "dmd.log" to "shepherd.log".
+	* shepherd.texi: Adjust accordingly.
+
+2016-01-11  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Rename.
+	* dmd.texi: Rename to...
+	* shepherd.texi: ... this.  Change "dmd" to "the Shepherd", and
+	"@command{dmd}" to "@command{shepherd}".
+	* Makefile.am (info_TEXINFOS): Adjust accordingly.
+
+	Rename 'dmd' command to 'shepherd'.
+	* modules/dmd.scm: Rename to...
+	* modules/shepherd.scm: ... this.
+	(program-name): Change to "shepherd".
+	* configure.ac: Adjust accordingly.
+	* dmd.in: Rename to...
+	* shepherd.in: ... this.
+	* tests/basic.sh, tests/no-home.sh, tests/respawn.sh,
+	tests/sigint.sh, tests/status-sexp.sh: Invoke 'shepherd' instead of
+	'dmd'.
+	* Makefile.am (templates, bin_SCRIPTS): Adjust accordingly.
+	(dist_shepherd_DATA): Likewise.
+
+	Rename modules to (shepherd ...).
+	* modules/dmd: Rename directory to...
+	* modules/shepherd: ... this.  Adjust module names accordingly.
+	* modules/deco.scm, modules/dmd.scm, modules/halt.scm,
+	modules/reboot.scm, tests/status-sexp.sh: Use the new module names.
+	* configure.ac: Adjust to the new file names.
+	* Makefile.am (templates, BUILT_SOURCES): Adjust file names.
+	(modules/dmd/config.scm): Rename target to...
+	(modules/shepherd/config.scm): ... this.
+	(dmddir, dmdsubdir): Rename to...
+	(shepherddir, shepherdsubdir): ... these.  Adjust corresponding variable
+	names accordingly.
+	(install-exec-hook): Adjust accordingly.
+	(dmd_install_go_files): Rename to...
+	(shepherd_install_go_files): ... this.
+
+	build: Change package name to "GNU Shepherd".
+	* configure.ac: Change name to "GNU Shepherd".  Bump version to 0.3.
+
+2016-01-11  Ludovic Courtès  <ludo@gnu.org>
+
+	License headers refer to "the GNU Shepherd".
+	This is the result of applying this sed script:
+
+	  s/This file is part of GNU dmd/This file is part of the GNU Shepherd/;
+	  s/GNU dmd is free software/The GNU Shepherd is free software/;
+	  s/GNU dmd is distributed/The GNU Shepherd is distributed/;
+	  s/along with GNU dmd/along with the GNU Shepherd/
+
+2016-01-09  Ludovic Courtès  <ludo@gnu.org>
+
+	service: 'status' always returns an sexp; 'deco' interprets it.
+	This moves formatting (and localization) of 'status' command outputs to
+	the client side.
+
+	* modules/dmd/service.scm (action)[status]: Write (service->sexp obj)
+	instead of calling 'dmd-status'.
+	(dmd-status): Remove.
+	* modules/dmd/service.scm (dmd-service) <actions>: Remove 'sexp-status'
+	and 'detailed-status'; 'status' now does what 'sexp-status' used to do.
+	* modules/deco.scm (service-list-error, service-canonical-name)
+	(display-status-summary, display-detailed-status)
+	(display-service-status): New procedure.
+	(alist-let*): New macro.
+	* modules/deco.scm (run-command): Special-case the 'status' and
+	'detailed-status' commands, using the above procedures.  Close SOCK
+	before returning.
+	* Makefile.am (AM_TESTS_ENVIRONMENT): Add 'GUILE', 'GUILE_LOAD_PATH',
+	and 'GUILE_LOAD_COMPILED_PATH'.
+	* tests/status-sexp.sh (fetch_status): New variable.
+	Use "$GUILE" when invoking Guile.  Use the (dmd comm) module and
+	FETCH_STATUS to fetch the status sexp.
+
+2016-01-09  Ludovic Courtès  <ludo@gnu.org>
+
+	deco: 'run-command' expects symbols.
+	* modules/deco.scm (run-command): Expect SERVICE and ACTION to be
+	symbols.
+	(main): Adjust accordingly.
+
+2016-01-08  Ludovic Courtès  <ludo@gnu.org>
+
+	service: Clear supplementary groups only when asked to.
+	* modules/dmd/service.scm (exec-command): Move 'setgroups' under 'when
+	group'.
+
+	Write the PID file atomically.
+	* modules/dmd/support.scm (with-atomic-file-output): New file.
+	* modules/dmd.scm (main): Use it.
+
+	deco: "deco status" is equivalent to "deco status dmd".
+	* modules/deco.scm (run-command): New procedure.
+	(main): Use it.  Allow the 'service' argument to be omitted for the
+	"status" and "detailed-status" actions.
+	* tests/basic.sh, tests/respawn.sh: Use "deco status" instead of "deco
+	status dmd" in some places.
+	* dmd.texi (Jump Start): Simplify the examples accordingly.
+	(Invoking deco): Document the change.
+
+	service: Add 'status-sexp' action for dmd.
+	* modules/dmd/service.scm (service->sexp, service-list): New
+	procedures.
+	(dmd-service)[status-sexp]: New action.
+	* tests/status-sexp.sh: New file.
+	* Makefile.am (TESTS): Add it.
+
+2016-01-07  Ludovic Courtès  <ludo@gnu.org>
+
+	services: 'last-respawns' is no longer circular.
+	Before this change, the 'last-respawns' slot was a circular list.
+
+	* modules/dmd/service.scm (respawn-limit-hit?): New procedure.
+	(<service>)[last-respawns]: Initialize to the empty list.
+	(respawn-service): Use 'respawn-limit-hit?'.  Always append to the
+	'last-respawns' slot.
+	(start): Reset 'last-respawns' slot.
+
+2016-01-07  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Install 'shutdown' as a symlink to 'halt'.
+	* Makefile.am (install-exec-hook): Depend on
+	'install-executable-symlinks'.
+	(install-executable-symlinks, uninstall-hook): New targets.
+
+	'halt' and 'reboot' connect to the system socket.
+	* modules/dmd/support.scm (%system-socket-dir): New variable.
+	(default-socket-dir): Use it.
+	(%system-socket-file): New variable.
+	* modules/halt.scm (main): Use %SYSTEM-SOCKET-FILE.
+	* modules/reboot.scm (main): Likewise.
+
+2016-01-06  Ludovic Courtès  <ludo@gnu.org>
+
+	'exec-command' clears the list of supplementary groups.
+	* modules/dmd/service.scm (exec-command): Add call to 'setgroups'.
+
+2016-01-06  David Thompson  <dthompson2@worcester.edu>
+
+	service: Change GID before UID when dropping privileges.
+	* modules/dmd/service.scm (exec-command): Move 'setgid' call before
+	'setuid' call.
+
+2016-01-06  Ludovic Courtès  <ludo@gnu.org>
+
+	tests: Remove race condition in respawn test.
+	Fixes <http://bugs.gnu.org/22130>.
+	Reported by Mark H Weaver <mhw@netris.org>.
+
+	* tests/respawn.sh: Use 'wait_for_file' instead of 'test -f' when
+	checking for service PID files right after services have been started.
+
+2015-11-20  Ludovic Courtès  <ludo@gnu.org>
+
+	halt, reboot: Clarify usage line in '--help'.
+	Reported by sebboh on #guix.
+
+	* modules/halt.scm (main): Remove "ARGS..." string in 'process-args'
+	  argument.
+	* modules/reboot.scm (main): Ditto.
+
+2015-09-04  David Thompson  <dthompson2@worcester.edu>
+
+	service: Export provided-by procedure.
+	* modules/dmd/service.scm: Export provided-by.
+
+2015-08-20  Ludovic Courtès  <ludo@gnu.org>
+
+	Add Andy to 'AUTHORS'.
+
+2015-08-20  Andy Wingo  <wingo@pobox.com>
+
+	Add ability to set user and group before exec'ing a command
+	* dmd.texi (Service De- and Constructors): Document #:user and #:group
+	  options.
+	* modules/dmd/service.scm (exec-command, fork+exec-command):
+	  (make-forkexec-constructor): Add #:user and #:group keyword arguments.
+
+2015-05-03  David Thompson  <dthompson2@worcester.edu>
+
+	doc: Fix location of default user dmd configuration file.
+	* dmd.texi ("Jump Start"): Document the real default user config file.
+
+2015-02-08  Ludovic Courtès  <ludo@gnu.org>
+
+	services: Export 'make-actions'.
+	* modules/dmd/service.scm: Export 'make-actions', which is documented.
+
+2014-11-05  Ludovic Courtès  <ludo@gnu.org>
+
+	dmd: Autoload (ice-9 readline).
+	* modules/dmd.scm: Autoload (ice-9 readline) since it's rarely needed
+	  anyway.
+
+	dmd: Ignore 'daemonize' command when running as PID 1.
+	* modules/dmd/service.scm (dmd-service)[daemonizing]: Do nothing
+	  when (getpid) returns 1.
+
+2014-07-16  Ludovic Courtès  <ludo@gnu.org>
+
+	dmd: Stop the 'dmd' service upon SIGINT.
+	* modules/dmd.scm (main): Add 'sigaction' call.
+	* tests/sigint.sh: New file.
+	* Makefile.am (TESTS): Add it.
+
+2014-07-11  David Michael  <fedora.dm0@gmail.com>
+
+	build: Support cross-compilation.
+	* Makefile.am (%.go): Specify the target platform.
+
+2014-07-09  David Michael  <fedora.dm0@gmail.com>
+
+	dmd: Find the system dmdconf.scm in the configured sysconfdir
+	* Makefile.am (instantiate): Substitute the sysconfdir value.
+	* modules/dmd/config.scm.in (%sysconfdir): New variable.
+	* modules/dmd/support.scm (default-config-file): Use %sysconfdir in
+	  place of prefix+"/etc".
+
+2014-07-07  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'NEWS'.
+	* NEWS: Update.
+
+	Display the value of the 'running' slot in 'status' commands.
+	* modules/dmd/service.scm (dmd-status): When OBJ is running, show the
+	  value of the 'running' slot.
+
+2014-07-04  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Bump to 0.2.
+	* configure.ac: Bump to version 0.2.
+
+	services: Use / as the execution directory when $HOME is nonexistent.
+	* modules/dmd/service.scm (default-service-directory): Add
+	  'ensure-valid' procedure and use it.
+	* tests/respawn.sh: Add some debugging output.
+
+2014-07-04  Ludovic Courtès  <ludo@gnu.org>
+
+	dmd: Don't create configuration file when '-c' is passed.
+	Fixes a bug where 'dmd' would fail in 'default-config-file' when $HOME
+	is not writable, even if '-c' was passed.
+
+	* modules/dmd.scm (main): Delay call to 'default-config-file'.
+	* tests/no-home.sh: New file.
+	* Makefile.am (TESTS): Add it.
+
+2014-06-24  Ludovic Courtès  <ludo@gnu.org>
+
+	Introduce 'fork+exec-command'.
+	* modules/dmd/service.scm (fork+exec-command): New procedure.
+	  (make-forkexec-constructor): Use it.
+	* dmd.texi (Service De- and Constructors): Document it.
+
+	Export and document 'exec-command'.
+	* modules/dmd/service.scm (exec-command): Export.  Augment docstring.
+	* dmd.texi (Service De- and Constructors): Document it.
+
+2014-06-23  Ludovic Courtès  <ludo@gnu.org>
+
+	Make sure file descriptor zero is open.
+	* modules/dmd/service.scm (exec-command): Open /dev/null on file
+	  descriptor 0.
+
+2014-06-19  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Mention the 'status' command in "Jump Start".
+	* dmd.texi (Jump Start): Mention 'deco status dmd', 'deco
+	  detailed-status dmd', and 'deco status apache'.
+
+2014-05-09  Ludovic Courtès  <ludo@gnu.org>
+
+	Close the current log output port in 'stop-logging'.
+	* modules/dmd/comm.scm (stop-logging): Add 'close-port' call.
+
+2014-05-07  Ludovic Courtès  <ludo@gnu.org>
+
+	Open the log file in append mode.
+	* modules/dmd/comm.scm (start-logging): Open FILE in append mode.
+
+	dmd: Make SIGALRM hack conditional on multi-threading support.
+	* modules/dmd.scm (main): Move SIGALRM hack under (provided? 'threads)
+	  condition.
+
+	Make sure the SIGCHLD handler doesn't run concurrently with 'stop'.
+	* modules/dmd/service.scm (stop <service>): Wrap in
+	  'call-with-blocked-asyncs'.  Remove 'running-value' variable; set the
+	  'running' slot of OBJ to #f when its 'stop' procedure has completed.
+	  (respawn-service): Fix comment about asynchronous signal delivery.
+
+	Change so that $HOME prevails over /etc/passwd.
+	* modules/dmd/support.scm (user-homedir): Move (getenv "HOME") first.
+
+	Turn 'default-config-files' into a procedure so side effects are under control.
+	* modules/dmd/support.scm (default-config-file): Turn into a procedure,
+	  so the side effect doesn't happen at random times.
+	* modules/dmd.scm (main): Adjust accordingly.
+
+2014-04-10  Ludovic Courtès  <ludo@gnu.org>
+
+	Enrich 'system-error' exceptions thrown by 'connect'.
+	* modules/dmd/comm.scm (open-connection): Wrap 'connect' call in
+	  'catch'.
+
+2014-04-10  Ludovic Courtès  <ludo@gnu.org>
+
+	Gracefully handle connection errors in client programs.
+	Suggested by Cyprien Nicolas <cyprien@nicolas.tf>.
+
+	* modules/dmd/support.scm (call-with-system-error-handling): New
+	  procedure.
+	  (with-system-error-handling): New macro.
+	* modules/deco.scm (main): Wrap body in 'with-system-error-handling'.
+	* modules/halt.scm (main): Likewise.
+	* modules/reboot.scm (main): Likewise.
+
+2014-04-07  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'errno' procedure from Guix.
+	* modules/dmd/system.scm.in (errno): Update definition, copied from
+	  Guix.
+
+2014-03-31  Ludovic Courtès  <ludo@gnu.org>
+
+	Correctly handle one-argument deprecated form of 'make-forkexec-constructor'.
+	* modules/dmd/service.scm (make-forkexec-constructor): Add
+	  'warn-deprecated-form' thunk.  In the main lambda, check whether
+	  COMMAND is a string, and convert it to a list and call
+	  'warn-deprecated-form'.
+
+2014-03-25  Ludovic Courtès  <ludo@gnu.org>
+
+	Add #:directory and #:environment-variables for 'make-forkexec-constructor'.
+	* modules/dmd/service.scm (default-service-directory,
+	  default-environment-variables, exec-command): New procedures.
+	  (make-forkexec-constructor): Rewrite using 'case-lambda*', add new
+	  form with keyword parameters, and deprecate the old form.  Use
+	  'exec-command'.
+	* tests/respawn.sh <configuration>: Use the non-deprecated form.
+	* dmd.texi (Service De- and Constructors): Adjust
+	  'make-forkexec-constructor' documentation accordingly.
+
+2014-03-25  Alex Sassmannshausen  <alex.sassmannshausen@gmail.com>
+
+	dmd: Add dmd action 'reload': unload all; load.
+	* modules/dmd/service.scm (load-config): New procedure.
+	  (dmd-service): Re-factor 'load', add new action: 'reload'.
+	* dmd.texi (The 'dmd' and 'unknown' services): Document 'reload'.
+	* tests/basic.sh: Add 'reload' test.
+
+2014-03-12  Ludovic Courtès  <ludo@gnu.org>
+
+	Don't warn about processes that die and don't have an associated service.
+	* modules/dmd/service.scm (respawn-service): Comment out warning.
+
+2014-03-12  Alex Sassmannshausen  <alex.sassmannshausen@gmail.com>
+
+	dmd: Add dmd action unload: unload known services.
+	* modules/dmd/service.scm (deregister-services): New procedure.
+	  (dmd-service): Add new action: unload.
+	* dmd.texi (The 'dmd' and 'unknown' services): Document 'unload'.
+	* tests/basic.sh: Add 'unload' tests (stop single service  & 'all').
+
+2014-02-18  Ludovic Courtès  <ludo@gnu.org>
+
+	Help Emacs traverse support.scm.
+	* modules/dmd/support.scm (make-bare-init-file): Move opening
+	  parentheses away from the first column so that Emacs is not confused.
+
+	dmd: Add '--pid' option.
+	* modules/dmd.scm (main): Add '--pid' option and honor it.
+	* tests/basic.sh: Run dmd with '--pid'.  Wait for the PID file to be
+	  available, for synchronization.
+	* tests/respawn.sh: Likewise.
+	* dmd.texi (Invoking dmd): Document '--pid'.
+
+2014-02-05  Ludovic Courtès  <ludo@gnu.org>
+
+	Augment 'AUTHORS'.
+
+2014-02-05  Alex Sassmannshausen  <alex.sassmannshausen@gmail.com>
+
+	dmd: Make config file if necessary when not run as root.
+	* modules/dmd/support.scm (make-bare-init-file): new procedure to
+	  generate basic init file.
+	  (default-logfile): Check for init file, create it if necessary.
+
+2014-02-04  Alex Sassmannshausen  <alex.sassmannshausen@gmail.com>
+
+	dmd: Use ~/.dmd.d/ by default when not run as root.
+	* modules/dmd/support.scm: Add copyright.
+	  (user-dmddir): New variable.
+	  (default-logfile): Use it instead of user-homedir.
+	  (default-persistency-state-file): Use it instead of user-homedir.
+	  (default-configfile): Use it instead of user-homedir, use init.scm
+	  as default name for configfile, ensure .dmd.d exists.
+	  (default-socket-dir): Add check for root, if #f, use user-dmddir as
+	  base for socket.
+
+2014-01-24  Alex Sassmannshausen  <alex.sassmannshausen@gmail.com>
+
+	Doc: Introduction: rewrite for style and clarity.
+	* dmd.texi (Introduction): Rewrite for style and clarity.
+
+2013-12-15  Ludovic Courtès  <ludo@gnu.org>
+
+	Start gracefully even when /etc/{passwd,shadow} are missing.
+	* modules/dmd/support.scm (user-homedir): Gracefully handle 'getpwuid'
+	  failure.
+
+2013-12-03  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Update outdated documentation of communication facilities.
+	* dmd.texi (Invoking dmd): Remove mention of special socket name 'none';
+	  replace with text about '-'.
+	  (Communication): Mention (dmd comm).  Remove documentation of
+	  <receiver>, <sender>, receive-data, and send-data.  Document
+	  'open-connection', 'write-command', and 'read-command'.
+
+	Change Alfred's address.
+
+2013-12-02  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Change 'respawn.sh' test to use two services.
+	* tests/respawn.sh: Add second service.  Use
+	  'assert_killed_service_is_respawned' on both services.
+
+	dmd: SIGCHLD handler iterates over all the dead processes.
+	* modules/dmd/service.scm (waitpid*): New procedure.
+	  (respawn-service): Use it, and pass WNOHANG.  Use 'match', and loop
+	  until 'waitpid*' returns a PID of 0.
+
+	dmd: Don't get SIGCHLD for processes that stop.
+	* modules/dmd/service.scm: Pass SA_NOCLDSTOP as a 'sigaction' flag.
+
+	Change log file to $localstatedir/log/dmd.log when running as 'root'.
+	* modules/dmd/support.scm (default-logfile): Add '/log'.
+	* modules/dmd/comm.scm (start-logging): Make sure FILE's directory
+	  exists.
+
+2013-12-01  Ludovic Courtès  <ludo@gnu.org>
+
+	Clarify SIGCHLD handler.
+	* modules/dmd/service.scm (find-service): New function.
+	  (respawn-service): Use it, and fold the body of 'handler' into
+	  'respawn-service'.  Emit warning about unknown child processes.
+
+	build: Add test for respawnable services.
+	* tests/respawn.sh: New file.
+	* Makefile.am (TESTS): Add it.
+	  (AM_TESTS_ENVIRONMENT): Set 'SHELL' variable.
+
+	dmd: Work around unreliable signal delivery.
+	* modules/dmd.scm (main): Add 'sigaction' and 'alarm' call to wake up
+	  every second.  Argh.
+
+	Use 'EINTR-safe' for 'accept' calls.
+	* modules/dmd/service.scm (EINTR-safe): Move to...
+	* modules/dmd/support.scm (EINTR-safe): ... here.
+	* modules/dmd.scm (main): Use 'EINTR-safe' instead of
+	  'catch-system-error' for 'accept' calls.
+
+2013-11-30  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Change test to build a local log file rather than under $HOME.
+	* tests/basic.sh: Use a temporary log file under $PWD.
+
+	build: Add a basic test.
+	* tests/basic.sh: New file.
+	* configure.ac: Add 'color-tests' Automake option.
+	* Makefile.am (TESTS, TEST_EXTENSIONS, AM_TESTS_ENVIRONMENT,
+	  SH_LOG_COMPILER, AM_SH_LOG_FLAGS): New variables.
+	  (EXTRA_DIST): Add $(TESTS).
+
+	build: Generate 'ChangeLog' upon 'make dist'.
+	* ChangeLog: Rename to...
+	* ChangeLog-2003: ... this.
+	* ChangeLog: New file.
+	* Makefile.am (EXTRA_DIST): Add 'ChangeLog-2003'.
+	  (gen-ChangeLog, dist-hook): New targets.
+	* build-aux/gitlog-to-changelog: New file, from Gnulib.
+
+	Provide EINTR-safe versions of 'system' and 'system*' for Guile < 2.0.10.
+	* modules/dmd/service.scm (EINTR-safe, system*, system): New
+	  procedures.
+
+	Update 'NEWS' for 0.1.
+
+	Change 'NEWS' to Org-mode.
+
+	Update 'README' and 'AUTHORS'.
+
+	build: Use Automake's 'std-options' flag.
+	* configure.ac: Add 'std-options' to 'AM_INIT_AUTOMAKE'.
+
+	build: Make commands usable before install; relocate them upon install.
+	* Makefile.am (install-exec-hook): New target.
+	  (instantiate): Remove %DMDDIR%; use %modsrcdir% and %modbuilddir%
+	  instead.
+	* deco.in, dmd.in, halt.in, reboot.in: Use them instead of %DMDDIR%.
+
+	build: Clean leftover 'halt' and 'reboot' files.
+	* Makefile.am (CLEANFILES): Add $(sbin_SCRIPTS).
+
+	doc: Switch license to GNU FDL 1.3+.
+	* dmd.texi: Change @copying to FDL 1.3+.  Update master menu.
+	  (GNU Free Documentation License): New appendix.
+	* fdl-1.3.texi: New file.
+	* Makefile.am (EXTRA_DIST): Add it.
+	* COPYING.DOC: Remove.
+
+	doc: Assorted improvements.
+	* dmd.texi: Change title to "GNU dmd Manual".  Use @copying.  Add
+	  directory entry for deco, reboot, and halt.  Set encoding to UTF-8.
+	  Use @contents.
+	  (Introduction): Fix cross-ref to Guile's Top node.
+	  (deco and dmd): Update menu.
+	  (Invoking dmd): Add reference to "Services".  Clarify text of
+	  '--insecure'.  Remove '--silent'.  Give exact socket file name.
+	  (Invoking deco): Improve wording an typography.  Remove non-existent
+	  '--insecure' option.
+	  (Invoking reboot, Invoking halt): New nodes.
+	  (Services): Add cross-ref to GOOPS.  Mention the (dmd service) module.
+	  (Service De- and Constructors): Use @var and @dots appropriately.
+	  Update 'make-forkexec-constructor' documentation to mention closed
+	  file descriptors.
+	  (The dmd and unknown services): Use @table @code; remove redundant
+	  @code.  Mention the execution environment for 'load'.
+
+2013-11-29  Ludovic Courtès  <ludo@gnu.org>
+
+	doc: Cosmetic updates.
+	* dmd.texi (YEARS): Rename to...
+	  (OLD-YEARS): ... this.
+	  (NEW-YEARS): New variable.
+	  Add myself as copyright holder, and add copyright line.
+	  (Introduction): Mention use as an init system and as a user.  Link to
+	  Guile's manual.
+	  (Jump Start): Update socket file name.  Mention 'networking', not
+	  'network'.  Remove the 'silent' and 'verbose' actions.
+	  (Coding standards): Remove hint about formatting of 'if'.
+
+	Add licensing and copyright information in '--version'.
+	* modules/dmd/support.scm: Rewrite as UTF-8.
+	  (display-version): Show copyright and licensing info.
+
+	Add 'halt' and 'reboot' commands.
+	* halt.in, reboot.in, modules/halt.scm, modules/reboot.scm: New files.
+	* Makefile.am (sbin_SCRIPTS): New variable.
+	  (templates): Add halt.in and reboot.in.
+	  (dist_dmd_DATA): Add halt.scm and reboot.scm.
+	  (maybe_executable): New variable.
+	  (%:%.in): Use it.
+	  (deco, dmd): Remove targets.
+
+	build: Factorize socket directory handling.
+	* Makefile.am (install-data-local): Use $(localstatedir), not
+	  ${prefix}/var.  Change mode to 700, not 777.  Add '-'.
+	  (install-data-hook): Remove.
+
+	deco: Use line buffering for the input.
+	* modules/deco.scm (main): Add 'setvbuf' call before receiving input.
+
+	Have 'make-forkexec-constructor' close all file descriptors after 'fork'.
+	* configure.ac: Check for '_SC_OPEN_MAX' and substitute it.
+	* modules/dmd/system.scm.in (_SC_OPEN_MAX): New variable.
+	  (sysconf, max-file-descriptors): New procedures.
+	* modules/dmd/service.scm (make-forkexec-constructor): Close all the
+	  file descriptors except stdout and stderr before calling 'execlp'.
+
+2013-11-28  Ludovic Courtès  <ludo@gnu.org>
+
+	dmd: The 'load' action loads in a fresh module.
+	* modules/dmd.scm (make-dmd-user-module): Move to support.scm.
+	  (main): Use 'load-in-user-module' instead of 'primitive-load' and
+	  'make-dmd-user-module'.
+	* modules/dmd/service.scm (dmd-service)[load]: Use
+	  'load-in-user-module'.
+	* modules/dmd/support.scm (make-dmd-user-module, load-in-user-module):
+	  New procedures.
+
+	Change SIGCHLD handler to dismiss services not backed by a process.
+	* modules/dmd/service.scm (respawn-service)[handler]: Deal with
+	  'running' slots that are not a number.
+
+	build: Chmod 700 $localstatedir/run/dmd.
+	* Makefile.am (install-data-hook): New target.
+
+	Allow non-respawnable services to be stopped.
+	* modules/dmd/service.scm (stop): Always clear the 'running' slot before
+	  calling OBJ's 'stop'.  Restore its value upon exception.
+
+	dmd: Fix race condition when a service's process dies immediately at startup.
+	* modules/dmd/service.scm (start): Wrap call to OBJ's 'start' field in
+	  'call-with-blocked-asyncs'.
+	  (respawn-service): Disable services whose process just died, even if
+	  the service is not respawnable.
+
+2013-11-27  Ludovic Courtès  <ludo@gnu.org>
+
+	Catch 'system-error' in 'make-forkexec-constructor'.
+	* modules/dmd/service.scm (make-forkexec-constructor): Catch and handle
+	  'system-error'.
+
+	dmd: Catch 'system-error' exceptions in 'accept' call.
+	* modules/dmd.scm (main): Wrap 'accept' call in 'catch-system-error'.
+
+	build: Bump to 0.1.
+	* configure.ac: Set version to 0.1.
+
+	dmd: Evaluate the configuration file in a fresh module.
+	* modules/dmd.scm (make-dmd-user-module): New procedure.
+	  (main): Use it.  Load CONFIG-FILE with 'primitive-load', in the
+	  context of a fresh module.
+	* dmd.texi (Jump Start): Write "reads and evaluates".
+	  (Invoking dmd): Likewise.  Make the evaluation context explicit.
+
+	dmd: Adjust command reading from stdin.
+	* modules/dmd.scm (main): Remove (not socket-file) case; call
+	  'process-textual-commands' in that case.
+	  (process-textual-commands): New procedure.
+
+	system: Report the 'errno' value upon 'reboot' failure.
+	* modules/dmd/system.scm.in (%libc-reboot): Call 'errno' upon failure,
+	  and throw an exception.
+	  (%libc-errno-pointer, errno): New procedures.
+
+2013-11-25  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Ensure the templates are instantiated before anything is compiled.
+	* Makefile.am (.scm.go): Change to...
+	  (%.go:%.scm): ... this.  Add dependency on the instantiated
+	  templates.
+
+	deco: Remove '--insecure'.
+	* modules/deco.scm (main): Remove '--insecure' option.
+
+	dmd: Simplify output port handling.
+	* modules/dmd/comm.scm: Unsplice code formerly in 'begin-dmd' form.
+	  Strip export list.  Remove top-level call to 'set-current-output-port'.
+	  (make-dmd-output-port): New procedure.
+	  (dmd-output-port): Use it.
+	  (silent, be-silent, be-verbose): Remove.
+	* modules/dmd/service.scm (dmd-service): Remove the 'silent' and
+	  'verbose' actions.
+	* modules/dmd/support.scm (begin-dmd): Remove.
+	* modules/dmd.scm (main): Call 'set-current-output-port' from here.
+	  Remove use of 'be-silent'.  '--silent' and '--quiet' are now no-ops.
+
+	Remove now-useless variable.
+	* modules/dmd/comm.scm (terminating-string): Remove.
+
+2013-11-24  Ludovic Courtès  <ludo@gnu.org>
+
+	Avoid use of deprecated interface to procedure arities.
+	* modules/dmd/support.scm (can-apply?): Use 'procedure-minimum-arity'
+	  instead of 'procedure-property'.
+
+	dmd: Write to stdout only as a last resort.
+	* modules/dmd/comm.scm (dmd-output-port): When (%current-client-socket)
+	  is true, send data only to that.
+
+	Use a single socket for communication; change to an sexp-based protocol.
+	* modules/dmd/comm.scm (<sender>, initialize, send-data, <receiver>,
+	  initialize, receive-data): Remove.
+	  (<dmd-command>): New record type.
+	  (dmd-command, open-connection, read-command, write-command): New
+	  procedures.
+	  (extra-output-sender, open-extra-sender, close-extra-sender,
+	  without-extra-output): Remove.
+	  (%current-client-socket): New variable.
+	* modules/dmd/service.scm (respawn-service): Remove use of
+	  'without-extra-output'.
+	* modules/dmd/support.scm (default-socket-file): Change to /socket.
+	  (default-deco-socket-file): Remove.
+	* modules/deco.scm (main): Remove --result-socket option.  Use
+	  'open-connection' instead of <sender> and <receiver>.  Use
+	  'write-command' instead of 'send-data'.  Use 'read-line' instead of
+	  'receive-data'.
+	* modules/dmd.scm (open-server-socket): New procedure.
+	  (main): Use it.  Remove handshake.
+	  (process-connection): New procedure.
+	  (process-command): Expect COMMAND to be a <dmd-command>; use 'match'.
+
+	Fix invocation of dmd's and deco's 'main' procedures.
+	* modules/deco.scm (main): Turn 'args' into a rest argument.
+	  Remove invocation at end of file.
+	* modules/dmd.scm (main): Likewise.
+	  Remove invocation at end of file.
+
+2013-11-20  Ludovic Courtès  <ludo@gnu.org>
+
+	dmd-service: Really halt/power-off.
+	* modules/dmd/service.scm (dmd-service): Change 'halt' and 'power-off'
+	  handler for 'quit' to accept one argument.  Move message to the handler.
+	* modules/dmd.scm (process-command): Add "Rebooting..." message before
+	  call to 'reboot'.
+
+	build: Make 'deco' and 'dmd' executable.
+	* Makefile.am (deco, dmd): New targets.
+
+	deco: Gracefully handle not-enough-arguments conditions.
+	* modules/deco.scm (main): Gracefully handle not-enough-arguments
+	  conditions.
+
+2013-11-14  Ludovic Courtès  <ludo@gnu.org>
+
+	dmd-service: Add 'halt' and 'power-off' actions.
+	* modules/dmd/service.scm (shutdown-services): New procedure.  Code
+	  moved from...
+	  (dmd-service)[#:stop]: ... here.
+	  [#:actions]: Add 'halt' and 'power-off'.
+
+	'deco stop dmd' reboots instead of panicking.
+	* modules/dmd.scm (process-command): In 'quit' handler: when running as
+	  root, call 'reboot' instead of 'quit'.
+	* modules/dmd/service.scm (dmd-service)[daemonize]: Exit with
+	  'primitive-exit'.
+
+	dmd-service: Use 'when' in contexts for effect.
+	* modules/dmd/service.scm (dmd-service): Use 'when' instead of 'if' or
+	  'and' when in effect context.
+
+	Add (dmd system).
+	* modules/dmd/system.scm.in: New file.
+	* Makefile.am (templates): Add it.
+	  (nodist_dmdsub_DATA): Add modules/dmd/system.{scm,go}.
+	* configure.ac: Bump Autoconf requirement, for 'AC_COMPUTE_INT'.  Use
+	  'AC_CANONICAL_HOST'.  Add 'AC_COMPUTE_INT' invocations for RB_*
+	  constants.  Output modules/dmd/system.scm.
+
+2013-11-03  Ludovic Courtès  <ludo@gnu.org>
+
+	Upgrade to GPLv3+.
+
+	Augment '.gitignore'.
+
+	Change '--help' output to match current GNU standard.
+	* modules/dmd/config.scm.in (package-url): New variable.
+	* Makefile.am (instantiate): Substitute %PACKAGE_URL%.
+	* modules/dmd/args.scm (process-args): Change '--help' message to comply
+	  with current GNU standards.
+
+	Commands don't start a shell, and avoid auto-compilation.
+	* deco.in, dmd.in: Rewrite in Scheme; add '--no-auto-compile'.
+
+	Install the current locale.
+	* modules/deco.scm (main): Add 'setlocale' call.
+	* modules/dmd.scm (main): Likewise.
+
+	Change '--version' output to match current GNU standard.
+	* modules/dmd/config.scm.in (package-name): New variable.
+	* Makefile.am (instantiate): Substitute %PACKAGE_NAME%.
+	* modules/dmd/support.scm (display-version): Use the standard GNU
+	  format.
+
+2013-09-27  Ludovic Courtès  <ludo@gnu.org>
+
+	Honor --localstatedir; change socket file to be independent from the user.
+	* modules/dmd/support.scm (default-socket-dir): Change to be independent
+	  of the calling user.  Use '%localstatedir', not 'Prefix-dir'.
+	  (default-persistency-state-file): Use '%localstatedir'.
+
+	Use 'lambda*' instead of 'opt-lambda'.
+	* modules/dmd/support.scm (opt-lambda): Remove.
+	* modules/dmd/service.scm (make-kill-destructor, dmd-service): Use
+	  'lambda*' instead of 'opt-lambda'.
+
+	doc: Use @ifnottex, not @ifinfo, for the 'Top' node.
+	* dmd.texi (Top): Use @ifnottex instead of @ifinfo, as recommended by
+	  makeinfo.
+
+2013-09-21  Ludovic Courtès  <ludo@gnu.org>
+
+	Update 'NEWS'.
+
+	Fix typo in 'local-output'.
+	* modules/dmd/support.scm (local-output): Actually write to the current
+	  output port.
+
+	build: Use the package bug-report address.
+	* Makefile.am (instantiate): Add @PACKAGE_BUGREPORT@.
+	* modules/dmd/config.scm.in (bug-address): Use @PACKAGE_BUGREPORT@.
+
+	build: Use Automake with '-Wall -Wno-portability'.
+	* configure.ac: Use '-Wall -Wno-portability' for Automake.
+
+2013-09-20  Ludovic Courtès  <ludo@gnu.org>
+
+	Update '.gitignore'.
+
+	Become the session leader when forking a service.
+	* modules/dmd/service.scm (make-forkexec-constructor): Call 'setsid'.
+
+	service: Rewrite 'make-actions' as a 'syntax-rules' macro.
+	* modules/dmd/service.scm (make-actions): Move above first use; rewrite
+	  using 'syntax-rules'.
+
+2013-09-19  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Store 'dmd.log' under $localstatedir.
+	* Makefile.am (instantiate): Add %localstatedir%.
+	* modules/dmd/config.scm.in (%localstatedir): New variable.
+	* modules/dmd/support.scm (default-logfile): As root, set to
+	  (string-append %localstatedir "/dmd.log").
+
+	Remove generated file.
+	* modules/dmd/config.scm: Remove.
+
+	build: Substitute $(GUILE) in scripts.
+	* Makefile.am (instantiate): Substitute %GUILE%.
+	* deco.in, dmd.in: Use %GUILE%.
+
+	build: Factorize sed expression for template instantiation.
+	* Makefile.am (instantiate): New variable.
+	  (%, modules/dmd/config.scm): Use it.
+
+	Consistently use 'make-forkexec-constructor'.
+	* dmd.texi (Service De- and Constructors): Change
+	  'make-childexec-constructor' to 'make-forkexec-constructor'.
+	* examples/wolfgangj.scm: Likewise.
+
+2013-09-13  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Use $(SED).
+	* configure.ac: Add 'AC_PROG_SED'.
+	* Makefile.am: Use it.
+
+	build: Fix 'distcheck'.
+	* Makefile.am (dmd_DATA): Rename to...
+	  (dist_dmd_DATA): ...this.
+	  (nodist_dmd_DATA): Adjust accordingly.
+	  (dmdsub_DATA): Rename to...
+	  (dist_dmdsub_DATA): ... this.
+	  (nodist_dmdsub_DATA): Adjust accordingly.
+	  (CLEANFILES): Add $(bin_SCRIPTS).
+	  (modules/dmd/config.scm): New target.
+	  (BUILT_SOURCES): New variable.
+
+	doc: Use better name for the Texinfo directory entry.
+	* dmd.texi: Change direntry name to "dmd".
+
+2013-02-14  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Compile and install `.go' files.
+	* Makefile.am (nodist_dmd_DATA): New variable.
+	  (nodist_dmdsub_DATA): Add .go files.
+	  (.scm.go): New rule.
+	  (SUFFIXES, dmd_install_go_files): New variable.
+	  ($(dmd_install_go_files)): New rule.
+	* configure.ac: Check for `guild'.
+	* deco.in, dmd.in: Set `GUILE_LOAD_COMPILED_PATH'.
+
+2013-02-10  Ludovic Courtès  <ludo@gnu.org>
+
+	build: Use modern `configure.ac'.
+	* configure.in: Rename to...
+	* configure.ac: ... this.  Use current `AC_INIT' and `AM_INIT_AUTOMAKE'
+	  invocations.  Add `AC_CONFIG_SRCDIR' and `AC_CONFIG_AUX_DIR'.
+
+2013-02-09  Ludovic Courtès  <ludo@gnu.org>
+
+	Use modules instead of `load'.
+	* args.scm, comm.scm, config.scm.in, runlevel.scm, service.scm,
+	  support.scm: Move under modules/dmd and turn into modules.  Fix
+	  various small issues.
+	* deco.scm, dmd.scm: Move under modules/ and turn into modules.  Shuffle
+	  around global variables to other places.
+	* self.scm: Remove.  Move `dmd-service' variable to
+	  modules/dmd/service.scm.
+	* configure.in: Adjust `AC_INIT' call accordingly.  Use
+	  `AC_PROG_MKDIR_P'.
+	* Makefile.am (templates): Adjust accordingly.
+	  (dmd_data): Remove.
+	  (dmd_DATA, dmdsubdir, dmdsub_DATA, nodist_dmdsub_DATA): New
+	  variables.
+	  (%: %.in): Make the target's parent directory first.
+
+	Remove more generated files.
+
+	Remove uses of `debug-enable'.
+	* deco.scm, dmd.scm: Remove `debug-enable'.
+
+	build: Remove generated files.
+
+	Adjust to Guile 2.0 macrology.
+	* support.scm (define-syntax-rule): Remove.
+	  (begin-dmd): Implement using `syntax-case'.
+	* dmd.scm, deco.scm: Don't use (ice-9 syncase).
+	* runlevel.scm (enter): Fix erroneous `let' form.

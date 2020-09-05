@@ -1,0 +1,208 @@
+@c system.texi
+      
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+
+@node System Information, Color Reference, Dynamic Allocation of Shapes, Top
+@chapter System Information
+
+The functions described in this chapter are all declared in the
+@code{namespace System}.  They are for finding out information 
+about the system on which 3DLDF is being run.  They are declared and
+defined in @file{pspglb.web}, except for the template function
+@code{get_second_largest()}, which is declared and defined in 
+@file{gsltmplt.web}. 
+
+There are two reasons for this.  The first is that template definitions
+must be available 
+in the compilation units where specializations are instantiated.  
+I therefore write the template definition of @code{get_second_largest()}
+to @file{gsltmplt.h}, so it can be included by the CWEB files that need
+it, currently @file{main.web} only.  If I
+wrote it to @file{pspglb.h}, it would be included by all of the CWEB
+files except for @file{loader.web}, causing unnecessarily bloated object
+code.
+
+The other reason is because of the way way 3DLDF is built using Automake
+and @t{make}.  I originally tried to define @code{get_second_largest()}
+in @file{pspglb.web} and wrote the definition to @file{gsltmplt.cc},
+which is no problem with CWEB.  However, I was unable to express the
+dependencies among the CWEB, @cpp{}, and object files in such a way that
+3DLDF was built properly.  
+
+Therefore all template functions will be put into files either by
+themselves, or in small groups.
+
+
+@menu
+* Endianness::                  
+* Register Width::              
+* Get Second Largest Real::     
+@end menu
+
+@node Endianness, Register Width, System Information, System Information
+@section Endianness
+
+@deftypefun {signed short} get_endianness ([{const bool} @var{verbose} = @code{false}])
+@c
+Returns the following values:
+
+@table @asis
+
+@item 0  
+if the processor is little-endian.
+
+@item 1  
+if the processor is big-endian.
+
+@item -1 
+if the endianness cannot be determined.
+
+@end table
+
+It is called by @code{is_little_endian()} and 
+@code{is_big_endian()}.
+
+If @var{verbose} is @code{true}, messages are printed to standard
+output. 
+
+This function has been adapted from 
+Harbison, Samuel@w{ }P., and Guy@w{ }L. Steele Jr.
+@cite{C, A Reference Manual}, pp.@w{ }163--164.
+This book has the clearest explanation of endianness that I've found so
+far. 
+
+This is the @cpp{} code:
+
+@example
+signed short
+System::get_endianness(const bool verbose)
+@OCB{}
+  union @OCB{}
+    long Long;
+    char Char[sizeof(long)];
+  @CCB{} u;
+  u.Long = 1;
+  if (u.Char[0] == 1)
+    @OCB{}
+      if (verbose)
+        cout << "Processor is little-endian." 
+             << endl << endl << flush;
+      return 0;
+    @CCB{}
+  else if (u.Char[sizeof(long) - 1] == 1)
+    @OCB{}
+      if (verbose)
+        cout << "Processor is big-endian." 
+             << endl << endl << flush;
+      return 1;
+    @CCB{}
+  else
+    @OCB{}
+      cerr << "ERROR! In System::get_endianness():\n"
+           << "Can't determine endianness. Returning -1"
+           << endl << endl << flush;
+      return -1;
+    @CCB{}
+@CCB{}
+@end example
+@end deftypefun
+
+@deftypefun bool is_big_endian ([{const bool} @var{verbose} = @code{false}])
+@c
+Returns @code{true} if the processor is big-endian, otherwise @code{false}.
+If @var{verbose} is @code{true}, messages are printed to standard
+output. 
+@end deftypefun 
+
+@deftypefun bool is_little_endian ([{const bool} @var{verbose} = @code{false}])
+@c
+Returns @code{true} if the processor is little-endian, otherwise @code{false}.
+If @var{verbose} is @code{true}, messages are printed to standard
+output. 
+@end deftypefun 
+
+
+@node Register Width, Get Second Largest Real, Endianness, System Information
+@section Register Width
+
+
+@deftypefun {unsigned short} get_register_width (void)
+@c
+Returns the register width of the CPU of the system on which 3DLDF is
+being run.  This will normally be either 32 or 64 bits.
+
+This is the @cpp{} code:
+
+@example
+return (sizeof(void*) * CHAR_BIT);
+@end example
+
+This assumes that an address will be the same size as the processor's
+registers, and that @code{CHAR_BIT} will be the number of bits in a
+byte.  These are reasonable assumptions that apply to all architectures
+I know about.
+
+This function is called by @code{is_32_bit()} and @code{is_64_bit()}. 
+@end deftypefun 
+
+
+@deftypefun bool is_32_bit (void)
+Returns @code{true} if the CPU of the system on which 3DLDF is being run
+has a register width of 32 bits, otherwise @code{false}.
+@end deftypefun 
+
+@deftypefun bool is_64_bit (void)
+Returns @code{true} if the CPU of the system on which 3DLDF is being run
+has a register width of 64 bits, otherwise @code{false}.
+@end deftypefun 
+
+@node Get Second Largest Real,  , Register Width, System Information
+@section Get Second Largest Real 
+
+@deftypefn {Template function} {template <class Real> Real} get_second_largest (Real @var{MAX_VAL}, [bool @var{verbose} = @code{false}])
+@c
+@deftypefnx {Template specialization} float get_second_largest (float, bool)
+@c
+@deftypefnx {Template specialization} double get_second_largest (double, bool)
+@c
+@code{get_second_largest} returns the second largest floating point
+number of the type specified the template paramater @var{Real}.  
+If @var{verbose} is @code{true}, messages are printed to standard
+output. 
+
+This function is used for setting the value of @code{MAX_REAL}. 
+@xref{Global Constants and Variables}. 
+
+@code{get_second_largest} depends on there 
+being an unsigned integer type with the same length as @var{Real}.
+This should always be the case for @code{float} and @code{double}, but
+may not be @code{long double}.
+
+@var{MAX_VAL} should be the largest number of type @var{Real} on a given
+architecture.  The GNU @cpp{} compiler GCC 3.3 does not currently supply
+the @code{numeric_limits} template, so it is necessary to pass 
+one of the macros @code{FLT_MAX} or @code{DBL_MAX} explicitly, depending
+on which specialization you use@c
+@c
+@footnote{If your system supplies an unsigned integer type with the same
+length as @code{long double}, then you can instantiate
+@code{get_second_largest<long double>()} and call 
+@samp{get_second_largest<long double>(LDBL_MAX)}.  However, I doubt
+that this amount of precision would be worthwhile.  If it ever were
+required, 3DLDF would have to be changed in other ways, too.  In
+particular, it would have to use more precise trigonometric functions
+for rotations.  @xref{Accuracy}.}.
+@c
+When and if GCC supplies the @code{numeric_limits} template, I will
+eliminate the @var{MAX_REAL} argument.
+@end deftypefn 
+
+
+ 
+
+
+

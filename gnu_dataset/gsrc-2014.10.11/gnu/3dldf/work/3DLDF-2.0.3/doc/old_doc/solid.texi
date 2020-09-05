@@ -1,0 +1,708 @@
+@c solid.texi
+  
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+ 
+@node Solid Reference, Faced Solid Reference, Pattern Reference, Top
+@chapter Solid Reference
+
+@tindex Solid 
+Class @code{Solid} is defined in @file{solids.web}.
+It's derived from @code{Shape} using public derivation.  It is intended
+to be used as a base class for  
+more specialized classes representing solid figures, e.g., cuboids,
+polyhedra, solids of rotation, etc.  
+
+@menu
+* Solid Data Members::          
+* Solid Constructors and Setting Functions::  
+* Solid Destructor::            
+* Solid Operators::             
+* Copying Solids::              
+* Setting Solid Members::       
+* Querying Solids::             
+* Returning Elements and Information Solids::  
+* Showing Solids::              
+* Affine Transformations for Solids::  
+* Applying Transformations to Solids::  
+* Outputting Solids::           
+* Drawing and Filling Solids::  
+* Clearing Solids::             
+@end menu
+
+@node Solid Data Members, Solid Constructors and Setting Functions, Solid Reference, Solid Reference
+@section Data Members
+
+@deftypevr {Protected variable}  bool on_free_store
+@code{true}, if the @code{Solid} was dynamically allocated on the free 
+store, otherwise @code{false}.  @code{Solids} should only be allocated 
+on the free store by @code{create_new<Solid>()}, or analogous functions
+for derived classes. 
+@xref{Solid Constructors and Setting Functions,,Solid Reference; 
+Constructors and Setting Functions}.
+@end deftypevr 
+
+@deftypevr {Protected variable}  Point center
+The center of the @code{Solid}.  An object of a type derived from
+@code{Solid} need not have a meaningful @code{center}.  However, many
+do, so it's convenient to be able to access it using the member
+functions of @code{Solid}.  
+@end deftypevr 
+
+@deftypevr {Protected variable}  bool do_output
+Set to @code{false} in @code{Picture::output()}, if the @code{Solid}
+cannot be projected using the arguments of that particular invocation of
+@code{output()}.  Reset to @code{true} at the end of
+@code{Picture::output()}, so that the @code{Solid} will be tested for
+projectability again, if @code{output()} is called on the
+@code{Picture} again.
+@end deftypevr 
+
+@deftypevr {Protected variables}  {vector<Path*>} paths
+@deftypevrx {}  {vector<Circle*>} circles
+@deftypevrx {}  {vector<Ellipse*>} ellipses
+@deftypevrx {}  {vector <Reg_Polygon*>} reg_polygons
+@deftypevrx {}  {vector<Rectangle*>} rectangles
+Vectors of pointers to the @code{Paths}, @code{Circles},
+@code{Ellipses}, @code{Reg_Polygons}, and @code{Rectangles},
+respectively, belonging to the @code{Solid}, if any exist.
+@end deftypevr 
+
+@deftypevr {Protected variable}  {valarray<real>} projective_extremes
+The maximum and minimum values for the x, y, and z-coordinates of the
+@code{Points} belonging to the @code{Solid}.  Used in
+@code{Picture::output()} for testing whether a @code{Solid} is
+projectable using a particular set of arguments.
+@end deftypevr 
+
+@deftypevr  {Public static @code{const} variables} {unsigned short} CIRCLE      
+@deftypevrx {} {unsigned short} ELLIPSE    
+@deftypevrx {} {unsigned short} PATH       
+@deftypevrx {} {unsigned short} RECTANGLE  
+@deftypevrx {} {unsigned short} REG_POLYGON
+Used as arguments in the functions @code{get_shape_ptr()} and
+@code{get_shape_center()} 
+(@pxref{Returning Elements and Information Solids,,
+        Returning Elements and Information}). 
+@end deftypevr 
+
+@node Solid Constructors and Setting Functions, Solid Destructor, Solid Data Members, Solid Reference
+@section Constructors and Setting Functions
+
+@deftypefn {Default constructor} @code{void} Solid (@code{void})
+Creates an empty @code{Solid}.
+@end deftypefn 
+
+@deftypefn {Copy constructor} @code{void} Solid ({const Solid&} @var{s})
+Creates a new @code{Solid} and makes it a copy of @var{s}.
+@end deftypefn 
+
+@deftypefn {Template specializations} Solid* create_new<Solid> ({const Solid*} @var{s})
+@c
+@deftypefnx {} Solid* create_new<Solid> ({const Solid&} @var{s})
+@c
+Pseudo-constructors for dynamic allocation of @code{Solids}.
+They create a @code{Solid} on the free store and allocate memory for it using 
+@code{new(Solid)}.  They return a pointer to the new @code{Solid}.  
+
+If @var{s} is a non-zero pointer or a reference,
+the new @code{Solid} will be a copy of
+@var{s}.  If the new object is not meant to be a
+copy of an existing one, @samp{0} must be passed to
+@code{create_new<Solid>()} as its argument.
+@xref{Dynamic Allocation of Shapes}, for more information. 
+@end deftypefn 
+
+@node Solid Destructor, Solid Operators, Solid Constructors and Setting Functions, Solid Reference
+@section Destructor
+
+@deftypefn {@code{virtual} Destructor} void {~Solid} (@code{void})
+This function currently has an empty definition, but its existence
+prevents GCC 3.3 from issuing the following warning:
+``@c
+@iftex
+@tex
+\thinspace
+@end tex
+@end iftex
+@c
+`class Solid' has virtual functions but non-virtual destructor''.
+@end deftypefn 
+
+@node Solid Operators, Copying Solids, Solid Destructor, Solid Reference
+@section Operators
+
+@deftypefn {Virtual function} {const Solid&} {operator=}  ({const Solid&} @var{s})
+Assignment operator.  Makes @code{*this} a copy of @var{s}, discarding
+the old contents of @code{*this}.
+@end deftypefn 
+
+@deftypefn {Virtual function} Transform {operator*=} ({const Transform&} @var{t})
+Multiplication by a @code{Transform}.  All of the @code{Shapes} that
+make up the @code{Solid} are transformed by @var{t}.  
+@end deftypefn 
+
+@node Copying Solids, Setting Solid Members, Solid Operators, Solid Reference
+@section Copying
+
+@deftypefn {@code{const} virtual function} Shape* get_copy (@code{void})
+Dynamically allocates a new @code{Solid} on the free store, using
+@code{create_new<Solid>()}, and makes it a copy of @code{*this}.  Then, a
+pointer to @code{Shape} is pointed at the copy and returned.  Used for
+putting @code{Solids} onto @code{Picture::shapes} in the drawing and
+filling functions for @code{Solid}.
+@xref{Drawing and Filling Solids,,
+Solid Reference; Drawing and Filling}.
+@end deftypefn 
+
+@node Setting Solid Members, Querying Solids, Copying Solids, Solid Reference
+@section Setting Members
+
+@deftypefn {Virtual function} bool set_on_free_store ([bool @var{b} = @code{true}])
+Sets @code{on_free_store} to @var{b}.  This function is
+called in the  template function
+@code{create_new()}.
+@xref{Solid Constructors and Setting Functions,,
+Solid Reference; Constructors and Setting Functions}.
+@end deftypefn 
+
+@node Querying Solids, Returning Elements and Information Solids, Setting Solid Members, Solid Reference
+@section Querying
+
+@deftypefn {@code{const} virtual function} bool is_on_free_store (@code{void})
+Returns the value of @code{on_free_store}; @code{true}, if the
+@code{Solid} was dynamically allocated on the free store, otherwise
+@code{false}. 
+@code{Solids}, and objects of classes derived from @code{Solid}, 
+should only ever be allocated on the free store by 
+a specialization of the template function @code{create_new()}.
+@xref{Solid Constructors and Setting Functions,,
+Solid Reference; Constructors and Setting Functions}.
+@end deftypefn 
+
+@node Returning Elements and Information Solids, Showing Solids, Querying Solids, Solid Reference
+@section Returning Elements and Information 
+
+@deftypefn {@code{const} virtual function} {const Point&} get_center (void) 
+Returns @code{center}.  If the @code{Solid} doesn't 
+have a meaningful center, the return value will probably be 
+@code{INVALID_POINT}.
+@end deftypefn 
+
+
+@menu
+* Getting Shape Centers Solids::  
+* Getting Shapes Solids::       
+@end menu
+      
+@node Getting Shape Centers Solids, Getting Shapes Solids, Returning Elements and Information Solids, Returning Elements and Information Solids
+@unnumberedsubsec Getting Shape Centers 
+
+@deftypefn {@code{const} virtual function} {const Point&} {get_shape_center} (const unsigned short @var{shape_type}, {const unsigned short} @var{s})
+Returns the @code{center} of a @code{Shape} belonging to the @code{Solid}.
+Currently, the object can be a @code{Circle}, @code{Ellipse}, 
+@code{Rectangle}, or @code{Reg_Polygon}, and it is accessed through a pointer
+on one of the following vectors of pointers to @code{Shape}:
+@code{circles}, @code{ellipses},
+@code{rectangles}, or @code{reg_polygons}.
+The type of
+object is specified 
+using the @var{shape_type} argument.  
+The following @code{public static const} data members of @code{Solid}
+can (and probably should) be passed as the @var{shape_type} argument:
+@code{CIRCLE}, @code{ELLIPSE}, @code{RECTANGLE}, and
+@code{REG_POLYGON}. 
+
+The argument @var{s} is used to index the vector.  
+
+This function is called within the more specialized functions in this
+section, namely: @code{get_circle_center()},
+@code{get_ellipse_center()}, @code{@code{get_rectangle_center()}}, and 
+@code{get_reg_polygon_center()}.  I don't expect it to be needed in user
+code very often.
+
+@example
+Dodecahedron d(origin, 3); 
+d.filldraw();
+Point C = d.get_shape_center(Solid::REG_POLYGON, 1);
+C.dotlabel("C");
+@end example
+
+@c
+@iftex
+@tex 
+\ifmakeexamples
+\BEX
+\BGRP 
+\immediate\write\examples{default_focus.set(2, 2, -10, 0, 2, 10, 10);}
+\immediate\write\examples{Dodecahedron d(origin, 3); }
+\immediate\write\examples{d.filldraw();}
+\immediate\write\examples{Point C = d.get_shape_center(Solid::REG_POLYGON, 1);}
+\immediate\write\examples{C.dotlabel("C");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF182.png"
+alt="[Figure 182. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 182.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 182 not displayed.]
+@end ifinfo
+
+@c
+
+@c !! NOTE.  LDF 2003.08.15.
+Note that this function will have to be changed, if new vectors of
+@code{Shape} pointers are added to @code{class Solid}!
+@end deftypefn 
+
+
+@deftypefn {@code{const} virtual functions} {const Point&} {get_circle_center} ({const unsigned short} @var{s})
+@deftypefnx {} {const Point&} {get_ellipse_center} ({const unsigned short} @var{s})
+@deftypefnx {} {const Point&} {get_rectangle_center} ({const unsigned short} @var{s})
+@deftypefnx {} {const Point&} {get_reg_polygon_center} ({const unsigned short} @var{s})
+These functions all return the center of the @code{Shape} pointed to by a pointer on 
+one of the vectors of @code{Shapes} belonging to the @code{Solid}.  The argument @var{s}
+indicates which element on the vector is to be accessed.  For example, 
+@code{get_rectangle_center(2)} returns the center of the
+@code{Rectangle} pointed to by @code{rectangles[2]}.
+
+@example
+Cuboid c(origin, 3, 4, 5, 0, 30);
+c.draw();
+for (int i = 0; i < 6; ++i)
+  c.get_rectangle_center(i).label(i, ""); 
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Cuboid c(origin, 3, 4, 5, 0, 30);}
+\immediate\write\examples{c.draw();}
+\immediate\write\examples{for (int i = 0; i < 6; ++i)}
+\immediate\write\examples{  c.get_rectangle_center(i).label(i, "");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF183.png"
+alt="[Figure 183. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 183.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 183 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+
+@node Getting Shapes Solids,  , Getting Shape Centers Solids, Returning Elements and Information Solids
+@unnumberedsubsec Getting Shapes 
+
+The functions in this section 
+all return @code{const} pointers to @code{Shape}, or one of its derived
+classes. Therefore, they must be invoked in such a way, that
+the @code{const} qualifier is not discarded.  See 
+the description of @code{get_reg_polygon_ptr()} below, for an example.
+
+@deftypefn {@code{const} virtual function} {Shape*} get_shape_ptr (const unsigned short shape_type, const unsigned short s)
+Copies one of the objects belonging to the @code{Solid}, and returns a
+pointer to @code{Shape} that points to the copy.
+The object is found by dereferencing one of the pointers on one of the
+vectors of pointers belonging to the @code{Solid}.
+Currently, these
+vectors are @code{circles}, @code{ellipses}, @code{paths},
+@code{rectangles}, and @code{reg_polygons}.  The argument
+@var{shape_type} specifies the vector, and the
+argument @var{s} specifies which element of the vector should be
+accessed.  The following @code{public static const} data members of
+@code{Solid} can (and probably should) be passed as the @var{shape_type}
+argument: @code{CIRCLE}, @code{ELLIPSE}, @code{PATH}, @code{RECTANGLE},
+and @code{REG_POLYGON}.   
+
+This function was originally intended to be called within the more
+specialized functions in this 
+section, namely: @code{get_circle_ptr()}, @code{get_ellipse_ptr()},
+@code{get_path_ptr()}, @code{get_rectangle_ptr}, and @code{get_reg_polygon_ptr}.
+However, these functions no longer use @code{get_shape_ptr()}, so this
+function is probably no longer needed.
+
+@example
+Icosahedron I(origin, 3);
+I.filldraw();
+Reg_Polygon* t = 
+static_cast<Reg_Polygon*>(I.get_shape_ptr(Solid::REG_POLYGON, 9));
+t->fill(gray);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP 
+\immediate\write\examples{Icosahedron I(origin, 3);}
+\immediate\write\examples{I.filldraw();}
+\immediate\write\examples{Reg_Polygon* t =}
+\immediate\write\examples{static_cast<Reg_Polygon*>(I.get_shape_ptr(Solid::REG_POLYGON, 9));} 
+\immediate\write\examples{t->fill(gray);}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF184.png"
+alt="[Figure 184. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 184.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 184 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+@deftypefn {@code{const} virtual functions} {const Reg_Polygon*} get_circle_ptr ({const unsigned short} @var{s})
+@deftypefnx {} {const Reg_Polygon*} get_ellipse_ptr ({const unsigned short} @var{s})
+@deftypefnx {} {const Reg_Polygon*} get_path_ptr ({const unsigned short} @var{s})
+@deftypefnx {} {const Reg_Polygon*} get_rectangle_ptr ({const unsigned short} @var{s})
+@deftypefnx {} {const Reg_Polygon*} get_reg_polygon_ptr ({const unsigned short} @var{s})
+@c
+Each of these functions returns a pointer from one of the vectors of 
+@code{Shape} pointers belonging to the @code{Solid}.  The argument @var{s}
+specifies which element of the appropriate vector should be returned.
+For example, @code{get_reg_polygon_ptr(2)} returns the @code{Reg_Polygon*}
+in @code{reg_polygons[2]}. 
+
+Since these functions return @code{const} pointers, they must be invoked
+in such a way, that the @code{const} qualifier is not discarded, as
+noted at the beginning of this section.  The following example
+demonstrates two ways of invoking @code{get_reg_polygon_ptr()}:
+
+@example
+Dodecahedron d(origin, 3);
+d.draw();
+const Reg_Polygon* ptr = d.get_reg_polygon_ptr(0);
+ptr->draw(black, "evenly scaled 4", "pencircle scaled 1mm");
+Reg_Polygon A = *d.get_reg_polygon_ptr(5);
+A.fill(gray);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(2, 2, -10, 0, 2, 10, 10);}
+\immediate\write\examples{Dodecahedron d(origin, 3);}
+\immediate\write\examples{d.draw();}
+\immediate\write\examples{const Reg_Polygon* ptr = d.get_reg_polygon_ptr(0);}
+\immediate\write\examples{ptr->fill(gray);}
+\immediate\write\examples{Reg_Polygon A = *d.get_reg_polygon_ptr(5);}
+\immediate\write\examples{A.draw(black, "evenly scaled 4", "pencircle scaled 1mm");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX 
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF185.png"
+alt="[Figure 185. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 185.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 185 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+
+@node Showing Solids, Affine Transformations for Solids, Returning Elements and Information Solids, Solid Reference
+@section Showing
+
+@deftypefn {@code{const} virtual function} @code{void} show ([string @var{text} = "", [char @var{coords} = 'w', [{const bool} @var{do_persp} = @code{true}, [{const bool} @var{do_apply} = @code{true}, [Focus* f = 0, [{const unsigned short} @var{proj} = @code{Projections::PERSP}, [{const real} @var{factor} = 1]]]]]]])
+Prints @var{text} and the value of @code{on_free_store} to the standard
+output (@code{stdout}), and then calls 
+@code{show()} on the objects pointed to by the pointers on 
+@code{paths}, @code{circles}, @code{ellipses}, @code{reg_polygons}, and
+@code{rectangles}, unless the vectors are empty.  The arguments are
+passed to @code{Path::show()}, @code{Ellipse::show()}, etc.  If a vector
+is empty, a message to this effect is printed to the standard output.
+@end deftypefn 
+
+@node Affine Transformations for Solids, Applying Transformations to Solids, Showing Solids, Solid Reference
+@section Affine Transformations
+
+@deftypefn {Virtual functions} Transform scale (real @var{x}, [real @var{y} = 0, [real @var{z} = 0]])
+@code{Solid}.  
+@deftypefnx {} Transform shear (real @var{xy}, [real @var{xz} = 0, [real @var{yx} = 0, [real @var{yz} = 0, [real @var{zx} = 0, [real @var{zy} = 0]]]]])
+@deftypefnx {} Transform shift (real @var{x}, [real @var{y} = 0, [real @var{z} = 0]])
+@deftypefnx {} Transform shift ({const Point&} @var{pt})
+@deftypefnx {} Transform rotate ({const real} @var{x}, [{const real} @var{y} = 0, [{const real} @var{z} = 0]])
+@deftypefnx {} Transform rotate ({const Point&} @var{p0}, {const Point&} @var{p1}, [{const real} @var{angle} = 180])
+@c
+These functions perform the corresponding transformations on all of the
+@code{Shapes} belonging to the @code{Solid}.
+@xref{Affine Transformations for Transforms,,
+Transform Reference; Affine Transformations}.
+@end deftypefn 
+
+@node Applying Transformations to Solids, Outputting Solids, Affine Transformations for Solids, Solid Reference
+@section Applying Transformations 
+
+@deftypefn {Virtual function} void apply_transform (@code{void})
+Calls @code{apply_transform()} on all of the @code{Shapes} belonging to
+the @code{Solid}. 
+@end deftypefn 
+
+@node Outputting Solids, Drawing and Filling Solids, Applying Transformations to Solids, Solid Reference
+@section Outputting
+
+The functions in this section are are called, directly or indirectly, by
+@code{Picture::output()}.
+@xref{Outputting Pictures,,Picture Reference; Outputting}. 
+
+@deftypefn {Virtual function} void output (@code{void})
+Writes the MetaPost code for drawing, filling, filldrawing, undrawing,
+unfilling, or unfilldrawing the @code{Solid} to @code{out_stream}.  
+@end deftypefn 
+
+@deftypefn {Virtual function} void suppress_output (@code{void})
+Used in @code{Picture::output()}.  Sets @code{do_output} to @code{false}, if the
+@code{Solid} cannot be projected using a particular set of arguments to
+@code{Picture::output()}.  
+@end deftypefn 
+
+@deftypefn {Virtual function} void unsuppress_output (@code{void})
+Used in @code{Picture::output()}.  Resets @code{do_output} to @code{true}, 
+so that the @code{Solid} will be tested for projectability again, if the
+@code{Picture} it's on is output again.
+@end deftypefn 
+
+@deftypefn {Virtual function} {vector<Shape*>} extract ({const Focus&} @var{f}, {const unsigned short} @var{proj}, real @var{factor})
+Tests whether all of the @code{Shapes} belonging to the @code{Solid} are
+projectable, using the arguments passed to @code{output()}.  If it is,
+this function returns a
+vector of pointers to @code{Shape} containing a single pointer to
+the @code{Solid}.  If not, an empty vector is returned.
+@end deftypefn 
+
+@deftypefn {Virtual function} bool set_extremes (@code{void})
+Sets @code{projective_extremes} to contain the maximum and minimum
+values for the x, y, and z-coordinates of the @code{Points} on the
+@code{Shape}.  Used for determining projectability of a @code{Solid}
+using a particular set of arguments.  
+@end deftypefn 
+
+@deftypefn {@code{const} inline virtual function} {const valarray<real>} get_extremes (@code{void})
+Returns @code{projective_extremes}.  
+@end deftypefn 
+
+@deftypefn {@code{const} virtual functions} real get_minimum_z (@code{void})
+@deftypefnx {} real get_maximum_z (@code{void})
+@deftypefnx {} real get_mean_z (@code{void})
+Returns the minimum, maximum, or mean z-value, respectively, of the
+@code{Points} belonging to the @code{Solid}.
+Used for surface hiding.
+@xref{Surface Hiding}.
+@end deftypefn 
+
+
+@node Drawing and Filling Solids, Clearing Solids, Outputting Solids, Solid Reference
+@section Drawing and Filling
+
+@deftypefn {@code{const} virtual function} void draw ([{const vector<const Color*>} @var{v} = @code{Colors::default_color_vector}, [{const string} @var{ddashed} = "", [{const string} @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]]])
+@c
+Draws the @code{Solid}.
+
+This function allocates a new @code{Solid}, makes it a copy of
+@code{*this}, and puts a pointer to the copy onto
+@code{@var{picture}.shapes}.  The data members of the @code{Shapes}
+belonging to the copy are set appropriately, so that they can be drawn,
+when @code{Picture::output()} is called.
+
+The @code{Colors} used 
+for drawing the various
+@code{Paths}, @code{Circles}, @code{Ellipses}, etc., belonging to the
+@code{Solid} are passed in @var{v}.  If the @code{Solid} contains more
+@code{Shapes} than @var{v} contains pointers to @code{Color}, the
+@code{Color} pointed to by the last pointer on @var{v} is used to draw
+the remaining @code{Shapes}.
+
+Currently, a @code{Solid} can
+only be drawn with a single dash pattern (@var{ddashed}), and
+pen (@var{ppen}).  
+@end deftypefn 
+
+@deftypefn {@code{const} virtual function} void fill ([{const vector<const Color*>} @var{v} = @code{Colors::default_color_vector}, [Picture& @var{picture} = @code{current_picture}]])
+@c
+Fills the @code{Solid}.
+
+This function allocates a new @code{Solid} makes it a copy of @code{*this}, and puts a
+pointer to it onto @var{picture}.@code{shapes}.  
+The data members of the @code{Shapes}
+belonging to the copy are set appropriately, so that they can be filled,
+when @code{Picture::output()} is called.
+
+The @code{Colors} used
+for filling the various
+@code{Paths}, @code{Circles}, @code{Ellipses}, etc., belonging to the
+@code{Solid} are passed in @var{v}.
+If the @code{Solid} contains more
+@code{Shapes} than @var{v} contains pointers to @code{Color}, the
+@code{Color} pointed to by the last pointer on @var{v} is used to fill
+the remaining @code{Shapes}.
+@end deftypefn 
+
+@deftypefn {@code{const} virtual function} void filldraw ([{const vector<const Color*>} @var{draw_colors} = Colors::default_color_vector, [{const vector<const Color*>} @var{fill_colors} = Colors::background_color_vector, [{const string} @var{ddashed} = "", [{const string} @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]]]])
+@c
+Filldraws the @code{Solid}.
+
+This function allocates a new @code{Solid}, makes it a copy of @code{*this}, and puts a
+pointer to it onto @code{@var{picture}.shapes}.  
+The data members of the @code{Shapes}
+belonging to the copy are set appropriately, so that they can be filldrawn,
+when @code{Picture::output()} is called.
+
+The @code{Colors} used
+for drawing and filling the various
+@code{Paths}, @code{Circles}, @code{Ellipses}, etc., belonging to the
+@code{Solid} are passed in @var{draw_colors} and @var{fill_colors}.
+If the @code{Solid} contains more
+@code{Shapes} than @var{draw_colors} contains pointers to @code{Color}, the
+@code{Color} pointed to by the last pointer on @var{draw_colors} is used to draw
+the remaining @code{Shapes}.  The same applies to @code{fill_colors}.  
+
+Currently, a @code{Solid} can only be filldrawn with a single dash
+pattern (@var{ddashed}), and pen (@var{ppen}).  
+@end deftypefn 
+
+@deftypefn {@code{const} virtual function} void undraw ([{const string} @var{ddashed} = "", [{const string} @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]])
+@c
+Undraws the @code{Solid}.
+
+This function allocates a new @code{Solid}, makes it a copy of @code{*this}, and puts a
+pointer to it onto @var{picture}.@code{shapes}.  
+The data members of the @code{Shapes}
+belonging to the copy are set appropriately, so that they can be undrawn,
+when @code{Picture::output()} is called.
+
+A @code{Solid} can currently only be undrawn using a single dash
+pattern (@var{ddashed}), and 
+pen (@var{ppen}).  
+@end deftypefn 
+
+@deftypefn {@code{const} virtual function} void unfill ([Picture& @var{picture} = @code{current_picture}])
+@c
+Unfills the @code{Solid}.
+
+This function allocates a new @code{Solid} makes it a copy of
+@code{*this}, and puts a pointer to it onto @var{picture}.@code{shapes}.   
+The data members of the @code{Shapes}
+belonging to the copy are set appropriately, so that they can be unfilled,
+when @code{Picture::output()} is called.
+
+
+@end deftypefn 
+
+@deftypefn {@code{const} virtual function} void unfilldraw ([{const string} @var{ddashed} = "", [{const string} @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]])
+@deftypefnx {@code{const} virtual function} void undraw ([{const string} @var{ddashed} = "", [{const string} @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]])
+@c
+Unfilldraws the @code{Solid}.
+
+This function allocates a new @code{Solid}, makes it a copy of
+@code{*this}, and puts a 
+pointer to it onto @var{picture}.@code{shapes}.  The data members of the
+@code{Shapes} 
+belonging to the copy are set appropriately, so that they can be
+unfilldrawn, when @code{Picture::output()} is called.
+
+A @code{Solid} can currently only be unfilldrawn using a single dash
+pattern (@var{ddashed}), and 
+pen (@var{ppen}).  
+@end deftypefn 
+
+@node Clearing Solids,  , Drawing and Filling Solids, Solid Reference
+@section Clearing
+
+@deftypefn {Virtual function} void clear (@code{void})
+@c
+Calls @code{clear()} on all the @code{Shapes} belonging to the
+@code{Solid}.   
+Used in @code{Picture::clear()} for deallocating
+and destroying @code{Solids}.
+
+Currently, <@var{Shape}>.@code{clear()} always resolves to 
+@code{Path::clear()}, since none of the other types of @code{Shape} that a
+@code{Solid} can contain, e.g., @code{Ellipse}, @code{Circle}, etc.,
+overloads @code{Path::clear()}.
+@end deftypefn 
+

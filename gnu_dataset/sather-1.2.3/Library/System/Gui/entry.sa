@@ -1,0 +1,86 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- entry.sa: Entry widget
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class TK_ENTRY_CFG is
+    include TK_WIDGET_CFG_INCL
+	  background->background,
+	  foreground->foreground,
+	  font->font,
+	  char_width->char_width,
+	  borderwidth->borderwidth,
+	  justify_left->justify_left,justify_right->justify_right,
+	  justify_center->justify_center,
+	  relief_none->relief_none,relief_raised->relief_raised,
+	  relief_sunken->relief_sunken,
+	  relief_flat->relief_flat,relief_ridge->relief_ridge,
+	  relief_groove->relief_groove,
+	  highlightcolor->highlightcolor,
+	  highlightbackground->highlightbackground,
+	  highlightthickness->highlightthickness,
+	  insertwidth->insertwidth,
+	  insertborderwidth->insertborderwidth,
+	  text->text,
+	  width->width,
+	  selectforeground->selectforeground,
+	  selectbackground->selectbackground,
+	  selectborderwidth->selectborderwidth;
+	 
+    std: SAME is return new.relief_sunken end;
+    
+    variable(v:TK_VAR) is config("textvariable",v.str) end;
+    variable(v:TK_VAR):SAME is variable(v); return self; end;
+    
+end;
+-------------------------------------------------------------------
+class TK_ENTRY < $TK_WIDGET is
+    -- Entry widget
+    -- Example usage:
+    --   e := #TK_ENTRY;
+    --   e.set_initial_text("Some initial text");
+    --   e.bind_enter_key(bind(entered_text));
+    -- The routine "entered_text" may be defined as below  
+    -- entered_text is
+    --   #OUT+"Entered text into entry widget:"+e.get_data+"\n";
+    -- end;
+    
+    include TK_WIDGET_INCL{TK_ENTRY_CFG};
+    
+    private attr command: ROUT;
+   
+    -- Redefined from TK_WIDGET_INCL
+    const tk_widget_type: STR := "entry";
+    
+    private default_config: TK_ENTRY_CFG is return TK_ENTRY_CFG::std end;
+   
+    bind_enter_key(action: ROUT{TK_EVENT_INFO}) is
+	bind_event(TK_KEY_EVENT::Press.Return,action);
+    end;
+    
+    set_text(s:STR)
+    is
+	length: INT := GUI_APP_END::eval(widget_name+" get").length;
+	eval(widget_name,"delete 0",length);
+	eval(widget_name,"insert 0",quote(s))  
+    end;
+    
+    get_text: STR is return GUI_APP_END::eval(widget_name+" get")  end;
+    
+end; -- class TK_ENTRY
+-------------------------------------------------------------------
+
+
+
+

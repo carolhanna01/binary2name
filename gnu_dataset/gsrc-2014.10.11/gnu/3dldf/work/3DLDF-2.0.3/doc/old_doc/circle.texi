@@ -1,0 +1,268 @@
+@c circle.texi
+      
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+@node Circle Reference, Pattern Reference, Ellipse Reference, Top
+@chapter Circle Reference
+
+@tindex Circle
+Class @code{Circle} is defined in @file{circles.web}.
+It is derived from @code{Ellipse}, using public derivation.  
+
+Since @code{Circle} is just a special kind of @code{Ellipse}, there is
+often no need to define special functions for @code{Circles}.  
+
+Currently, @code{Circle} inherits the transformation functions and
+@code{operator*=(const Transform&)} from @code{Ellipse}.  Consequently,
+the data member @code{radius}, described below,
+is not recalculated, when transformations
+are performed on a @code{Circle}.  I plan to change this soon!
+
+@menu
+* Circle Data Members::         
+* Circle Constructors and Setting Functions::  
+* Circle Operators::            
+* Querying Circles::            
+* Circle Intersections::        
+@end menu
+     
+@node Circle Data Members, Circle Constructors and Setting Functions, Circle Reference, Circle Reference
+@section Data Members
+
+@deftypevr {Private variable} real radius
+The radius of the @code{Circle}.
+@end deftypevr 
+
+@node Circle Constructors and Setting Functions, Circle Operators, Circle Data Members, Circle Reference
+@section Constructors and Setting Functions
+
+@deftypefn {Default constructor} @code{void} Circle (@code{void})
+Creates an empty @code{Circle}.
+@end deftypefn 
+
+@deftypefn Constructor @code{void} Circle ({const Point&} @var{ccenter}, {const real} @var{ddiameter}, [{const real} @var{angle_x} = 0, [{const real} @var{angle_y} = 0, [{const real} @var{angle_z} = 0, [{const unsigned short} @var{nnumber_of_points} = @code{DEFAULT_NUMBER_OF_POINTS}]]]])
+@c
+Creates a @code{Circle} with @code{radius} @equiv{} 
+@math{@var{ddiameter}/2} in the x-z plane and centered at the origin
+with @var{nnumber_of_points} @code{Points}.  If any of the arguments
+@var{angle_x}, @var{angle_y}, or @var{angle_z} is 
+@c
+@iftex 
+@tex
+$\neq 0$,
+@end tex
+@end iftex
+@c
+@ifnottex 
+@code{!= 0}, 
+@end ifnottex 
+@c
+the @code{Circle} is rotated around the major axes by the angles
+indicated by the arguments.  Finally, the
+@code{Circle} is shifted such that @code{center} comes to lie at
+@var{ccenter}. 
+@end deftypefn 
+
+@deftypefn {Setting function} void set ({const Point&} @var{ccenter}, {const real} @var{ddiameter}, [{const real} @var{angle_x} = 0, [{const real} @var{angle_y} = 0, [{const real} @var{angle_z} = 0]]])
+Corresponds to the constructor above.
+@end deftypefn 
+
+
+
+@deftypefn {Template specializations} Circle* create_new<Circle> ({const Circle*} @var{c})
+@c
+@deftypefnx {} Circle* create_new<Circle> ({const Circle&} @var{c})
+@c
+Pseudo-constructors for dynamic allocation of @code{Circles}.
+They create a @code{Circle} on the free store and allocate memory for it using 
+@code{new(Circle)}.  They return a pointer to the new @code{Circle}.  
+
+If @var{c} is a non-zero pointer or a reference,
+the new @code{Circle} will be a copy of
+@var{c}.  If the new object is not meant to be a
+copy of an existing one, @samp{0} must be passed to
+@code{create_new<Circle>()} as its argument.
+@xref{Dynamic Allocation of Shapes}, for more information. 
+@end deftypefn 
+
+
+@node Circle Operators, Querying Circles, Circle Constructors and Setting Functions, Circle Reference
+@section Operators
+
+@deftypefn {Assignment operator} Circle& {operator=}  ({const Circle&} @var{c})
+Makes the @code{Circle} a copy of @var{c}.
+@end deftypefn 
+
+@deftypefn {Assignment operator} Circle& {operator=} ({const Ellipse&} @var{e})
+Makes the @code{Circle} a copy of @var{e}, if @var{e} is circular.
+@code{radius} is set to @var{e}.@code{axis_v} @math{/ 2} and  
+@code{*this} is returned.
+
+If @var{e} is not circular, this function issues an error message and returns @code{*this}.
+@end deftypefn 
+
+@node Querying Circles, Circle Intersections, Circle Operators, Circle Reference
+@section Querying
+
+@deftypefn {@code{const} function} bool is_circular (void)
+Returns @code{true} if the @code{Circle} is circular, otherwise
+@code{false}. 
+
+Certain transformations, such as shearing and scaling, can cause
+@code{Circles} to become non-circular.
+
+@example
+Circle c(origin, 3, 90);
+cout << c.is_circular();
+@print{} 1
+
+Circle d = c;
+d.shift(2.5);
+d.scale(2, 3);
+cout << d.is_circular();
+@print{} 0
+@end example
+
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Circle c(origin, 3, 90);}
+\immediate\write\examples{Circle d = c;}
+\immediate\write\examples{d.shift(2.5);}
+\immediate\write\examples{c.draw();}
+\immediate\write\examples{c.get_center().label("$c$", "");}
+\immediate\write\examples{d.scale(2, 3);}
+\immediate\write\examples{d.draw();}
+\immediate\write\examples{d.get_center().label("$d$", "");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF176.png"
+alt="[Figure 176. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 176.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 176 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn
+
+
+@deftypefn {Inline function} real get_radius (@code{void})
+Returns @code{radius}.  
+@end deftypefn 
+
+@deftypefn {Inline function} real get_diameter (@code{void})
+Returns
+@c
+@iftex
+@tex
+$2\times$@code{radius}.
+@end tex
+@end iftex
+@c
+@ifnottex 
+2 * @code{radius}.
+@end ifnottex 
+@end deftypefn 
+
+
+@node Circle Intersections,  , Querying Circles, Circle Reference
+@section Intersections
+
+@deftypefn {Virtual @code{const} function} bool_point_quadruple intersection_points ({const Circle&} @var{c}, [{const bool} @var{verbose} = @code{false}])
+Returns the intersection points of two @code{Circles}.  
+
+If the @code{Circles} are coplanar, they can intersect at at most two
+points.  There is an easy algebraic solution for this, so in this case,
+this function is faster than @code{Ellipse::intersection_points(Ellipse,
+bool)}, which uses an iterative procedure to find the points.
+
+If the @code{Circles} are non-coplanar, the intersection points of each
+@code{Circle} with the plane of the other @code{Circle} are returned, so
+a maximum of four @code{Points} can be found.
+
+@c !! TO DO:  Add more examples.
+
+@example
+Circle t(origin, 5, 90);
+Circle c(origin, 3, 90);
+c.shift(3);
+c.rotate(0, 0, 45);
+bool_point_quadruple bpq = t.intersection_points(c);
+bpq.first.pt.dotlabel("$f$"); 
+bpq.second.pt.dotlabel("$s$"); 
+@end example
+  
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Circle t(origin, 5, 90);}
+\immediate\write\examples{Circle c(origin, 3, 90);}
+\immediate\write\examples{c.shift(3);}
+\immediate\write\examples{c.rotate(0, 0, 45);}
+\immediate\write\examples{t.draw();}
+\immediate\write\examples{c.draw();}
+\immediate\write\examples{t.get_center().label("t", ""); }
+\immediate\write\examples{c.get_center().label("c", ""); }
+\immediate\write\examples{bool_point_quadruple bpq = t.intersection_points(c);}
+\immediate\write\examples{bpq.first.pt.dotlabel("$f$", "lrt"); }
+\immediate\write\examples{bpq.second.pt.dotlabel("$s$", "llft"); }
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX  
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF177.png"
+alt="[Figure 177. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 177.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 177 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn
+
+
+
+

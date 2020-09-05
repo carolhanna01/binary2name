@@ -1,0 +1,250 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- listbox.sa: listbox widget
+-- Author: Matthias Ernst <mernst@x4u.desy.de>
+
+class TK_LISTBOX_CFG is
+    include TK_WIDGET_CFG_INCL
+	  background->background,
+	  foreground->foreground,
+	  font->font,
+	  char_width->char_width,
+	  borderwidth->borderwidth,
+	  height->height,
+	  width->width,
+	  justify_left->justify_left,justify_right->justify_right,
+	  justify_center->justify_center,
+	  relief_none->relief_none,relief_raised->relief_raised,
+	  relief_sunken->relief_sunken,
+	  relief_flat->relief_flat,relief_ridge->relief_ridge,
+	  relief_groove->relief_groove,
+	  highlightcolor->highlightcolor,
+	  highlightbackground->highlightbackground,
+	  highlightthickness->highlightthickness,
+	  insertwidth->insertwidth,
+	  insertborderwidth->insertborderwidth,
+	  selectforeground->selectforeground,
+	  selectbackground->selectbackground,
+	  selectborderwidth->selectborderwidth;
+    
+    selectmode_single is
+	selectmode("single");
+    end;
+    
+    selectmode_browse is
+	selectmode("browse");
+    end;
+    
+    selectmode_multiple is
+	selectmode("multiple");
+    end;
+    
+    selectmode_extended is
+	selectmode("extended");
+    end;
+    
+    selectmode_single: SAME is
+	selectmode_single;
+	return self
+    end;
+    
+    selectmode_browse: SAME is
+	selectmode_browse;
+	return self
+    end;
+    
+    selectmode_multiple: SAME is
+	selectmode_multiple;
+	return self
+    end;
+    
+    selectmode_extended: SAME is
+	selectmode_extended;
+	return self
+    end;
+    
+    private selectmode(s: STR) is
+	config("selectmode", s);
+    end;
+    
+    attr hscroll,vscroll: BOOL;  -- Treated differently
+    hscroll(v: BOOL): SAME is hscroll := v; return self end;
+    vscroll(v: BOOL): SAME is vscroll := v; return self end;
+    
+    std: SAME is
+	return new.vscroll(true).selectmode_single
+    end;
+    
+end; -- class TK_LISTBOX_CFG
+-------------------------------------------------------------------
+
+class TK_LISTBOX < $TK_WIDGET is
+    -- a tk listbox with a vertical scrollbar
+    include TK_SCROLL_WIDGET_INCL{TK_LISTBOX_CFG};
+    
+    private const tk_widget_type: STR := "listbox";
+    
+    private default_init(c: TK_LISTBOX_CFG) is
+	if c.vscroll then vscroll end;
+	if c.hscroll then hscroll end;
+    end;
+    
+    --------------------------------------
+    -- indices into the list are integers
+    -- some special indices:
+    -- (see listbox manual page for explanation)
+    
+    -- instead of feeding special strings to index
+    -- you call these and give Tk the result.
+    -- Note that these values may change any time,
+    -- so saving them somewhere is impractical:
+    -- list_end ::= list.index_end;
+    -- ...
+    -- list.insert(list_end, "YES");
+    -- may not work as expected
+    
+    
+    private index(s: STR): INT is
+	return #(GUI_APP_END::eval(actual_widget_name+" index " + s));
+    end;
+    
+    index_active: INT is
+      return index("active");
+    end;
+    
+    index_anchor: INT is
+	return index("anchor");
+    end;
+   
+    index_end: INT is
+	return index("end");
+    end;
+    
+    index_at(x, y: FLT): INT is
+	return index("@"+x+","+y);
+    end;
+    
+    --------------------------------------
+    
+    activate(index: INT) is
+	-- make index the active element
+	eval(actual_widget_name, "activate", index);
+    end;
+    
+    curselection: ARRAY{INT} is
+	-- the indices of all currently selected elements
+	cursel: STR := GUI_APP_END::eval(actual_widget_name + " curselection");
+	length_str ::= GUI_APP_END::eval("llength " + quote(cursel));
+	length: INT := length_str.cursor.int;
+	res ::= #ARRAY{INT}(length);
+	loop ind ::= length.times!;
+	    res[ind] := #(GUI_APP_END::eval("lindex "+quote(cursel)+" "+ind));
+	end;
+	return res;
+    end;
+    
+    curselection!: INT is
+	loop yield curselection.elt! end;
+    end;
+    
+    delete(first: INT) is
+	eval(actual_widget_name, "delete", first);
+    end;
+    
+    delete(first, last: INT) is
+	eval(actual_widget_name, "delete", first, last);
+    end;
+    
+    get(first: INT): STR is
+	return GUI_APP_END::eval(actual_widget_name + " get " + first);
+    end;
+    
+    get(first, last: INT): ARRAY{STR} is
+	list ::= GUI_APP_END::eval(actual_widget_name+" get "+first+" "+last);
+	length ::= #INT(GUI_APP_END::eval("llength " + quote(list)));
+	
+	res ::= #ARRAY{STR}(length);
+	
+	loop ind ::= length.times!;
+	    res[ind] := GUI_APP_END::eval("lindex "+quote(list)+" "+ind);
+	end;
+	
+	return res;
+    end;
+    
+    get!( once first,once last: INT): STR is
+	loop yield get(first, last).elt! end;
+    end;
+    
+    insert(index: INT, s: STR)
+    -- Inserts `s' at index `i'
+    -- see above for index functions
+    is
+	eval(actual_widget_name, "insert", index, quote(s));
+    end;
+    
+    insert(index: INT, s: ARRAY{STR})
+    -- Inserts all s's at index i
+    -- see above for index functions
+    is
+	list: FSTR;
+	loop
+	    list := list + " ".separate!(quote(s.elt!))
+	end;
+	eval(actual_widget_name, "insert", index, list);
+    end;
+    
+    see(index: INT)
+    -- Makes element i visible (and scrolls if neccessary).
+    is
+	eval(actual_widget_name, "see", index);
+    end;
+    
+    size: INT is
+	-- Returns number of elements in the list box.
+	return #(GUI_APP_END::eval(actual_widget_name + " size"));
+    end;
+
+    set_selection(i:INT)
+    -- Sets the selection to the `i'th element .
+    is
+	eval(actual_widget_name,"selection set",i);
+    end;
+
+    clear_selection(i:INT)
+    -- Disselects the selection at `i'.
+    is
+	GUI_APP_END::eval(actual_widget_name+" selection clear "+i);
+    end;
+    
+    is_selected(i:INT): BOOL
+    -- Returns true if the index `i' is selcted.
+    is
+	return
+	      GUI_APP_END::eval(actual_widget_name+" selection includes "+i)
+	      ="true"
+    end;
+
+    nearest(y:INT): INT
+    -- Returns the index number which is nearest to the `y' coordinate.
+    is
+	return GUI_APP_END::eval(actual_widget_name+" nearest "+y).cursor.int;
+    end;
+    
+end; -- class TK_LISTBOX
+-------------------------------------------------------------------
+
+
+
+

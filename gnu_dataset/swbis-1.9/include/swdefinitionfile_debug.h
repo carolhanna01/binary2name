@@ -1,0 +1,1 @@
+../swstructlib/src/swmetadata/swdefinitionfile_debug.h

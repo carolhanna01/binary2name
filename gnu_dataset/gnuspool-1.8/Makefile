@@ -1,0 +1,107 @@
+#
+#	Top-level Makefile
+#
+#   Copyright 2008,2009 Free Software Foundation, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+SHELL		=	/bin/sh
+
+BASE		=	.
+PARENT		=	.
+UTILDIR		=	util
+SRCDIR		=	src
+BUILDDIR	=	build
+MSGFILE		=	GNUSPOOL.msg
+HELPPARSE	=	$(UTILDIR)/helpparse
+prefix		=	/usr/local
+exec_prefix	=	${prefix}
+BINDIR		=	$(DESTDIR)${exec_prefix}/bin
+SBINDIR		=	$(DESTDIR)${exec_prefix}/sbin
+INTBINDIR	=	$(DESTDIR)${exec_prefix}/libexec/gnuspool
+DATADIR		=	$(DESTDIR)${datarootdir}/gnuspool
+MANDIR		=	$(DESTDIR)${prefix}/share/man
+PDFDIR		=	$(DESTDIR)${docdir}
+CUPSPYDIR	=	$(DESTDIR)${prefix}/etc/cups/cupspy
+INSTALL		=	/usr/bin/install -c
+INSTALL_DATA	=	${INSTALL} -m 644
+STAGED_INSTALL	=	false
+
+all:	buildd build-src
+
+buildd:	utild
+	$(HELPPARSE) $(MSGFILE) $(SRCDIR) $(BUILDDIR)
+	touch $@
+
+build-src:
+	cd $(BUILDDIR);$(MAKE) all
+	touch $@
+
+utild:
+	cd $(UTILDIR);$(MAKE) all
+	touch $@
+
+install: all
+	cd $(UTILDIR);$(MAKE) install
+	cd $(BUILDDIR);$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd ptrinstall;$(MAKE)
+	$(INSTALL) gspl-ptrinstall $(SBINDIR)
+	$(INSTALL) pclbanner psbanner $(INTBINDIR)
+	cp -r -p Psetups $(DATADIR)
+	cp -r -p ptrinstall $(DATADIR)
+	cd doc;$(MAKE) install
+	cd cupspy;$(MAKE) install
+	$(STAGED_INSTALL) || $(BINDIR)/gspl-uchange -R
+	$(STAGED_INSTALL) || $(BINDIR)/gspl-uchange -p ALL `who am i|sed -e 's/ .*//'`
+	cd udev;$(MAKE) install
+
+install-strip:	all
+	cd $(UTILDIR);make install-strip
+	cd $(BUILDDIR);$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd ptrinstall;$(MAKE)
+	$(INSTALL) gspl-ptrinstall $(SBINDIR)
+	$(INSTALL) pclbanner psbanner $(INTBINDIR)
+	cp -r -p Psetups $(DATADIR)
+	cp -r -p ptrinstall $(DATADIR)
+	cd doc;$(MAKE) install-strip
+	cd cupspy;$(MAKE) install-strip
+	$(STAGED_INSTALL) || $(BINDIR)/gspl-uchange -R
+	$(STAGED_INSTALL) || $(BINDIR)/gspl-uchange -p ALL `who am i|sed -e 's/ .*//'`
+	cd udev;$(MAKE) install
+
+install-user user-install:
+	/usr/bin/perl $(BASE)/Userinst
+
+install-net:
+	/usr/bin/perl $(BASE)/Netinst
+
+clean:
+	cd $(UTILDIR);$(MAKE) clean
+	rm -fr $(BUILDDIR) buildd utild build-src
+	cd doc;$(MAKE) clean
+	cd cupspy;$(MAKE) clean
+	cd ptrinstall;$(MAKE) clean
+	cd udev;$(MAKE) clean
+
+distclean:	clean
+	cd $(UTILDIR);$(MAKE) distclean
+	cd $(SRCDIR);$(MAKE) distclean
+	$(RM) $(SRCDIR)/hdrs/files.h $(SRCDIR)/hdrs/infiles.h 
+	$(RM) config.cache config.h config.status config.log Makefile gspl-ptrinstall gspl-udevpatch
+	$(RM) Checkuserinst Userinst Netinst STARTUP/Startdirs
+	cd doc;$(MAKE) distclean
+	cd cupspy;$(MAKE) distclean
+	cd ptrinstall;$(MAKE) distclean
+	cd udev;$(MAKE) distclean

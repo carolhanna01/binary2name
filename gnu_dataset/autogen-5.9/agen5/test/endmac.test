@@ -1,0 +1,60 @@
+#! /bin/sh
+#  -*- Mode: Shell-script -*-
+# endmac.test --- test variations on the end macro marker
+#
+# Time-stamp:        "2005-03-07 13:05:43 bkorb"
+# Author:            Bruce Korb <bkorb@gnu.org>
+# Maintainer:        Bruce Korb <bkorb@gnu.org>
+# Created:           Fri Oct 1 10:27:29 PDT 1999
+# Last Modified:     $Date: 2006/09/24 02:11:15 $
+#            by: bkorb
+#
+# $Id: endmac.test,v 4.4 2006/09/24 02:11:15 bkorb Exp $
+# ----------------------------------------------------------------------
+
+. ./defs
+set -x
+cat > ${testname}1.tpl <<EOF
+<=AutoGen5 template test=>><<=
+`echo ENDMAC 1`
+=>> <=`pwd`=>>
+<=# comment this test fails because the '=' is bound to 'test' >>
+This is a test
+EOF
+
+${AGexe} -T${testname}1 --no-def 2> /dev/null && \
+  failure $testname failure test was successful.  Oops.
+echo $testname failure test failed correctly
+
+cat > ${testname}2.tpl <<EOF
+<=AutoGen5 template test =>>
+ENDMAC 2 <=`echo print this message` =>>
+<=# comment This test succeeds because the '=' is not part of 'test' =>>
+This is a test
+EOF
+
+${AGexe} -T${testname}2 --no-def || \
+   failure $testname success test was a failure
+echo first successful $testname test succeeded
+
+cat > ${testname}3.tpl <<EOF
+<+AutoGen5 template test+>>
+ENDMAC 3 <+(define foo "print this message")  (. foo) +>>
+<+# comment The '+' is not joined because it is neither '=' nor
+            a legal file name character +>>
+This is a test
+EOF
+
+${AGexe} -T${testname}3 --no-def || \
+   failure second $testname success test was a failure
+echo second successful $testname test succeeded
+
+cleanup
+
+## Local Variables:
+## Mode: shell-script
+## indent-tabs-mode: nil
+## sh-indentation: 2
+## End:
+
+# end of endmac.test

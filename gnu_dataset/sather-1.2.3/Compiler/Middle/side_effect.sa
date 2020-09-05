@@ -1,0 +1,578 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class SIDE_EFFECT < $HASH is
+   include COMPARABLE;
+   
+   attr tp:$TP;	        -- The class modified
+   attr name:IDENT;	-- The name of the attribute, void(IDENT) for arrays
+   attr doeswrite:BOOL; -- Is this attribute written to?
+
+-- are these two refrences to the same object?
+-- don't check the doeswrite flag
+   is_eq(other:SAME):BOOL is
+      if void(self) or void(other) then return false end;
+      if is_array then
+	 return(other.is_array and tp.is_eq(other.tp));
+      elsif is_local then
+	 return(other.is_local and name.is_eq(other.name));
+      else
+	 return(tp.is_eq(other.tp) and name.is_eq(other.name));
+      end;
+   end;
+
+-- this function is used to mainatin the FSET, combine the hash functions
+-- of our refrences
+   hash:INT is
+      if is_array then return(tp.str.hash);
+      elsif is_local then return(name.hash);
+      else return(tp.str.hash.bxor(name.hash));
+      end;
+   end;
+
+-- is this a local variable?
+   is_local:BOOL is
+      return void(tp);
+   end;
+
+-- is this an array refrence?
+   is_array:BOOL is
+      return void(name);
+   end;
+
+   create:SAME is return new; end;
+
+-- here is our create function
+   create(amattr:$OB,doeswrite:BOOL):SAME is
+      r::=new;
+      r.doeswrite := doeswrite;
+      typecase amattr
+      when AM_ATTR_EXPR then
+	 r.tp := amattr.self_tp;
+	 r.name := amattr.at;
+	 assert(~void(r.name));
+	 assert(~void(r.tp));
+      when AM_VATTR_ASSIGN_EXPR then
+	 r.tp  := amattr.ob.tp;
+	 r.name := amattr.at;
+	 assert(~void(r.name));
+	 assert(~void(r.tp));
+	 assert(doeswrite);
+      when AM_SHARED_EXPR then
+	 r.tp := amattr.class_tp;
+	 r.name := amattr.name;
+	 assert(~void(r.name));
+	 assert(~void(r.tp));
+      when AM_LOCAL_EXPR then
+	 -- don't remember unnamed local variable
+	 if void(amattr.name) then return void end; 
+	 r.tp := void;
+	 r.name := amattr.name;
+      when SIDE_EFFECT then
+	  r.tp := amattr.tp;
+	  r.name := amattr.name;
+      end;
+
+      return r;
+   end;
+
+-- return a string for debugging
+   str:STR is
+      ret::="";
+
+      if ~is_local then
+	 ret:= ret+tp.str;
+      end;
+
+      if is_array then
+	 ret := ret+ "[]";
+      else
+	 ret := ret + ":" + name.str;
+      end;
+
+      if doeswrite then ret := ret + "*" end;
+      return ret;
+   end;
+end;
+
+
+
+-- each side_effect context (routine, loop) carries one of these around
+-- with them.
+
+class SE_CONTEXT is
+   private attr set:FSET{SIDE_EFFECT};   -- the set of attributes modified
+   private attr is_full:BOOL;             -- do we assume everything is modified
+   attr unsafe:BOOL;           -- is it unsafe to optimize this function out?
+   attr has_raise:BOOL;		-- true if the function (or any function it calls) may raise an exception
+   attr has_import:BOOL;	-- true if the function (or any function it calls) makes an import
+   attr	has_export:BOOL;	-- true if the function (or any function it calls) makes an import
+   attr has_fatal_error:BOOL;	-- true if the function (or any function it calls) may encounter a fatal error
+   attr has_arith_error:BOOL;	-- true if the function could break if arith checks are on and it is called with the wrong arguments
+   attr has_yield_in_lock:BOOL; -- true if an iter has a yield inside a lock
+   attr has_new:BOOL; 		-- true if the function/iter calls "new" somewhere on a reference class
+   attr may_block:BOOL;		-- true if the function could block (lock)
+   attr forks:BOOL;		-- true if the function forks new threads
+   attr rsig:SIG;               -- signature of the routine this is for
+   attr weight:INT;		-- number that defines the weight of the function
+   shared prog:PROG;
+   shared cs_options:CS_OPTIONS;  -- options for the compiler
+
+   full:BOOL is return is_full or has_import or has_export; end;
+   full(b:BOOL) is is_full:=b; end;
+
+-- get the typesafe options from prog and save them for quick refrence
+   get_options is
+      if ~void(cs_options) then return; end;
+
+      temp::=prog.get_options;
+      typecase temp
+      when CS_OPTIONS then cs_options := temp;
+      end;
+   end;
+
+-- what is the maximum size of a context to keep?
+   maxsize:INT is
+      return 100;
+   end;
+
+-- are we supposed to compute side effects?
+   do_side_effects:BOOL is
+      if void(self) then return false end;
+      return ~prog.all_reached and cs_options.side_effects;
+   end;
+
+-- are we debugging side effects?
+   do_side_debug:BOOL is
+      if void(self) then return false end;
+      return cs_options.side_debug;
+   end;
+
+-- an iter to iterate all of the elements in the set... just pass through
+   elt!:SIDE_EFFECT is
+      loop yield(set.elt!) end;
+   end;
+
+-- return the number of elements in the siedeffect set
+   size:INT is
+      return set.size;
+   end;
+
+-- return the sideeffect for a given attr
+   se_attr(tp:$TP,name:IDENT):SIDE_EFFECT is
+      s::=#SIDE_EFFECT;
+      s.tp:=tp;
+      s.name:=name;
+      return set.get(s);
+   end;
+
+-- return the sideeffect for a given local var
+   se_local(name:IDENT):SIDE_EFFECT is
+      s::=#SIDE_EFFECT;
+      s.tp:=void;
+      s.name:=name;
+      return set.get(s);
+   end;
+
+-- return the sideeffect for arrayt
+   se_array(tp:$TP):SIDE_EFFECT is
+      s::=#SIDE_EFFECT;
+      s.tp:=void;
+      s.name:=void;
+      return set.get(s);
+   end;
+
+-- create a new, empty, SE_CONTEXT
+   create(prog:PROG,sig:SIG):SAME is
+
+      r::=new;
+      r.prog := prog;
+      r.rsig := sig;
+      r.get_options;
+      if void(cs_options) then return void end;
+
+      if ~r.do_side_effects then return void end;
+      if r.do_side_debug then
+	 #OUT + "Created context for "+sig.str+"\n";
+      end;
+      r.weight:=1;
+
+      return r;
+   end;
+
+   expand_macro(r:STR,sig:SIG):STR is
+      res::="";
+      i:INT:=0;
+      loop while!(i<r.size);
+	 case r[i]
+	 when '@' then
+	    i:=i+1;
+	    case r[i] 
+	    when '0' then
+	       res:=res+sig.tp.str;
+	    when '1','2','3','4','5','6','7','8','9' then
+	       l:INT:=r[i].int-'1'.int;
+	       res:=res+sig.args[l].tp.str;
+	    when 'r' then
+	       res:=res+sig.ret.str;
+	    when 'P' then
+	       l:INT:=r[i].int-'0'.int;
+	       if l<0 or l>=sig.src_tparams.size then
+		  prog.barf("@Pn bound error in '"+r+'\'');
+	       end;
+	       res:=res+sig.src_tparams[l].str;
+	    else
+	       prog.barf("unknown '@' macro in CONFIG for "+sig.str+" (reads/writes)");
+	    end;
+	 when ' ' then
+	 else res:=res+r[i];
+	 end;
+	 i:=i+1;
+      end;
+      return res;
+   end;
+
+   private get_touched_attr(a:ARRAY{STR},doeswrite:BOOL) is
+      if void(a) then return; end;
+      loop s::=expand_macro(a.elt!,rsig);
+	 i::=s.search(':');
+   	 tpname::=s.head(i);
+	 aname::=s.tail(s.size-i-2);
+	 -- unless tp_class_for() does not handle ROUT and ITER, we mark
+	 -- routines that use such types as mark_full.
+	 if tpname.search("ROUT")/=-1 or tpname.search("ITER")/=-1 then
+	    mark_full;
+	    return;
+	 end;
+	 tp::=prog.tp_tbl.tp_class_for(tpname);
+	 se::=#SIDE_EFFECT;
+	 se.tp:=tp;
+	 if aname/="[]" then
+	    se.name:=#IDENT(aname);
+	 end;
+	 se.doeswrite:=doeswrite;
+	 mark_se(se);
+      end;
+   end;
+
+   private get_builtin_context 
+   pre rsig.is_builtin is
+      if ~do_side_effects then return end;
+      if rsig.builtin_info.volatile or rsig.builtin_info.reads_any 
+         or rsig.builtin_info.writes_any then
+	 mark_full;
+      end;
+      if rsig.builtin_info.fragile then
+	 mark_unsafe;
+      end;
+      has_import:=rsig.builtin_info.does_import;
+      has_export:=rsig.builtin_info.does_export;
+      has_arith_error:=rsig.builtin_info.arith;
+      may_block:=rsig.builtin_info.block;
+      has_raise:=~rsig.builtin_info.raises_none;
+      get_touched_attr(rsig.builtin_info.reads,false);
+      get_touched_attr(rsig.builtin_info.writes,true);
+
+   end;
+
+-- register this context with my associated signature
+   register is
+      if void(self) then return end;
+
+      -- check to see if this is a builtin safe function
+      if rsig.is_builtin then
+         get_builtin_context;
+      end;
+
+      -- all functions and iter in OPT_DEBUG have no sideeffects per definition
+      if prog.opt_debug and rsig.tp.str="OPT_DEBUG" then 
+	 mark_clean;
+	 has_fatal_error:=false;
+	 has_raise:=false;
+      end;
+
+      rsig.set_se_context(self);
+
+      if do_side_debug then
+	 #OUT + "Side effects for "+rsig.str;
+	 if full then #OUT + ", full" end;
+	 if unsafe then #OUT + ", unsafe" end;
+	 if has_raise then #OUT + ", has_raise" end;
+	 if has_fatal_error then #OUT + ", has_fatal_error" end;
+	 if has_import then #OUT + ", has_import" end;
+	 if has_export then #OUT + ", has_export" end;
+	 if has_arith_error then #OUT + ", has_arith_error" end;
+	 if may_block then #OUT + ", may_block" end;
+	 if forks then #OUT + ", forks" end;
+	 if has_new then #OUT + ", has_new" end;
+	 #OUT + "\n";
+	 loop
+	    -- we need the () to avoid the "\t" to be printed once too often
+	    #OUT + ("\t" + elt!.str + "\n");
+	 end;
+      end;
+   end;
+
+-- diagnostic output, returns a string to describe this context
+   str:STR is
+      ret::= rsig.str;
+
+      if full then
+	 ret := ret + " full";
+	 return ret;
+      end;
+
+      ret := ret+" with";
+      
+      loop e::=elt!;
+	 ret := ret + " " + e.str;
+      end;
+
+      return ret;
+   end;
+
+-- give up with this set, and mark it is as having full side effects
+   mark_full is
+      if ~do_side_effects then return end;
+      full   := true;
+      set    := void;
+      unsafe := true;
+   end;
+
+-- mark the current context as unsafe
+   mark_unsafe is
+      if ~do_side_effects then return end;
+      unsafe := true;
+   end;
+
+-- clean out this set, so that it has no side effects
+   mark_clean is
+      if ~do_side_effects then return end;
+      full   := false;
+      set    := void;
+      unsafe := false;
+      has_fatal_error:=false;
+      has_import:=false;
+      has_export:=false;
+      has_arith_error:=false;
+      has_new :=false;
+   end;
+
+-- check to see if the given sig is cyclic
+   is_recursive(sig:SIG):BOOL is
+      return prog.generate_am.sig_recursive.test(sig);
+   end;
+
+-- make sure that the context has been generated, and then return it
+   get_se_context(sig:SIG):SE_CONTEXT is
+      -- make sure we don't try to do this for checking code
+      -- a check in do_side_effects should prevent this
+      assert ~prog.all_reached;
+
+      -- make sure this sig has been generated. 
+      -- This will do nothing if this is a cyclic or recursive call,	 
+      -- or possibly if this is a builtin call.
+      prog.generate_am.output_sig(sig);
+      
+      if do_side_debug then
+	 #OUT + "Looking for signature "+sig.str+"\n";
+      end;
+
+      nsec ::= sig.get_se_context(prog);
+
+      if void(nsec) then
+	 nsec := #SE_CONTEXT(prog,sig);
+	 if sig.is_builtin then
+	    nsec.register; -- this will notice that its a builtin and mark it
+
+	    if do_side_debug then
+	       #OUT + sig.str + " is builtin.\n";
+	    end;
+	 elsif sig/=rsig and is_recursive(sig) then
+	    -- check for cyclic calls, but allow recursive calls
+
+	    nsec.mark_full; -- this would be cyclic, so it's full
+
+	    -- we have to register this signature now, else we may try
+	    -- to generate the code that calls this routine before the
+	    -- complete side effects have been generated (which will be
+	    -- be full anyway...)
+	    nsec.register;
+
+	    if do_side_debug then
+	       #OUT + "Marking full because "+rsig.str+" is cyclic\n";
+	    end;
+	 elsif sig.is_eq(rsig) then
+	    -- recursive calls should be marked as clean
+	    if do_side_debug then
+	       #OUT + sig.str + " is recursive.\n";
+	    end;
+	 else
+	    if do_side_debug then
+	       #OUT + "Unknown signature "+rsig.str+", using full\n";
+	    end;
+	    nsec.mark_full;
+	 end;
+      end;
+      
+      return nsec;
+   end;
+
+-- make the union with the given context and this context
+   mark_se(nsec:SE_CONTEXT) is
+      if ~do_side_effects then return end;
+
+      -- check for existance
+      if void(nsec) then return end;
+
+      has_raise:=has_raise or nsec.has_raise;
+      has_fatal_error:=has_fatal_error or nsec.has_fatal_error;
+      has_import:=has_import or nsec.has_import;
+      has_export:=has_export or nsec.has_export;
+      has_arith_error:=has_arith_error or nsec.has_arith_error;
+      may_block:=may_block or nsec.may_block;
+      forks:=forks or nsec.forks;
+      has_new:=has_new or nsec.has_new;
+      -- has_yield_in_lock is only relevant for iters
+      if rsig.is_iter then
+	 has_yield_in_lock:=has_yield_in_lock or nsec.has_yield_in_lock;
+      end;
+      weight:=weight+nsec.weight;
+      weight:=weight.min(1000000);
+
+      if full then return end; -- already full, don't worry about it
+      
+      -- propigate the unsafe flag
+      if nsec.unsafe then mark_unsafe end;
+
+      -- check to see if adding the other set would make us full
+      if ((set.size + nsec.set.size) > maxsize) then
+	 if do_side_debug then
+	    #OUT + "Marking full because "+rsig.str+" is too big\n";
+	 end;
+	 mark_full;
+      else
+	 if nsec.full then
+	    mark_full;
+	 else
+	    -- loop through all the elements in the other set and incorperate 
+	    -- them.  Don't use fset.union because we want to preserve the
+	    -- doeswrite flag ordering.
+	    loop 
+	       mark_se(nsec.elt!);
+	    end;
+	 end;
+      end;
+   end;
+
+-- add the given side effect to this context   
+   mark_se(nse:SIDE_EFFECT) is
+      -- if we don't care about side effects, then return now
+      if ~do_side_effects then return end;
+
+      -- check for table full, so don't worry about inserting 
+      if full then return end;
+
+      -- don't mark accesses to local variables
+      if nse.is_local then return end;
+
+      -- check to see if this refrence is already in the table
+      old_se::= set.get(nse); -- get the old entry for this attribute
+      
+      if set.is_elt_nil(old_se) then -- not there, so add it
+	 set := set.insert(nse);
+      else -- it's already in there, so update the write flag
+	 if (nse.doeswrite and ~old_se.doeswrite) then
+	    set := set.insert(nse); -- this overwrites the old refrence
+	 end;
+      end;
+
+      -- update our unsafe flag if this access is a write to a non-local
+      if nse.doeswrite and ~nse.is_local then mark_unsafe end;
+
+      if set.size > maxsize then -- is the table full now?
+	 if do_side_debug then
+	    #OUT + "Marking full because " + rsig.str + " is too big.\n";
+	 end;
+	 mark_full;
+      end;
+   end;
+
+-- add the given single access to the current context
+   mark_se(amattr:$AM,doeswrite:BOOL) is
+      if ~do_side_effects then return end;
+
+      nse::=#SIDE_EFFECT(amattr,doeswrite);
+      mark_se(nse);
+   end;
+
+-- add the context of the given element to the current context
+   mark_context(amattr:$AM) is
+      if ~do_side_effects then return end;
+
+      typecase amattr
+      when AM_ROUT_CALL_EXPR then
+	 new_sec ::= get_se_context(amattr.fun);
+	 mark_se(new_sec);
+      when AM_ITER_CALL_EXPR then
+	 new_sec ::= get_se_context(amattr.fun);
+	 mark_se(new_sec);
+      when AM_EXT_CALL_EXPR then
+	  -- unknwon external function, marking it as full
+	  mark_full;
+	 if do_side_debug then
+	    #OUT + "Marking full because of unknown external call\n";
+	 end;
+      when AM_BND_CREATE_EXPR then
+	 -- we don't do anything because creating a BND_EXPR is 'safe'
+      when AM_BND_ROUT_CALL_EXPR then
+	 mark_full;
+	 if do_side_debug then
+	    #OUT + "Marking full because "+rsig.str+" is bound\n";
+	 end;
+      when AM_BND_ITER_CALL_EXPR then
+	 mark_full;
+	 if do_side_debug then
+	    #OUT + "Marking full because "+rsig.str+" is bound\n";
+	 end;
+      else end;
+   end;
+
+-- make an SE_CONTEXT for an abstract signature.  I'm putting this
+-- here for now -- but it really should be in sig.sa
+   get_abstract_union(for_prog:PROG,for_sig:SIG):SE_CONTEXT is
+      new_sec::=#SE_CONTEXT(for_prog,for_sig);
+      stp:TP_CLASS; 
+      ostp::=for_sig.tp;
+      typecase ostp when TP_CLASS then stp:=ostp end;
+      desof::=for_prog.tp_graph_abs_des.des_of(stp);
+      loop tp::=desof.elt!;
+	 ifc:IFC:=tp.ifc;
+	 cs:SIG:=ifc.sig_conforming_to(for_sig);
+	 nse:SE_CONTEXT:= cs.get_se_context(for_prog);
+
+	 -- check to see if maybe the sig is cyclic or something... ?
+	 if void(nse) then
+	    if do_side_debug then
+	       #OUT + "Missing signature " +cs.str+"; marking full\n";
+	    end;
+	    new_sec.mark_full;
+	 else
+	    new_sec.mark_se(nse);
+	 end;
+      end;
+      return new_sec;
+   end;
+end;
+
+-- vim:sw=3:nosmartindent

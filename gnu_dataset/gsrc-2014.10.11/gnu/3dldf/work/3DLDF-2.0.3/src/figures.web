@@ -1,0 +1,367 @@
+@q figures.web @>
+                   
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation  @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to bug-3dldf@@gnu.org @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Figures.@>
+@** Figures\quad ({\tt figures\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2004.03.09.}  
+Added this file.
+\ENDLOG 
+
+@q * Include files.@>
+@ Include files.
+\filename{getopt.h} is included for 
+processing the command line options.
+\initials{LDF 2003.08.14.}
+\LOG
+\initials{LDF 2004.04.16.}  No longer including the library header
+file \filename{map} here.  It's now included in
+\filename{loader.web}. 
+
+\initials{LDF 2004.05.21.}  Now including \filename{pens.web}.
+
+\initials{LDF 2004.07.21.}  No longer including \filename{bitset}.  It's
+included in \filename{loader.web} instead.
+\ENDLOG 
+
+@<Include files@>=
+#include "loader.h++"
+
+
+#ifdef __GNUC__
+#include <getopt.h> 
+#endif 
+
+#include "pspglb.h++"
+#include "io.h++"
+#include "gsltmplt.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++" 
+#include "pictures.h++"
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++"
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+#include "arc.h++"
+#include "helices.h++"
+#include "origami.h++"
+
+#if 0 
+   #include "patterns.h++"
+#endif 
+
+#include "solids.h++"
+#include "solfaced.h++"
+#include "cuboid.h++"
+#include "polyhed.h++"
+#include "ddchdrn.h++"
+#include "rhtchdrn.h++"
+#include "plyhdslc.h++"
+#include "cones.h++"
+#include "cylinder.h++" 
+#include "ellpsoid.h++"
+#include "spheres.h++" 
+#include "sphrdevl.h++"
+#include "parabold.h++"
+#include "paraellp.h++"
+#include "parahypr.h++"
+#include "glyphs.h++"
+#include "pctfncs0.h++"
+#include "utility.h++"
+#include "pntrvcf0.h++"
+#include "predctes.h++"
+#include "scanprse.h++"   
+
+@q * Begin figure@>
+@* Begin figure.
+
+\LOG
+\initials{LDF 2003.07.16.}  
+Added |silent| argument, and a message printed
+conditionally to |stdout|, saying which figure is being started.  
+This should help in finding where errors occur.
+
+\initials{LDF 2003.07.16.}  
+Made non-inline.
+
+\initials{LDF 2003.08.17.} 
+Made |silent| non-|const|.   Setting it to |true|, if 
+|SILENT_GLOBAL| is |true|.   
+
+\initials{LDF 2004.03.09.}  
+Moved this function from \filename{io.web}.
+It needs to be here, because I plan to have it access variables of
+types defined in \filename{scanprse.web}, i.e., the |maps| containing
+the objects that are created by the user code.  
+
+\initials{LDF 2004.03.09.}  
+|beginfig()| now allocates memory for a
+|Picture| and points |current_picture| at it.  This memory is freed by
+|endfig()|.  This is so that 3DLDF can perform
+|current_picture->output()| asynchronously.
+
+\initials{LDF 2004.05.25.}  
+Added |Scanner_Node| argument.  Changed 
+|out_stream| from a global |ofstream| to an |ofstream*|.  It's now set
+using the |Scanner_Node| argument.
+\ENDLOG 
+
+@q ** (2) Declaration.  @>
+
+@<Declare figure functions@>=
+
+void 
+beginfig(Scanner_Node s, unsigned short i, bool silent = false);
+
+@q ** (2) Definition.  @>
+
+@
+@<Define figure functions@>=
+
+void 
+beginfig(Scanner_Node s, unsigned short i, bool silent)
+{
+  bool DEBUG = false; /* |true| */@; 
+
+  if (SILENT_GLOBAL)
+    silent = true;
+  
+  if (DEBUG) 
+    cerr << "Entering beginfig(" << i << ")" << endl;
+
+  if (!silent)
+    cerr << "Beginning figure " << i << "." 
+         << endl;
+
+
+  Output_Struct* os = s->out[Run_State::METAPOST];
+  ofstream* out_stream  = static_cast<ofstream*>(os->stream_ptr);
+
+@ !! START HERE.  Change the way |current_picture| is handled.
+\initials{LDF 2004.05.25.}
+
+@<Define figure functions@>=
+  if (current_picture != static_cast<Picture*>(0))
+    {
+      if (DEBUG)
+        cerr << "current_picture != 0.  Clearing and freeing the memory."
+             << endl;
+      current_picture->clear();
+      delete current_picture;
+    }
+  else
+    {
+      if (DEBUG)
+        cerr << "current_picture == 0." << endl;
+    }
+
+  current_picture = new Picture;
+  current_picture->clear();
+  
+
+  *out_stream << "beginfig(" << i << ");\n";
+
+  if (DEBUG) 
+    cerr << "Exiting beginfig(" << i << ")" << endl;
+
+  return;
+}
+
+@q * End figure.@>
+@* End figure.
+\LOG
+\initials{LDF 2003.07.16.}  Added |silent| argument, and a message printed
+conditionally to |stdout|, saying which figure is being ended.  
+This should help in finding where errors occur.
+
+\initials{LDF 2003.07.16.}  Made non-inline.
+
+\initials{LDF 2003.08.17.} Made |silent| non-|const|.   Setting it to |true|, if 
+|SILENT_GLOBAL| is |true|.   
+
+\initials{LDF 2004.03.09.}  Moved |endfig()| from
+\filename{io.web} and redefined it, so that |endfig()| calls 
+|current_picture->output()|.  There are now two versions, with
+argument lists that correspond to those of the two versions of
+|Picture::output()|.  I've added the constant |SUPPRESS| to |namespace
+Projections|, in order to be able to suppress output.
+
+\initials{LDF 2004.05.25.}  Added |Scanner_Node| argument.  Changed 
+|out_stream| from a global |ofstream| to an |ofstream*|.  It's now set
+using the |Scanner_Node| argument.
+
+\initials{LDF 2004.06.07.}  Got rid of the version of this function that didn't
+take a |Focus| argument, because I've gotten rid of |default_focus|.  I may
+replace |default_focus| with a predefined variable defined in 
+|Scanner_Type::create()|.  
+\ENDLOG 
+
+@<Declare figure functions@>=
+void 
+endfig (Scanner_Node s,
+        const Focus& f,
+        const unsigned short projection = Projections::persp,
+        real factor = 1,
+        const unsigned short sort_value = Sorting::MAX_Z,
+        const bool do_warnings = true,
+        const real min_x_proj = -40, const real max_x_proj = 40,
+        const real min_y_proj = -40, const real max_y_proj = 40,
+        const real min_z_proj = -40, const real max_z_proj = 40);
+
+
+@
+@<Define figure functions@>=
+void 
+endfig (Scanner_Node s,
+        const Focus& f,
+        const unsigned short projection,
+        real factor,
+        const unsigned short sort_value,
+        const bool do_warnings,
+        const real min_x_proj, const real max_x_proj,
+        const real min_y_proj, const real max_y_proj,
+        const real min_z_proj, const real max_z_proj)
+{
+  bool DEBUG = false; /* |true| */ @;
+
+  if (DEBUG) 
+    cerr << "Entering endfig().\n";
+
+
+  Output_Struct* os = s->out[Run_State::METAPOST];
+  ofstream* out_stream  = static_cast<ofstream*>(os->stream_ptr);
+
+
+  if (projection != Projections::suppress)
+    {
+      if (DEBUG)
+        cerr << "projection != Projections::suppress. "
+             << "Calling current_picture->output()." << "\n";
+      current_picture->output(s, f, projection, factor, sort_value,
+                              do_warnings, 
+                              min_x_proj, max_x_proj,
+                              min_y_proj, max_y_proj,
+                              min_z_proj, max_z_proj);
+    }
+  else
+    {
+      if (DEBUG)
+        cerr << "projection == Projections::suppress. "
+             << "Not calling current_picture->output()." << "\n";
+    }
+  
+
+  current_picture->clear();
+  delete current_picture;
+  current_picture = 0;
+
+  *out_stream << "endfig" << ";\n";
+
+
+
+  if (DEBUG) 
+    cerr << "Exiting endfig().\n";
+
+  return;
+}
+
+
+@q * Putting figures together.@>
+@ Putting figures together.
+
+@q ** Compilation. @>
+@ This is what's compiled.  
+@c
+@<Include files@>@;
+@<Define figure functions@>@;
+
+
+@q ** Header file. @>
+@ This is what's written to \filename{figures.h}.
+
+@(figures.h@>=
+@<Declare figure functions@>@;
+
+
+
+  
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-cweave-on-file:"3DLDFprg.web" @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>
+

@@ -1,0 +1,66 @@
+
+GTK+ support
+============
+
+Maverik support for GTK+ requires that GTK+ and the GtkGLArea option
+be installed. These packages can be downloaded from http://www.gtk.org
+and http://www.student.oulu.fi/~jlof/gtkglarea respectively.
+  
+GTK+ support has only be tested on Unix (Linux and Irix to be
+precise). However, both GTK+ and GtkGLArea are available for Windows
+so it should also work on that platform. In fact one the aims of
+supporting GTK+ is that it will hopefully provide Maverik with a
+platform independent means of opening windows, creating graphics
+contexts, handling events etc...
+
+GTK+ support must be specified to the setup script when compiling
+Maverik, for example "./setup --GTK".
+
+
+
+How it works
+============
+
+The mav_windowNew function is used to open windows, either explicitly
+or as a part of the initialisation sequence. When GTK+ support is
+enabled this function creates a GtkWidget to act as the Maverik
+rendering window and calls a user-supplied callback function to create
+the GUI. The callback function has the following prototype:
+
+  void fn(GtkWidget *mavarea, char *nm);
+
+where mavarea is the GTK+ widget representing the Maverik rendering
+area and nm is the name of the window.
+
+The mav_windowNew function has the following prototype:
+
+  MAV_window *mav_windowNew(int x, int y, int w, int h, char *name, char *disp);
+
+The last argument, disp, specifies the X server on which to open the
+window - something which is not applicable when using GTK+. So, when
+GTK+ support is enable this variable is used to define the callback
+function which creates the GUI. For example:
+
+  void gui(GtkWidget *mavarea, char *nm)
+  {
+    [code to create the GUI]
+  }
+
+  mav_windowNew(0, 0, 100, 100, "name", (char *) gui);
+
+Note the cast to prevent compilation problems. If the window is opened
+automatically as part of the initialisation sequence then the callback
+function is defined thus:
+
+  mav_opt_disp= (char *) gui;
+
+If no callback function is specified (mav_windowNew called with
+disp=NULL which is the default case) then a default GUI is created
+which simply has a window containing the Maverik rendering area.
+
+An example of using GTK+ can be found in examples/misc/GTK.
+
+Note: the current implementation processes one GTK+ event per
+frame. If lots of event are generated and the frame rate is low this
+could lead to lag. Ideally GTK+ processing should be performed as a
+separate thread.

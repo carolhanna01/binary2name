@@ -1,0 +1,1074 @@
+@q lines.web @>
+ 
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Line.@>
+@** Line\quad ({\tt lines\PERIOD web}).\hfil
+\initials{LDF 2002.10.29.}  
+
+|Lines| are not |Shapes|.  They are used for
+performing vector operations.  A |Line| is defined by a |Point|
+representing a position vector and a |Point| representing a direction
+vector. 
+\initials{LDF 2002.10.29.}  
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2003.06.03.}
+Add setting functions. 
+\ENDTODO 
+
+\LOG
+\initials{LDF 2002.04.08.}  
+Added this section.
+
+\initials{LDF 2002.04.12.}  
+Created this file.  Removed the code for |Line| from 
+\filename{points.web} and put it here.
+
+\initials{LDF 2003.11.12.}  
+Removed the version control identifiers from the CWEB
+files for the distribution of 3DLDF 1.1.  They're still used in my
+development versions.
+
+\initials{LDF 2003.12.10.}  
+Put the version control identifiers back
+into my release versions for 3DLDF 1.1.4.  I've already put some of
+them back in, now I'm doing the rest of them.  However, the release
+versions are now in their own RCS repository.
+\ENDLOG 
+
+@q * (0) Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.05.09.}  
+Now including \filename{creatnew.h}.
+
+\initials{LDF 2004.05.21.}  
+Now including \filename{pens.web}.
+\ENDLOG 
+
+@<Include files@>=
+
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++"
+#include "pictures.h++"
+#include "points.h++"
+
+
+@q * (1) Line struct definition.@>
+@* {\bf Line struct} definition.
+@f Line Point
+@<Define |struct Line|@>=
+struct Line
+{
+ public:
+  Point position;
+  Point direction;
+  @<Declare |Line| constructors@>@;
+  @<Declare |Line| functions@>@;
+};
+
+@q * (1) |Line| functions.@> 
+@* {\bf Line} functions.
+\initials{LDF 2005.11.04.}
+
+
+@q ** (2) Constructors.@>
+@*1 Constructors.
+\initials{LDF 2002.10.29.}  
+The constructors and assignment operator take |Point| arguments for
+|position| and |direction|.  If you want to get the |Line| between 
+two |Points|,\newline
+use |Point::get_line()|.
+
+\LOG
+\initials{LDF 2002.04.12.}  
+It took me a while to figure out why I was having
+problems with |Lines|.  The constructor was making the opposite
+assumption, namely, that it was supposed to calculate the |Line| from
+its arguments, rather than just taking them as they were.  This caused
+a problem in |Plane::intersection_line()|.
+
+\initials{LDF 2004.06.08.}  
+Removed the defaults for the arguments.  They were
+both formerly |origin|.  This was necessary, because I've
+removed the global variable |origin|.  I'm replacing it with a predefined
+variable defined in |Scanner_Type::create()|.
+\ENDLOG 
+
+@q *** (3) Default constructor.@>
+@*2 Default constructor.  
+@^\cfunc{Line}{Line}@>
+
+\LOG
+\initials{LDF 2005.12.11.}
+Added this function.
+\ENDLOG
+
+@<Declare |Line| constructors@>=
+Line(void);
+
+@
+@<Define |Line| constructors@>=
+Line::Line(void)
+{
+   position.set(0, 0, 0);
+   direction.set(0, 0, 0);
+}
+
+
+@q *** (3) Two |Point| arguments.@>
+@*2 Two |Point| arguments.
+@^\cfunc{Line}{Line}@>
+
+This constructor takes two optional |Point| arguments.
+\initials{LDF Undated.}
+
+@<Declare |Line| constructors@>=
+Line(const Point& pos, const Point& dir);
+       
+@
+@<Define |Line| constructors@>=
+Line::Line(const Point& pos, const Point& dir)
+: position(pos),   direction(dir) 
+{
+  position.apply_transform();
+  direction.apply_transform();
+}
+
+@q *** (3) Copy constructor.@>
+@*2 Copy constructor.
+@^\cfunc{Line}{Line}@>
+\initials{LDF 2002.10.29.}  Calling |apply_transform()| on |position| and
+|direction| is probably unnecessary, because it will already
+have been called on |l.position| and |l.direction| when |l| was
+declared or assigned to.  But maybe some function has affected 
+|l.position.transform| or |l.direction.transform|, so I'm doing it
+just to be sure. 
+
+@<Declare |Line| constructors@>=
+Line(const Line& l);
+
+@
+@<Define |Line| constructors@>=
+Line::Line(const Line& l)
+     : position(l.position), direction(l.direction) 
+{
+  position.apply_transform(); 
+  direction.apply_transform();
+}
+
+@q ** (2) Operators.@> 
+@*1 Operators.
+\initials{LDF 2005.11.04.}
+
+\LOG
+\initials{LDF 2005.11.04.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Assignment.@>
+@*2 Assignment.
+@^\cofunc{Line}{=}@>
+\initials{LDF Undated.}
+
+@<Declare |Line| functions@>=
+void
+operator=(const Line& l);
+
+@
+@<Define |Line| functions@>=
+void
+Line::operator=(const Line& l)
+{
+  position = l.position;
+  direction = l.direction;
+}
+
+@q *** (3) Equality.@>
+@*2 Equality.
+\initials{LDF 2005.11.04.}
+
+\LOG
+\initials{LDF 2005.11.04.}
+Added this section.
+\ENDLOG
+
+@q **** (3) Is Equal.@>
+@*3 Is Equal.
+\initials{LDF 2007.10.06.}
+@^\cfunc{Line}{is\_equal}@>
+\initials{LDF 2007.10.06.}
+
+\LOG
+\initials{LDF 2007.10.06.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Line| functions@>=
+bool
+is_equal(const Line& l, real tolerance = -1);
+
+@q **** (4) Definition.@>
+@
+@<Define |Line| functions@>=
+bool
+Line::is_equal(const Line& l, real tolerance)
+{
+    if (tolerance < 0)
+       tolerance = .0001;
+
+    return (position.is_equal(l.position, tolerance)
+            && direction.is_equal(l.direction, tolerance));
+
+}
+
+@q **** (3) Equality Operator.@>
+@*3 Equality Operator.
+\initials{LDF 2005.11.04.}
+@^\cofunc{Line}{==}@>
+\initials{LDF 2005.11.04.}
+
+\LOG
+\initials{LDF 2005.11.04.}
+Added this function.
+
+\initials{LDF 2007.10.06.}
+This function now calls |Line::is_equal|.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Line| functions@>=
+bool
+operator==(const Line& l);
+
+@q **** (4) Definition.@>
+@
+@<Define |Line| functions@>=
+bool
+Line::operator==(const Line& l)
+{
+    return is_equal(l, -1);
+}
+
+@q *** (3) Inequality.@>
+@*2 Inequality.
+\initials{LDF 2005.11.04.}
+
+\LOG
+\initials{LDF 2005.11.04.}
+Added this section.
+\ENDLOG
+
+
+\LOG
+\initials{LDF 2005.11.04.}
+Added this function.
+\ENDLOG
+
+@q **** (3) Is Unequal.@>
+@*3 Is Unequal.
+\initials{LDF 2007.10.06.}
+@^\cfunc{Line}{is\_unequal}@>
+\initials{LDF 2007.10.06.}
+
+\LOG
+\initials{LDF 2007.10.06.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Line| functions@>=
+bool
+is_unequal(const Line& l, real tolerance = -1);
+
+@q **** (4) Definition.@>
+@
+@<Define |Line| functions@>=
+bool
+Line::is_unequal(const Line& l, real tolerance)
+{
+    return !is_equal(l, tolerance);
+}
+
+@q **** (4) Inequality operator.@> 
+@*3 Inequality operator.
+@^\cofunc{Line}{!=}@>
+\initials{LDF 2005.11.04.}
+
+\LOG
+\initials{LDF 2005.11.04.}
+Added this function.
+
+\initials{LDF 2007.10.06.}
+Now calling |is_unequal|.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Line| functions@>=
+bool
+operator!=(const Line& l);
+
+@q ***** (5) Definition.@>
+@
+@<Define |Line| functions@>=
+bool
+Line::operator!=(const Line& l)
+{
+  return is_unequal(l, -1);
+}
+
+@q ** (2) Returning elements and information.@> 
+@*1 Returning elements and information.
+\initials{LDF 2005.11.04.}
+
+\LOG
+\initials{LDF 2005.11.04.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Get Line. (Point function).@>
+@*2 Get {\bf Line}. (|Point| function).
+@^\cfunc{Point}{get\_line}@>
+\initials{LDF Undated.}
+
+Declared in \filename{points.web}.  Must be defined here, because
+|Line| is an incomplete type there.
+\initials{LDF Undated.}
+
+|get_line()| returns a |Line l| corresponding to the 
+line from |*this| to |p|, where |l.position| is a |Point| on the
+|Line|, and |l.direction| is a direction vector.  |l.position| will be
+|*this|, and |l.direction| will be |pt - *this|.
+\initials{LDF 2003.06.06.}  
+
+
+\LOG
+\initials{LDF 2003.06.06.}  
+@:BUG FIX@> BUG FIX:  Changed the call to |Line()|, 
+so that the argument for |direction| is |pt - *this| instead 
+of |pt|.
+\ENDLOG 
+
+@<Define |Point| functions@>=
+
+Line
+Point::get_line(const Point& pt) const
+{
+  Line l(*this, (pt - *this));
+  return l;
+}
+
+@q *** (3) Get distance.@>
+@*2 Get distance.
+@^\cfunc{Line}{get\_distance}@>
+
+\initials{LDF 2002.04.22.}  
+Renamed this function |get_distance()| from
+|intersection_point()|.  The old version of
+|Point::intersection_point()|, which I am currently using again, since
+the new version wasn't working, returns a |Bool_Point|, which is
+sensible.  If I start using the commented-out version above again, I
+should have it return a |Bool_Point| too, instead of a
+|Bool_Real_Point|.  This will make it easier to switch back to the old
+version, if I have problems again.
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2003.06.11.}  
+|get_distance()| may be working now, due to
+changes I've made to |Line| elsewhere.
+Read this through and see how it works.  Then test.  Also, check where
+it's used. 
+\initials{LDF 2003.06.03.}  When I've fixed it, add description to
+\filename{line.texi}. 
+\ENDTODO 
+
+
+\LOG
+\initials{LDF 2002.04.10.}  
+Added this function.
+
+\initials{LDF 2004.06.08.}  
+Changed |origin| to |origin_pt|, because I've
+removed the global variable |origin|.  I'm replacing it with a predefined
+variable defined in |Scanner_Type::create()|.
+
+\initials{LDF 2004.10.23.}
+Added optional |Scanner_Node scanner_node| argument with default 0
+and made debugging output thread-safe.
+\ENDLOG 
+
+@q ** (2) Declaration.@>
+@<Declare |Line| functions@>=
+Bool_Real_Point
+get_distance(const Line& l, Scanner_Node scanner_node = 0) const;
+
+@q ** (2) Definition.@>
+@
+@<Define |Line| functions@>=
+Bool_Real_Point
+Line::get_distance(const Line& l, Scanner_Node scanner_node) const
+{
+
+@q *** (3) Preliminaries.@> 
+
+  bool DEBUG = false; /* |true| */ @; 
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+  
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+@q *** (3).@> 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name << "Entering `Line::get_distance()'.";
+ 
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+  Bool_Real_Point brp;
+
+  Point normal = direction.cross_product(l.direction);
+
+  Point origin_pt(0, 0, 0);
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_mutex.lock();
+         cerr_strm << thread_name << "In `Line::get_distance()':"
+                   << endl; 
+         log_message(cerr_strm); 
+         cerr << cerr_strm.str();
+         normal.show("normal after cross product:");
+         cerr_strm.str(""); 
+         cerr_mutex.unlock(); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+  Point normal_unit = normal.unit_vector();
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {  
+        cerr_mutex.lock(); 
+        cerr_strm << thread_name << "In `Line::get_distance()':" << endl;
+        log_message(cerr_strm); 
+        cerr << cerr_strm.str();
+        normal_unit.show("normal_unit:");
+        cerr_strm.str(""); 
+        cerr_mutex.unlock(); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+@q *** (3) Lines are parallel.@> 
+
+@ Lines are parallel.
+\initials{LDF 2004.10.23.}
+
+@<Define |Line| functions@>=
+  if (normal_unit == origin_pt)
+    {
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "In `Line::get_distance()': Lines are parallel.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      brp.b = false;  /* No intersection.  */
+      brp.pt = INVALID_POINT;
+      
+      Point temp_pt(l.position);
+      temp_pt -= position;
+      
+      temp_pt = temp_pt.cross_product(direction);
+
+@q *** (3) Distance.@> 
+
+@ Distance.
+\initials{LDF 2002.10.29.}
+
+@<Define |Line| functions@>=
+
+     
+      brp.r = temp_pt.magnitude() / direction.magnitude(); 
+
+@q *** (3).@> 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << thread_name 
+                 << "In `Line::get_distance()': "
+                 << "distance == " << brp.r << endl 
+                 << "Exiting function.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      return brp; 
+
+     } /* |if (normal_unit == origin_pt)|  */
+
+@q *** (3) Lines aren't parallel.@> 
+
+@ Lines aren't parallel.
+\initials{LDF 2004.10.23.}
+
+@<Define |Line| functions@>=
+
+  else /* |normal_unit != origin_pt|  */
+    {
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "In `Line::get_distance()': Lines are not parallel.";
+                  
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+      brp.r = fabs((l.position - position).dot_product(normal_unit));
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "In `Line::get_distance()': "
+                  << "distance == " << brp.r << ".";
+ 
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+        
+@q **** (4) @>   
+@ Lines have an intersection.  
+\initials{LDF 2004.10.23.}
+
+\LOG
+\initials{LDF 2003.08.27.}  
+Commented-out the declarations of |v_x|, |v_y|, and
+|v_z|, since they are not used.  I haven't deleted them, in case I
+need them someday.
+\ENDLOG 
+
+@<Define |Line| functions@>=
+
+      if (brp.r < Point::epsilon()) 
+        {
+        
+
+#if DEBUG_COMPILE
+           if (DEBUG)
+              {
+                 cerr_strm << thread_name 
+                           << "In `Line::get_distance()': "
+                           << "Lines have an intersection.";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+              }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+          brp.r = 0;
+          brp.b = true;  
+
+          real a_x = position.get_x();
+          real a_y = position.get_y();
+          real a_z = position.get_z();
+
+          real b_x = l.position.get_x();
+          real b_y = l.position.get_y();
+          real b_z = l.position.get_z();
+          
+#if 0 
+          real v_x = direction.get_x();
+          real v_y = direction.get_y();
+          real v_z = direction.get_z();
+#endif 
+          real w_x = l.direction.get_x();
+          real w_y = l.direction.get_y();
+          real w_z = l.direction.get_z();
+
+          real u_x = normal.get_x();
+          real u_y = normal.get_y();
+          real u_z = normal.get_z();
+          
+          real t;
+
+@q ***** (5).@> 
+          
+          if (u_z != ZERO_REAL)
+            {
+
+
+#if DEBUG_COMPILE
+               if (DEBUG)
+                 {
+                    cerr_strm << thread_name 
+                              << "In `Line::get_distance()': "
+                              << "u_z (normal z) != 0.";
+                    log_message(cerr_strm);
+                    cerr_message(cerr_strm);
+                    cerr_strm.str("");         
+                 }           
+#endif /* |DEBUG_COMPILE|  */@; 
+
+              t = (((b_x - a_x) * w_y) - ((b_y - a_y) * w_x))
+                / u_z;
+
+            } /* |if (u_z != ZERO_REAL)|  */
+          
+
+@q ***** (5).@> 
+
+          else if (u_x != ZERO_REAL)
+            {
+
+#if DEBUG_COMPILE
+               if (DEBUG)
+                 {
+                    cerr_strm << thread_name 
+                              << "In `Line::get_distance()': "
+                              << "u_x (normal x) != 0";
+                    log_message(cerr_strm);
+                    cerr_message(cerr_strm);
+                    cerr_strm.str("");  
+                 }           
+#endif /* |DEBUG_COMPILE|  */@; 
+
+              t = (((b_y - a_y) * w_z) - ((b_z - a_z) * w_y))
+                / u_x;
+
+            } /* |else if (u_x != ZERO_REAL)|  */
+
+
+@q ***** (5).@> 
+
+          else if (u_y != ZERO_REAL)
+            {
+ 
+
+#if DEBUG_COMPILE
+            if (DEBUG)
+              {
+                 cerr_strm << thread_name 
+                           << "In `Line::get_distance()': "
+                           << "u_y (normal y) != 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+              }      
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+              t = (((b_z - a_z) * w_x) - ((b_x - a_x) * w_z))
+                / u_y;
+
+            } /* |else if (u_y != ZERO_REAL)|  */
+
+@q ***** (5).@> 
+
+          else
+            {
+              cerr_strm << "ERROR! In `Line::get_distance()':"
+                        << endl 
+                        << "normal == origin_pt.  This case should have been "
+                        << "caught, so something is really wrong."
+                        << endl 
+                        << "Exiting function with return value "
+                        << "`INVALID_BOOL_REAL_POINT'.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm, error_stop_value);
+              cerr_strm.str("");
+
+              return INVALID_BOOL_REAL_POINT;
+
+            } /* |else|  */
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "In `Line::get_distance()': "
+                  << "`t' == " << t << ".";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          brp.pt = direction;
+          brp.pt *= t;
+          brp.pt += position;
+
+
+#if DEBUG_COMPILE
+           if (DEBUG)
+             {
+                cerr_mutex.lock(); 
+                cerr_strm << thread_name 
+                          << "In `Line::get_distance()':" << endl;
+                cerr << cerr_strm.str();
+                log_message(cerr_strm); 
+                brp.pt.show("intersection point:");
+                cerr_strm.str(""); 
+                cerr_mutex.unlock(); 
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+@q ***** (5).@> 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "In `Line::get_distance()': "
+                  << "Exiting `Line::get_distance()' successfully.";
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");                 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+          return brp;
+
+        } /* |if (brp.r < Point::epsilon())|  */ 
+
+@q **** (4) @>   
+
+@ Lines are not parallel, but do not intersect.  
+\initials{LDF 2004.10.23.}
+
+@<Define |Line| functions@>=
+      else  /* |brp.r >= Point::epsilon()|  */
+        {
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                cerr_strm << thread_name  
+                          << "In `Line::get_distance()':"
+                          << endl 
+                          << "Lines are not parallel, but do not intersect.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str("");
+             }       
+#endif /* |DEBUG_COMPILE|  */@; 
+          
+          brp.b = false;
+          brp.pt = INVALID_POINT;
+
+#if DEBUG_COMPILE
+         if (DEBUG)
+            {
+               cerr_strm << thread_name 
+                         << "Exiting `Line::get_distance()'.";
+               log_message(cerr_strm);
+               cerr_message(cerr_strm);
+               cerr_strm.str("");
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+          return brp;
+
+        } /* |else| (|brp.r >= Point::epsilon()|)  */
+
+    } /* |else| (|normal_unit != origin_pt|)  */  
+
+@q **** (4) @>   
+
+} /* End of |Line::get_distance()| definition.  */
+
+
+
+
+
+@q *** (3) Get |Path|.@>
+@*2 Get {\bf Path}.
+@^\cfunc{Line}{get\_path}@>
+\initials{LDF 2003.06.06.}  
+
+Returns a linear |Path| consisting of two |Points|,
+and corresponding to the |Line|.  Must be defined in
+\filename{paths.web}, because |Path| is an incomplete type here.
+\initials{LDF 2003.06.06.}  
+
+\LOG
+\initials{LDF 2003.06.06.}  
+Added this function.
+\ENDLOG 
+@<Declare |Line| functions@>=
+Path
+get_path(void) const;
+
+@q ** (2) Intersection.@>
+@*1 Intersection.
+@^\cfunc{Point}{intersection\_point}@>
+
+\initials{LDF Undated.}
+Declared in \filename{points.web}, but must be
+defined here, because |Line| is an incomplete type in
+\filename{points.web}. 
+
+\LOG
+\initials{LDF 2002.04.12.}  
+Moved this function definition 
+here from \filename{points.web} because it requires the use of
+|Lines|, and |Line| is an incomplete type there.
+
+\initials{LDF 2002.04.15.}  
+Commented-out, because I'm having problems with it.
+Commented old version in \filename{points.web} back in.
+I don't quite understand this, because it seemed to be working.
+
+\initials{LDF 2002.04.22.}  
+Changed return value to |Bool_Point|, to correspond
+with the old version.  This facilitates testing, since all I have to
+do is to comment-out whichever version I don't want to use, and
+uncomment-out the other one.  Made a few changes in the function
+definition in order to be able to return a |Bool_Point|.
+\ENDLOG
+
+@q ** Definition.@>
+@<Define |Point| functions@>=
+#if 1 /* 0 */
+Bool_Point
+Point::intersection_point(const Point& pp0, const Point& pp1, const
+                          Point& qq0, const Point& qq1)
+{  
+/* !! TO DO.  DEBUGGING.  \initials{LDF 2003.06.24.}*/ 
+
+  bool DEBUG = false; /* |true| */
+
+  if (DEBUG)
+  {
+    cerr << "Entering Point::intersection_point()\n";
+  }
+
+  Line l_p = pp0.get_line(pp1);
+  Line l_q = qq0.get_line(qq1);
+
+  if (DEBUG) 
+    {
+      pp0.show("pp0");
+      pp1.show("pp1");
+      qq0.show("qq0");
+      qq1.show("qq1");
+      l_p.show("l_p");
+      l_q.show("l_q");
+    }
+
+  Bool_Real_Point brp = l_p.get_distance(l_q);
+
+  if (DEBUG)
+    {
+      cerr << "brp.b == " << brp.b << endl;
+      cerr << "brp.r == " << brp.r << endl;
+      brp.pt.show("brp.pt");
+    }
+
+
+  if (brp.r != ZERO_REAL || brp.b == false || brp.pt == INVALID_POINT)
+    return INVALID_BOOL_POINT;
+
+  Bool_Point bp;
+  
+  bp.pt = brp.pt;
+
+  Bool_Real br_p = brp.pt.is_on_segment(pp0, pp1);
+  Bool_Real br_q = brp.pt.is_on_segment(qq0, qq1);
+
+  if (DEBUG) 
+    {
+      cerr << "br_p.first == " << br_p.first << endl;
+      cerr << "br_p.second == " << br_p.second << endl;
+      cerr << "br_q.first == " << br_q.first << endl;
+      cerr << "br_q.second == " << br_q.second << endl;
+    }
+
+  
+  bp.b = (br_p.first && br_q.first);
+
+  if (DEBUG)
+    cerr << "Exiting Point::intersection_point()\n";
+
+  return bp;
+
+}
+#endif 
+
+
+@q * (1) Show.@>
+
+@* Show.
+@^\cfunc{Line}{show}@>
+
+@<Declare |Line| functions@>=
+void
+show(string text = "");
+
+@
+@<Define |Line| functions@>=
+void
+Line::show(string text)
+{
+  if (text == "")
+    cerr << "Line:\n";
+  else
+    cerr << text << endl;
+
+  position.show("position:");
+  direction.show("direction:");
+}
+
+@q * Global constants for Line.@>
+@ Global constants for {\bf Line}.
+@<|Line| global constants@>=
+extern const Line INVALID_LINE(INVALID_POINT, INVALID_POINT);
+
+@
+@<Declarations for the header file@>=
+extern const Line INVALID_LINE;
+
+@q * Putting Line together.@>
+@ Putting {\bf Line} together.
+
+@ This is what's compiled.
+@c
+@<Include files@>@;
+@<Define |struct Line|@>@;
+@<Define |Line| constructors@>@;
+@<|Line| global constants@>@;
+@<Define |Line| functions@>@;
+@<Define |Point| functions@>@;
+
+@ This is what's written to \filename{lines.h}. 
+@(lines.h@>=
+@<Define |struct Line|@>@;
+@<Declarations for the header file@>@;
+
+
+
+
+@q run-gxx-on-file:"points.c" @>
+@q run-cweb-on-file:"points.web" @>
+
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

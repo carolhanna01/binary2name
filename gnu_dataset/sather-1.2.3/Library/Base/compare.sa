@@ -1,0 +1,196 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Comparison include classes
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class COMPARE{ETP} is
+   -- Partial class that should be included by containers of elements
+   -- of type ETP that need to provide an elt_eq, elt_lt, hash,
+   -- elt_nil or is_elt_nil routines. These routines use the user
+   -- defined functionality by default, falling back to the system
+   -- versions of equality, hash and comparison if it is possible and
+   -- correct to do so.
+
+   elt_eq(e1,e2:ETP):BOOL is return ELT_EQ{ETP}::elt_eq(e1,e2); end;
+   
+   elt_lt(e1,e2:ETP):BOOL is return ELT_LT{ETP}::elt_lt(e1,e2); end;
+   
+   elt_hash(e:$OB):INT is return ELT_HASH::elt_hash(e) end;
+   
+   elt_nil:ETP is return ELT_NIL{ETP}::elt_nil end;
+   
+   is_elt_nil(e:ETP):BOOL is return ELT_NIL{ETP}::is_elt_nil(e); end;
+
+end;
+-------------------------------------------------------------------
+class ELT_EQ{ETP} is
+   -- Provides the equality comparison function for elements of type
+   -- ETP. Tries to use the user provided equality and falls back 
+   -- on the system default equality if the user has not provided an
+   -- appropriate method
+   
+   elt_eq(e1,e2:ETP):BOOL is
+      -- The equality relation uses the user defined is_eq routine, if
+      -- ETP < $IS_EQ. Otherwise it uses the system defined equality
+      typecase e1
+      when $IS_EQ then return e1.is_eq(e2)
+      else return SYS::ob_eq(e1,e2); end;
+   end;
+end;
+-------------------------------------------------------------------
+class ELT_LT{ETP} is
+   -- Provides the less than comparison function for elements of type
+   -- ETP. Tries to use the user defined comparison and falls back 
+   -- on the system default comparison, if possible
+   
+   elt_lt(e1,e2:ETP):BOOL is
+      -- The default "less than" relation e1 < e2. Uses the user
+      -- defined is_lt if ETP < $IS_LT{ETP}. Otherwise it uses a
+      -- default system implementation of is_lt.  
+      -- 
+      -- Due to a current limitation, the default implemetnation of
+      -- is_lt does not work for immutable classes. Hence, they must
+      -- be placed under $IS_LT
+      typecase e1
+      when $IS_LT{ETP} then return e1.is_lt(e2)
+      else 
+	 -- The less than operation for two objects that are not under
+	 -- $IS_LT{T}. Value objects must be placed under $IS_LT{ETP}
+	 assert verify_can_call_lt(e1,e2);
+	 return SYS::id(e1) < SYS::id(e2);
+      end;
+   end;
+
+   private verify_can_call_lt(e1,e2:$OB): BOOL is
+      -- Return true if it the system call SYS::id(e1) < SYS::id(e2) would
+      -- run without problems
+      if void(e1) or void(e2) then
+	 raise "Error: No default less than operator for void objects";
+      elsif SYS::tp(e1) < 0 or SYS::tp(e2) < 0 then 
+	 t1:STR := SYS::str_for_tp(SYS::tp(e1));
+	 t2:STR := SYS::str_for_tp(SYS::tp(e2));
+	 raise "Error:"
+	       +" No default system lt for immutable classes.\n"
+	       +"Please redefine is_lt and place "+t1+ " and "+ t2
+	       +" under $IS_LT";
+      else return true; end;
+   end;
+
+end;
+-------------------------------------------------------------------
+class ELT_HASH is
+   -- Provides the hash value of an object. Returns the user defined
+   -- hash value, if there is one (i.e. the object subtypes from $HASH)
+   -- Otherwise provides a system defined hash value.
+   
+   elt_hash(e:$OB):INT is
+      -- The default hash value of an object "e".  Uses the user defined
+      -- hash function if e < $HASH. Otherwise, uses the system defined hash
+      -- function.  
+      -- 
+      -- If e < $IS_EQ, then the system defined hash function will not
+      -- be used, since it may not be valid. An exception will be raised.
+      -- The hash function must maintain the property that
+      --          a=b => a.hash=b.hash
+      -- However, if the user has redefined equality, there is no way
+      -- for the system to guarantee that any hash values it provides
+      -- preserve the above property, except by returning the same
+      -- value every time (which is correct, but useless for hashing).
+      -- 
+      -- Due to a current limitation of the compiler, the system defined
+      -- hash function will not work on immutable classes. Hence, immutable
+      -- classes must define their own hash function and be under $HASH
+      -- 
+      typecase e
+      when $HASH then return e.hash
+      when $IS_EQ then
+	 -- ETP redefines equality but not hash.  The standard system
+	 -- hash value cannot be used.
+	 raise "Cannot provide a default hash for:"+SYS::str_for_tp(SYS::tp(e))
+	       +" since is_eq is defined.Redefine hash and subtype from $HASH."
+      else 
+	 if void(e) then 
+	    -- Handle the void case specially. Some reference
+	    -- types such as the F classes are valid when void
+	    -- and therefore require a valid hash function..
+	    return 0
+	 else
+	    assert verify_can_call_hash(e);
+	    return SYS::id(e).hash;
+	 end;
+      end;
+   end;
+
+   private verify_can_call_hash(e:$OB):BOOL is
+      -- Check that "e" is of a reference type. If not, raise an error
+      if SYS::tp(e) < 0 then
+	 t:STR := SYS::str_for_tp(SYS::tp(e));
+	 raise "Error "
+	       +" No default system definition of hash for immutable classes\n"
+	       +" Please define a hash for "+t+" and subtype from $HASH";
+      else return true end;
+   end;
+
+
+end;
+-------------------------------------------------------------------
+class ELT_NIL{ETP} is
+   -- Provides the nil value for an object of type ETP. 
+   -- If ETP < $NIL then return ETP::nil otherwise return void
+   -- This does not work for abstract types - hence, abstract
+   -- classes should not be placed under $NIL
+
+   elt_nil: ETP is
+      -- Return the nil value. If the element is under $NIL then
+      -- return e.nil. Otherwise, return "void"
+      e: ETP; 
+      typecase e 
+      when $NIL then 
+	 -- Note: The double typecase is necessary since
+	 -- at this point we know that "e" is of type $NIL and
+	 -- $NIL::nil returns SAME, which is $NIL.
+	 -- We need the extra typecase to return an ETP.
+	 -- If ETP < $NIL, then the second typecase is not needed.
+	 -- Won't work for void reference classes.
+	 res ::= e.nil; typecase res when ETP then return res end;
+      else return void end
+   end;      
+      
+   is_elt_nil(e:ETP):BOOL is
+      -- Return true if ETP is defines a nil value and "e" has that value
+      -- or if ETP does not define a nil value, but "e" is void
+      typecase e
+      when $IS_NIL then return e.is_nil;
+      else return void(e); end;
+   end;
+   
+end;
+-------------------------------------------------------------------
+partial class COMPARABLE is
+   -- Partial class that implements the generalized equality routine.
+   -- Classes should provide an is_eq(SAME) and include this class to
+   -- provide the more general versions
+   
+   stub is_eq(arg: SAME): BOOL;
+   
+   is_eq(arg: $OB): BOOL is
+      -- Overloaded version of the is_eq routine that works with an argument
+      -- of any type. If the type of the 'arg' is not the same as they
+      -- type of 'self' then return false. Otherwise, deletegate to
+      -- the 'real' is_eq(SAME):BOOL routine
+      typecase arg  when SAME then return is_eq(arg)  else return false end;
+   end;
+   
+end;
+-------------------------------------------------------------------

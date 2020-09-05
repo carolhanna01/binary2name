@@ -1,0 +1,59 @@
+#
+#	Doc files Makefile
+#
+#   Copyright 2008 Free Software Foundation, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+SHELL		=	/bin/sh
+
+BASE		=	..
+PARENT		=	..
+prefix		=	/usr/local
+exec_prefix	=	${prefix}
+MANDIR		=	$(DESTDIR)${prefix}/share/man
+PDFDIR		=	$(DESTDIR)${docdir}
+INSTALL		=	/usr/bin/install -c
+INSTALL_DATA	=	${INSTALL} -m 644
+STARTLINKS	=	phalt pstop pinter padd pdel pchange ok nok pstat conn disconn
+STOPLINKS	=	suspend release
+LPCOVERLINKS	=	cancel gspl-cancel gspl-lpr gspl-lpstatc lp lpq lpr lprm lpstat
+
+all:  manpages pdfdocs
+
+manpages:
+	# Currently don't do anything
+
+pdfdocs:
+	# Currently don't do anything
+
+install install-strip: all
+	$(INSTALL_DATA) poddoc/man/*.1 $(MANDIR)/man1
+	$(INSTALL_DATA) poddoc/man/*.3 $(MANDIR)/man3
+	$(INSTALL_DATA) poddoc/man/*.5 $(MANDIR)/man5
+	$(INSTALL_DATA) poddoc/man/*.8 $(MANDIR)/man8
+	cd $(MANDIR)/man1; for p in $(LPCOVERLINKS); do ln -s gspl-lpcover.1 $$p.1; done
+	cd $(MANDIR)/man1; ln -s gspl-pr.1 gspl-rpr.1
+	cd $(MANDIR)/man1; for p in $(STARTLINKS); do ln -s gspl-start.1 gspl-$$p.1; done
+	cd $(MANDIR)/man1; for p in $(STOPLINKS); do ln -s gspl-stop.1 gspl-$$p.1; done
+	cd $(MANDIR)/man3; ln -s gspool_jobfind.3 gspool_jobfindslot.3
+	cd $(MANDIR)/man8; ln -s gspl-hostedit.8 gspl-xhostedit.8
+	$(INSTALL_DATA) pdf/*.pdf $(PDFDIR)
+
+clean:
+	# Currently don't do anything
+
+distclean:	clean
+	$(RM) Makefile

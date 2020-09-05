@@ -1,0 +1,198 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class GENERATE_AM < $GENERATE_AM is
+   -- This phase does a code walk from main and generates the AM form
+   -- It causes errors for failures of type checking, name clashes,
+   -- etc.  It is interleaved in time with the back-end for each
+   -- routine generated.
+
+    include CS_COMPONENT;
+    
+    attr sig_list:FLIST{SIG};	-- Signatures to still consider 
+        -- outputting.
+    attr optimize:BOOL;
+    attr only_check: BOOL; -- Holger
+
+    -- Ivin: Signatures in process of being output.
+    attr sig_inprocout:FSET{SIG};
+    -- Ivin: Signatures of routines that have been called recursively.
+    attr sig_recursive:FSET{SIG};
+
+    -- attr inline_tbl:INLINE_TBL;  -- Ivin
+    attr global_tbl:GLOBAL_TBL;
+
+    create(p:PROG):SAME is
+	r::=new; 
+	r.prog:=p; 
+	r.global_tbl:=#(p); 
+	return r;
+    end;   
+
+    generate_am is
+	-- Get optimize attr and whether code should be generated.
+	cgen::=prog.back_end;
+	typecase cgen when CGEN then
+                optimize:=cgen.optimize;
+                only_check:=cgen.only_check;
+	else end;
+        
+	-- Generate all the code.
+	mn:SIG:=prog.get_main_sig.main_sig;
+	if void(mn) then return end;
+	if prog.show_generated_sig then 
+	    #OUT + "Output sig " + mn.str + "\n"
+	end;
+	
+	output_sig(mn);
+	output_externals_with_bodies;
+	loop until!(sig_list.is_empty); 
+	    s:SIG:=sig_list.pop;
+	    if prog.show_generated_sig then 
+		#OUT + "Output sig " + s.str + "\n"
+	    end;	 
+	    output_sig(s);
+	end;
+	prog.all_reached:=true;
+    end;
+    
+    output_sig(s:SIG) 
+    -- Transform and output the signature `s' if it hasn't already
+    -- been done. Put the routines and iters that it calls on
+    -- `sig_list'. Now searches depth first on routines, so these
+    -- don't get put on the list.
+    -- Puts information in the inline table for inlining.
+      pre ~void(s)
+    is
+	if s.tp.is_generic then return; end;
+	-- *H*: Generic class might be reachable when a dispatched call
+	-- in its superclass tries to implement all corresponding calls
+	-- in all subtypes. But there should be no code for it, so screw it.
+
+        if s.am_created then
+          if sig_inprocout.test(s) then -- Ivin.
+	     sig_recursive:=sig_recursive.insert(s);
+	  end;
+          return
+        end;
+
+	if s.am_created then return; end;
+	if s.tp.is_abstract then output_abs_sig(s); return end;
+	-- skip things coming from partial classes.
+	-- partial classes cannot be instantiated
+	if s.tp.is_partial then return; end;
+	s.am_created:=true;
+	if s.tp.is_bound then return; end; -- sig of a bound type
+	elt:ELT:=s.tp.impl.elts.elt_with_sig(s);
+
+	if void(elt) then return end;
+	if elt.is_external and elt.is_abstract then return end;
+
+
+        -- this is needed for recursion detection
+        -- necessary for inlining
+        sig_inprocout:=sig_inprocout.insert(s);  -- Ivin.
+        am:AM_ROUT_DEF:=TRANS::transform_elt(elt);
+        sig_inprocout:=sig_inprocout.delete(s);  -- Ivin.
+        if void(am) then return end;
+        prog.inliner.consider(am);
+
+	if prog.show_am then
+	    #OUT + "\nAM for " + am.sig.str + "="; 
+	    AM_OUT::AM_out(am); #OUT + "\n" end;
+	i:INT;
+	loop while!(i<am.calls.size);
+	    c:$AM_EXPR:=am.calls[i];
+	    typecase c
+	    when AM_ROUT_CALL_EXPR then 
+		    output_sig(c.fun);
+	    when AM_ITER_CALL_EXPR then
+		    output_sig(c.fun);
+	    when AM_BND_CREATE_EXPR then
+		    output_sig(c.fun);
+	    else end; 
+	    i:=i+1 end; 
+	if ~prog.err_seen and ~only_check then
+	    if optimize then
+	       prog.optimizer.optimize(am);
+	    else
+	       prog.optimizer.no_optimize(am);
+	    end;
+	end;
+    end;
+    
+   output_abs_sig(s:SIG)
+   -- Do the output for the abstract call `s'.
+      pre ~void(s) is
+      if s.am_created then return end;
+      s.am_created:=true;
+      am:AM_ROUT_DEF:=#AM_ROUT_DEF(1+s.args.size,void);
+      am.sig:=s; am.is_abstract:=true;
+      stp:TP_CLASS; ostp::=s.tp;
+      typecase ostp when TP_CLASS then stp:=ostp end;
+      
+      desof::=prog.tp_graph_abs_des.des_of(stp);
+      
+      tparr::=#TP_ARRAY(desof.size);   -- For determinism
+      loop tparr.set!(desof.elt!); end;
+      tparr.sort;
+      
+      loop
+	 --tp::=prog.tp_graph_abs_des.des_of(stp).elt!;
+	 tp::=tparr.elt!;
+	 ifc:IFC:=tp.ifc;
+	 cs:SIG:=ifc.sig_conforming_to(s); -- The call in the descendant.
+	 output_sig(cs);
+	 -- sig_list:=sig_list.push(cs);
+      end;
+      SYS::destroy(tparr);
+      
+      if prog.show_am then
+	 #OUT + "\nAM for " + am.sig.str + "="; 
+	 AM_OUT::AM_out(am); #OUT + "\n" end;
+      if ~prog.err_seen and ~only_check then
+	 prog.optimizer.optimize(am) 
+      end; 
+   end;
+   
+   output_externals_with_bodies is
+	loop
+	    tp::=prog.tp_tbl.class_tbl.elt!;
+	    if tp.is_external then
+		et::=tp.impl.elts;
+		sig_tbl::=tp.ifc.sigs;
+		loop
+		    sig::=sig_tbl.elt!;
+		    elt::=et.elt_with_sig(sig);
+		    if ~elt.is_abstract then output_sig(sig) end;
+		end;
+	    end;
+	end;
+    end;
+    
+end; -- class GENERATE_AM
+
+class TP_ARRAY is
+
+    include ARRAY{$TP};
+
+    elt_lt(a,b:$TP):BOOL is
+	return a.str<b.str;
+    end;
+end;
+
+
+
+
+
+

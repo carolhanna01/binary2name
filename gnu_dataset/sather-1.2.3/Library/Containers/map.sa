@@ -1,0 +1,532 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+abstract class $RO_MAP{ITP,TTP} < $RO_MULTIMAP{ITP,TTP}
+-- An unordered container of tuples of {index:ITP,target:TTP} such
+-- that the indices of all tuples are unique. Indices may be used
+-- to retrieve targets
+-- 
+-- Definition: A map is a multimap with the additional constraint that
+-- the indices of the tuples are unique
+-- 
+-- This is a read-only abstraction in which no modifying operations
+-- are available. However, subtypes may provide modifying operations
+-- For documentation see:
+--    The overall organization of container classes
+--    The organization and usage of maps and related classes
+is
+
+   
+   aget(k:ITP):TTP;
+   -- Returns the element k is mapped to.
+   -- Note that this usage is different from the usage in arrays.
+   -- 
+   -- result is e s.t. self has (k,e). If self has no (k,_) then
+   --          if E < $IS_NIL return E::nil otherwise return void 
+
+   insert(k:ITP,e:TTP):$RO_MAP{ITP,TTP};
+   -- Shortcut for for add(#TUP{ITP,TTP}(k,e))
+   
+   insert(e:TUP{ITP,TTP}):$RO_MAP{ITP,TTP};
+   -- Insert the element 'e' in the bag. If a tuple (e.t1,_) exists,
+   -- the replace it with (e.t1,e.t2)
+   
+   target!:TTP;
+   -- Yields all the targets in this mapping in an unspecified order
+   -- 
+   -- yield all t s.t. self has (_,t)
+
+   add(k:ITP,e:TTP):$RO_MULTIMAP{ITP,TTP};
+   -- Shortcut for for add(#TUP{ITP,TTP}(k,e))
+   
+   delete(k:ITP,e:TTP):$RO_MAP{ITP,TTP};
+   -- Shortcut for for delete(e:TUP{ITP,TTP})
+   
+   delete_ind(k:ITP):$RO_MAP{ITP,TTP};
+   -- Returns a new map in which any occurences of the tuple (k,_)
+   -- has been deleted
+   
+   has_ind(k:ITP): BOOL;
+   -- Returns true if this map has an index equal to 'k'
+   -- 
+   -- result is true iff self contains a tuple (k,_)
+   
+   n_targets(k:ITP): INT;
+   -- Returns the number of targets associated with the index 'k' i.e. 0 or 1
+   
+   ind!:ITP;
+   -- Yields all the indices of self i.e. first elements of every
+   -- tuple in self, in an unspecified order
+   -- 
+   -- yield all i s.t. self.has((i,_))
+   
+   target!(once k:ITP):TTP;
+   -- Yields all the target associated with index 'k'
+   -- 
+   -- yield all t s.t. self.has((k,t))
+   
+   pair!: TUP{ITP,TTP};
+   -- Yields all elements of self in an unspecified order. An alias for
+   -- "elt!"
+   
+   add(e:TUP{ITP,TTP}):$VMULTIMAP{ITP,TTP};
+   -- Result is a new multimap containing all the elements of self and 'e'
+
+   delete(e:TUP{ITP,TTP}):$RO_MAP{ITP,TTP};
+   -- Result is a new map containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+   
+   delete_all(e:TUP{ITP,TTP}):$RO_MAP{ITP,TTP};
+   -- Result is a new map containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+
+   count(e:TUP{ITP,TTP}):INT;
+   -- Return the number of occurences of 'e' in self
+   
+   unique!:TUP{ITP,TTP};
+   -- Yield the unique elements of self. Equivalent to self.as_set.elt!
+   
+   n_unique: INT;
+   -- Returns the number of unique elements in the bag 
+   
+   is_subset_of(arg: $RO_BAG{TUP{ITP,TTP}}): BOOL;
+   -- Returns true if 'self' is a subset of 'arg'. 
+   
+   concat(arg:$RO_BAG{TUP{ITP,TTP}}):$RO_MULTIMAP{ITP,TTP};
+   -- Returns a multimap containing all the elements of self and 'arg'.
+   -- For elements that occur multiple times, the result contains
+   -- the sum of the number of occurences in self and 'arg'
+   -- 
+   -- result=mmap of all e s.t. result.count(e)=self.count(e)+arg.count(e)
+   
+   union(arg: $RO_BAG{TUP{ITP,TTP}}): $RO_MULTIMAP{ITP,TTP};
+   -- Returns a multimap containing the union of elements of 'self' and 'arg'. 
+   -- For elements that occur multiple times, the result contains
+   -- the maximum number of occurences in either self or 'arg'
+   -- 
+   -- result=mmap of all e s.t. result.count(e)=max(self.count(e),arg.count(e))
+   
+   union(arg: $RO_MAP{ITP,TTP}): $RO_MAP{ITP,TTP};
+   -- Returns a map containing the elements of 'self' and 'arg'. 
+   -- 
+   -- result=map of all e s.t. self.has(e) or arg.has(e)
+   -- Overloads method in $RO_MULTIMAP with more specific argument
+   
+   intersection(arg: $RO_BAG{TUP{ITP,TTP}}):$RO_MULTIMAP{ITP,TTP};
+   -- Returns a multimap  containing the elements common to self and 'arg'
+   -- For elements that occur multiple times, the result contains
+   -- the minimum number of occurrences in either self or 'arg'.
+   -- 
+   -- result=mmap of all e s.t. result.count(e)=min(self.count(e),arg.count(e))
+   
+   intersection(arg: $RO_MAP{ITP,TTP}):$RO_MAP{ITP,TTP};
+   -- Returns a map  containing the elements common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) and arg.has(e)
+   -- Overloads method in $RO_MULTIMAP with more specific argument
+   
+   diff(arg:$RO_MAP{ITP,TTP}):$RO_MAP{ITP,TTP};
+   -- Returns a map  containing the elements common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) and ~arg.has(e)
+   
+   sym_diff(arg:$RO_MAP{ITP,TTP}):$RO_MAP{ITP,TTP};
+   -- Returns a map  containing the elements not common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) xor arg.has(e)
+   
+   is_empty:BOOL;
+   -- Returns true if the size of the container = 0
+
+   size: INT;
+   -- Number of elements contained
+   
+   copy: SAME;
+    -- Return a copy of the current container
+
+   has(e: TUP{ITP,TTP}): BOOL;
+   -- True if the container contains the element "e"
+   
+   equals(c:$RO_BAG{TUP{ITP,TTP}}):BOOL;
+   -- Return true if both containers contain the same elements with
+   -- the same number of repetitions, irrespective of the order of the
+   -- elements
+   
+   as_array:ARRAY{TUP{ITP,TTP}};
+   -- Return the elements of the container in an array
+
+   elt!:TUP{ITP,TTP};
+   -- Yield all the elements of self. The order is not defined.
+   
+   str:STR;
+   -- Yield a string version of self
+   
+end;
+-------------------------------------------------------------------
+abstract class $VMAP{ITP,TTP} < $RO_MAP{ITP,TTP},$VMULTIMAP{ITP,TTP} 
+-- An unordered container of tuples of {index:ITP,target:TTP} such
+-- that the indices of all tuples are unique. Indices may be used
+-- to retrieve targets
+-- 
+-- IMPORTANT: This is a value abstraction and is stricter than the
+-- read-only abstraction. Subtypes must not support *any*
+-- operations that modify self. The language cannot enforce this
+-- restriction. 
+-- 
+-- For pointers to other documentation please see the class comment in
+-- the read-only abstraction
+is
+
+   aget(k:ITP):TTP;
+   -- Returns the element k is mapped to.
+   -- Note that this usage is different from the usage in arrays.
+   -- 
+   -- result is e s.t. self has (k,e). If self has no (k,_) then
+   --     the result is undefined
+   
+   insert(k:ITP,e:TTP):$VMAP{ITP,TTP};
+   -- Shortcut for for add(#TUP{ITP,TTP}(k,e))
+
+   insert(e:TUP{ITP,TTP}):$VMAP{ITP,TTP};
+   -- Insert the element 'e' in the bag. If a tuple (e.t1,_) exists,
+   -- the replace it with (e.t1,e.t2)
+   
+   target!:TTP;
+   -- Yields all the targets in this mapping in an unspecified order
+   -- 
+   -- yield all t s.t. self has (_,t)
+
+   add(k:ITP,e:TTP):$VMULTIMAP{ITP,TTP};
+   -- Shortcut for for add(#TUP{ITP,TTP}(k,e))
+
+   delete(k:ITP,e:TTP):$VMAP{ITP,TTP};
+   -- Shortcut for for delete(e:TUP{ITP,TTP})
+
+   delete_ind(k:ITP):$VMAP{ITP,TTP};
+   -- Returns a new map in which any occurences of the tuple (k,_)
+   -- has been deleted
+
+   has_ind(k:ITP): BOOL;
+   -- Returns true if this map has an index equal to 'k'
+   -- 
+   -- result is true iff self contains a tuple (k,_)
+   
+   n_targets(k:ITP): INT;
+   -- Returns the number of targets associated with the index 'k' i.e. 0 or 1
+   
+   ind!:ITP;
+   -- Yields all the indices of self i.e. first elements of every
+   -- tuple in self, in an unspecified order
+   -- 
+   -- yield all i s.t. self.has((i,_))
+   
+   target!(once k:ITP):TTP;
+   -- Yields all the target associated with index 'k'
+   -- 
+   -- yield all t s.t. self.has((k,t))
+   
+   pair!: TUP{ITP,TTP};
+   -- Yields all elements of self in an unspecified order. An alias for
+   -- "elt!"
+   
+   add(e:TUP{ITP,TTP}):$VMULTIMAP{ITP,TTP};
+   -- Result is a new multimmap containing all the elements of self and 'e'
+
+   delete(e:TUP{ITP,TTP}):$VMAP{ITP,TTP};
+   -- Result is a new map containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+   
+   delete_all(e:TUP{ITP,TTP}):$VMAP{ITP,TTP};
+   -- Result is a new map containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+
+   count(e:TUP{ITP,TTP}):INT;
+   -- Return the number of occurences of 'e' in self
+   
+   unique!:TUP{ITP,TTP};
+   -- Yield the unique elements of self. Equivalent to self.as_set.elt!
+   
+   n_unique: INT;
+   -- Returns the number of unique elements in the bag 
+   
+   is_subset_of(arg: $RO_BAG{TUP{ITP,TTP}}): BOOL;
+   -- Returns true if 'self' is a subset of 'arg'. 
+   -- 
+   -- result=true iff for all e in self: count(e) <= arg.count(e)
+
+   concat(arg:$ELT{TUP{ITP,TTP}}):$VMULTIMAP{ITP,TTP};
+   -- Returns a multimap containing all the elements of self and 'arg'.
+   -- For elements that occur multiple times, the result contains
+   -- the sum of the number of occurences in self and 'arg'
+   -- 
+   -- result=mmap of all e s.t. result.count(e)=self.count(e)+arg.count(e)
+   
+   union(arg: $RO_BAG{TUP{ITP,TTP}}): $VMULTIMAP{ITP,TTP};
+   -- Returns a multimap containing the elements of 'self' and 'arg'. 
+   -- For elements that occur multiple times, the result contains
+   -- the maximum number of occurences in either self or 'arg'
+   -- 
+   -- result=mmap of all e s.t. result.count(e)=max(self.count(e),arg.count(e))
+
+   union(arg: $RO_MAP{ITP,TTP}): $VMAP{ITP,TTP};
+   -- Returns a map containing the elements of 'self' and 'arg'. 
+   -- 
+   -- result=map of all e s.t. self.has(e) or arg.has(e)
+   
+   intersection(arg: $RO_BAG{TUP{ITP,TTP}}):$VMULTIMAP{ITP,TTP};
+   -- Returns a multimap  containing the elements common to self and 'arg'
+   -- For elements that occur multiple times, the result contains
+   -- the minimum number of occurrences in either self or 'arg'.
+   -- Redefined to strengthen the return type.
+   -- 
+   -- result=mmap of all e s.t. result.count(e)=min(self.count(e),arg.count(e))
+   -- Redefined from $RO_MAP to change the return type from $RO_MULTIMAP
+
+   intersection(arg: $RO_MAP{ITP,TTP}):$VMAP{ITP,TTP};
+   -- Returns a map  containing the elements common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) and arg.has(e)
+   
+   diff(arg:$RO_MAP{ITP,TTP}):$VMAP{ITP,TTP};
+   -- Returns a map  containing the elements common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) and ~arg.has(e)
+   
+   sym_diff(arg:$RO_MAP{ITP,TTP}):$VMAP{ITP,TTP};
+   -- Returns a map  containing the elements not common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) xor arg.has(e)
+   
+   is_empty:BOOL;
+   -- Returns true if the size of the container = 0
+
+   size: INT;
+   -- Number of elements contained
+      
+   copy: SAME;
+    -- Return a copy of the current container
+   
+   has(e: TUP{ITP,TTP}): BOOL;
+   -- True if the container contains the element "e"
+      
+   equals(c:$RO_BAG{TUP{ITP,TTP}}):BOOL;
+   -- Return true if both containers contain the same elements with
+   -- the same number of repetitions, irrespective of the order of the
+   -- elements
+   
+   as_array:ARRAY{TUP{ITP,TTP}};
+   -- Return the elements of the container in an array
+
+   elt!:TUP{ITP,TTP};
+   -- Yield all the elements of self. The order is not defined.
+   
+   str:STR;
+   -- Yield a string version of self
+   
+end;
+-------------------------------------------------------------------
+abstract class $MAP{ITP,TTP} < $RO_MAP{ITP,TTP}, $VAR
+-- An unordered container of tuples of {index:ITP,target:TTP} such
+-- that the indices of all tuples are unique. Indices may be used
+-- to retrieve targets
+-- 
+-- This is a reference abstraction and supports operations that modify
+-- self. Instances of subtypes may be viewed as variables with a value
+-- of $VMULTIMAP{ITP,TTP}
+-- 
+-- For pointers to other documentation please see the class comment in
+-- the read-only abstraction $RO_MAP{ITP,TTP}
+is
+   
+   as_value:$VMAP{ITP,TTP};
+   -- Return the current value associated with self
+
+   aset(k:ITP,e:TTP);
+   -- Maps k to e. If k is already mapped, replace the old
+   -- maping with the new one.
+
+   delete(k:ITP);
+   -- Delete the tuple associated with element "k". Does nothing if
+   -- no tuple was associated with "k"
+   
+   to_union(arg: $RO_MAP{ITP,TTP});
+   -- Turn this bag into the union of self and 'arg'
+   -- self <- initial(self).union(arg)
+
+   to_intersection(arg:$RO_MAP{ITP,TTP});
+   -- Turn this bag into the intersection of self and 'arg'
+   -- self <- initial(self).intersection(arg)
+   
+   to_diff(arg:$RO_MAP{ITP,TTP});
+   -- Turn this bag into the difference of self and 'arg'
+   -- self <- initial(self).diff(arg)
+
+   to_sym_diff(arg:$RO_BAG{TUP{ITP,TTP}});
+   -- Turn this bag into the symmetric difference of self and 'arg'
+   -- self <- initial(self).sym_diff(arg)
+   
+
+   aget(k:ITP):TTP;
+   -- Returns the element k is mapped to.
+   -- 
+   -- result is e s.t. self has (k,e). If self has no (k,_) then
+   --          result is undefined
+
+   insert(k:ITP,e:TTP):$MAP{ITP,TTP};
+   -- Shortcut for for add(#TUP{ITP,TTP}(k,e))
+   
+   insert(e:TUP{ITP,TTP}):$MAP{ITP,TTP};
+   -- Insert the element 'e' in the bag. If a tuple (e.t1,_) exists,
+   -- the replace it with (e.t1,e.t2)
+   
+   target!:TTP;
+   -- Yields all the targets in this mapping in an unspecified order
+   -- 
+   -- yield all t s.t. self has (_,t)
+
+   add(k:ITP,e:TTP):$VMULTIMAP{ITP,TTP};
+   -- Shortcut for for add(#TUP{ITP,TTP}(k,e))
+
+   delete(k:ITP,e:TTP):$MAP{ITP,TTP};
+   -- Shortcut for for delete(e:TUP{ITP,TTP})
+
+   delete_ind(k:ITP):$MAP{ITP,TTP};
+   -- Returns a new multimap in which all occurences of the tuple
+   -- (k,_) have been deleted
+   
+   has_ind(k:ITP): BOOL;
+   -- Returns true if this map has an index equal to 'k'
+   -- 
+   -- result is true iff self contains a tuple (k,_)
+
+   n_targets(k:ITP): INT;
+   -- Returns the number of targets associated with the index 'k' i.e. 0 or 1
+   
+   ind!:ITP;
+   -- Yields all the indices of self i.e. first elements of every
+   -- tuple in self, in an unspecified order
+   -- 
+   -- yield all i s.t. self.has((i,_))
+   
+   target!(once k:ITP):TTP;
+   -- Yields all the target associated with index 'k'
+   -- 
+   -- yield all t s.t. self.has((k,t))
+   
+   pair!: TUP{ITP,TTP};
+   -- Yields all elements of self in an unspecified order. An alias for
+   -- "elt!"
+
+   add(e:TUP{ITP,TTP}):$VMULTIMAP{ITP,TTP};
+   -- Result is a new bag containing all the elements of self and 'e'
+
+   delete(e:TUP{ITP,TTP}):$MAP{ITP,TTP};
+   -- Result is a new multimap containing all the elements of self except for
+   -- an element equal to 'e', if one exists. If more than one element
+   -- is equal to 'e', delete only one of them
+   
+   delete_all(e:TUP{ITP,TTP}):$MAP{ITP,TTP};
+   -- Result is a new multimap containing all the elements of self except for
+   -- all elements equal to 'e', if any exist. Same as 'delete' here
+
+   count(e:TUP{ITP,TTP}):INT;
+   -- Return the number of occurences of 'e' in self
+   
+   unique!:TUP{ITP,TTP};
+   -- Yield the unique elements of self. Equivalent to self.as_set.elt!
+   
+   n_unique: INT;
+   -- Returns the number of unique elements in the bag 
+   -- 
+   -- result = number of unique elements
+   
+   is_subset_of(arg: $RO_BAG{TUP{ITP,TTP}}): BOOL;
+   -- Returns true if 'self' is a subset of 'arg'. For elements that occur
+   -- multiple times, the number of occurences of the element in 'arg'
+   -- must be greater than or equal to the number of occurences in self
+   -- 
+   -- result=true iff for all e in self: count(e) <= arg.count(e)
+
+   concat(arg:$RO_BAG{TUP{ITP,TTP}}):$VMULTIMAP{ITP,TTP};
+   -- Returns a bag containing all the elements of self and 'arg'.
+   -- For elements that occur multiple times, the result contains
+   -- the sum of the number of occurences in self and 'arg'
+   -- 
+   -- result=mmap of all e s.t. result.count(e)=self.count(e)+arg.count(e)
+   
+   union(arg: $RO_BAG{TUP{ITP,TTP}}): $VMULTIMAP{ITP,TTP};
+   -- Returns a bag containing the elements of 'self' and 'arg'. 
+   -- For elements that occur multiple times, the result contains
+   -- the maximum number of occurences in either self or 'arg'
+   -- 
+   -- result=bag of all e s.t. 
+   --             result.count(e)= max(self.count(e),arg.count(e)) > 0
+   
+   union(arg: $RO_MAP{ITP,TTP}): $MAP{ITP,TTP};
+   -- Returns a map containing the elements of 'self' and 'arg'. 
+   -- 
+   -- result=map of all e s.t. self.has(e) or arg.has(e)
+   
+   intersection(arg: $RO_BAG{TUP{ITP,TTP}}): $VMULTIMAP{ITP,TTP};
+   -- Returns a bag containing the elements common to self and 'arg'
+   -- For elements that occur multiple times, the result contains
+   -- the minimum number of occurrences in either self or 'arg'
+   -- 
+   -- result=bag of all e s.t. 
+   --              result.count(e)=min(self.count(e),arg.count(e)) > 0
+
+   intersection(arg: $RO_MAP{ITP,TTP}):$MAP{ITP,TTP};
+   -- Returns a map  containing the elements common to self and 'arg'
+   -- Overloads the version in $RO_BAG which has an argument and return
+   -- type of $RO_BAG
+   -- 
+   -- result=map of all e s.t. self.has(e) and arg.has(e)
+   
+   diff(arg:$RO_MAP{ITP,TTP}):$MAP{ITP,TTP};
+   -- Returns a map  containing the elements common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) and ~arg.has(e)
+   
+   sym_diff(arg:$RO_MAP{ITP,TTP}):$MAP{ITP,TTP};
+   -- Returns a map  containing the elements not common to self and 'arg'
+   -- 
+   -- result=map of all e s.t. self.has(e) xor arg.has(e)
+
+   is_empty:BOOL;
+   -- Returns true if the size of the container = 0
+
+   size: INT;
+   -- Number of elements contained
+   
+   copy: SAME;
+    -- Return a copy of the current container
+
+   has(e: TUP{ITP,TTP}): BOOL;
+   -- True if the container contains the element "e"
+   
+   equals(c:$RO_BAG{TUP{ITP,TTP}}):BOOL;
+   -- Return true if both containers contain the same elements with
+   -- the same number of repetitions, irrespective of the order of the
+   -- elements
+   
+   as_array:ARRAY{TUP{ITP,TTP}};
+   -- Return the elements of the container in an array
+
+   elt!:TUP{ITP,TTP};
+   -- Yield all the elements of self. The order is not defined.
+   
+   str:STR;
+   -- Yield a string version of self
+   
+end;
+--------------------------------------------------------------------------

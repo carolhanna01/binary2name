@@ -1,0 +1,2825 @@
+\input texinfo
+@c %**start of header
+@setfilename gnun.info
+@include version.texi
+@settitle GNUnited Nations
+@afourpaper
+@c %**end of header
+
+@c FIXME: Add more xrefs, where appropriate.
+@c FIXME: Improve the indexing commands.
+
+@copying
+
+This manual (updated @value{UPDATED}) is for GNUnited Nations (version
+@value{VERSION}), a suite for maintaining translations of www.gnu.org
+essays and other articles.@*
+@sp 1
+Copyright @copyright{} 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2016,
+2018 Free Software Foundation, Inc.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included in the section entitled ``GNU Free
+Documentation License.''
+@end quotation
+@end copying
+
+@titlepage
+@title GNUnited Nations
+@subtitle Software for maintaining www.gnu.org translations
+@subtitle (for version @value{VERSION}, @value{UPDATED})
+@author by Yavor Doganov <@email{yavor@@gnu.org}>
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+@dircategory Localization
+@direntry
+* GNUnited Nations: (gnun).     Maintaining gnu.org translations.
+@end direntry
+
+@ifnottex
+@node Top
+@top GNUnited Nations
+@insertcopying
+@end ifnottex
+
+@menu
+* Introduction::        Overview of GNUnited Nations.
+* Usage::               Basic usage, invocation and tips.
+* Team's Repository::   How to maintain translations in the team's
+                          repository.
+* PO Files::            The gentle art of editing PO files.
+* Webmaster Tips::      The webmaster's guide to GNUnited Nations'
+                          galaxy.
+* Internals::           Dive into GNUN.
+* Bugs::                How to report bugs.
+* Copying This Manual:: The GNU Free Documentation License.
+* Index::
+@end menu
+
+@node Introduction
+@chapter Introduction to GNUnited Nations
+
+GNUnited Nations (abbreviated GNUN) is a collection of
+scripts that are supposed to make the life of @url{https://www.gnu.org}
+translators easier.  Although it is specifically developed for the GNU
+Project's website, it could be customized, at least in theory, to fit
+the needs of other internationalized sites.  GNUN is in an early stage of
+development, but if it proves useful, and if there is sufficient
+interest (and time), it is possible to develop a robust configuration
+interface that would be appropriate for general usage.
+
+It is vitally important to understand that GNUN is @emph{not} a silver
+bullet that solves all problems.  To be honest, deploying
+GNUN in fact even does create some @ref{Disadvantages}.
+
+GNUnited Nations is free software, available under the GNU General
+Public License.
+
+This manual is organized in a way that is suitable both for translators
+and GNU Web Translation Managers (plus eventually interested GNU
+Webmasters, if any).  It may also serve as an introductory material and
+reference for new GNUN developers and contributors.  Hopefully, it might
+be useful to people who customize and adopt the software for a third
+party site or for their own needs.  Feel free to skip sections or entire
+chapters if they are irrelevant for your intended usage.
+
+This manual is free documentation, and you can modify and redistribute
+it under the terms of the GNU Free Documentation License.  @xref{Copying
+This Manual, ,GNU Free Documentation License}.
+
+@menu
+* Overview::            What is GNUN and why is necessary?
+* Concepts::            Basic concepts and goals.
+* Advantages::          The goodness GNUN brings.
+* Disadvantages::       Staying on firm ground.
+@end menu
+
+@node Overview
+@section Why GNUN Is Being Developed
+
+The @uref{https://www.gnu.org, GNU Project's website}, has become
+considerably large over the years.  Maintaining it requires significant
+effort, and sometimes a new web standard is developed faster than the
+time required to migrate all articles to the next widely adopted one.
+
+When it comes to internationalization, the problems are so many that
+it is hard to enumerate them.  It has become apparent that maintaining
+translations up-to-date is a major undertaking, involving tedious
+skimming through commit logs, reviewing diffs and other medieval
+techniques to catch up.  Some translation teams have developed their
+own sets of scripts, but so far there has been no universal solution.
+
+This unpleasant situation, combined with rapid and incompatible design
+changes, have led some teams to neglect the important work of keeping
+their translations in line with the changing original articles.  As a
+consequence, the GNU Project is facing the problem of maintaining them
+in suboptimal ways, in order to keep the information updated.
+
+The reasons for developing GNUnited Nations are very similar to those
+that led to the inception of GNU gettext, or GNOME Documentation
+Utilities (@code{gnome-doc-utils}) some years later.
+
+@node Concepts
+@section What GNUnited Nations Is and Should Be
+
+@cindex POT
+The basic concept behind GNUN is that localization of HTML articles is
+similar to localization of computer programs@footnote{Actually, it is
+a lot closer to localization of software documentation, where
+typically strings (also known as ``messages'' in gettext's context) are
+longer than strings in programs.  Nevertheless, all points raised still
+apply.}.  In articles, like in programs, not every string is considered
+translatable, so translatable strings must be identified first, and then
+collected in a file (called ``PO template'') for translation.  Articles,
+like programs, tend to change over time, but not every change in the
+sources calls for a translation update.  Sometimes the change does not
+affect the translatable strings, but sometimes it does.  So, translators
+must have means to identify those changes and apply the appropriate
+updates to the translation.
+
+The GNU @code{gettext} package already provides the needed
+infrastructure for maintaining translations using PO files.
+@xref{Introduction, Introduction, , gettext, GNU gettext tools},
+for a basic overview.
+GNUnited Nations fills the gaps to apply this infrastructure to articles
+in the @url{https://www.gnu.org} web site.@footnote{The process of converting
+HTML to PO and the other way around is performed using po4a (``PO for
+anything''), see @uref{http://po4a.alioth.debian.org, PO4A website}.}
+
+The following diagram summarizes the relation between the files handled
+by GNUN.  It is followed by somewhat detailed explanations, which you
+should read while keeping an eye on the diagram.  Having a clear
+understanding of these interrelations will surely help translators and
+web maintainers.
+
+@example
+@group
+.---<--- * Original ARTICLE.html
+|
+|   .---> ARTICLE.pot ---> * ARTICLE.LANG.po --->---.
+`---+                                               |
+    `--->---.   .------<----------------------------'
+            |   |
+            |   `---.
+            |       +---> Translated ARTICLE.LANG.html
+            `-------'
+@end group
+@end example
+
+The indication @samp{*} appears in two places in this picture, and means
+that the corresponding file is intended to be edited by humans.  The
+author or web maintainer edits the original @file{@var{article}.html},
+and translators edit @file{@var{article}.@var{lang}.po}.  All other
+files are regenerated by GNUN and any manual changes on them will be
+lost on the next run.
+
+Arrows denote dependency relation between files, where a change in one
+file will affect the other.  Those automatic changes will be applied by
+running @samp{make -C server/gnun}.  This is the primary way to invoke
+GNUN, since it is implemented as a set of recipes for GNU @code{make}.
+
+First, GNUN extracts all translatable strings from the original English
+article @file{@var{article}.html} into
+@file{@var{article}.pot}@footnote{A special group of templates, so
+called optional templates, have names like
+@file{@var{article}.pot.opt}.  The PO file for them is still
+@file{@var{article}.@var{lang}.po}.  @xref{optional-templates}.}.  The
+resulting file is suitable for manipulation with the various GNU
+@samp{gettext} utilities.  It contains all original article strings and
+all translations are set to empty.  The letter @code{t} in @file{.pot}
+marks this as a Template PO file, not yet oriented towards any
+particular language.
+
+On the first run, though, there is no @file{@var{article}.@var{lang}.po}
+yet, so a translator must create @file{@var{article}.@var{lang}.po} from
+@file{@var{article}.pot}, where @var{lang} represents the
+target language.  @xref{New Translation}, for details.
+
+Then comes the initial translation of messages in
+@file{@var{article}.@var{lang}.po}.  Translation in itself is a whole
+matter, whose complexity far overwhelms the level of this manual.
+Nevertheless, a few hints are given in another chapter of this
+manual.
+
+It is possible to make GNUN get translations for common strings from
+dedicated PO files, the so-called compendia.  @xref{Compendia}, for more
+information.
+
+You may use any compatible PO editor to add translated messages into
+the PO file.  @xref{Editing, , Editing, gettext, GNU gettext tools},
+for more information.
+
+When the PO file actually exists (hopefully populated with initial
+translations), GNUN generates @file{@var{article}.@var{lang}.html} file.
+It takes its structure from the original @file{@var{article}.html}, but
+all translatable strings are replaced with the translations specified
+in @file{@var{article}.@var{lang}.po}.
+
+Original articles sometimes change.  A new paragraph is being added or a
+tiny change in the wording is introduced.  Also, some articles are
+dynamic in nature, like the ones containing news entries or a list of other
+articles.  If the original article changes, GNUN will automatically
+rebuild @file{@var{article}.pot}, and will merge the changes into
+@file{@var{article}.@var{lang}.po}.  Any outdated translations will be
+marked as ``fuzzy,'' any new strings will be added with empty translations,
+waiting to be translated.  In the same run
+@file{@var{article}.@var{lang}.html} will be rebuilt, and consequently the relevant
+strings in the translation will be substituted with the original English
+text until the translation teams update them in
+@file{@var{article}.@var{lang}.po}.
+
+Those changes in the original article that do not affect the
+translatable strings (or just delete whole strings) will not lead
+to new untranslated or ``fuzzy'' strings in
+@file{@var{article}.@var{lang}.po}.  Thus, no actions from translators
+will be needed.  @file{@var{article}.@var{lang}.html} will be
+automatically regenerated to reflect the changes.
+
+The POT for every article under GNUN's control is kept in the `www'
+repository under a special sub-directory @file{po/} of the relevant
+directory in the `www' tree.  Thus, for
+@indicateurl{https://www.gnu.org/philosophy/free-sw.html} this
+sub-directory is @file{philosophy/po/}.  In addition to
+@file{free-sw.pot}, this directory holds the canonical source of every
+translation, such as @file{free-sw.bg.po}, @file{free-sw.ca.po}, etc.
+For more details, @pxref{Files and Directories}.
+
+Several additional features are implemented, like automatic update of
+the list of the available translations.  For example, if a new
+@file{free-sw.ja.po} translation is added, the list of translations
+included in @file{free-sw.html} and all translated
+@file{free-sw.@var{lang}.html} is updated.  This saves a lot of
+tedious, repetitive work and eliminates a source of mistakes.  There
+is a basic infrastructure to ``inject'' general information about a
+translation team---like a note on how to contact the team, or how to
+report a bug/suggestion for improvement.  Translators' credits are
+also handled, as well as translators' notes, if any.
+
+@node Advantages
+@section Major Advantages of GNUN
+
+Here is a simple list of situations where we hope this suite would
+prove useful.
+
+@itemize
+@item
+Automatic rebuild of all translations when the original article
+changes.  This is the most important feature, as it prevents
+accumulation of seriously outdated translations.
+
+@item
+Global update of the whole site.  Apply the previous point to the web
+server templates (under @file{server/} in the `www' repository).  A
+single change to such a file will affect literally @emph{all}
+articles, translated or not.
+
+@item
+Urgent notices.  Sometimes an ``urgent'' notice is added by the
+webmasters, which should appear on all pages.  Typically this is about
+an event where urgent action is needed, although often it is only
+relevant to a single country or even a particular city.  Such a notice
+will propagate to all pages, and translators may choose whether to
+translate it or not.  For example, the Urdu translation team may
+conclude that there are only a few Urdu speakers in Massachusetts, to
+participate in an event that will happen in Boston, so translating the
+``urgent'' notice may not be very ``urgent'' for Urdu.  However, such
+notice will appear in all translated pages and people who usually read
+gnu.org pages in their native language will see it, so they can take
+action as necessary.  When the notice is removed, often within a week or
+two, it will disappear without translators' intervention, whether they
+translated it or not.
+
+@item
+HTML validation.  As a preliminary step, GNUN validates the English
+pages before updating the POT files, and the regenerated translations
+before committing them.  It often detects typos and other errors in
+the markup.
+
+@item
+Simplification of the translation process---lots of errors and typos
+come from the fact that translators basically have to duplicate the
+whole HTML markup of the original.  The PO files eliminate most of the
+basic markup, which is where most of the validation errors come from.
+
+@item
+Markup consistency site-wide---it will be substantially easier to
+update the site to a future standard, because translations will
+naturally follow the changes in the original articles.  This also means
+that translation teams do not have to go through the boring process of
+converting their articles to the new SSI-based layout; this will be done
+automatically.
+
+@item
+Easy updates by translators.  Modified paragraphs, links, etc. will
+appear as ``fuzzy'' strings in the PO files, newly added ones will
+appear as ``untranslated'', and deleted will appear as ``obsolete''.
+It is substantially easier to update a PO file, where a keystroke
+takes you to the part that needs updating, whatever it may be.
+
+@item
+Reporting and statistics.  Since the basis is standard PO files, which
+are the canonical source of the translations, it is easy to manipulate
+them and extract useful information.
+@end itemize
+
+@node Disadvantages
+@section Known Bugs and Limitations
+
+As it happens in real life, we don't wear pink glasses and are aware
+of certain limitations and annoyances of this semi-automatic system.
+
+@itemize
+@item
+There is no easy way to preview the translations.  The official build
+is invoked twice an hour, because doing it much more often is not
+feasible with current build server hardware.  Additionally, any errors
+interrupt the build so they have to be fixed before the next articles
+are processed.
+
+@item
+In very rare cases
+the structure of the translation should diverge from the structure
+of the original document.  So far, our system has developed no means
+of taking such issues into account (apart from alphabetically
+sorted lists).
+@end itemize
+
+@node Usage
+@chapter General Usage
+
+@flushright
+If anything may go wrong, it will definitely go wrong.
+---Murphy's Law
+
+Murphy is an optimist.
+---O'Reilly's Law
+@end flushright
+@sp 1
+
+GNUN currently consists of a few makefiles, scripts and template files.
+They are designed
+to reside in the @file{server/gnun} directory, but this may change.
+In all examples in this manual, ``invoking'' means executing on the
+command line @code{make -C server/gnun [@var{target}]
+[@var{variable}=@var{value} @dots{}]} while the working directory is
+the root in the `www' web repository.  For the purpose of brevity, we
+will refer to the above command as simply @command{make}, which is
+equivalent to @code{cd server/gnun; make}.  It is desirable never to
+invoke @command{make} with the @option{-k} (@option{--keep-going})
+option, because an eventual error in only one make recipe might create
+a mess in many articles, both original and translated.  Do this with
+caution, and generally only when debugging in a safe environment.
+
+The build process is intended to be invoked by a cron job, although
+manual intervention is possible to a certain degree.
+
+@menu
+* Invoking GNUN::       How to trigger a (re)build.
+* Runtime Variables::   Variables to control the build process.
+* Special Targets::     Targets that are not built by default.
+* Main Variables::      Specifying what to build.
+* languages.txt::       Specifying canonical names for languages.
+* Compendia::           Using translation memory.
+* Sitemap::             Specifics of sitemap generation.
+@end menu
+
+@node Invoking GNUN
+@section Invoking GNUN
+@cindex invoking
+@cindex invocation
+@cindex triggering, build
+@cindex GNUmakefile
+
+The central part of GNUnited Nations is a makefile; actually a
+@file{GNUmakefile} since it heavily relies on features and extensions
+available in GNU Make.  Thus, invoking a build consists of typing
+@command{make} on the command line, or within cron.  If you are
+deploying the software on a non-GNU machine, probably GNU Make is
+installed and available as @command{gmake} or @command{gnumake}.  If
+not, you should consider installing it, since the build will fail
+otherwise.  See @uref{https://www.gnu.org/software/make,
+GNU Make homepage} for information on
+how to download and install GNU Make.
+
+If you don't specify a target, @command{make} by default builds the
+target @code{all}, which in this case is to rebuild all translations
+that are not up-to-date.  However, there are special targets that do not
+depend on the standard @code{all} target, which can be built by
+@code{make @var{target}}.  Some of the variables in the next section
+apply to them, and some do not.
+
+@cindex config.mk
+@cindex gnun.mk
+@cindex priorities.mk
+Note that GNUN expects @file{GNUmakefile}, @file{config.mk} and
+@file{gnun.mk} to be @emph{present} under @file{server/gnun} of the
+`www' web repository, otherwise @command{make} has no way to know what
+to build, and how.  Another file, @file{priorities.mk}, is
+expected to be present under @file{server/gnun} in order to define
+the priorities when reporting about the outdated translations.  If
+absent, the @code{report} target will not sort the translations by
+priority.  Since the location of the repository working
+copy is strictly user-specific and cannot be determined in any way,
+@file{GNUmakefile} and @file{config.mk} must be copied there manually
+after the package installation.  For convenience, these files are
+installed in @samp{$(pkgdatadadir)} (@file{/usr/local/share/gnun} with
+the default @samp{prefix}) so you can just create symlinks pointing to
+them, e.g.:
+
+@example
+ln -s /usr/local/share/gnun/config.mk /path/to/www/server/gnun/
+ln -s /usr/local/share/gnun/GNUmakefile /path/to/www/server/gnun/
+@end example
+
+If next GNUN releases are installed with the same @option{--prefix}, you
+will always use the latest versions without the need for any manual
+intervention.
+
+If you are playing with a non-gnu.org setup, you also have to take care of
+@file{gnun.mk} and put a modified version under @file{server/gnun} of
+your hypothetical tree.  (For gnu.org, that is not necessary since
+a proper @file{gnun.mk} is maintained in `www'.)
+
+@node Runtime Variables
+@section Variables to Control the Build Process
+@cindex variables
+@cindex variable, behavior
+
+The build process has several modes of operation, and they all relate to
+the handling of files that are to be added to the repository or
+performing certain sanity checks at build time.  The variables are
+specified on the command line, after @command{make}, in the form
+@code{VARIABLE=value}, e.g. @code{make VCS=yes}.  In the future,
+additional features will be implemented in a similar fashion.
+
+@table @samp
+@cindex VCS
+@cindex CVS
+@cindex Subversion
+@cindex SVN
+@cindex Bazaar
+@cindex bzr
+@item VCS=no
+@itemx @dots{}
+
+Do not add any files to the repository.  This is the default.  You may
+as well omit to define @code{VCS} entirely; there is no special code
+that expects assigning the value `no'.
+
+@item VCS=yes
+Automatically add any new files in the repository (CVS, Subversion or
+GNU Bazaar---the repository type is auto-determined at build time,
+@command{bzr} being a fallback).@footnote{When GNU Bzr is used, files
+are added locally only; you need to take care to use @command{bzr push}
+manually (or via cron) to take care of effectively adding them to the
+public repository.  @xref{triggers}, for a short explanation.} These are
+any POT files, if they are generated for the first time, and the
+translated articles (@file{.@var{lang}.html}) in HTML format.  Finally,
+any missing PO and their HTML counterparts of
+the server templates will be added, computed on the basis of the
+@code{extra-templates} and @code{optional-templates} variables.
+
+@cindex VALIDATE
+@cindex validation
+@cindex sanity checks
+@item VALIDATE=no
+@itemx @dots{}
+Skips validation of the HTML articles and generated translations.
+
+@item VALIDATE=yes
+Validates all original articles before generating the POTs, to ensure
+that the ultimate source is valid (X)HMTL.  Also, validates all
+generated translations in HTML format and all PO files.  It is highly
+recommended to run the build this way, even if it is a bit tedious to
+fix the errors that are reported as a result of enforcing validation.
+
+This is the default, and not defining this variable has the same effect.
+
+@cindex NOTIFY
+@cindex mail, notifications
+@item NOTIFY=no
+@itemx @dots{}
+Do not send email notifications about errors.  This is the default.
+
+@item NOTIFY=yes
+If an error occurs, send a mail with a meaningful subject and the error
+message as body to the concerned party.  The variables
+@code{devel-addr}, @code{web-addr} and @code{transl-addr} control the
+recipients; normally they should be set to the GNUN maintainers,
+webmasters and translators accordingly.  These variables are defined in
+the configuration file @file{gnun.conf} and by default are set to
+@email{bug-gnun@@gnu.org}.
+
+@cindex new translations, notifications/announcements
+@cindex announce
+@item ANNOUNCE=yes
+If defined, automatic announcements for new translations will be sent to
+the address defined in the @code{ann-addr} variable (in
+@file{gnun.conf}).  The email messages contain the translated article
+title as Subject, and the URL of the translation as its body.  For the
+official GNUN build, they are delivered to the
+@email{trans-coord-news@@gnu.org} mailing list and each language has its
+own Mailman @dfn{topic}.  It is possible to subscribe to the list and
+receive only traffic related to a specific language.  @xref{Mailing
+Lists, , , web-trans, GNU Web Translators Manual}.
+
+The default behavior is not to send such announcements.
+
+@cindex VERBOSE
+@cindex output, detailed
+@item VERBOSE=yes
+If defined, the value of the variables @code{templates-translated},
+@code{ALL_POTS}, and @code{articles-translated}
+will be printed to the standard output.  This is off by
+default, but recommended in general since it will show a bug in the
+computation of the basic variables.
+
+@cindex GRACE
+@cindex fuzzy strings
+@cindex grace flag
+@cindex deferred generation of articles
+@anchor{GRACE}
+@item GRACE
+If defined, ordinary articles that have ``fuzzy'' strings
+will not be regenerated.  This functionality is
+implemented specifically to prevent gratuitous replacement of translated
+strings with the English text when there are only minor formatting
+changes in the original.  The translator should review the changes,
+update the translation and clear the ``fuzzy'' mark from the
+strings, while keeping the online translation intact@footnote{This
+variable used to define the ``grace period'' in days to let
+the translator update the strings before the English text propagates
+to the translated page, but in practice that period has always been
+unlimited}.  Note that this
+variable has no effect on the server templates
+and all articles defined in the variable @code{no-grace-articles}.
+
+@cindex OUTDATED-GRACE
+@item OUTDATED-GRACE=@var{days}
+Grace period for the out-of-date notice.  When the variable
+@code{GRACE} is defined, @code{OUTDATED-GRACE} defaults to 60 days.
+The out-of-date notice is a special
+text (@file{server/outdated.html} in the `www' repository) that is
+inserted into every outdated translation when the period defined in
+this variable is over; its purpose is to inform the reader that the
+translation may not correspond to the original English article.
+
+@cindex TEAM
+@cindex variable, team
+@item TEAM=@var{lang}
+The translation team whose articles need to be checked for
+completeness.  This variable is applicable only for the @code{report}
+target, and is mandatory for it.  @xref{report}.
+
+@end table
+
+@cindex validation
+When validation is enabled, the
+original English articles are validated first, before any commands
+that generate the other files, and @command{make} exits with an error
+on the first encountered article.  This is done on purpose, to prevent
+the propagation of an eventual error in the markup of the original
+article to all translations.
+
+Validation of the translated @file{.@var{lang}.html} is
+performed after it is preliminarily generated as a temporary file.
+When no errors are found, the translation is updated; otherwise
+the real file is not changed (and it is not added if absent)---the build
+will fail and further processing of the remaining articles will not be
+performed.  The translator has time
+until the next run to fix the error---usually by modifying the
+corresponding @file{.@var{lang}.po} file.
+
+If notification is enabled (@code{NOTIFY=yes}), and the build system
+encounters errors (mostly when validating articles), email messages
+will be sent to the party that is expected to fix the error.  The
+subject of the messages always includes the problematic article, for
+example:
+
+@example
+Subject: [GNUN Error] gnu/gnu.fa.html is not valid HTML
+@end example
+
+@node Special Targets
+@section Targets Specified on the Command Line
+
+Some targets are not built by default, because they are only useful
+under certain circumstances.  Think of them like semi-automated
+commands or canned command sequences that are more complicated, and
+more importantly, whose arguments are variables computed at the time
+@command{make} reads the makefiles---the filesets they affect are
+specific and already defined, one way or another.
+
+@menu
+* no-grace-items::
+* update-localized-URLs::
+* report::
+* triggers::
+* validate-all::
+@end menu
+
+@node no-grace-items
+@subsection The @code{no-grace-items} Target
+
+The @code{no-grace-items} target regenerates a limited set of articles
+that are not affected by the @code{GRACE} variable, namely, the
+server templates, and all articles defined in the variable
+@code{no-grace-articles} (@pxref{GRACE,,grace flag}).
+
+This target can be rebuilt more often than @code{all}; however,
+currently we just build all with the same period.
+
+@node update-localized-URLs
+@subsection The @code{update-localized-URLs} Target
+
+The @code{update-localized-URLs} target invokes a script that
+generates the @file{localized-urls.mk} file.  This file includes the
+list of URLs that should be localized, it is extracted from special
+comments in the HTML source (@pxref{Localized URLs}).
+
+This target is meant to be rebuilt nightly.
+
+@node report
+@subsection The @code{report} Target
+@cindex reporting
+@cindex status, translations
+
+This target exists solely for convenience to translators, enabling them
+to check which articles are not 100% translated and have to be updated.
+The way to check this is by running @code{make report TEAM=@var{lang}},
+where @var{lang} is the language code, as usual.  Thus, to check all
+French translations, one would run
+
+@example
+make report TEAM=fr
+@end example
+
+This target checks only the PO files; the old translations that haven't
+been converted to PO files are reported, but there is no reasonable way
+to check if they are up-to-date.  In fact, this is one of the main
+reasons GNUN is being developed, if you recall.
+
+@cindex priorities.mk
+@anchor{priorities.mk}
+When present, @file{priorities.mk} defines four classes of articles by
+priority: @var{priority-articles} for the most important translations,
+@var{important-articles} for the second priority level,
+@var{important-directories} for the directories with important articles;
+all other translations are reported as less important.
+
+There is also a script, @command{gnun-report}, to generate HTML reports.
+@xref{gnun-report}.  GNUmakefile.team provides another @code{report}
+target, which produces a more detailed report.
+@xref{report in GNUmakefile.team}.
+
+@node triggers
+@subsection The @code{triggers} Target
+
+This is a special target intended to be run by the automatic build after
+the main build and @emph{after} @code{cvs|svn|bzr commit}.
+
+@c FIXME: Check how Subversion behaves with keywords and update the
+@c paragraph below.
+@c ineiev: In fact, "the result" is _not_ "checked in" the repository.
+@c
+@c When a GNUN build completes and some translations fail at the HTML
+@c validation stage, the result is checked in the repository, as
+@c explained earlier (@pxref{Runtime Variables}).  Thus, CVS updates the
+@c @w{$}Date$ RCS keyword (or any other keywords, for that matter) and
+@c resets the file(s) timestamp.  Next time @command{make} is invoked,
+@c the target appears newer than the prerequisite so no rebuild is
+@c triggered.  The purpose of the @code{triggers} target is to ``save''
+@c the information of the faulty targets during the main build, and to
+@c touch their prerequisites in order such invalid articles not to remain
+@c online unnoticed.
+
+The @code{triggers} target currently executes the files named
+@file{@var{article}.@var{lang}.html.hook} in the @file{server/gnun}
+directory---these files are created during the main build and each of
+them contains the command to update the timestamp of the prerequisite
+based on the timestamp of the target that must be rebuilt.  Finally, it
+deletes all those @file{*.hook} files.
+
+This is the rule that takes care of actually sending the
+announcements if @code{ANNOUNCE=yes}.  Since it is a completely valid
+scenario to have a new translation which is initially invalid HTML,
+the canned command sequence for announcements is recorded in
+@file{*.hook-ann} files, and they are treated by @code{triggers} in a
+different way.  A newly added @file{.@var{lang}.po} file may be
+invalid, in which case the HTML file is not added, and it is not
+appropriate to announce it as a new translation as it is completely
+useless for the
+general public.  The @code{triggers} rule detects this case, and
+postpones the announcement to the next build attempt, when the
+generated HTML translation is supposed to be human-readable.
+
+To summarize, for effective operation GNUN should be invoked
+automatically as @code{make; cvs|svn|bzr commit -m @dots{}; make
+triggers}.  To illustrate this, here is a concrete example showing the
+official job once running at fencepost.gnu.org@footnote{These days we
+run a more complicated script instead of this cron job in order
+to address some exceptional situations like concurrent builds.}:
+
+@example
+@group
+25 4,12,20 * * *  cd $HOME/projects/www; cvs -q update &>/dev/null; \
+                    make -j1 -C server/gnun VCS=yes VALIDATE=yes; \
+                    NOTIFY=yes VERBOSE=yes GRACE=5000; ANNOUNCE=yes; \
+                    cvs commit -m \
+                    "Automatic update by GNUnited Nations."; \
+                    make -C server/gnun triggers
+@end group
+@end example
+
+The above example is for CVS; if the underlying repository is
+Subversion, they need to be amended accordingly.  If it is GNU Bzr,
+remember to add a @command{bzr push} after commit (in the usual
+scenario), otherwise changes will be committed only locally.  Since a
+distributed Version Control System can be used in multiple (sometimes
+radically different) ways, this step cannot be anticipated and therefore
+cannot be automated.  Adding the @command{push} command in the makefile
+rules would not work if a so called ``bound branch'' is used, for
+instance.
+
+In the future, this target may be extended further to do other useful
+things that should be ``triggered'' after the main build.
+
+@node validate-all
+@subsection The @code{validate-all} Target
+@cindex validation
+
+The @code{validate-all} target validates all HTML pages under GNUN's
+control.  It is needed because GNUN doesn't track dependencies on the
+included files, so errors in those included files could pass unnoticed.
+
+This target is invoked once a day by the official GNUN cron job.
+
+@node Main Variables
+@section Defining Articles to Be Built
+@cindex variables
+@cindex gnun.mk
+
+The file @file{gnun.mk} contains variable definitions, based on which
+almost all other important variables are computed.  In other words,
+the variables defined in that file directly affect the overall
+behavior of the build process.
+
+There are two types of variables, which are specifically separated in
+order to make translators' life easier: variables that translators are
+free to modify and variables that are modified by the
+web-translators@footnote{Only because presumably, they are more familiar with
+GNUnited Nations' internals.  From a purely technical point of view,
+there is no difference.}, ideally after performing some local tests.  A
+translation team leader should update only @code{FUZZY_DIFF_LINGUAS}
+and @code{TEMPLATE_LINGUAS}; everything else is supposed to be built
+automagically, without manual intervention.  If not, that is a bug that
+should be reported and fixed.
+
+You can also request building files separately this way: 
+
+@example
+@group
+make -C server/gnun ../../philosophy/not-ipr.bg.html
+@end group
+@end example
+
+@table @samp
+@cindex TEMPLATE_LINGUAS
+@cindex templates, defining
+@cindex defining templates
+@item TEMPLATE_LINGUAS
+A space-separated list with languages.  Add here your language code
+@emph{if and only if} you have all the SSI templates translated, and
+have already committed all template files listed in
+the @code{extra-templates} and @code{localized-ssis} variables
+in @file{server/@/gnun/@/gnun.mk}.
+
+@cindex FUZZY_DIFF_LINGUAS
+@anchor{FUZZY_DIFF_LINGUAS}
+@cindex previous, diff
+@item FUZZY_DIFF_LINGUAS
+Add your language code here if you want GNUN to add differences to
+``previous'' @code{msgid}s in your PO files.
+@xref{gnun-add-fuzzy-diff}, for more information.
+
+@anchor{localized-ssis}
+@cindex localized-ssis
+@cindex SSIs, localized
+@cindex localized SSIs
+@item localized-ssis
+
+This variable lists the templates that are not under GNUN's control
+and are translated manually, like
+
+@itemize @minus
+@item @file{server/header.@var{lang}.html}
+@item @file{server/head-include-1.@var{lang}.html}
+@item @file{server/banner.@var{lang}.html}
+@item @file{server/footer.@var{lang}.html}.
+@end itemize
+
+They contain HTML code and SSI directives; PO4A doesn't extract them
+to any messages in PO files.
+
+@cindex extra-templates
+@cindex templates, additional
+@anchor{extra-templates}
+@item extra-templates
+
+The @code{extra-templates} variable lists templates under GNUN
+control; they are rebuilt from corresponding
+@var{template}.@var{lang}.po files;
+when the @var{template}.@var{lang}.po file is absent, GNUN initializes
+and commits a file with empty @code{msgstr}s.
+
+@cindex optional-templates
+@cindex .pot.opt
+@cindex templates, optional
+@anchor{optional-templates}
+@item optional-templates
+
+The @code{optional-templates} variable defines optional templates under
+GNUN control.  Those are the templates of low priority items, like news
+lines included in some pages.  They are managed like the additional
+templates listed in the @var{extra-templates} variable, except
+
+@itemize @minus
+@item @var{template}.@var{lang}.po is not added when absent, and
+@item their POTs end in @code{.pot.opt} rather than @code{.pot}.
+@end itemize
+
+This way, the scripts reporting outdated translations and translations
+that haven't been converted to PO files won't complain about them unless
+the team decides to actually commit @var{template}.@var{lang}.po.
+
+@cindex sitemap
+@item sitemap
+The @code{sitemap} variable declares the pages that are treated like
+sitemaps, that is, an additional externally generated compendium is used
+when updating them.  @xref{Sitemap}, for more information.
+
+@cindex ROOT
+@cindex articles in root directory, defining
+@cindex defining articles in the root dir
+@item ROOT
+Add here articles that are in the server root, like @file{home.html}
+and @file{keepingup.html}.  Always write only the
+basename of the article, i.e. if you add these two articles, the value
+of @code{ROOT} should be @code{home keepingup}.  This is true for
+all the variables that expect values in the form of article names.
+
+@cindex ALL_DIRS
+@cindex directories, defining
+@cindex defining directories
+@item ALL_DIRS
+The list of directories containing articles, like @file{philosophy},
+@file{gnu}, @file{licenses}, etc.
+
+@cindex POT generation, articles
+@item gnu
+@itemx philosophy
+@itemx @dots{}directory@dots{}
+A space-separated list of basenames for articles residing in
+@var{directory}, for which POTs will be generated and updated when the
+original article changes.  If an article is missing here,
+GNUN doesn't maintain its translations.
+@end table
+
+@node languages.txt
+@cindex languages.txt
+@section The @file{languages.txt} File
+
+The file @file{server/gnun/languages.txt} is used when generating
+lists of translations; those lists are subsequently included in all
+translations of the article.  Every line in the file is either a
+comment (when it begins with ``#'') or a definition for a language.  A
+language is defined by three @key{TAB}-separated fields.  The first field
+defines the language suffix; it is used in file names and in texts of
+the links.  The second field is the name of the language in English.
+The third field defines the name of the
+language in that language itself; it is used in texts of the links,
+and it should be in UTF-8.  For example:
+
+@example
+de	German	Deutsch
+@end example
+
+The generated list of translations may look like this:
+
+@example
+<!-- begin translist file -->
+<div id="translations">
+<p>
+<span class="original"><a href="/distros/screenshot.en.html">English</a>&nbsp;[en]</span>&nbsp;&nbsp;
+<span><a href="/distros/screenshot.de.html">Deutsch</a>&nbsp;[de]</span>&nbsp;&nbsp;
+<span><a href="/distros/screenshot.pl.html">polski</a>&nbsp;[pl]</span>&nbsp;&nbsp;
+</p>
+</div> <!-- id="translations" -->
+<!-- end translist file -->
+@end example
+
+@node Compendia
+@section Using Compendia
+@cindex compendia
+@cindex translation memory
+
+Compendium is a PO file including translations for common strings; it is
+used to fill other PO files.  @xref{Compendium, Compendium, Using
+Translation Compendia, gettext, GNU gettext tools}.  One example of such
+common strings is the footer
+text about reporting bugs and sending inquiries: when a webmaster
+updates footer texts in an article, GNUN will use compendia to
+automatically fill the translations for the new version of the strings.
+
+GNUN has two types of compendia:
+
+@enumerate
+@item Site-Wide Compendia
+This type is used for all articles, and only contains common strings.
+
+@item Per-Directory Compedia
+These files accumulate all strings from all articles in the directory,
+even if these strings are not repeated in different articles.
+@end enumerate
+
+@menu
+* Site-Wide Compendia::          Common translations for all articles
+* Per-Directory Templates::      Files that contain all strings
+                                   from all articles in the directory
+@end menu
+
+@node Site-Wide Compendia
+@subsection Site-Wide Compendia
+@cindex compendia, site-wide
+@cindex site-wide compendia
+@cindex exclude.pot
+@cindex master.lang.po
+@cindex compendium.lang.po
+@cindex compendium.pot
+
+Site-wide compendia are located in the @file{server/gnun/compendia}
+directory of the `www' web repository.  There are two kinds of
+compendia: @file{master.@var{lang}.po} and
+@file{compendium.@var{lang}.po}.
+
+The first kind, @file{master.@var{lang}.po}, can be used to
+simultaneously update all occurrences of the translations of a given
+string.  Translations from this file will override the translations from
+@file{@var{article}.@var{lang}.po}.  When @file{master.@var{lang}.po} is
+updated, the translations will be rebuilt.  GNUN doesn't modify this
+kind of compendia.
+
+The second kind, @file{compendium.@var{lang}.po}, is updated
+automatically.  GNUN finds strings that repeat many times in POTs of
+articles and collects them in @file{compendium.pot}.  Then it checks
+all available @file{@var{article}.@var{lang}.po} files for
+translations of those strings and generates
+@file{compendium.@var{lang}.po}.  This file is also used to fill
+missing translations, but it doesn't override the translations from
+@file{@var{article}.@var{lang}.po}, and the strings coming from
+@file{compendium.@var{lang}.po} are always marked as ``fuzzy'' to
+prevent propagation of translations that may be wrong in a different
+context.
+
+When updating @file{compendium.pot}, some strings should be excluded
+even though they repeat in the POT files many times---for instance,
+GNUN slots for translators' notes.  @xref{Notes Slot}.  They are not
+real translations, this is why they are likely to be different for
+different articles.  In order to avoid including them in compendia,
+GNUN checks a specific file, @file{exclude.pot}, and when that file
+contains the string, it won't be added to @file{compendium.pot}.
+
+@node Per-Directory Templates
+@subsection Per-Directory Templates
+@cindex compendia, per-directory
+@cindex per-directory compendia
+@cindex pot
+@cindex lang.po
+
+When GNUN detects a file named @file{pot} in some @file{po} directory,
+it writes to it all strings from all articles in the same directory;
+it also merges translations of those strings to files named
+@file{@var{lang}.po}, for all languages available in that directory.
+In its turn, files @file{@var{lang}.po} are used to update
+translations in articles from that directory.
+
+This helps updating translations in sets of articles like
+@file{proprietary/} section, where an item may belong to many files
+at once.  The translator can only update @file{@var{lang}.po},
+or any article where the outdated item is listed.  Then GNUN
+will copy the translation to all other places.
+
+@node Sitemap
+@section Building Sitemap
+@cindex sitemap
+
+Sitemaps differ from regular pages in two respects:
+
+@enumerate
+@item
+They are typically regenerated automatically from the texts of the
+articles.
+
+@item
+They mostly consist of links, therefore a significant part of their text
+should come to translations without any changes.
+
+@end enumerate
+
+Also, sitemaps contain many translated messages, so it is desirable
+to eliminate manual work where possible.
+
+In order to take this into account, GNUN provides the @code{sitemap}
+variable in @file{gnun.mk}.  All articles listed in @code{sitemap} are
+rebuilt using an additional compendium (when present),
+@file{server/@/gnun/@/compendia/@/sitemap-compendium.@var{lang}.po}.
+
+Those additional compendia are supposed to be compiled outside of GNUN
+by the same tool that generates the sitemap.  It is the responsibility of
+that tool to provide the compendia with reasonable translations whose
+@code{msgid}s match those generated by PO4A when processing the
+English version of the sitemap.
+
+@node Team's Repository
+@chapter Maintaining Translations in Your Team's Repository
+@cindex project repository
+@cindex repository, translation project
+@cindex team maintenance
+@cindex GNUmakefile.team
+
+GNUN operates on the ``official'' Web repository of the Savannah project
+`www', where normally only the co-ordinators of translation teams have
+write access.  However, all translation teams have their own projects,
+so it is possible to take advantage of Savannah as a hosting facility to
+make the team work more comfortable.
+
+The PO files provide an excellent and natural way to review each other's
+translations, because the translation appears right below the original
+message.  Mutual reviews and proof-reading of translations is a crucial
+part of the process.  Furthermore, team work is great for the community
+spirit; automating some of the operations also result in more time for
+all members to concentrate on the important tasks.
+
+The file @file{GNUmakefile.team} in the @samp{gnun} package is a
+template, aimed for all translation teams who wish to use their own
+project's repository as a place to keep their draft translations, until
+they ripe and are ready to be installed officially.
+
+@cindex team workflow
+The following diagram illustrates a typical workflow---it is applicable
+for small, medium and large teams:
+
+@example
+@group
++----------+                   +-------------------+
+| ``www''  |                   |   ``www-LANG''    |
+|   Web    |------>---->-------|Sources repository |
+|repository|  automatic merge  +-------------------+
++----------+                         |    |     |
+     |                               |    |     `-- Member A
+     +------------<----<-------------'    |
+                  Leader                  `---Member B
+@end group
+@end example
+
+All members and the team leader commit in their project's
+repository---when a translation is ready, the leader checks it in the
+official `www' repository.  If an original article changes, a build
+can be invoked to synchronize (i.e. merge) the changes and
+optionally automatically commit them so that the draft PO files are
+updated; at the same time, automatic notifications are sent to the
+persons interested in particular translations@footnote{The following
+sections describe in more details how to setup these automatic
+actions; however, if you have any difficulties with that, please ask
+the GNU Web Translation Managers to set them up for your team on our
+server.}.  A translator will then normally update the PO file, and
+commit it again in the project's Sources repository, from where the
+co-ordinator will pick it up and install it in `www'.
+
+To take advantage of this semi-automation, rename this template
+@file{GNUmakefile.team} as @file{GNUmakefile} and install it in the root
+of your project's Sources repository.  Then create directories and
+sub-directories exactly as they are in `www'.  Do not create the
+@file{/po} sub-directories; they are redundant here.  Instead, install
+the PO files in the normal locations where the corresponding
+@file{.@var{lang}.html} resides in `www', for example:
+
+@example
+@group
+Root
+  |
+  |--GNUmakefile
+  |--home.@var{lang}.po
+  |--@dots{}
+  |--gnu
+  |   |
+  |   |
+  |   +--linux-and-gnu.@var{lang}.po
+  |   +--manifesto.@var{lang}.po
+  |   +--@dots{}
+  |
+  |
+  +--philosophy
+  |     |
+  |     |
+  |     +--free-sw.@var{lang}.po
+  |     +--not-ipr.@var{lang}.po
+  |     +--open-source-misses-the-point.@var{lang}.po
+  |     +--@dots{}
+  |
+  +--@dots{}
+@end group
+@end example
+
+The next sections explain how to adopt the makefile for your team and
+how to invoke a ``build''.
+
+@menu
+* GNUmakefile.team Variables::
+* GNUmakefile.team Targets::
+* GNUmakefile.team and Cron::
+@end menu
+
+@node GNUmakefile.team Variables
+@section Adopting @file{GNUmakefile.team} for a Specific Team
+
+To adjust the makefile for your team, you need to edit the next
+variables.
+
+@table @samp
+@item TEAM
+Set this to the language code, like @code{bg} or @code{pt-br}.
+It is autodetected if not defined.
+
+@item wwwdir
+The relative or absolute path to the working copy of the master `www'
+repository.  So if you have checked out your project's Sources
+repository at @file{~/projects/www-@var{lang}} and the `www' Web
+repository at @file{~/projects/www}, the value of @code{wwwdir} should
+be @code{../www/} or @file{/home/@var{user}/projects/www/}.  Note the
+slash at the end, it is important.
+
+@item TEAM_URL_PREFIX
+@itemx TEAM_URL_POSTFIX
+These variables are used to transform the path to a file in the team's
+working copy into a URL for this file; they are only needed for
+automatic email notifications.  It is expected that typically
+the URL will point to some sort of Web interface for the repository,
+for example,
+
+@example
+TEAM_URL_PREFIX := http://cvs.savannah.gnu.org/viewvc/*checkout*/www-bg/
+TEAM_URL_POSTFIX := ?root=www-bg
+@end example
+
+@end table
+
+If two variants of one language share the same project and repository
+(such as @code{zh-cn} and @code{zh-tw}), they should maintain two
+directories with two @file{GNUmakefile}s and each directory having its
+own tree.
+
+Some variables are specified on the command line, and alter the behavior
+of the build process.
+
+@table @samp
+@item ADD_FUZZY_DIFF
+@anchor{ADD_FUZZY_DIFF}
+The program to manage differences to ``previous'' @code{msgid}s added to
+``fuzzy'' translations when merging PO files.  When undefined,
+the makefile tries to find @command{gnun-add-fuzzy-diff} and assigns
+the result to this variable. @xref{gnun-add-fuzzy-diff}, for more
+information.
+
+Define to empty string to disable the feature.
+
+@item NOTIFICATION_PERIOD=@var{days}
+@cindex NOTIFICATION_PERIOD
+@cindex reminder period, default
+@cindex notification period, default
+Default period of reminders sent by the @code{notify} target.
+
+@cindex mail, notifications
+@cindex NOTIFY
+@item NOTIFY=yes
+Make the @code{notify} target actually send notifications.
+
+@item NOTIFY=no
+Do not send email notifications about errors.  This is the default.
+
+@item VERBOSE=yes
+Print more information from @command{cvs}, @command{svn} and
+@command{msgmerge}; off by default.  Note that @code{VERBOSE} can be
+defined to any string, it will have the same effect.
+
+@item VCS=yes
+Update both @samp{www} and @samp{www-@var{lang}} repositories, then
+commit the merged PO files in the latter repository.  By default, there
+is no VCS interaction.  The VCS of the translation project repository is
+determined automatically; currently only CVS, Subversion, GNU Bzr, Git,
+Mercurial (Hg) and GNU Arch repositories are supported.
+
+@strong{Caution:} The makefile rule will commit all local changes, not
+only those that resulted from running @command{msgmerge}.  Thus, it is
+better to use a separate working copy dedicated solely for this
+purpose.
+@end table
+
+@node GNUmakefile.team Targets
+@section Targets in @file{GNUmakefile.team}
+
+@table @code
+@item update-team
+Updates the working copy of team's repository.
+
+@item update-www
+Updates the working copy of @dfn{www}.
+
+@item update
+A shortcut for making @code{update-team} and @code{update-www}.
+
+@item sync
+Merges all available PO files from the corresponding POT in @dfn{www}.
+If a POT is missing in the master repository (usually, because it was
+deleted when the original article was either split, renamed or deleted),
+a warning is printed for the corresponding file and no merging occurs
+for it.
+
+@item report
+@anchor{report in GNUmakefile.team}
+Verifies which translations are complete, and prints a list (with
+statistics) of those that need to be updated.  Also, it reports
+the translations that are not consistent with the revisions from
+@dfn{www} repository.
+
+More fine-grained notifications are implemented as the @code{notify}
+target.
+
+@item notify
+@anchor{notify in GNUmakefile.team}
+@cindex outdated translations, notifications
+Invokes the @code{report} target, filters its output for different
+translators and sends them notifications.
+
+As an addition to the output of the @code{report} target, URLs for
+relevant files are written; also, when @dfn{www} and team revisions
+are not consistent, their differences generated with
+@command{gnun-diff-po} are optionally attached (@pxref{gnun-diff-po},
+for more details).
+
+@cindex nottab
+The list of files to report against are configured with @file{nottab}
+file.  The lines of this file that begin with `#' are ignored;
+other lines should contain two fields separated by `:'.
+
+The first field is an extended grep regular expression; the files are
+selected for the report if their names match this expression.
+@xref{Regular Expressions, , Regular Expressions, grep,
+GNU Grep manual}.
+
+The second field is a space-separated list of single-word translators'
+identifiers for which the line applies.  The file may look like this:
+
+@example
+^gnu/gnu-history: alice bob carol
+^distros/(common-distros|distros|screenshot): dan alice
+^(licenses|philosophy)/: eve bob frank
+^licenses/: dan
+@end example
+
+@cindex email-aliases
+Email addresses of the translators are kept in a separate file,
+@file{email-aliases}.  Like in @file{nottab}, the lines beginning
+with `#' are ignored; other lines contain fields separated by `:'.
+
+The first field is the translator's identifier, the second is
+space-separated list of translator's email addresses.  These two
+fields are mandatory.
+
+@cindex reminder period
+@cindex notification period
+The third field is the personal reminder period in days.  After that
+period the message is sent again even though its contents don't
+change.  Otherwise, the @code{notify} target only sends messages when
+something changes.  Naturally, no message is sent when no action
+is needed in the requested set of translations (unless the
+@code{force} option is used).
+
+The team-wide default period is defined in its GNUmakefile.team using
+the @code{NOTIFICATION_PERIOD} variable.
+
+The fourth field provides comma-separated options for the report.
+Currently recognized options are:
+
+@table @code
+@item force
+Forces sending messages even when there are no files to work on.
+
+@item no-diffs
+Disables sending @dfn{www} vs. @dfn{www-@var{lang}} differences
+as attachments.
+
+@item www
+Report cases that suggest actions by the team leader, that is,
+when the translation in the team repository is complete whereas
+in @dfn{www} it is incomplete or absent.
+@end table
+
+This is an example of @file{email-aliases}:
+
+@example
+alice:alice@@example.com abc@@test.net
+# Disable `dan' temporarily.
+#dan:miller@@test.by:5:no-diffs,www
+bob:brh@@invalid.tr:3
+# Note that the third field is empty; the default value for period
+# will be used.
+carol:carol@@localhost.br translator@@example.bg::no-diffs
+eve:eve@@test.gr:2:www
+frank:gnun-notifications@@example.gr:1:www,no-diffs
+@end example
+
+The @file{email-aliases} file should be kept privately because it
+may contain personal email addresses of people.  How to do this
+is out of scope of GNUN and this manual.
+
+@item format
+A convenience rule to re-wrap all files up to the standard length.  Many
+PO editors leave the @code{msgstr} as a single long line after it has
+been edited, but GNUN will automatically re-wrap the file to the standard
+line length when it is processed.  Wrapping long lines in PO files is a
+good practice as it avoids unnecessary revisions.
+
+This rule filters all translations with @command{msgcat}; basically,
+it reformats the lines that are longer than the default page width
+of @command{msgcat}.
+
+@item publish
+@anchor{publish}
+The @code{publish} rule's task is to copy all modified files to the
+official @dfn{www} repository.  It depends on the @code{format} target
+to ensure that all files are re-wrapped to the standard line length
+limit, but deliberately does not depend on @code{sync VCS=yes}.
+Usually, one would run @code{make publish} when one or a bunch of PO
+files are in a satisfactory condition to be published, and this rule is
+just a convenience to avoid multiple manual @command{cp} invocations.
+As a rule of thumb, before running this rule it is sane to run
+@code{sync} and correct any ``fuzzy'' messages and other problems, if
+necessary.
+
+The @code{publish} rule does not depend on @code{sync} explicitly,
+because that would be a nuisance for offline operations and basically
+unnecessary when the committer is fairly confident that there are no
+changes to (re-)merge.  A hard dependency on @code{sync} would slow down
+the operation considerably.
+
+As usual, when committing to the official repository, it is always a
+good practice to examine the output of @command{cvs diff}.
+
+Invoking @code{make publish} prints warnings and does not actually copy
+the affected file if the sub-directory in ``www'' is non-existent or the
+corresponding @file{.pot} is missing.
+
+Typically, after an editing session (whether it involves actual editing
+or just merging contributions from team members), one would do:
+
+@example
+$ make sync VCS=yes
+$ make publish
+$ cd @var{wwwdir}
+$ cvs up
+(Add all new translations, if any.)
+  $ cvs add @var{file} @dots{}
+$ cvs diff
+$ cvs commit -m "Some descriptive message."
+@end example
+
+@item clean
+Deletes all backup and auto-generated files.
+@end table
+
+@code{make VCS=yes} is the recommended command to be run periodically.
+To check the status of the translations, run @code{make report}.
+
+Feel free to replace all strings with equivalents in your native
+language and of course---do not hesitate to extend this file and
+modify it as much as you like.  If you come up with
+something interesting, it would be nice to send a message to
+@email{bug-gnun@@gnu.org}, so that @file{GNUmakefile.team} gets
+updated for all teams' benefit.
+
+@node GNUmakefile.team and Cron
+@section Automatic Synchronization and Status Reports
+@cindex team maintenance, cron
+@cindex cron, team maintenance
+
+It is convenient to invoke such synchronization automatically, for
+example once every day.  If you have enabled commit notifications for
+the project's repository, any new changes will be visible for
+subscribers.  Here is an example crontab entry:
+
+@example
+# m h  dom mon dow   command
+@@daily              cd $HOME/projects/www-@var{lang}; make VCS=yes
+@end example
+
+The job doesn't have to run on the team leader's machine,
+since all team members have write access to their project repository.
+
+If desired, you could set up another job to report the status of the
+translations weekly or fortnightly, for example:
+
+@example
+# m h  dom mon dow   command
+@@weekly             cd $HOME/projects/www-@var{lang}; \
+                       make report | mail -s "Weekly statistics" \
+                       www-@var{lang}-list@@gnu.org
+@end example
+
+@strong{Caution:} Most cron implementations do not allow the character
+`\' as a line continuation character---the example shown is made that
+way for better readability.
+
+@node PO Files
+@chapter Working with PO Files
+
+This section provides technical details about working with PO files.
+For general information about PO editors, @pxref{PO Editors, ,
+Editing PO Files, web-trans, GNU Web Translators Manual}.
+
+@menu
+* New Translation::     How to start a new translation.
+* PO Header::           How to fill the header of a new translation.
+* GNUN Slots::          Special GNUN messages.
+* Wrapping Long Lines::
+* PO Tips::             Tips and hints for translators.
+* Migrating::           How to migrate an existing translation to a PO
+                          format under GNUN's control.
+@end menu
+
+@node New Translation
+@section Starting a New Translation
+@cindex starting translation
+@cindex initializing PO files
+@cindex translation, new
+@cindex new translation
+
+To start a new translation, the most simple way is to copy the
+existing POT as @file{@var{article}.@var{lang}.po}, where @var{lang} is your
+language code.  The name of the POT is @file{@var{article}.pot} or,
+when you are translating an optional template, @file{@var{article}.pot.opt}
+(@pxref{optional-templates}).  All these files are situated in the
+@file{po/} subdirectory of the directory containing the HTML file
+of the article.  @xref{Files and Directories}, for more info on GNUN
+directory layout.  For example, to prepare for a new translation
+of the essay @uref{https://www.gnu.org/philosophy/free-sw.html}
+in Manx, you can simply @code{cd philosophy/po; cp free-sw.pot
+free-sw.gv.po} and then edit the latter.  If
+@file{free-sw.pot} does not exist it is because either the article is
+not yet ``templated'' (i.e. migrated to the new style), or the GNUN
+maintainers have not yet added it to the value of the appropriate
+variable in @file{server/gnun/gnun.mk}.  In that case, just ask them
+to do what's needed for the POT to be generated.
+
+You could also use the @command{msginit} utility that would populate
+the PO file header with the right information, provided your
+environment is set up correctly.  @xref{msginit Invocation, ,,
+gettext, GNU gettext tools}.
+
+GNUN also provides a customized script to automatically fill more
+header fields.  @xref{gnun-init-po}.
+
+@node PO Header
+@section Filling the PO File Header
+@cindex PO files, header
+
+The PO file header as generated usually looks like this:
+
+@example
+@group
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2008-02-06 16:25-0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: ENCODING\n"
+@end group
+@end example
+
+You have to edit the header to match the already established
+conventions, and the rules for gnu.org translations.  For reference,
+here is a list with all fields explained:
+
+@cindex PO headers
+@table @samp
+@item Project-Id-Version
+Add here the filename of the original article, without the
+sub-directory, like ``body-include-1.html'' or ``free-sw.html''.
+
+@item POT-Creation-Date
+Do not edit this field, it is already set when the POT is created.
+
+@item PO-Revision-Date
+Likewise, do not edit.  This field is automatically filled in when you
+save the file with any decent PO editor.
+
+@item Last-Translator
+The name and email address of the last translator who has edited the
+translation.  Pay attention that normally this is the name of a member
+of your team, it can be the translation team leader if he/she was the
+person who updated the translation.  For example:
+
+@example
+Elvis Parsley <king@@grassland.com>
+@end example
+
+@item Language-Team
+This field should contain the mailing list on which the translation
+team can be reached---usually @email{www-LANG-@dots{}@@gnu.org}.
+Example:
+
+@example
+Czech <www-cs-general@@gnu.org>
+@end example
+
+@item MIME-Version
+Leave it like it is.
+
+@item Content-Type
+Usually this is @code{text/plain; charset=UTF-8}; change the charset
+accordingly.
+
+@item Content-Transfer-Encoding
+Set this to @code{8bit}.  Note that the PO file header ends with this
+field, and it should contain a newline (@samp{\n}).  Unfortunately, some
+PO editors remove the newline, which causes an unnecessary revision when
+the file is automatically modified by GNUN's rules.
+@end table
+
+Here is an example of a properly edited header:
+
+@example
+@group
+# Bulgarian translation of https://www.gnu.org/philosophy/@/free-sw.html
+# Copyright (C) 2008 Free Software Foundation, Inc.
+# This file is distributed under the same license as the gnu.org article.
+# Yavor Doganov <yavor@@gnu.org>, 2008.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: free-sw.html\n"
+"POT-Creation-Date: 2008-02-06 16:25-0500\n"
+"PO-Revision-Date: 2008-02-09 15:23+0200\n"
+"Last-Translator: Yavor Doganov <yavor@@gnu.org>\n"
+"Language-Team: Bulgarian <www-bg-list@@gnu.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+@end group
+@end example
+
+Notice the absence of the ``fuzzy'' marker; you should ``unfuzzy'' the
+header after entering the necessary information (this is done by
+simply pressing @key{TAB} in PO mode).
+
+It is recommended that you wrap all lines in the comments to be less
+than 80 characters; that looks better from a purely aesthetic point of view
+and improves the performance of @file{GNUmakefile.team}'s @code{publish}
+rule (@pxref{publish}).
+
+@node GNUN Slots
+@section Special GNUN messages
+
+There are some special messages that appear in the POT and PO:
+
+@table @samp
+@cindex notes, translators
+@cindex translators' notes
+@item *GNUN-SLOT: TRANSLATOR'S NOTES*
+This is for translator's notes that are injected in the resulting
+translation.  @xref{Notes Slot}, for more information.  If your
+translation does not have notes, you @emph{must} translate this as a
+space:
+
+@example
+@group
+msgid "*GNUN-SLOT: TRANSLATOR'S NOTES*"
+msgstr " "
+@end group
+@end example
+
+@cindex credits, translators
+@cindex translators' credits
+@item *GNUN-SLOT: TRANSLATOR'S CREDITS*
+This is again optional, and should contain the name (and address) of
+the person who made the translation.  ``Translate'' this string as a
+space if you do not want your name to appear there.
+@xref{Credits Slot}.
+@end table
+
+@menu
+* Notes Slot::          How to handle translator's notes.
+* Credits Slot::        Translator's credits.
+@end menu
+
+@node Notes Slot
+@subsection The Special Slot for Translator's Notes
+@cindex notes, translators
+@cindex translators' notes
+
+Sometimes it is necessary to complement the translation of an essay
+with translator's notes.  The special message @code{*GNUN-SLOT:
+TRANSLATOR'S NOTES*} is designed to serve this purpose.  If your
+translation doesn't have notes, you should ``translate'' the
+@code{msgstr} as a space (@key{SPC})---otherwise the PO file will be
+considered incomplete, which is not what you want.  Here is an example
+how to use translators' notes in a PO file:
+
+@example
+@group
+# type: Content of: <p>
+msgid ""
+"To understand the concept, you should think of <q>free</q> "
+"as in <q>free speech,</q> not as in <q>free beer.</q>"
+msgstr ""
+"Translated message, where you want to clarify beer<sup><a "
+"href=\"#TransNote1\">1</a></sup>, presumably because the "
+"expression in your language is different"
+@dots{}
+@dots{}
+# type: Content of: <div>
+#. TRANSLATORS: Use space (SPC) as msgstr if you don't have notes.
+msgid "*GNUN-SLOT: TRANSLATOR'S NOTES*"
+msgstr ""
+"<h3>Translator's notes</h3>\n"
+"<ol>\n"
+"<li id=\"TransNote1\">Note clarifying the text.</li>\n"
+"</ol>\n"
+@end group
+@end example
+
+Certainly, everything in the @code{msgstr}s should be in your native
+language; we use English here, so that everyone understands
+the example.  If you have more notes, each subsequent one should be with
+incremented number, i.e. @samp{TransNote2}, @samp{TransNote3}, etc. and
+you have to add them as more @code{<li>} elements accordingly.
+
+Do not worry about the @code{\n} character---it is inserted
+automatically when you press @key{RET}.  It is not compulsory that
+notes start on a new line, this is the recommended way simply because
+it is easier to edit them.
+
+It is important to follow this specification, because notes will look
+consistent in all languages and will be clearly distinguishable from
+authors' footnotes, if any.  Furthermore, it will be easier to define
+a special CSS class for them, and also to convert the
+translations in other formats such as Texinfo---when these conversions
+are implemented.
+
+@node Credits Slot
+@subsection The Special Slot for Translator's Credits
+@cindex credits, translators
+@cindex translators' credits
+
+Most of the translators usually put their name under the translation,
+in the ``footer'' area.  This is entirely acceptable, since some
+readers prefer to send buggestions directly to the translator.  Also,
+giving credit where credit is due is a natural thing.
+
+Like the previous slot, you should ``translate'' it as a space if
+you don't want your name to appear there.
+
+Here is an example of the recommended way to specify credits:
+
+@example
+<b>Traduction</b>: Benjamin Drieu 
+<a href="mailto:foo@@example.org">&lt;foo@@example.org&gt;</a>,
+2007, 2008.
+@end example
+
+It is highly desirable to use this form, but you may omit the email
+address or add a link to translator's noncommercial personal home page,
+provided that the translation team leader ensures that it constantly
+meets the linking criteria for gnu.org.  Please follow the FSF HTML
+Style Sheet when adding URIs or other information.
+
+@node Wrapping Long Lines
+@section Wrapping Long Lines
+@cindex wrapping long lines
+@cindex long lines, wrap
+
+Most of the PO editors do not wrap long lines that inevitably appear in
+@code{msgstr}s.  If that happens, long lines make reading subsequent
+diffs harder, and are generally annoying for most people.  If this issue
+bothers you, you can ``normalize'' the already finished PO translation
+by executing on the command line @code{msgcat -o @var{file}.po
+@var{file}.po}, before installing it in the repository.  Either way, the
+build system will treat it as a valid PO file.
+
+For those lucky Emacs users, here is a code snippet that you can put
+in your @file{.emacs}; doing @kbd{M-x po-wrap} while in PO mode will
+wrap all long lines:
+
+@lisp
+@group
+(defun po-wrap ()
+  "Filter current po-mode buffer through `msgcat' tool to wrap all lines."
+  (interactive)
+  (if (eq major-mode 'po-mode)
+      (let ((tmp-file (make-temp-file "po-wrap."))
+	    (tmp-buf (generate-new-buffer "*temp*")))
+	(unwind-protect
+	    (progn
+	      (write-region (point-min) (point-max) tmp-file nil 1)
+	      (if (zerop
+		   (call-process
+		    "msgcat" nil tmp-buf t (shell-quote-argument tmp-file)))
+		  (let ((saved (point))
+			(inhibit-read-only t))
+		    (delete-region (point-min) (point-max))
+		    (insert-buffer tmp-buf)
+		    (goto-char (min saved (point-max))))
+		(with-current-buffer tmp-buf
+		  (error (buffer-string)))))
+	  (kill-buffer tmp-buf)
+	  (delete-file tmp-file)))))
+@end group
+@end lisp
+
+It is highly desirable that you check if the PO file you finished
+translating (or editing) is valid, before committing it.  This is done
+@cindex running checks
+@cindex validation, PO files
+by running @code{msgfmt -cv -o /dev/null @var{file}} or by simply
+pressing @kbd{V} in PO mode.  The build system automatically verifies
+each PO file when invoked with @code{VALIDATE=yes}, but you won't get a
+warm and fuzzy feeling if a stupid typo you made halts the whole update
+of all translations.  Such things happen to everyone, so it is a good
+practice to check before you actually commit.
+
+@node PO Tips
+@section Useful Hints for Editing PO Files
+@cindex tips, translators
+@cindex recommendations, PO files
+
+This section contains additional explanations, some in the form of
+advice and recommendations; not all of them are strictly related to
+PO files editing.
+
+@itemize
+@item
+When you install a new translation of an article (that is different
+from a server template), all you need to do is to add
+your PO file in the appropriate @file{/po} sub-directory.
+
+In the next build, your @file{@var{article}.@var{lang}.html} will be
+built and the link to it will be added to the list of translations
+and propagate to all translations, provided
+that they are under GNUN's control.
+
+@item
+If you don't feel comfortable editing @file{gnun.mk}, do not worry.
+Someone from the GNUN maintainers will notice and will amend
+@code{TEMPLATE_LINGUAS} for you, as appropriate.
+
+@item
+Dealing with obsolete strings.  Elements which are removed from the
+original articles appear in the PO files as ``obsolete'' strings---the
+translation is not lost, but they are marked in a special way at the
+end of the PO file.  You don't have to update a PO file if it contains
+obsolete strings---do this only if it has ``fuzzy'' or
+``untranslated'', and of course when you want to improve the existing
+translated ones.  Sometimes these obsolete strings are useful, and
+they can save time.  For example, if you anticipate that the deleted
+text may reappear some time in the future, you can preserve the string
+and hopefully it would be marked as ``fuzzy'' when this happens.
+Failing that, you can still copy it and yank it at the appropriate
+place.
+
+@item
+You can add comments to every message in a PO file---for example if
+you want to remember that you have to do something, or to remind you
+why this particular message is translated in a special way.  These
+comments do not appear in the generated HTML source.
+
+@item
+Sometimes, especially when the original message contains many links,
+it is easier to copy it to @code{msgstr} and edit the latter by
+translating the English text.  In PO mode of Emacs, this is done by @kbd{C-j}.
+This is useful also for large chunks of text in @code{<pre>} elements,
+which normally you would want to preserve verbatim.
+
+@item
+Do not use HTML entities for non-ASCII letters as in the English
+original.  They are harder to type and read.  So, if there is
+@samp{&uuml;} and this is a character from the alphabet of your
+language, just write it as @samp{@"u} directly.
+
+@item
+Wrapping of @code{msgstr} using @kbd{M-q} in Emacs (or other means) is
+considered harmful.  It is best to leave GNUN (or more precisely, Po4a)
+do the wrapping---that way all generated HTML translations will have
+predictable results.  This will help tremendously for the conversion to
+other formats, like Texinfo.  Also, note that not all elements are
+wrapped by default, so deliberately wrapping the text inside the
+@code{msgstr} could lead to an invalid page or a page that is valid, but
+is rendered incorrectly by the web browser.
+@end itemize
+
+@node Migrating
+@section Transforming Existing Translation in PO Format
+@cindex migration, translations
+@cindex conversion of existing translations
+
+Migrating an existing translation to a PO file format is basically
+editing the header as described in the previous section, and
+populating each of the messages by copying the already translated text
+and markup from the existing translation in HTML format in the
+relevant message.
+
+Typically, you will visit @file{po/foo.@var{lang}.po} (in PO mode) and
+@file{foo.@var{lang}.html} (in HTML mode) in another buffer.  Then you
+can copy a paragraph or an element from the latter and yank it in the
+relevant message in the former.  Be extra careful, since this is the
+time to check @emph{precisely} that the translation corresponds to the
+original.  Further changes will be reflected, but if your ``initial''
+PO file is not a 100% match, that would not necessarily mean that it
+is an improvement.  Since it is very easy to do this kind of check,
+because the relevant @code{msgid} and @code{msgstr} appear one above
+the other in the same buffer (or the similar concept in other PO
+editors), please @emph{do} perform this initial sanity check even if
+you are confident that the translation you have been yanking strings
+from is a completely up-to-date translation.
+
+There is also a semi-automatic way to produce an initial PO file.  You
+checkout the revision of the English page, @file{foo.html}, that
+corresponds to the latest revision of the translation,
+@file{foo.@var{lang}.html}.  Then you run @command{gnun-preconvert}
+(@pxref{gnun-preconvert}):
+
+@example
+gnun-preconvert foo.lang.html foo.html
+@end example
+
+If some passages in @file{foo.@var{lang}.html} don't match the structure
+of @file{foo.html}, error messages will be displayed.  Check them,
+adjust the files and try again.  When you succeed, the result will be
+written to foo.lang.po.  After that, run
+@command{gnun-merge-preconverted} (@pxref{gnun-merge-preconverted}):
+
+@example
+gnun-merge-preconverted -C compendium.lang.po foo.lang.po foo.pot
+@end example
+
+If you have no compendium, just omit the ``@code{-C
+compendium.lang.po}'' part.
+
+You get @file{foo.@var{lang}.po} where all messages are marked as
+``fuzzy'' (unless you use a compendium); you still should make sure that
+the translations correspond to the original and remove those ``fuzzy''
+marks.  The script adds differences against ``previous'' @code{msgid}s to
+facilitate checking.
+
+There is no need to delete the existing HTML translation, GNUN will
+automatically overwrite it.  The only thing the translator should do
+is commit the PO file to the repository.
+
+When an essay has been translated by several people through the years,
+it is important that this information is recorded and reflected in the
+PO file.  In the future, special targets may be added to enable the FSF
+to check who translated a particular article, and when.
+
+A recommended way to do this is as follows:
+
+@example
+@group
+# French translation of https://www.gnu.org/philosophy/@/bsd.html
+# Copyright (C) 2006, 2007, 2008 Free Software Foundation, Inc.
+# This file is distributed under the same license as the gnu.org article.
+# C@'edric Corazza <cedric.corazza@@wanadoo.fr>, 2006, 2008.
+# Jer@^ome Dominguez <taz@@gnu.org>, 2007.
+@end group
+@end example
+
+In this example, it is clear that C@'edric made the initial
+translation, Jer@^ome made some changes in 2007, and the original
+translator returned in 2008 and continued maintaining it.
+
+@node Webmaster Tips
+@chapter Tips and Hints for Webmasters
+@cindex tips, webmasters
+@cindex webmaster tips
+
+This section contains some tips and general recommendations for
+webmasters in no particular order---it is not mandatory to follow them,
+but doing so will make translators' lives substantially easier.
+
+First and foremost, respect translators' work---it is ungrateful and
+hard, undoubtedly much harder than translation of programs.  It is
+important to have as many translations as possible, and make them
+as good as possible, and you don't have to make titanic efforts to
+help.
+
+If you plan to edit a certain page extensively, please do so within a
+reasonable time frame, for example a day or preferably, several hours.
+That way, the translators who are quick to update it immediately won't
+be disappointed if the POT changes again in the next GNUN run.
+
+@menu
+* Modifying Templates::       How to avoid errors.
+* Comments for Translators::  Passing comments to translators.
+* Localized URLs::            Specifying URLs of diagrams
+                                to be translated.
+* Splitting Long Passages::   How to avoid too long strings
+                                in PO files.
+* Sorting Lists::             Marking up lists for sorting
+                                in translations.
+@end menu
+
+@node Modifying Templates
+@section Modifying Templates
+@cindex boilerplates
+@cindex templates
+
+Any significant structural diversion from
+@file{boilerplate.html} in a specific article may result in errors from
+GNUN.  Any untested intrusive updates to the server templates (such as
+changing the entire look & feel of the site) will probably break
+GNUN build process.  Of course, this does not
+mean that no changes should happen---only that they must be applied in
+a sandbox first, to ensure a smooth transition.
+
+@cindex validation 
+The script @command{gnun-validate-html} is useful for webmasters who
+want to verify if their (potentially intrusive) changes result in a
+valid markup.  Before committing your changes, you can check whether
+the file is valid by running
+
+@example
+gnun-validate-html --root . philosophy/not-ipr.html
+@end example
+
+@xref{gnun-validate-html}, for more information.
+
+@node Comments for Translators
+@section Comments for Translators
+@cindex comments for translators
+
+If you want a comment to be visible for translators, place it
+@emph{inside} the element, for example:
+
+@example
+<p>
+<!--TRANSLATORS: Note that foo is bar in this context.-->
+The fooish bar mumbles bazzling.
+</p>
+@end example
+
+This will result in:
+
+@example
+# type: Content of: <p>
+#. TRANSLATORS: Note that foo is bar in this context.
+msgid "The fooish bar mumbles bazzling."
+msgstr ""
+@end example
+
+As per the established convention, start the comment with
+@code{TRANSLATORS:} to catch their attention, and do not add a space
+after the beginning of the HTML comment (@code{<!--}), since this will
+unnecessarily indent the comment in the POT.
+
+@node Localized URLs
+@section Localized URLs
+@cindex localized URLs
+
+Some articles may contain diagrams or other images with English text
+that can and should be translated.  In order to make the translated
+versions appear in the respective translations, GNUN should be told
+what URLs need localization.  It can be done with HTML comments like
+
+@example
+<!-- GNUN: localize URL /philosophy/category.png,
+ /licenses/template-diagram.png and /graphics/jesus-cartoon.jpg -->
+@end example
+
+The URLs are separated with spaces.  One trailing comma at the end of
+every word is removed if present.  Words without a dot, such as `and',
+do not count as URLs; they are ignored.
+
+Such comments will be extracted nightly and compiled into per-article
+lists of URLs in @file{localized-urls.mk}.
+
+After every build GNUN will check if the respective
+@file{philosophy/category.@var{lang}.png} and other files are present in
+the working copy and substitute the strings in the HTML file of the
+translation.
+
+GNUN relies on URLs being absolute, starting from the root directory
+as required in the
+@url{https://www.gnu.org/server/fsf-html-style-sheet.html#FilenameAndURLGuidelines,
+FSF HTML Style Sheet Guidelines}.
+
+And please don't forget to commit the image in its source form
+(typically, in SVG format).
+
+@node Splitting Long Passages
+@section Splitting Long Passages
+@cindex long passages, avoiding
+@cindex conventional separator for strings
+
+GNUN splits typical text by paragraphs, and translators write the
+translations for the resulting parts of the text one by one.  When a
+part is too long, it is hard to translate and proofread the translation;
+the likelihood of skipping some phrases is relatively high.
+
+In order to make our translators' life easier, it is desirable to keep
+the paragraphs short (no more than 350--700 characters).  If rearranging
+the paragraphs is not an option, you can use a conventional separator,
+@code{<span class="gnun-split"></span>}:
+
+@example
+<p>GNUN splits typical text by paragraphs, and translators write
+the translations for the resulting parts of the text
+one by one. <span class="gnun-split"></span> When a part
+is too long, it is hard to translate and proofread the translation;
+the likelihood of skipping some phrases is relatively high.</p>
+@end example
+
+It is important that the separator be inserted between complete
+sentences, because different languages may require different orders
+of parts of the sentence, and the translator has no control over
+the sequence of the strings in the translation.
+
+@node Sorting Lists
+@section Sorting Lists
+@cindex sorting translated lists
+
+Sometimes a list is sorted alphabetically to make search easier
+for the visitors, and this property should be preserved in
+translations.  GNUN has specific marks for such lists.
+
+@cindex GNUN-SORT-START
+@example
+<!-- GNUN-SORT-START -->
+@end example
+
+This HTML comment marks the begin of the list.
+
+@cindex GNUN-SORT-STOP
+@example
+<!-- GNUN-SORT-STOP -->
+@end example
+
+This comment marks the end of the list.
+
+@cindex GNUN-SORT-NEXT-ITEM
+@example
+<!-- GNUN-SORT-NEXT-ITEM -->
+@end example
+
+This mark separates list items.
+
+The next two marks are optional, they delimit the key to sort items.
+
+@cindex GNUN-SORT-BEGIN-KEY
+@example
+<!-- GNUN-SORT-BEGIN-KEY -->
+@end example
+
+@cindex GNUN-SORT-END-KEY
+@example
+<!-- GNUN-SORT-END-KEY -->
+@end example
+
+When extracting the keys, all HTML tags are removed, leading and
+trailing whitespace is trimmed.
+
+Since the items are reordered in translations, webmasters should
+carefully choose places for the separators: reordering shouldn't break
+the page.
+
+The translators can modify the sorting order using HTML comments
+if needed.  For example, let the English text say
+
+@example
+<!-- GNUN-SORT-BEGIN-KEY -->
+<h3>Afrikaans</h3>
+<!-- GNUN-SORT-END-KEY -->
+@end example
+
+In the PO file, this transforms to an @code{msgstr} like
+
+@example
+Afrikaans
+@end example
+
+The translator inserts a comment in the translation:
+
+@example
+<!-- boer --> afrikaans
+@end example
+
+Now the item sorts like @samp{boer afrikaans}.
+
+Additional care should be taken when the items have a separator like
+
+@example
+<!-- GNUN-SORT-START -->
+A |
+<!-- GNUN-SORT-NEXT-ITEM -->
+B |
+<!-- GNUN-SORT-NEXT-ITEM -->
+...
+<!-- GNUN-SORT-NEXT-ITEM -->
+Y |
+<!-- GNUN-SORT-NEXT-ITEM -->
+Z
+<!-- GNUN-SORT-STOP -->
+@end example
+
+Note that the last item has no separator (@samp{|}).  When
+translating, make sure that the item to be last @emph{in your
+translation} has no separator, and all other items have it.
+
+@node Internals
+@chapter Unexciting Information for GNUN's Operation
+
+This chapter might be of interest probably only to people who would have
+special interest in the software, plan to enhance it or develop a
+front-end, except the section about scripts that includes descriptions
+of programs that may also be useful for the translators.
+
+@menu
+* Files and Directories::        What, where, when.
+* Scripts::                      Helper scripts.
+@end menu
+
+@node Files and Directories
+@section Files and Directories 
+@cindex GNUN directory layout
+
+This is a brief diagram of @dfn{www} working copy; note that in this
+section we don't describe the files out of GNUN control, including the
+old HTML-only translations.
+
+@example
+Legend:
+*   The file is maintained locally, without committing it to CVS.
+#   The file is edited manually.
+@@   The file is regenerated automatically.
+%   The file is edited both manually and automatically.
+#/@@ The file is generated automatically, but outside of GNUN.
+
+@group
+Root/
+  |
+  +--proprietary/
+  |   |
+  |   +--proprietary.html #
+  |   +--proprietary.@var{lang}.html @@
+  |   +--malware-cars.html #
+  |   +--malware-cars.@var{lang}.html @@
+  |   +--@dots{}
+  |   |
+  |   +--------------------------po/
+  |                               |
+  +--home.html #                  +--malware-cars.@var{lang}.po %
+  +--home.@var{lang}.html @@             +--malware-cars.pot @@
+  +--planetfeeds.html #/@@         +--malware-cars.proto * @@
+  +--planetfeeds.@var{lang}.html @@      +--malware-cars.translist @@
+  +--po/                          |
+  |  |                            +--malware-cars.@var{lang}-en.html @@
+  |  +--home.pot @@                +--malware-cars.@var{lang}-diff.html @@
+  |  +--home.proto * @@            +--proprietary.@var{lang}.po %
+  |  +--home.translist @@          +--pot @@
+  |  +--home.@var{lang}.po %            +--@var{lang}.po %
+  |  +--home.@var{lang}-en.html @@       +--@dots{}
+  |  +--home.@var{lang}-diff.html @@
+  |  +--planetfeeds.proto * @@
+  |  +--planetfeeds.pot.opt @@
+  |  +--planetfeeds.@var{lang}.po %
+  |  +--@dots{}
+  |
+  +--server/
+  |  |
+  |  +-------------------------gnun/
+  |  |                           |
+  |  +--sitemap.html #/@@         +--GNUmakefile * #
+  |  +--sitemap.@var{lang}.html @@      +--config.mk * #
+  |  +--po/                      +--gnun.mk #
+  |  |  |                        +--priorities.mk #
+  |  |  +--sitemap.pot @@         +--languages.txt #
+  |  |  +--sitemap.proto * @@     +--compendia/
+  |  |  +--sitemap.@var{lang}.po %          |
+  |  |  |                             +--master.@var{lang}.po #
+  |  |  +--body-include-2.pot @@       +--compendium.@var{lang}.po @@
+  |  |  +--body-include-2.proto * @@   +--compendium.pot @@
+  |  |  +--body-include-2.@var{lang}.po %   +--excluded.pot #
+  |  |  +--@dots{}
+  |  |  
+  |  +--body-include-2.html #
+  |  +--body-include-2.@var{lang}.html @@
+  |  +--@dots{}
+  +--@dots{}
+@end group
+@end example
+
+A description of some files follows.
+
+@table @file
+@item @dots{}/@var{file}.html
+The English files.
+
+@item @dots{}/@var{file}.@var{lang}.html
+The @var{lang} translation of @file{@dots{}/@var{file}.html}.
+
+@item @dots{}/po/@var{file}.proto
+Intermediate files generated from @file{@var{file}.html}; they are
+used only internally.  Essentially, GNUN inserts its special slots.
+@xref{GNUN Slots}, for more details.
+
+@item @dots{}/po/@var{file}.translist
+The list of translations for @file{@dots{}/@var{file}.html}.  It is
+included in @file{@dots{}/@var{file}.html} and all its translations.
+
+@item @dots{}/po/@var{file}.pot
+PO templates for articles and included files.
+
+@item @dots{}/po/@var{file}.pot.opt
+POTs of optional templates.
+@xref{optional-templates}, for more details.
+
+@item @dots{}/po/@var{file}.@var{lang}.po
+Translations of @file{@var{file}.pot} or @file{@var{file}.pot.opt}
+committed by the translators and merged by GNUN.
+
+@item @dots{}/po/@var{file}.@var{lang}-en.html
+The latest revision of the English file for which a full translation
+into @var{lang} language was provided.
+
+@item @dots{}/po/@var{file}.@var{lang}-diff.html
+The highlighted differences between the current version of
+@file{@dots{}@var{file}.html} and
+@file{@dots{}/po/@var{file}.@var{lang}-en.html}.
+
+@item @dots{}/po/pot
+Per-directory template.  It contains all strings from all articles
+in this directory.  @xref{Per-Directory Templates}.
+
+@item @dots{}/po/@var{lang}.po
+Per-directory compendium.  It is only used and regenerated when
+@file{@dots{}/po/pot} exists.  @xref{Per-Directory Templates}.
+
+@item planetfeeds.html
+A list of news; it is automatically generated outside of GNUN.
+For GNUN, it is an optional template.
+
+@item server/
+Most template SSI files are located in this directory.
+
+@item server/sitemap.html
+The sitemap; it is generated automatically by a script that is not
+included in GNUN.  @xref{Sitemap}.
+
+@item server/gnun/
+The directory for GNUN files.
+
+@item server/gnun/GNUmakefile
+@itemx server/gnun/config.mk
+These files are maintained locally.  They are used to rebuild the
+translations.  @xref{Invoking GNUN}.
+
+@item server/gnun/gnun.mk
+The file that defines the list of files to build.  @xref{Main
+Variables}.
+
+@item server/gnun/priorities.mk
+This file defines the list of translation priorities.
+@xref{priorities.mk}.
+
+@item server/gnun/languages.txt
+Canonical names for languages.  @xref{languages.txt}.
+
+@item server/gnun/compendia
+The directory for compendia.  @xref{Compendia}.
+@end table
+
+@node Scripts
+@section GNUN Scripts
+
+For the time being there are several helper scripts. Some of them are
+used internally as commands with certain arguments in the makefile
+rules; other scripts were written specifically to facilitate some
+mechanical actions, like initially filling the headers in the PO files.
+They all can be invoked separately, as stand-alone programs.
+
+@menu
+* gnun-add-fuzzy-diff::      Add differences to ``previous''
+                               @code{msgid}s.
+* gnun-diff-po::             Compare two revisions of a PO file.
+* gnun-init-po::             Initialize a new translation.
+* gnun-link-diff::           Figure out mismatched links.
+* gnun-preconvert::          Invoke the first step in converting
+                               HTML translation to PO format.
+* gnun-merge-preconverted::  Run the second step of the conversion.
+* gnun-report::              Generate report in HTML format.
+* gnun-validate-html::       Validate HTML file.
+* mailfail::
+* validate-html-notify::
+@end menu
+
+@node gnun-add-fuzzy-diff
+@subsection The @command{gnun-add-fuzzy-diff} Script
+@cindex previous, diff
+
+This script adds comments with differences of current @code{msgid}s
+against ``previous'' ones to ``fuzzy'' translations in a PO file.  To produce
+the differences @command{wdiff} is used.  (@xref{wdiff, wdiff, The word
+difference finder, wdiff, GNU wdiff}, for more information.)
+This may be useful to figure out what has changed.  In fact, it wraps
+around a @command{sed} script used in GNUN internally.
+
+@example
+gnun-add-fuzzy-diff [OPTION...] [FILE]
+@end example
+
+@table @option
+@item -i
+@itemx --in-place
+Edit the file in place.
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+The script is invoked automatically when requested through the
+@code{FUZZY_DIFF_LINGUAS} variable in @file{GNUmakefile}
+(@pxref{FUZZY_DIFF_LINGUAS}) and through the @code{ADD_FUZZY_DIFF}
+variable in @file{GNUmakefile.team} (@pxref{ADD_FUZZY_DIFF}).
+
+@node gnun-diff-po
+@subsection The @command{gnun-diff-po} Script
+@cindex comparing, translations
+
+This script compares two versions of a PO file.  It produces a HTML page
+with a table that contains original strings with highlighted differences
+of their translations.
+
+If the sets of original strings in the input PO files differ, one of
+them will be merged with the other in order to eliminate the differences
+in the original strings.
+
+The results are written to standard output.  Example:
+
+@example
+gnun-diff-po [OPTION...] PO_FILE1 PO_FILE2 > diff.html
+@end example
+
+@table @option
+@item -1
+@itemx --merge-against-first
+Adjust the original strings of PO_FILE2 against PO_FILE1 when their
+sets differ.  This is the default.
+
+@item -2
+@itemx --merge-against-second
+Adjust the original strings of PO_FILE1 against PO_FILE2 when their
+sets differ.
+
+@item --no-common
+Suppress strings that don't differ.
+
+@item -t
+@itemx --title=@var{title}
+Specify the title of the output HTML page.
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+@node gnun-init-po
+@subsection The @command{gnun-init-po} Script
+@cindex initializing, translations
+
+This script initializes a PO file using the POT generated with GNUN,
+and fills some fields in the header.  It also optionally uses
+a compendium (or compendia) to fill translations.
+
+@example
+gnun-init-po [OPTION...] POT
+@end example
+
+@table @option
+@item -C
+@itemx --compendium=@var{comp}
+Specify a compendium to use.  You can issue this option
+many times to use multiple compendia simultaneously.  The suffix
+of compendium is used when the language suffix is not specified
+with the @code{--language} option.
+
+@item -d
+@itemx --disable-diffs
+Don't add diffs to ``previous'' messages.
+
+@item -g
+@itemx --team="@var{team <list>}"
+Specify team's name and mailing list.
+
+@item -l
+@itemx --language=@var{lang}
+Specify language suffix, e.g ``bg''.  The suffix also defines
+the name of the language which is used in some fields of PO file header.
+
+@item -t
+@itemx --translator="@var{full name <email>}"
+Specify translator.
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+The PO file name is guessed from the name of POT and language
+suffix; the file is created in the current working directory.
+
+@node gnun-link-diff
+@subsection The @command{gnun-link-diff} Script
+@cindex running checks
+
+This script finds mismatched links and anchors
+and fills some fields in the header.  Usually this is a typo,
+though in @emph{very} rare cases changes in links are justified.
+
+The script takes into account possible translator's notes
+and changes in links to Creative Commons licenses.
+@xref{Distribution Terms, , , web-trans, GNU Web Translators Manual}.
+
+The output is a HTML page with highlighted differences.
+In the beginning, numbers of mismatched links and anchors
+are written. Links starting with "mailto:" are not counted,
+but highlighted.
+
+The exit status of the script is 0 when the counts of mismatched
+links and anchors are zero, 1 when their sum is not zero,
+2 when an error occurred.
+
+@example
+gnun-link-diff [OPTION...] FILE
+@end example
+
+@table @option
+@item -l
+@itemx --language=@var{lang}
+Specify language suffix, e.g ``bg''.  The suffix is used
+to adjust links to Creative Commons licenses.
+When unspecified, it is filled from the file name.
+
+@item -t
+@itemx --title="@var{page title}"
+Specify title.  When unspecified, the file name is used.
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+@node gnun-preconvert
+@subsection The @command{gnun-preconvert} Script
+@cindex migration, translations
+@cindex conversion of existing translations
+
+This script uses @command{po4a-gettextize} to convert a translation
+from HTML to PO format (see
+@uref{http://po4a.alioth.debian.org/man/man7/po4a.7.php#lbAO}).  If
+the conversion is successful, you can merge the result with the new
+POT using @command{gnun-merge-preconverted}.
+
+@example
+gnun-preconvert [OPTION...] TRANSLATION MASTER
+@end example
+
+@table @option
+@item -e
+@itemx --encoding
+Specify the encoding of TRANSLATION (if other than UTF-8).
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+@node gnun-merge-preconverted
+@subsection The @command{gnun-merge-preconverted} Script
+@cindex migration, translations
+@cindex conversion of existing translations
+
+This script takes @command{po4a-gettextize} output, adds current
+@code{msgid}s as ``previous'' values, merges the file with the new
+POT, and adds differences against ``previous'' values like
+@command{gnun-add-fuzzy-diff} does.
+
+@example
+gnun-merge-preconverted [OPTION...] PO POT
+@end example
+
+@table @option
+@item -C
+@itemx --compendium
+Specify the compendium (if any).  This option can be used
+more than once to specify multiple compendia.
+
+@item -d
+@itemx --disable-diffs
+Don't add diffs to previous messages in the format of
+gnun-add-fuzzy-diff.
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+@node gnun-report
+@subsection The @command{gnun-report} Script
+@cindex reporting
+@cindex status, translations
+
+This script generates HTML reports about translations of a given team.
+The HTML contains a set of tables sorted by priority and translation
+status (existing translations that need maintenance, untranslated
+files, complete translations).
+
+@cindex priorities.mk
+The script depends on the presence of the @file{priorities.mk} file
+in the @file{server/gnun} sub-directory of the working copy of `www'
+repository.
+
+The results are written to standard output.  Example:
+
+@example
+gnun-report --root=../www -t bg > report-bg.html
+@end example
+
+@table @option
+@item -t
+@itemx --team=@var{lang}
+Specify the language code of the team, for example, `ml'.
+
+@item --root
+Specify the top directory of the working copy; the default
+is the current directory.
+
+@item -l
+@itemx --language=@var{language}
+Specify the language name, for example, `Malayalam'.  When this option
+is missing, @command{gnun-report} tries to figure out the language name
+based on the language code provided with the ``-t'' option.
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+A cron job commits updated reports for all active teams to GNUN
+project web repository, typically twice an hour.  The links to those
+reports are provided on the
+@url{https://www.gnu.org/@/software/@/gnun/@/reports/@/reports.html,
+GNUN Reports}.
+
+There is also a target in @file{GNUmakefile} to generate text reports
+intended for monthly messages sent to the teams.  @xref{report}.
+
+@node gnun-validate-html
+@subsection The @command{gnun-validate-html} Script
+@cindex validation, HTML, XHTML
+
+This is a Bash script whose purpose is to ``validate'' both the
+original and translated articles to make sure that they conform to the
+respective W3C standard.  Sometimes webmasters make mistakes, and
+translators too, so this tool is useful to catch errors of that kind.
+
+GNUN enforces HTML validation at build time by default.
+
+The script expects only one @var{file} as the last argument and will exit
+with an error if it is not specified (which might be the case when an
+automatic variable is not expanded properly due to a bug in the
+makefile).  Example:
+
+@example
+gnun-validate-html --root . philosophy/free-sw.html
+@end example
+
+@table @option
+@item --root=@var{directory}
+Specify the top @var{directory} of the working copy; the default value
+is @file{../..}.
+
+@item --expand-to=@var{file}
+Save the expanded HTML as @var{file}.
+
+@item --apache-vars="@var{var1=val1;var2=val2...}"
+Specify additional (or override assumed) emulated predefined Apache
+variables.
+
+@item -V
+@itemx --verbose
+Produce more detailed output intended for automatic email reports;
+essentially, it adds the expanded HTML to facilitate finding errors
+by people who receive the report.
+
+@item -v
+@itemx --version
+Display copyright and version information and exit.
+
+@item -h
+@itemx --help
+Display usage information and exit.
+@end table
+
+@node mailfail
+@subsection The @command{mailfail} Script
+@cindex mail, notifications
+
+This is a helper script that runs a command, and mails the output of
+that command in case it exits with a non-zero exit status.
+@command{mailfail} depends on GNU Mailutils, or a compatible
+implementation, such as BSD's mailx.
+
+Usage:
+
+@example
+mailfail [--dry-run] RCPT SUBJECT CMD [ARG ...]
+@end example
+
+The @command{mailfail} script accepts the following options:
+
+@table @option
+@item --dry-run
+Does not send the email message.
+
+@item RCPT
+The recipient of the message in a valid format, like
+@code{someone@@somehost.org}.
+
+@item SUBJECT
+The subject of the message; if it is longer than a word you should
+guard it with quotes.
+
+@item CMD
+The command you want to run and send a mail in case it fails.
+
+@item ARG@dots{}
+The arguments of @code{CMD}, if any.
+@end table
+
+Here is a typical example, similar to the way it is used in GNUN:
+
+@example
+mailfail translators@@example.org "Bad PO" msgfmt -cv -o /dev/null bg.po
+@end example
+
+This will check the validity of @file{bg.po} with the @command{msgfmt}
+program and in case there are errors, a message will be sent to the
+specified address with `Bad PO' as subject and the error output from
+@command{msgfmt} as body.
+
+@command{mailfail} inherits the exit status of the command being run.
+If an argument is missing, the usage information is printed to the
+standard output and the exit code is 1.
+
+@node validate-html-notify
+@subsection The @command{validate-html-notify} Script
+
+This script is a wrapper around @command{gnun-validate-html}
+(@pxref{gnun-validate-html}); it is necessary because it is hard to
+capture the output of the program from a program that itself captures
+the output of another program that it runs.
+
+Usage:
+
+@example
+validate-html-notify [--dry-run] RCPT FILE
+@end example
+
+@table @option
+@item --dry-run
+Does not actually send the message, just like @command{mailfail}.
+In this case it runs @command{gnun-validate-html} without
+@option{--verbose} because it is expected that the expanded file
+will be available locally.
+
+@item RCPT
+The recipient of the message.
+
+@item FILE
+The HTML file that has to be validated for compliance with the W3C
+standard.
+@end table
+
+The subject of the message is hardcoded in the script, since this
+wrapper has a specific task and cannot be used to invoke an arbitrary
+command---use @command{mailfail} for that.  @xref{mailfail}.
+
+@node Bugs
+@chapter Reporting Bugs
+@cindex bugs, reporting
+@cindex reporting bugs
+
+GNUnited Nations, like any other software, is not bug free.  There are
+some known bugs and annoyances, which are listed in the @file{TODO}
+file, but it is absolutely certain that there are more which we know
+nothing about.
+
+If you encounter a bug, or if you have suggestions of any kind, please
+do not hesitate to report them at @email{bug-gnun@@gnu.org} or
+@url{https://savannah.gnu.org/@/bugs/@/?group=gnun,
+GNUN Bug Tracker}.
+
+@node Copying This Manual
+@appendix GNU Free Documentation License
+
+@include fdl.texi
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye
+
+Local Variables:
+compile-command: "texi2pdf -c gnun.texi"
+ispell-local-dictionary: "american"
+End:
+
+@c  LocalWords:  uref gettext gettext's po html samp lang www translinks sw SSI
+@c  LocalWords:  indicateurl TODO Pootle wiki CVS POs flushright O'Rielly's cd
+@c  LocalWords:  webmaster's makefile gmake Runtime VCS itemx cvs POTs XHMTL mk
+@c  LocalWords:  NOTFIY devel addr LINGUAS ing XHTML distclean subsubsection el
+@c  LocalWords:  GNUmakefile keepingup basename DIRS basenames RET distros KDE
+@c  LocalWords:  gTranslator KBabel Poedit wxWidgets cp templated msginit msgid
+@c  LocalWords:  msgstr charset CHARSET filename UTF unfuzzy SPC msgcat emacs
+@c  LocalWords:  kbd defun eq tmp buf progn zerop goto msgfmt cv href TransNote
+@c  LocalWords:  ol li CSS buggestions Traduction Drieu lt FSF Corazza pre bg
+@c  LocalWords:  prepend Fooish timestamp other's coord workflow br wwwdir zh
+@c  LocalWords:  cn tw msgmerge unnumberedsubsubsec crontab dom mon dow accute
+@c  LocalWords:  symlink env fooish bazzling mailfail proto RCS stdout BSD's sp
+@c  LocalWords:  Mailutils mailx CMD ARG texinfo setfilename gnun texi settitle
+@c  LocalWords:  GNUnited afourpaper FIXME titlepage Yavor Doganov vskip filll
+@c  LocalWords:  insertcopying dircategory direntry ifnottex makefiles url emph
+@c  LocalWords:  compendia Compendia GNUN's ineiev cron cindex gnumake config
+@c  LocalWords:  pkgdatadadir symlinks ln SVN bzr svn HMTL conf ann dfn
+@c  LocalWords:  online filesets urls automagically wdiff dir gNewSense Virtaal
+@c  LocalWords:  Gtranslator Lokalize XLIFF API ftplugin txt init URIs
+@c  LocalWords:  preconvert gettextize preconverted RSS de Deutsch
+@c  LocalWords:  ul nbsp polski committer Boilerplates boilerplates png
+@c  LocalWords:  FilenameAndURLGuidelines SVG lbAO hardcoded fdl

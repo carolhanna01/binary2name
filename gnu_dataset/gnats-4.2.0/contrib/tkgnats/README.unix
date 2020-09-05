@@ -1,0 +1,143 @@
+
+Distribution Files 
+==================
+
+    The 'Files' file contains a short description of each file in this
+    distribution.
+
+
+Install GNATS
+=============
+
+    If you will have a local GNATS database, you need to first install the
+    latest GNATS (see README.first for more information).  Once you get it
+    running and you can send a few bug reports to the 'test' bug category to
+    make sure it's working properly.
+
+    If you're only accessing a GNATS daemon, just continue and install TkGnats.
+
+
+Install TkGnats
+===============
+
+    o If you are updating a previous TkGnats installation, you should
+      clean up the old files first. Along the way, I have deleted,
+      renamed and moved several TkGnats files.
+
+      - If you have modified the tkgnats.config file, save a copy as a 
+        guide when modifying the new tkgnats.config file.
+
+      - In the old TkGnats distribution directory, run: make uninstall
+
+      As of TkGnats version 2.0b6, the TKGNATSLIB moved from
+      /usr/local/lib/tkgnats to /usr/local/share/tkgnats to be consistant with
+      GNATS itself. If you have been using this old location you should move
+      or copy all the remaining files and subdirectories to the new location
+      _after_ running "make uninstall" from the old TkGnats distribution. This
+      will preserve your old settings and any global queries, sorts and print
+      functions.
+ 
+    o Edit "Section 1" of the Makefile.
+
+      Follow the instructions in the Makefile, especially:
+   
+      Set GNATS=network if you _are_ using the GNATS daemon "gnatsd".
+      Set GNATS=local   if you're going to access disk files directly.
+      Set CHECK_CFG=no if GNATS=local but GNATS is not actually installed yet.
+
+      Alternatively, these can be set on the 'make' command line.
+
+    o Look at "Section 2" of the tkgnats.config file.
+
+      (The first section is configured by the Makefile.)
+
+      This sets up things needed by the TkGnats scripts like what postscript
+      viewer to use. There are options described in this file that are
+      not documented elsewhere.
+
+      I highly recommend copying the interesting bits of the second section of
+      tkgnats.config to "TKGNATSLIB"/tkgnatsrc and editing that. This way, the
+      file won't get overwritten the next time that you update TkGnats.
+
+    o Run 'make' to configure all the files into two temporary directories
+      (./_tbin and ./_tdir).
+
+      If you chose to use command line args instead of editing the Makefile:
+
+      Local GNATS: run 'make' if GNATS is already installed.
+                 : run 'make CHECK_CFG=no' if GNATS is not installed yet.
+
+      Network GNATS: run 'make GNATS=network'
+
+      Check for any error messages.
+
+    o Run 'make' again to copy the files in _tbin and _tdir to wherever you
+      defined previously in the first section of the Makefile.
+
+      If you chose to use command line args instead of editing the Makefile:
+
+      Local GNATS: run 'make install' if GNATS is already installed.
+                 : run 'make CHECK_CFG=no install' if GNATS is not installed.
+
+      Network GNATS: run 'make GNATS=network install'
+        
+      Check for any error messages.
+
+    o Optionally execute 'make install_man'.
+
+      This will install the TkGnats man file to wherever you defined previously
+      in the first section of the Makefile. However, the man file isn't very
+      useful. TkGnats doc exists only in the Help menus.
+
+    o See the file README.config for more configuration information.
+
+    o I've had problems with the default colors of CDE on Solaris overriding
+      the Tk color defaults. The following in TKGNATSLIB/tkgnatsrc fixes it up
+      for me:
+
+      . config -bg grey85
+      option add *foreground black user
+      option add *background grey85 user
+      option add *highlightBackground grey85 user
+
+    o TkGnats assumes the following programs are present somewhere within the
+      user's search $PATH:
+
+      - (g)tbl    - For producing  PostScript format printed reports.
+
+      - (g)roff   - For producing  PostScript format printed reports.
+
+      - ghostview - For previewing PostScript format printed reports.
+
+    o You can execute any of the TkGnats dialogs directly by supplying the
+      necessary command line arguments directly or in a wrapper script.
+
+      The following can all go on one command line for bourne/bash shells:
+
+         TKGNATSLIB=/usr/local/share/tkgnats ; export TKGNATSLIB ; wish
+           $TKGNATSLIB/tkeditpr.tcl -server "{} {} {} {} {} {}" -prid 1234 
+
+      or csh:
+
+         setenv TKGNATSLIB /usr/local/share/tkgnats ; wish
+           $TKGNATSLIB/tkeditpr.tcl -server "{} {} {} {} {} {}" -prid 1234 
+
+      You could make a script called tkeditpr (and similar ones for tkviewpr,
+      tksendpr and tkquerypr if required):
+
+         #!/bin/sh
+         TKGNATSLIB=/usr/local/share/tkgnats
+         export TKGNATSLIB
+         wish $TKGNATSLIB/tkeditpr.tcl -server "{} {} {} {} {} {}" -prid $1
+
+      For multiple database access, give the "ServerDir" and "GNATSDatabaseAlias"
+      fields:
+
+         -server "{} {} {} test-db /usr/local/share/gnats/test-db
+
+      The above are for direct disk access of the GNATS database. If you're 
+      accessing the GNATS network daemon, use the proper server argument
+      (note that the first field is for the main menu, which is being bypassed
+      and therefore not required here):
+
+         -server "{} srv.widget.com 1529 bugs@widget.com bugs.srv.widget.com widget"

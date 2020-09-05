@@ -1,0 +1,104 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+external class LM_EXTERNAL_INTERFACE is
+   -- This class is used as interface between
+   -- the lock manager and the C Code generated
+   -- by the Sather compiler back end.
+   -- We can only pass EXT_OB as basic types,
+   -- and use SYS::inlined_C for casting.
+ 
+   -- 'lck' is supposed to be of type $LOCK
+   p_init_lock_header(lck:EXT_OB) is return; end;
+   p_init_locks is return; end;
+
+   -- The external inteface for single locks is only used by attach.c
+   -- Calls from Sather code are translated directly by the compiler.
+   -- There is no .try_single_lock, since attach.c does not need it.
+   -- An exception is .unlock_single_lock, which is still used by the compiler. 
+   acquire_single_lock(this_lock:EXT_OB) is
+      -- .this_lock is a reference to a lock.
+      lck:$LOCK;
+      SYS::inlined_C("#lck = (void*)#this_lock;");
+      lck.access_acquire_single_lock;
+   end;
+
+   try_single_lock(this_lock:EXT_OB):C_INT is
+      -- .this_lock is a reference to a lock.
+      lck:$LOCK;
+      SYS::inlined_C("#lck = (void*)#this_lock;");
+      return lck.access_try_single_lock;
+   end;
+
+   release_single_lock(this_lock:EXT_OB) is
+      -- .this_lock is a reference to a lock.
+      lck:$LOCK;
+      SYS::inlined_C("#lck = (void*)#this_lock;");
+      -- Since unlock sets the lock reference to void,
+      -- there is nothing more to do if .lck is void.
+      if ~void(lck) then lck.access_release_single_lock; end;
+   end;
+
+   -- 
+   unlock_single_lock(stmt:EXT_OB,this_lock:EXT_OB) is
+      -- .stmt is supposed to be of type EXCEPT_LOCK_ELEMENT(n).
+      -- .this_lck is supposed to be of type $LOCK.
+      lck:$LOCK;
+      SYS::inlined_C( "#lck = (void*)#this_lock");
+      if ~void(lck) then lck.access_release_single_lock; end;
+   end; -- end: r_unlock(lck:EXT_OB)
+
+   -- Compiling requests for more than one lock, the compiler still uses
+   -- this external interface.
+   acquire_conjunctive_locks(these_locks:EXT_OB,size:C_INT) is
+      -- .these_locks is a pointer to a C array of lock references.
+      -- .size is the size of the array.
+      -- Get the first lock as entry point to lock management.
+      lck ::= LM_LOCK_C_ARRAY::get(these_locks,0);
+      lck.access_acquire_conjunctive_locks(these_locks,size.int);
+   end;
+
+   try_conjunctive_locks(these_locks:EXT_OB,size:C_INT):C_INT is
+      -- .these_locks is a pointer to a C array of lock references.
+      -- .size is the size of the array.
+      -- Get the first lock as entry point to lock management.
+      lck ::= LM_LOCK_C_ARRAY::get(these_locks,0);
+      return lck.access_try_conjunctive_locks(these_locks,size.int);
+   end;
+
+   release_conjunctive_locks(these_locks:EXT_OB,size:C_INT) is
+      -- .these_locks is a pointer to a C array of lock references.
+      -- .size is the size of the array.
+      -- Get the first lock as entry point to lock management.
+      lck ::= LM_LOCK_C_ARRAY::get(these_locks,0);
+      -- Since unlock deletes a lock from the array,
+      -- there might be no lock left in this when clause.
+      -- In this case, everything's already done.
+      lck.access_release_conjunctive_locks(these_locks,size.int);
+   end;
+
+   acquire_disjunctive_locks(stmt:EXT_OB):C_INT is
+      -- stmt is supposed to be of type EXCEPT_LOCK_ELEMENT(n).
+      lck:$LOCK;
+      SYS::inlined_C("#lck=(void*)((EXCEPT_LOCK_ELEMENT(1)*)(#stmt))->locks[0];");
+      return lck.access_acquire_disjunctive_locks(stmt);
+   end;
+
+   try_disjunctive_locks(stmt:EXT_OB):C_INT is
+      -- stmt is supposed to be of type EXCEPT_LOCK_ELEMENT(n).
+      lck:$LOCK;
+      SYS::inlined_C("#lck=(void*)((EXCEPT_LOCK_ELEMENT(1)*)(#stmt))->locks[0];");
+      return lck.access_try_disjunctive_locks(stmt);
+   end;
+
+end; -- class LM_EXTERNAL_INTERFACE

@@ -1,0 +1,438 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- 1995/Aug7 Blind conversion of 0.2 library by gomes.
+--    to_i changes to  .floor.int  (old behavior of .to_i was = floor)
+--    Involves DOUBLE->FLTD, adding of .0d after literals, 
+--    change from log(v) exp(v) etc to v.log v.exp etc.
+--    New tests are all *UNCHECKED!* (to be fair, so were the tests in 0.2!)
+-- changes 1994/11/03 by Erik Schnetter
+   
+-- rnd.sa: Random numbers.
+-- Originally from the 0.2 version by S. Omohundro. Converted to 1.0 by
+-- gomes The standard version RND::uniform and RND::int have been tested.
+-------------------------------------------------------------------
+abstract class $RANDOM_GEN is
+   -- Supertype from which all "raw" random number generators subtype.
+   -- Currently only supports the minimimal standard generator.
+   -- RND uses these subtypes to build more complex random numbers
+   
+   create: $RANDOM_GEN;
+
+   init(seed: INT);
+    -- Initialize the generator using nseed. Any `INT' value should be legal.
+   
+   get:FLTD;
+      -- The next random value. Should be in `[0.,1.)'.
+end;
+-------------------------------------------------------------------   
+class RND{GEN < $RANDOM_GEN} is
+   -- Random number source, which uses a "raw" random number generator
+   -- stream of type "GEN"
+   -- If this is used through a regular variable, which has been created,
+   -- it will act as an individual generator.
+   -- Otherwise - if the variable is void, or routines are called on
+   -- the class directly - a default generator will be used
+   -- act as an independant random number generator.
+   -- Tries to satisfy a number of needs. In the most common situation,
+   -- a single generator will supply all random numbers for the system.
+   -- Calls of the form: `RND::uniform' will use this shared generator 
+   -- (as will `r.uniform' where `r:RANDOM' is `void'). To use multiple
+   -- generators (perhaps of different kinds) one creates objects
+   -- of type `RND'. These objects have an attribute `own_gen' of type
+   -- `$RANDOM_GEN' which holds the actual generator. Several types of
+   -- generator are provided and new ones may be added by having them 
+   -- subtype from the specification class `$RANDOM_GEN'. 
+   -- Classes are provided to combine
+   -- generators and to randomly permute the output of a generator.
+
+   private shared default_gen: GEN;	        -- Shared generator
+   private attr own_gen: GEN;		-- Individualized generator
+   
+   gen: GEN is
+      --  Interface to the generator. If self is void, use the shared
+      -- generator, otherwise use the created generator
+      if void(self) then 
+	 if void(default_gen) then default_gen := make_generator; end;
+	 return default_gen;
+      else return own_gen end;
+   end;
+
+   create: SAME is 
+      -- Creates a new stream of random values.
+      res::=new; 
+      res.own_gen := make_generator;
+      return(res) 
+   end;
+
+   private make_generator: GEN is
+      -- Since $RANDOM_GEN::create returns a $RANDOM_GEN, we have to
+      -- typecase to make sure that it actually is of type GEN (abstract
+      -- classes cannot return SAME)
+      g ::= #GEN;
+      typecase g
+      when GEN then return g
+      else raise("Generator's create does not return SAME"); end;
+   end;      
+
+   seed(seed: INT) is
+      -- Initialize the generator with "seed"
+      -- Can use with assignment notation
+      gen.init(seed);
+   end; -- init
+   
+   int(l,u:INT):INT pre l <= u is 
+	 -- A uniform random member of `{l,...,u}'.
+      return(l+(((u-l+1).fltd)*uniform).floor.int) 
+   end;
+   
+   uniform: FLTD is
+      -- A uniformly distributed double in `[0.,1.)'.
+      return gen.get
+   end; -- uniform
+
+   uniform_range(l,u: FLTD): FLTD pre l <= u is
+      -- A uniformly distributed double in the range `[l,u)'.
+      return l + (u-l)*uniform
+   end;
+
+   bit(p:FLTD):BOOL pre p >= 0.0d and p <= 1.0d is
+      -- True with probability `p'.
+      return (uniform<p)
+   end; -- bit
+
+--  Standard normal generator
+   private attr norm_cache:FLTD;          -- Cache of normal deviate
+                                          -- generated earlier.
+   private shared snorm_cache:FLTD;	  -- Shared version of above.
+   private attr norm_cache_valid:BOOL;	  -- `True' if a value is cached.
+   private shared snorm_cache_valid:BOOL; -- Shared version of above.
+   
+   standard_normal:FLTD is
+      -- A normally distributed `FLTD' with mean `0.' and unit variance.
+      -- Uses Box-Muller method which generates two normal deviates and
+      -- requires two calls to uniform. One of these is cached for the next
+      -- call. Based on Knuth, Vol. 2, p. 117.
+      res: FLTD;
+      if void(self) then		-- use shareds
+	 if snorm_cache_valid then -- use stored value
+	    snorm_cache_valid:=false;
+	    res:=snorm_cache; 
+	 else			-- must recompute
+	    s:FLTD:=10.0d; v1,v2:FLTD;
+	    loop		 
+	       -- get two samples inside unit circle
+	       until!(s<1.0d and s/=0.0d);
+	       v1:=uniform_range(-1.0d,1.0d); 
+	       v2:=uniform_range(-1.0d,1.0d);
+	       s:=v1*v1+v2*v2;
+	    end; -- loop, executed 1.27 times on average
+	    rt:FLTD:= (-2.0d*(s).log/s).sqrt;
+	    snorm_cache:=v1*rt; 
+	    snorm_cache_valid:=true;
+	    res:=v2*rt;
+	 end; -- if
+      else			-- use locals
+	 if norm_cache_valid then -- use stored value
+	    res:=norm_cache; norm_cache_valid:=false;
+	 else			-- must recompute
+	    s:FLTD:=10.0d; v1,v2:FLTD;
+	    loop	-- get two samples inside unit circle
+	       until!(s<1.0d and s/=0.0d); 
+	       v1:=uniform_range(-1.0d,1.0d); v2:=uniform_range(-1.0d,1.0d);
+	       s:=v1*v1+v2*v2;
+	    end; -- loop, executed 1.27 times on average
+	    rt:FLTD:= (-2.0d*(s).log/s).sqrt;
+	    norm_cache:=v1*rt; norm_cache_valid:=true;
+	    res:=v2*rt;
+	 end; -- if
+      end; -- if
+      return res;
+   end; -- standard_normal
+   
+   exponential(m:FLTD):FLTD pre m>=0.0d is
+      -- Samples from an exponential distribution: `p(x)=e^(-x/m)/m'.
+      -- Mean is `m'. Eg: Time between emissions when one per `m' seconds on 
+      -- average. Based on Knuth, Vol. 2, p. 128.
+      u:FLTD; loop until!(u/=0.0d); u:=uniform end;
+      return -m*u.log;
+   end; -- exponential
+
+
+(* This old version is supposed to be buggy:
+
+   gamma(a:FLTD):FLTD pre a > 0.0d is
+      -- Samples from the Gamma distribution: `p(x)=(x^(a-1)e^(-x))/G(a)'.
+      -- Mean is `a>0'. Uses Cheng's algorithm from Devroye, "Non-Uniform
+      -- Random Variate Generation", Springer-Verlag, (1986) p. 413.
+      -- This is much less restrictive than the Numerical Recipes algorithm.
+      res: FLTD;
+      b:FLTD:=a-(4.0d).log;
+      c:FLTD:=a+(2.0d*a-1.0d).sqrt;
+      loop
+	 u:FLTD:=uniform; v:FLTD:=uniform;
+	 if v=0.0d or v=1.0d then v:=0.5d end;
+	 y:FLTD:=a*(v/(1.0d-v)).log;
+	 res:=a*(v).exp;
+	 z:FLTD:=u*v*v;
+	 r:FLTD:=b+c*y-res;
+	 if r>=(9.0d/2.0d)*z-(1.0d+(9.0d/2.0d).log) then break! end;
+	 if r>=(z).log then break! end;
+      end; -- loop
+      return res;
+   end; -- gamma
+*) 
+
+
+-- Corrected version, contributed by
+--    Darren J Wilkinson <d.j.wilkinson@freeuk.com>:
+   gamma(a:FLTD):FLTD pre a > 0.0d is
+      -- Samples from the Gamma distribution: 'p(x)=(x^(a-1)e^(-x))/G(a)'.
+      -- Mean and variance are `a>0'. 
+      -- Author: Darren Wilkinson <d.j.wilkinson@freeuk.com>
+      -- <URL:http://home.freeuk.com/d.j.wilkinson/>
+      -- Based on the C function "gammarand" in "dists.c"
+      -- in Luke Tierney's XLISPSTAT source code distribution. See:
+      -- http://www.stat.umn.edu/~luke/xls/xlsinfo/xlsinfo.html
+      e::=1.0d.exp;
+      x,u0,u1,u2:FLTD;
+      if (a < 1.0d) then
+         -- Ahrens and Dieter algorithm
+         c::=(a+e)/e;
+         loop
+            u0:=uniform;
+            u1:=uniform;
+            v::=c*u0;
+            if (v <= 1.0d) then
+               x:=(v.log/a).exp;
+               if (u1 <= (-x).exp) then return x; end;
+            else
+               x:= -(((c-v)/a).log);
+               if (x>0.0d) and (u1<((a-1.0d)*(x.log)).exp) then return x; end;
+            end;
+         end; -- loop
+      elsif (a = 1.0d) then
+         x:= -(uniform).log;
+         return x;
+      else
+         -- Cheng and Feast algorithm
+         c1::=a-1.0d;
+         c2::=(a - 1.0d/(6.0d*a))/c1;
+         c3::=2.0d/c1;
+         c4::=2.0d/(a-1.0d) + 2.0d;
+         c5::=1.0d/(a.sqrt);
+         w:FLTD;
+         loop
+            loop
+               u1:=uniform;
+               u2:=uniform;
+              if (a>2.5d) then u1:=u2+c5*(1.0d-1.86d*u1); end;
+               while!((u1<=0.0d) or (u1>=1.0d));
+            end;
+            w:=c2*u2/u1;
+            while!((c3*u1+w+1.0d/w)>c4 and (c3*(u1.log)-(w.log)+w)>1.0d);
+         end;
+         x:=c1*w;
+         return x;
+      end; -- if
+   end; -- gamma
+
+
+-- 2 argument version, contributed by
+--    Darren J Wilkinson <d.j.wilkinson@freeuk.com>:
+   gamma(a,b:FLTD):FLTD pre a>0.0d and b>0.0d is
+      -- Samples from the Gamma distribution: 
+      -- `p(x)=(b^(a)x^(a-1)e^(-bx))/G(a)'.
+      -- Mean is `a/b>0' and variance is 'a/(b^2)>0'.
+      return gamma(a)/b;
+   end; -- gamma
+
+   
+   beta(a,b:INT):FLTD pre a >0 and b > 0 is
+      -- Samples from the Beta distribution 
+      -- `p(x)=(G(a+b)/(G(a)G(b)))x^(a-1)(1-x)^(b-1)', `0<x<1', `a,b>0'.
+      -- Mean is `a/(a+b)'. Knuth, Vol. 2, p. 129.
+      x1:FLTD:=gamma(a.fltd);
+      if x1=0.0d then return 0.0d;  
+      else return x1/(x1+gamma(b.fltd)); end;
+   end; -- beta
+   
+   chi_square(v:INT):FLTD is
+      -- Samples from the Chi-Square distribution:
+      -- `p(x)=e^(-x/2)x^((v/2)-1)/(2^(v/2)G(v/2))'. Mean is `v'. `x>=0'.
+      -- Based on Knuth, Vol. 2, p. 130.
+      return 2.0d*gamma(v.fltd/2.0d);
+   end; -- chi_square
+   
+   f_dist(v1,v2:INT):FLTD is
+      -- Samples from the F-distribution with `v1' and `v2' degrees of
+      -- freedom (see any statistics text). Based on Knuth, Vol. 2, p. 130.
+      return chi_square(v1)*v2.fltd/(chi_square(v2)*v1.fltd);
+   end; -- f_dist
+   
+   t_dist(v:INT):FLTD is
+      -- Samples from the t-distribution with `v' degrees of freedom (see
+      -- any statistics text). Based on Knuth, Vol. 2, p. 130.
+      return standard_normal/((chi_square(v)/v.fltd).sqrt);
+   end; -- t_dist
+   
+   geometric(p:FLTD):INT pre p >= 0.0d and p <= 1.0d is
+      -- Samples from the geometric distribution. Is the number of trials
+      -- needed until an event of probability `p' first occurs.
+      -- `P(n)=(1-p)^(n-1)p'. Mean is `1/p'. Based on Knuth, Vol. 2, p. 131.
+      if p=1.0d then return 1 
+      else return (uniform.log/(1.0d-p).log).ceiling.int; end;
+   end; -- geometric
+
+   binomial(n:INT, p:FLTD):INT pre p >= 0.0d and p <= 1.0d is
+      -- Samples from the binomial distribution:
+      -- `P(t)=(n t) p^t (1-p)^(n-t)'. Mean is `np'. Is number of
+      -- occurrences of a probability `p' event in `n' trials.
+      -- Based on Knuth, Vol. 2, p. 131. and Numerical Recipes in C, p. 223.
+      res: INT;
+      dr:FLTD;		-- FLTD version of res.
+      -- can flip p->1-p if we also do res->n-res
+      lp:FLTD; if p<0.5d then lp:=p else lp:=1.0d-p end; 
+      am:FLTD:=n.fltd*lp;		-- mean of res
+      if n<25 then		-- Use direct method if n small enough.
+	 i:INT; loop until!(i=n);
+	    if uniform<lp then dr:=dr+1.0d end;
+	    i:=i+1;
+	 end; -- loop
+      elsif am<1.0d then	-- such small prob, approximate by Poisson
+	 dr:=poisson(am).fltd;	-- poisson distribution with the same mean
+	 if dr>n.fltd then dr:=n.fltd end; -- chop the tail
+      else			-- use rejection method
+	 y:FLTD; t:FLTD;
+	 sq:FLTD:=(2.0d*am*(1.0d-lp));
+	 loop
+	    loop		-- rejection with Lorenzian comparison
+	       y:=cauchy; dr:=sq*y+am;  
+	       if dr>=0.0d and dr<n.fltd+1.0d then break! end;
+	    end; -- loop
+	    dr:=dr.floor;
+	    if uniform<=1.2d*sq*(1.0d+y*y)
+		     *((n.fltd+1.0d).log_gamma
+		       -(dr+1.0d).log_gamma
+		      -(n.fltd-dr+1.0d).log_gamma
+		      +dr*(lp).log+(n.fltd-dr)*(1.0d-lp).log)
+		     .exp
+	    then break! end;
+	 end; -- loop
+      end; -- if
+      if lp/=p then res:=n-dr.floor.int else res:=dr.floor.int end; 
+      -- undo symmetry
+      return res;
+   end; -- binomial
+   
+   poisson(x:FLTD):INT is
+      -- Samples from the Poisson distribution: `p(j)=x^j e^(-x)/j!'.
+      -- Mean is `x'. Is number of events in time interval `x'.
+      -- Based on Numerical Recipes in C, p. 221.
+      res: INT;
+      if (x<12.0d) then		-- use direct method
+	 res:=-1; t:FLTD:=1.0d; g:FLTD:=(-x).exp;
+	 loop
+	    res:=res+1; t:=t*uniform; if t<=g then return res end;
+	 end; -- loop
+      else			-- use rejection method
+	 rd:FLTD;		-- FLTD version of res
+	 loop
+	    y:FLTD; g:FLTD:=x*(x.log)-(x+1.0d).log_gamma; 
+	    sq:FLTD:=(2.0d*x).sqrt;
+	    loop		-- use Lorentzian comparison
+	       y:=cauchy; rd:=sq*y+x; if rd>=0.0d then break! end;
+	    end; -- loop
+	    rd:=rd.floor;
+	    if uniform<=0.9d*(1.0d+y*y)*(rd*x.log-(rd+1.0d).log_gamma-g).exp
+	    then break! end;
+	 end; -- loop
+	 res:=rd.floor.int;
+      end; -- if
+      return res;
+   end; -- poisson
+   
+   cauchy:FLTD is
+      -- Samples from the Cauchy distribution: `p(x)=1/pi(1+x^2)'.
+      -- (Also called the Lorentzian.) No mean. Based on NR in C. p. 220.
+      return (FLTD::pi*uniform).tan
+   end; -- cauchy
+   
+   cantor(s:FLTD):FLTD is
+      -- A uniform random sample from a Cantor set with scaling `s'.
+      res: FLTD;
+      r:FLTD:=uniform;  m:FLTD:=1.0d-s;
+      i:INT:=0; loop until!(i>33);
+	 if r>=0.5d then r:=r-0.5d; res:=res+m end;
+	 r:=r*2.0d; m := m*s; i:=i+1
+      end; -- loop
+      return res;
+   end; -- cantor
+   
+   standard_cantor:FLTD is
+      -- A uniform random sample from the canonical Cantor set in `[0,1)'.
+      return cantor(0.3333333333d)
+   end; -- standard_cantor
+
+end; -- class RND
+-------------------------------------------------------------------
+class RND is 
+   include RND{MS_RANDOM_GEN};
+end;
+-------------------------------------------------------------------
+class MS_RANDOM_GEN < $RANDOM_GEN is
+   -- The "minimal standard" generator described in "Random Number
+   -- Generators: Good Ones are Hard to Find" by Stephen Park and 
+   -- Keith Miller, Communications of the ACM, October 1988, Volume 
+   -- 31, Number 10, p. 1192. Linear congruential, produces a value
+   -- in `[0.,1.)' including `0.' but not `1.' Any seed value in
+   -- the range `[1,2147483646]' is equally good. 
+
+   -- Constants used in generator:
+   -- BEWARE!! Problems with order of initialization and 
+   -- and FLTD literals
+   --   const ms_a:FLTD:=16807.0d;	-- `7^5'
+   --   const ms_m:FLTD:=2147483647.0d; -- `(2^31)-1', prime
+   --   const ms_md:FLTD:=(ms_m-1.0d); -- to avoid continual recomputation
+
+   const ms_a:FLTD:=16807.0d;	-- `7^5'
+   shared ms_m:FLTD; -- `(2^31)-1', prime
+   shared ms_md:FLTD; -- to avoid continual recomputation
+   
+   attr seed:INT;			-- Current state of generator.
+   
+   create:SAME is  
+      -- A minimal standard generator with `seed=1'.
+      res ::= new;  res.init(1);  return(res) 
+   end;
+   
+   init(nseed:INT) is 
+      -- Initialize the generator.
+      seed:=1+(nseed-1).mod(2147483645); 
+      ms_m := (1.lshift(31)).fltd-1.0d;
+      ms_md := ms_m - 1.0d;
+   end;  -- keep in legal range
+   
+   get:FLTD is
+      -- Pseudo-random value in `[0.,1.)' generated by minimal 
+      -- std generator.
+      tmp:FLTD:=ms_a*(seed.fltd); 
+      -- Original: tmp:FLTD:=ms_a*(seed);
+      seed:=(tmp-(ms_m*((tmp/ms_m).floor))).floor.int;
+      --  Original: seed:=(tmp-(ms_m*((tmp/ms_m).to_i))).to_i
+      return(((seed-1).fltd)/ms_md);  
+      -- Original: return(((seed-1))/ms_md); 
+   end; -- get
+
+end; -- class MS_RANDOM_GEN
+-------------------------------------------------------------------

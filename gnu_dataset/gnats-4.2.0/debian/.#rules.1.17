@@ -1,0 +1,128 @@
+#!/usr/bin/make -f
+# NAME
+#   debian/rules -- Debian build rules for GNATS
+#
+# DESCRIPTION
+#   This Makefile uses the CDBS makefiles to wrap the common package building
+#   steps necessary to make the gnats binary packages.
+# 
+# COPYRIGHT
+#   Copyright (c) 2004 Chad Walstrom <chewie@debian.org>
+#
+# LICENSE
+#   This program is free software; you can redistribute it and/or modify it
+#   under the terms of the GNU General Public License as published by the Free
+#   Software Foundation; either version 2, or (at your option) any later
+#   version.
+#
+#   This program is distributed in the hope that it will be useful, but WITHOUT
+#   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#   FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+#   more details.
+#
+#   You should have received a copy of the GNU General Public License along
+#   with this program; if not, write to the Free Software Foundation, Inc., 59
+#   Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+#   
+################################################################################
+#DH_VERBOSE=1
+
+# Previous versions of gnats had problems with gcc optimized
+#DEB_BUILD_OPTIONS = noopt
+
+################################################################################
+# CDBS Includes
+################################################################################
+include /usr/share/cdbs/1/rules/debhelper.mk
+include /usr/share/cdbs/1/class/autotools.mk
+
+# Bison override
+YACC = bison
+INSTALL = install
+INSTALL_INFO = /bin/true
+
+# VARIABLES
+DATADIR := $(DEB_CONFIGURE_LOCALSTATEDIR)/lib/gnats
+HOMEDIR := $(DATADIR)
+DBDIR   := $(DATADIR)/gnats-db
+LISPDIR := /usr/share/emacs/site-lisp/gnats
+CONFDIR := $(DEB_CONFIGURE_SYSCONFDIR)/gnats
+USER_ACCESS_FILE := $(CONFDIR)/gnatsd.user_access
+HOST_ACCESS_FILE := $(CONFDIR)/gnatsd.host_access
+GNATS_DATABASES := $(CONFDIR)/databases
+
+DEB_MAKE_ENVVARS += DEFAULT_SITE=unknown-site \
+	GNATS_SITE=unknown-site \
+	GNATS_ADMIN=gnats-admin \
+	GNATS_ADDR=unknown-addr \
+	DEFAULT_ORGANIZATION=unknown-org \
+	SUBMITTER=unknown-org \
+	GNATS_USER=gnats \
+	CHECK_CFG=no
+
+DEB_CONFIGURE_SCRIPT_ENV += SENDMAIL=/usr/sbin/sendmail
+
+# Gnats already installs libexec binaries in a "gnats" subdirectory
+DEB_CONFIGURE_LIBEXECDIR = "\$${prefix}/lib"
+DEB_CONFIGURE_EXTRA_FLAGS = \
+	--with-gnats-root='$(DBDIR)' \
+	--with-gnats-service=gnats \
+	--with-gnats-default-db=$(DBDIR) \
+	--with-gnatsd-user-access-file=$(USER_ACCESS_FILE) \
+	--with-gnatsd-host-access-file=$(HOST_ACCESS_FILE) \
+	--with-gnats-dblist-file=$(GNATS_DATABASES) \
+	--with-lispdir=$(LISPDIR)
+
+DEB_INSTALL_DIRS_ALL = usr/bin usr/sbin usr/lib/gnats etc/gnats/defaults \
+	usr/share/man/man1 usr/share/man/man5 usr/share/man/man7 \
+	usr/share/man/man8 usr/share/lintian/overrides
+
+DEB_INSTALL_DIRS_gnats_user = usr/share/emacs/site-lisp/gnats
+DEB_INSTALL_DIRS_gnats = var/lib/gnats var/lib/gnats/gnats-db \
+	usr/share/doc/gnats/gnats etc/gnats/db-config etc/xinetd.d
+DEB_INSTALL_EXAMPLES_gnats = -X.arch-ids -X.cvsignore
+
+# Don't edit the {post,pre}{inst,rm} scripts
+DEB_INSTALL_INFO_gnats = -n
+
+
+debscripts_tmpl := $(wildcard debian/*.in)
+debscripts := $(patsubst %.in,%,$(debscripts_tmpl))
+common-configure-arch:: $(debscripts)
+$(debscripts):
+	@echo "Build debian script $@"
+	sed -f debian/common.sed < $@.in > $@
+
+common-install-prehook-arch::
+	@echo "dh_installdirs doesn't install in the staging area"
+	-for d in $(DEB_INSTALL_DIRS_ALL) ; do \
+		mkdir -p debian/tmp/$$d ; \
+	done
+	@echo "Building HTML documentation"
+	-cd doc ; \
+		for i in gnats.texi gnats-faq.texi ; do \
+			$(MAKEINFO) --number-sections --html $$i ; \
+		done
+
+install/gnats::
+	$(INSTALL) -m644 debian/user/profile debian/gnats/var/lib/gnats/.profile
+	$(INSTALL) -m444 debian/overrides.gnats debian/gnats/usr/share/lintian/overrides/gnats
+	$(INSTALL) -m 644 debian/dhelp \
+		debian/gnats/usr/share/doc/gnats/gnats/.dhelp
+	$(INSTALL) -m 444 debian/gnats.xinetd debian/gnats/etc/xinetd.d/gnats
+	rmdir debian/gnats/usr/share/man/man1/ debian/gnats/usr/share/man/man7/ debian/gnats/usr/bin/ debian/gnats/usr/sbin/
+
+binary-predeb/gnats::
+	rm debian/gnats/usr/share/doc/gnats/examples/tkgnats/COPYING.gz
+	chmod 0644 debian/gnats/usr/share/doc/gnats/examples/juniper-web-reports/index.html
+	dh_strip
+
+install/gnats-user::
+	$(INSTALL) -m644 debian/misc/send-pr.conf debian/gnats-user/etc/gnats
+	$(INSTALL) -m444 debian/overrides.gnats-user \
+		debian/gnats-user/usr/share/lintian/overrides/gnats-user
+	rmdir debian/gnats-user/usr/sbin/
+
+clean::
+	-rm -f $(debscripts)
+	-rm -rf doc/gnats doc/gnats-faq doc/*.info

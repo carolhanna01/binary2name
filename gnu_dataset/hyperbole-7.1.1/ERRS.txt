@@ -1,0 +1,113 @@
+;; This buffer is for text that is not saved, and for Lisp evaluation.
+;; To create a file, visit it with C-x C-f and enter text in its buffer.
+
+;; Hyperbole
+(let ((hyperb:dir (expand-file-name "~/Dropbox/emacs/hyperbole-newest")))
+  (when (file-exists-p hyperb:dir)
+    (add-to-list 'load-path hyperb:dir)))
+
+(load "hyperbole-autoloads")
+(hyperbole-toggle-messaging 1)
+(load "hversion")
+(load "hact.elc")
+"/home"
+"~/Dropbox"
+(actype:action 'link-to-file)
+actypes::link-to-file
+
+(symtable:actype-p 'link-to-file)
+actypes::link-to-file
+
+
+
+In hbut.el, part of ibtype:create macro is not quoted, so adds to symtable when called interactively but not when loaded as a whole file.
+
+actype:action returns nil if given a short name actype (i.e. def form).
+
+symtable:actype-p also returns nil if given a short name
+{C-u C-n}
+(symbol-function 'ibtypes::kbd-key)
+nil
+
+(hash-table-keys (plist-get symtable:ibtypes 'hash-table))
+("ibtypes::org-mode" "org-mode" "ibtypes::mail-address" "mail-address" "ibtypes::pathname" "pathname" "ibtypes::function-in-buffer" "function-in-buffer" "ibtypes::annot-bib" "annot-bib" "ibtypes::debbugs-gnu-query" "debbugs-gnu-query" "ibtypes::debbugs-gnu-mode" "debbugs-gnu-mode" "ibtypes::social-reference" "social-reference" "ibtypes::git-commit-reference" "git-commit-reference" "ibtypes::markdown-internal-link" "markdown-internal-link" "ibtypes::rfc-toc" "rfc-toc" "ibtypes::id-cflow" "id-cflow" "ibtypes::ctags" "ctags" "ibtypes::etags" "etags" "ibtypes::cscope" "cscope" "ibtypes::text-toc" "text-toc" "ibtypes::dir-summary" "dir-summary" "ibtypes::kbd-key" "kbd-key" "ibtypes::rfc" "rfc" "ibtypes::man-apropos" "man-apropos" "ibtypes::klink" "klink" "ibtypes::elink" "elink" "ibtypes::glink" "glink" "ibtypes::ilink" "ilink" "ibtypes::ipython-stack-frame" "ipython-stack-frame" "ibtypes::ripgrep-msg" "ripgrep-msg" "ibtypes::grep-msg" "grep-msg" "ibtypes::debugger-source" "debugger-source" "ibtypes::pathname-line-and-column" "pathname-line-and-column" "ibtypes::elisp-compiler-msg" "elisp-compiler-msg" "ibtypes::patch-msg" "patch-msg" "ibtypes::texinfo-ref" "texinfo-ref" "ibtypes::gnus-push-button" "gnus-push-button" "ibtypes::www-url" "www-url" "ibtypes::Info-node" "Info-node" "ibtypes::hyp-address" "hyp-address" "ibtypes::hyp-source" "hyp-source" "ibtypes::action" "action" "ibtypes::completion" "completion" "ibtypes::doc-id" "doc-id")
+
+
+
+(hash-table-keys (plist-get symtable:actypes 'hash-table))
+("actypes::annot-bib" "annot-bib" "actypes::completion" "completion" "actypes::display-boolean" "display-boolean" "actypes::display-variable" "display-variable" "actypes::eval-elisp" "eval-elisp" "actypes::exec-kbd-macro" "exec-kbd-macro" "actypes::exec-shell-cmd" "exec-shell-cmd" "actypes::exec-window-cmd" "exec-window-cmd" "actypes::function-in-buffer" "function-in-buffer" "actypes::hyp-config" "hyp-config" "actypes::hyp-request" "hyp-request" "actypes::hyp-source" "hyp-source" "actypes::link-to-buffer-tmp" "link-to-buffer-tmp" "actypes::link-to-directory" "link-to-directory" "actypes::link-to-ebut" "link-to-ebut" "actypes::link-to-elisp-doc" "link-to-elisp-doc" "actypes::link-to-file" "link-to-file" "actypes::link-to-file-line" "link-to-file-line" "actypes::link-to-file-line-and-column" "link-to-file-line-and-column" "actypes::link-to-gbut" "link-to-gbut" "actypes::link-to-Info-index-item" "link-to-Info-index-item" "actypes::link-to-Info-node" "link-to-Info-node" "actypes::link-to-ibut" "link-to-ibut" "actypes::link-to-kcell" "link-to-kcell" "actypes::link-to-mail" "link-to-mail" "actypes::link-to-regexp-match" "link-to-regexp-match" "actypes::link-to-rfc" "link-to-rfc" "actypes::link-to-string-match" "link-to-string-match" "actypes::link-to-texinfo-node" "link-to-texinfo-node" "actypes::link-to-web-search" "link-to-web-search" "actypes::man-show" "man-show" "actypes::rfc-toc" "rfc-toc" "actypes::text-toc" "text-toc" "actypes::org-link" "org-link" "actypes::org-internal-link-target" "org-internal-link-target" "actypes::org-radio-target" "org-radio-target" "actypes::debbugs-gnu-query" "debbugs-gnu-query" "actypes::kbd-key" "kbd-key" "actypes::link-to-kotl" "link-to-kotl" "actypes::www-url" "www-url" "actypes::link-to-doc" "link-to-doc")
+
+
+(load "hibtypes.elc")
+(hash-table-keys (plist-get symtable:ibtypes 'hash-table))
+
+(macroexpand 
+'(defact ltf (path &optional point)
+  "Display a file given by PATH scrolled to optional POINT.
+If POINT is given, display the buffer with POINT at the top of
+the window."
+  (interactive
+   (let ((prev-reading-p hargs:reading-p)
+	 (existing-buf t)
+	 path-buf)
+     (unwind-protect
+	 (let* ((default-directory (or (hattr:get 'hbut:current 'dir) default-directory))
+		(file-path (or (car defaults) default-directory))
+		(file-point (cadr defaults))
+		(hargs:reading-p 'file)
+		;; If reading interactive inputs from a key series
+		;; (puts key events into the unread queue), then don't
+		;; insert default-directory into the minibuffer
+		;; prompt, allowing time to remove any extra pathname
+		;; quotes added in the key series.
+		(insert-default-directory (not unread-command-events))
+		;; Remove any double quotes and whitespace at the
+		;; start and end of the path that interactive use may
+		;; have introduced.
+		(path (hpath:trim (read-file-name "Path to link to: "
+						  file-path file-path)))
+		;; Ensure any variables and heading suffixes following
+		;; [#,] are removed before doing path matching.
+		(normalized-path (hpath:is-p path)))
+	   (when (not (or (file-name-absolute-p path)
+			  (string-match "\\`\\$\{" path)))
+	     (setq path (concat default-directory path)))
+	   (setq existing-buf (get-file-buffer normalized-path)
+		 path-buf (or existing-buf
+			      (and (file-readable-p normalized-path)
+				   (prog1 (set-buffer (find-file-noselect normalized-path t))
+				     (when (integerp file-point)
+				       (goto-char (min (point-max) file-point)))))))
+	   (if path-buf
+	       (with-current-buffer path-buf
+		 (setq hargs:reading-p 'character)
+		 (if (y-or-n-p
+		      (format "y = Display at present position (line %d); n = no position? "
+			      (count-lines 1 (point))))
+		     (list path (point))
+		   (list path)))
+	     (list path)))
+       (setq hargs:reading-p prev-reading-p)
+       (when (and path-buf (not existing-buf))
+	 (kill-buffer path-buf)))))
+  ;; Remove any double quotes and whitespace at the start and end of
+  ;; the path that use within a key series may have introduced.
+  (setq path (hpath:trim path))
+  (and (hpath:find path)
+       (integerp point)
+       (progn (goto-char (min (point-max) point))
+	      (recenter 0)))))
+(progn (symtable:add 'ltf symtable:actypes) (htype:create ltf actypes "Display a file given by PATH scrolled to optional POINT.
+If POINT is given, display the buffer with POINT at the top of
+the window." (path &optional point) ((interactive (let ((prev-reading-p hargs:reading-p) (existing-buf t) path-buf) (unwind-protect (let* ((default-directory (or (hattr:get 'hbut:current 'dir) default-directory)) (file-path (or (car defaults) default-directory)) (file-point (cadr defaults)) (hargs:reading-p 'file) (insert-default-directory (not unread-command-events)) (path (hpath:trim (read-file-name "Path to link to: " file-path file-path))) (normalized-path (hpath:is-p path))) (when (not (or (file-name-absolute-p path) (string-match "\\`\\${" path))) (setq path (concat default-directory path))) (setq existing-buf (get-file-buffer normalized-path) path-buf (or existing-buf (and (file-readable-p normalized-path) (prog1 (set-buffer (find-file-noselect normalized-path t)) (when (integerp file-point) (goto-char (min (point-max) file-point))))))) (if path-buf (with-current-buffer path-buf (setq hargs:reading-p 'character) (if (y-or-n-p (format "y = Display at present position (line %d); n = no position? " (count-lines 1 (point)))) (list path (point)) (list path))) (list path))) (setq hargs:reading-p prev-reading-p) (when (and path-buf (not existing-buf)) (kill-buffer path-buf)))))
+ (setq path (hpath:trim path)) (and (hpath:find path) (integerp point) (progn (goto-char (min (point-max) point)) (recenter 0)))) '(definition-name ltf))
+
+(symbol-function 'actypes::ltf)
+(lambda (path &optional point) "Display a file given by PATH scrolled to optional POINT.
+If POINT is given, display the buffer with POINT at the top of
+the window." (interactive (let ((prev-reading-p hargs:reading-p) (existing-buf t) path-buf) (unwind-protect (let* ((default-directory (or (hattr:get 'hbut:current 'dir) default-directory)) (file-path (or (car defaults) default-directory)) (file-point (car (cdr defaults))) (hargs:reading-p 'file) (insert-default-directory (not unread-command-events)) (path (hpath:trim (read-file-name "Path to link to: " file-path file-path))) (normalized-path (hpath:is-p path))) (if (not (or (file-name-absolute-p path) (string-match "\\`\\${" path))) (progn (setq path (concat default-directory path)))) (setq existing-buf (get-file-buffer normalized-path) path-buf (or existing-buf (and (file-readable-p normalized-path) (prog1 (set-buffer (find-file-noselect normalized-path t)) (if (integerp file-point) (progn (goto-char (min (point-max) file-point)))))))) (if path-buf (save-current-buffer (set-buffer path-buf) (setq hargs:reading-p 'character) (if (y-or-n-p (format "y = Display at present position (line %d); n = no position? " (count-lines 1 (point)))) (list path (point)) (list path))) (list path))) (setq hargs:reading-p prev-reading-p) (if (and path-buf (not existing-buf)) (progn (kill-buffer path-buf))))))
+ (setq path (hpath:trim path)) (and (hpath:find path) (integerp point) (progn (goto-char (min (point-max) point)) (recenter 0))))
+
+
+
+

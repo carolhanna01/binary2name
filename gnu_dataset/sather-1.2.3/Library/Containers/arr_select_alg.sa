@@ -1,0 +1,107 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class ARR_SELECT_ALG{ETP,ATP< $ARR{ETP}} is
+   -- Basic algorithms for order statistics
+   -- Most of these algorithms MODIFY THE ORIGINAL ARRAY! 
+   include COMPARE{ETP};
+   
+   median_modifying(a: ATP): ETP is
+      -- The median of the elements contained in 'a' according to the 
+      -- ordering relation `elt_lt'. Permutes the elements of 'a'. Void 
+      -- if self is empty
+      if a.size<=0 then return void end;
+      m::=(a.size-1)/2; 
+      return select_modifying(a,m,0,a.size-1); 
+   end;
+   
+   select_modifying(a: ATP,i:INT,lp,up: INT): ETP 
+   -- Modifies "a"
+   -- Move the elements of a so that the element with index `i' is 
+   -- not `elt_lt' any element with lower indices and no element with
+   -- a larger index is `elt_lt' it.
+   -- Use the subarray in the range l,u
+   -- Return the "ith" element in the rearranged array
+      pre check_index(a,i,lp,up)
+   is
+      l::=lp; u::=up;
+      loop until!(l>=u);       -- [0 to l-1] <= [l to u] <= [u+1 to size-1]
+	 r::= RND::int(l,u);  
+	 t ::= a[r];
+	 swap(a,l,r);	  -- Exchange the middle index with low
+	 m::=l;			-- Set the "clean" index m to low
+	 loop j::=(l+1).upto!(u);  -- Clean up the array above "l" below "m" 
+	    if elt_lt(a[j],t) then    m:=m+1; swap(a,m,j);   end 
+	 end;
+	 -- Exchange the end of the clean values (index m, which is clean)
+	 -- with the low index (which is not clean)
+	 swap(a,l,m); -- [l->m-1] <= [m] <= [m+1->u]
+	 -- Shift the active range
+	 if m<=i then l:=m+1 end; -- Use the upper range
+	 if m>=i then u:=m-1 end -- Use the lower range
+      end;
+      return a[i];
+   end; 
+
+   select_modifying(a:ATP,lt:ROUT{ETP,ETP}:BOOL, i:INT,lp,up: INT):ETP
+   -- Modifies 'a'
+   -- Move the elements of 'a' so that the element with index `i' is 
+   -- not `lt' any element with lower indices and no element with
+   -- a larger index is `lt' it.
+      pre check_index(a,i,lp,up)
+   is
+      l::=lp; u::=up;
+      loop until!(l>=u);       -- [0 to l-1] <= [l to u] <= [u+1 to size-1]
+	 r::= RND::int(l,u);  
+	 t ::= a[r]; swap(a,l,r);	  
+	 m::=l;			
+	 loop j::=(l+1).upto!(u); 
+	    if lt.call(a[j],t) then    m:=m+1; swap(a,m,j);   end 
+	 end;
+	 t := a[l];  swap(a,l,m); -- [l->m-1] <= [m] <= [m+1->u]
+	 if m<=i then l:=m+1 end; -- Use the upper range
+	 if m>=i then u:=m-1 end -- Use the lower range
+      end;
+      return a[i];
+   end;   
+
+   private swap(a: ATP,i,j: INT) is 
+      tmp ::= a[i];
+      a[i] := a[j];
+      a[j] := tmp;
+   end;
+
+   private swap(a: ATP,order: ARRAY{INT},i,j: INT) is 
+      tmp ::= order[i]; 
+      order[i] := order[j];
+      order[j] := tmp;
+   end;
+   
+   private check_index(a: ATP,i: INT,l,u: INT): BOOL is
+      if void(a) then
+	 #ERR+"The array for selection is void!\n"; return false;
+      end;
+      if i.is_bet(l,u) and l.is_bet(0,a.size-1) and u.is_bet(l,a.size-1) then
+	 return true;
+      else
+	 #ERR+"Can't select the specified index:"+i+" in:["+l+","+u+"]\n";
+	 #ERR+"The array is of size:"+a.size+"\n";
+	 return false;
+      end;
+   end;
+
+end; -- class ARR_SELECT_ALG{ETP}
+-------------------------------------------------------------------
+

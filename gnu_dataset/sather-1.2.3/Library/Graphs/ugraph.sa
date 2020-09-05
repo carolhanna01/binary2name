@@ -1,0 +1,240 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@tiramisu.ICSI.Berkeley.EDU>
+
+class UGRAPH{NTP} < $UGRAPH{NTP} is
+   -- For now, call this UGRAPH since we have no other graph
+   -- implementations.
+   -- A basic undirected graph implemented with a hash table from
+   -- nodes to neighbors. This implementation
+   -- mainly specifies the access routines. 
+   include UGRAPH_INCL{NTP};
+   
+   private attr node_list: FLIST{NTP};
+   private attr neighbor_map: FMAP{NTP,FLIST{NTP}};
+   -- holds mappings from each node to all it's neighbors
+   
+   private attr node_generator: $SUCC_STREAM{NTP}; -- Generator of nodes
+   -- which is used by add_node. If a node generator is not provided
+   -- at creation time, then add_node cannot be used, since the graph
+   -- does not know how to create new unique nodes.
+   
+   -- ------------------- Initialization ------------------
+   create: SAME is 
+      -- All the data structures can be initialized with void
+      res ::= new;
+      res.neighbor_map := #FMAP{NTP,FLIST{NTP}};
+      res.node_list := #;
+      return(res) 
+   end;
+
+   create(node_gen: $SUCC_STREAM{NTP}): SAME pre ~void(node_gen) is
+      -- Create a new ugraph. Store "node_gen" as a generator
+      -- of nodes, so that when "add_node: NTP" is called it
+      -- can generate unique new nodes. 
+      res: SAME := create;
+      res.node_generator := node_gen;
+      return res;
+   end;
+   
+   copy: SAME is 
+      res ::= #SAME;
+      loop res.add_node(node!) end;
+      loop res.connect(edge!) end;
+      return res;
+   end;
+
+   has_node(n:NTP):BOOL is return test_node(n) end;
+   has_edge(first,second:NTP):BOOL is return test_edge(first,second) end;
+      
+   -- ------------------- Insertion -----------------------
+   add_node: NTP is
+      -- Add a new node and return the index
+      if void(node_generator) then
+	 raise #GRAPH_EXC(self,"add_node",self,
+			  "Cannot call add_node: NTP on this graph."
+			  " No node generator was provided");
+      else
+	 -- Get the next unique node
+	 n: NTP := node_generator.next; 
+	 -- If it is really unique, add it to the list
+	 assert ~has_node(n);
+	 add_node(n);
+	 return n;
+      end;      
+   end;
+   
+   add_node(n: NTP):NTP pre ~test_node(n) is
+      -- Replaces an existing node that is the same as "n"
+      -- This function is guaranteed to return the same node, "n"
+      -- though this is not true of graph implementations in general
+      node_list := node_list.push(n);
+      neighbor_map := neighbor_map.insert(n,#FLIST{NTP});
+      return n;
+   end;
+
+   add_node(n: NTP) is
+      -- Add a node "n". 
+      -- 
+      -- Technical detail: Since the node index for "n" is the
+      -- same as the node for this particular implementation, 
+      -- there is no need to return a value. Note that this function
+      -- is not in the graph abstraction
+      discard ::= add_node(n);
+   end;
+   
+   connect(n1,n2: NTP) is
+      -- Connect n1 and n2. Add the nodes if they do not exist
+      if test_edge(n1,n2) then return; end;
+      if ~test_node(n1) then add_node(n1) end;
+      if ~test_node(n2) then add_node(n2) end;
+      add_neighbor(n1,n2);
+   end;
+
+   -- ------------------- Removal -------------------------
+   delete_node(n: NTP) is
+      -- Delete a node from the graph, and all its accompanying edges
+      node_list.delete(node_list.index_of(n));
+      neighbor_map := neighbor_map.delete(n);
+   end;
+
+   disconnect(n1,n2: NTP)  pre test_node(n1) and test_node(n2) is
+      -- Deletes the edge between n1 and n2 if it exists 
+      n1list ::= neighbor_list(n1);
+      n2list ::= neighbor_list(n2);
+      neighbor_map := neighbor_map.insert(n1,n1list.delete_elt(n2));
+      neighbor_map := neighbor_map.insert(n2,n2list.delete_elt(n1));
+   end;
+
+   -- ------------------- Comparison ----------------------
+   is_identical(g: SAME): BOOL is
+      -- Check whether the two graphs have the same nodes, edges in
+      -- the same order
+      if g.n_nodes /= n_nodes then return false end;
+      loop  if ~elt_eq(node!,g.node!) then return false end end;
+      loop n::= node!;
+	 if ~neighbor_map.get(n).equals(g.neighbor_map.get(n)) then 
+	    return false 
+	 end;
+      end;
+      return true
+   end;
+
+   -- ------------------- Transformation ------------------
+   permute_nodes(new_positions: $MAP{NTP,INT}) is
+      -- Permute the nodes of the graph so that they will
+      -- be yielded in the order expressed by "new_positions"
+      perm_arr: ARRAY{INT} := #(node_list.size);
+      loop perm_arr.set!(new_positions[node_list.elt!]) end;
+      new_src: FLIST{NTP} := #(node_list.size);
+      loop new_src := new_src.push(node_list.elt!) end;
+      permute_alg: ARR_PERMUTE_ALG{NTP,FLIST{NTP}};
+      permute_alg.permute_into(new_src,perm_arr,node_list);
+      -- node_list.permute(perm_arr);
+   end;
+
+   sort is
+      -- Reduce the graph to a canonical form based on the
+      -- sorting order of nodes and edges
+      sorter:ARR_SORT_ALG{NTP,FLIST{NTP}};
+      sorter.sort(node_list);
+      loop n ::= node_list.elt!;                      -- Sort edges
+	 neighbors ::= neighbor_map.get(n);
+	 sorter.sort(neighbors);
+      end;
+   end;
+
+   -- ------------------- Implementation ------------------
+   test_node(n: NTP): BOOL is return neighbor_map.test(n) end;
+   
+   n_nodes: INT is return node_list.size end;
+
+   node!: NTP is loop yield node_list.elt! end; end;
+
+   test_edge(s,t: NTP): BOOL is
+      if ~test_node(s) or ~test_node(t) then return false
+      else return neighbor_map.get(t).contains(s);   end;
+   end;
+   
+   n_adjacent(n: NTP): INT pre test_node(n) is 
+      return(neighbor_map.get(n).size);
+   end;
+   
+   adjacent!(once n: NTP): NTP pre check_node(n,"adjacent!") is
+      neighbors ::= neighbor_map.get(n);
+      loop yield neighbors.elt! end;
+   end;
+         
+   new_edge(n1,n2: NTP): UEDGE{NTP} is return #UEDGE{NTP}(n1,n2) end;
+   
+   edge!: UEDGE{NTP} is
+      -- Return all edges in the graph. A problem, since we represent
+      -- edges in both directions. We might want to either maintain
+      -- a hash table of edges already seen or generate a matching
+      -- or something of the sort.
+      -- Or can use some arbitrary test to choose one or the other.
+      -- such as lt
+      -- For now, use a set which holds all nodes for which all edges
+      -- have been yielded
+      seen: FSET{NTP} := #;	-- Holds all nodes that have had their
+      -- edges yielded
+      loop n1 ::= node_list.elt!;
+	 n1_neighbors ::= neighbor_map.get(n1);
+	 loop n2 ::= n1_neighbors.elt!;
+	    if ~seen.test(n2) then yield new_edge(n2,n1); end;
+	 end;
+	 seen := seen.insert(n1);
+      end;
+   end;
+
+   -- ----------------------- Private accessing functions ---------------
+   private check_node(n: NTP,routine_name: STR): BOOL is
+      if test_node(n) then return true 
+      else 
+	 #ERR+routine_name+" received a node not in the graph\n";
+	 return false;
+      end;
+   end;
+
+   private add_neighbor(n1,n2: NTP) is
+     neighbor_map:=neighbor_map.insert(n1,neighbor_map.get(n1).push(n2));
+     neighbor_map:=neighbor_map.insert(n2,neighbor_map.get(n2).push(n1));
+   end;
+
+   private neighbor_list(n1:NTP):FLIST{NTP} is
+      return neighbor_map.get(n1) 
+   end;
+
+   --   sort_by(lt: ROUT{NTP,NTP}:BOOL) is
+      -- Reduce the graph to a cannoical form using the predicate "lt"
+      -- to determine the less than relation between two nodes
+      --      ARR_ALG{NTP,FLIST{NTP}}::sort_by(node_list,lt); 
+      -- Sort edges
+      --      loop n ::= node_list.elt!;
+      --	 neighbors ::= neighbor_map.get(n);
+      --	 ARR_ALG{NTP,FLIST{NTP}}::sort_by(neighbors,lt);
+      --      end;
+      --   end;
+
+   --   create_from(g: $GRAPH{NTP}): SAME is
+   --      -- Return a graph created from "g"
+   --      res ::= #;
+   --      loop res.add_node(g.node!) end;
+   --      loop res.add_edge(g.edge!) end;
+   --      return(res);
+   --   end;
+
+
+end;
+---------------------------------------------------------------  

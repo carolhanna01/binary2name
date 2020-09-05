@@ -1,0 +1,582 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Nasty things about switch threshold - it depends on the initial
+-- size - switch at the first doubling.
+-- However, initial size seems to be determined differently at different
+-- points in the code...
+-- double_size does the actual switching from list to map
+-- Does NOT shrink on the way down (after deletes)
+-- ffset.sa: Hash-based sets of objects of type T.
+-------------------------------------------------------------------
+class FSET{T} < $COPY,$ELT{T} is
+   -- Faster (hopefully!) version of FSET that switches from an FLIST
+   -- to an FSET at the first amortized doubling. 
+   -- Hash array based sets of objects of type T requiring writebacks.
+    -- 
+    -- If T is a subtype of $NIL, then `nil' may not be an element,
+    -- otherwise the type's default value may not be a element.
+    -- 
+    -- If T is a subtype of $IS_EQ, then `is_eq' will be used for
+    -- element equality (eg. string equality for STR), otherwise 
+    -- object equality is used. 
+    -- 
+    -- If T is a subtype of $HASH, then `hash' will be used for the hash
+    -- value, otherwise the element `id' will be used.
+    -- 
+    -- May be inherited with `elt_eq', `elt_nil', and `elt_hash' redefined
+    -- to get a different behavior.
+    --
+    -- The tables grow by amortized doubling and so require writeback
+    -- when inserting and deleting elements.  We keep down the load
+    -- factor to cut down on collision snowballing.  The simple
+    -- collision resolution allows us to support deletions, but makes
+    -- the behavior with poor hash functions quadratic.  Puts a
+    -- sentinel at the end of the table to avoid one check while
+    -- searching.
+   -- See the notes associated with an ORIG_FSET.
+   -- For laziness reasons, the old FSET has been renamed to ORIG_FSET
+   --  (slow fset)
+   include COMPARE{T};
+   include AREF{T};
+
+   private const use_map_initially: BOOL := false;
+   -- Indicates whether the data structure 
+   -- should start out with a map
+   private const switch_structures: BOOL := true;
+   -- Indicates whether the data structure 
+   -- should switch after the first allocate
+   
+   private attr hsize:INT;	-- Number of stored entries.
+   readonly attr use_map: BOOL;	-- True if using the space as a map
+   private const default_initial_size: INT := 5;
+   --shared upward_transition_size: INT;
+   -- shared downward_transition_size: INT;
+   private const load_ratio:INT:=4; -- Allow to be at most 1/load_ratio full
+
+   create:SAME is return void end;
+   
+   create(n:INT):SAME 
+   -- Make a table capable of dealing with `n' elements without
+   -- expansion. You can simply insert into a void table to create 
+   -- one as well. Self may be void (and often is).
+      pre n>=1 is 
+      res ::= allocate(1.lshift((3*load_ratio*n/4).highest_bit+1)+1);
+      res.set_initial_structure;
+      return res;
+   end;
+
+   create(arr: ARRAY{T}): SAME is return create_from(arr) end;
+   
+   create_from(a: $CONTAINER{T}): SAME is
+      res: SAME := #(a.size);
+      loop res := res.insert(a.elt!) end;
+      return res;
+   end;
+   
+   private allocate(n:INT):SAME is
+      -- Allocate `n' locations (must be power of 2 plus 1) and
+      -- initialize to `elt_nil'.
+      r::=new(n); 
+      if ~void(elt_nil) then 
+	 loop r.aset!(elt_nil) end 
+      end;
+      return r
+   end;
+   
+   size:INT is
+      -- Number of entries in the table. Self may be void.
+      if void(self) then return 0 
+      else return hsize 
+      end 
+   end;
+
+   copy:SAME is
+      -- A copy of self.
+      r:SAME; 
+      loop r:=r.insert(elt!) end;
+      return r
+   end;
+   
+   elt!:T is
+      -- Yield the elements in self in an arbitrary order. Do not insert
+      -- or delete from self while calling this. Self may be void.
+      if ~void(self) then 
+	 if use_map then
+	    loop r::=aelt!; 
+	       if ~is_elt_nil(r) then yield r end
+	    end
+	 else 
+	    i ::= 0; sz ::= hsize;
+	    loop until!(i = hsize); yield [i]; i := i + 1; end;
+	 end;
+      end
+   end;
+
+   first_elt:T is
+      -- The first element in the table, if any, otherwise elt_nil.
+      if ~void(self) then 
+	 if use_map then
+	    loop r::=aelt!; 
+	       if ~is_elt_nil(r) then return r end 
+	    end
+	 elsif hsize > 0 then return [0] end;
+      end;
+      return elt_nil 
+   end;
+   
+   has(e: T): BOOL is return test(e) end;
+   
+   test(e:T):BOOL is
+      -- True if `e' is `elt_eq' to an element contained in self. 
+      -- Self may be void.
+      if void(self) then return false end;  
+      if use_map then return test_map(e) 
+      else return test_list(e) end;
+   end;
+	
+   test_list(e: T): BOOL is
+      i ::= 0; sz ::= hsize;
+      loop  until!(i = sz); 
+	 if elt_eq(e,[i]) then return true end;
+	 i := i + 1;
+      end;
+      return false;
+   end;
+
+   private set_initial_structure is
+      use_map := use_map_initially;
+   end;
+   
+   private switch_structure(is_old_map: BOOL, is_new_map: BOOL) is
+      -- Isolate this as a function to make changes easier
+      if switch_structures then use_map := is_new_map
+      else use_map := is_old_map; end;
+   end;
+   
+   test_map(e: T): BOOL is
+      h::=elt_hash(e).band(asize-2);
+      loop te::=[h];  
+	 if is_elt_nil(te) then break!
+	 elsif elt_eq(te,e) then return true
+	 end;  
+	 h:=h+1 end;
+      if h=asize-1 then		-- hit sentinel
+	 h:=0;
+	 loop te::=[h];
+	    if is_elt_nil(te) then break!
+	    elsif elt_eq(te,e) then return true
+	    end;  
+	    h:=h+1 
+	 end;
+	 assert h/=asize-1 -- table mustn't be filled
+      end; 
+      return false 
+   end;
+   
+   get(e:T):T is
+      -- If `e' is `elt_eq' to a table entry, return that entry, 
+      -- otherwise return `elt_nil'. Useful when different objects 
+      -- are treated as equal (eg. a table of strings used to get a 
+      -- unique representative for each class of equal strings).
+      -- Self may be void.
+      if void(self) then return elt_nil end;
+      if use_map then return get_map(e)
+      else return get_list(e); end;
+   end;
+
+   get_list(e: T): T is
+      i ::= 0; sz ::= hsize;
+      loop  until!(i = sz); 
+	 if elt_eq(e,[i]) then return [i] end;
+	 i := i + 1;
+      end;
+      return elt_nil
+   end;
+
+   get_map(e: T): T is
+      h::=elt_hash(e).band(asize-2);	
+      loop te::=[h];
+	 if is_elt_nil(te) then break!
+	 elsif elt_eq(te,e) then return te
+	 end;
+	 h:=h+1 
+      end;
+      if h=asize-1 then h:=0;	-- hit sentinel
+	 loop te::=[h];
+	    if is_elt_nil(te) then break!
+	    elsif elt_eq(te,e) then return te
+	    end;
+	    h:=h+1 
+	 end;
+	 assert h/=asize-1 -- table mustn't be filled
+      end; 
+      return elt_nil 
+   end;
+   
+   private double_size:SAME 
+   -- A new table of twice the size of self with self's entries
+   -- copied over. 
+      pre ~void(self) is
+      r::=allocate((asize-1)*2+1); 
+      r.switch_structure(use_map,true);
+      assert changed_map(self,r);
+      loop 
+	 -- test if the has values have changed (should never happen)
+	 assert test(elt!);
+         r:=r.insert(elt!);
+      end;
+      SYS::destroy(self);   -- The old set should never be used now.
+      return r
+   end;
+
+   changed_map(old,n: SAME): BOOL is
+      -- if ~old.use_map and n.use_map then
+--	 #OUT+"Transitioning to use map. Size="+old.size+"\n";
+ --     end;
+      return true;
+   end;
+
+   private grow_if_necc: SAME is
+      -- Return a new map if it is necessary to grow it, otherwise
+      -- return self
+      if use_map then
+	 if (hsize+1)*load_ratio>asize then
+	    return double_size;
+	 else return self end;
+      else
+	 -- Still using list. Different growth condition
+	 if hsize >= asize then  return double_size 
+	    -- Must grow, which causes a transition
+	 else return self end;
+      end;
+   end;
+
+   insert(e:T):SAME is
+      -- A possibly new table which includes `e'. If an entry 
+      -- is `elt_eq' to `e' then overwrite it with `e'.
+      -- Usage: `tbl:=tbl.insert(e)'. 
+      -- Creates a new table if void(self).
+      r::=self;
+      if void(r) then 
+	 r:=allocate(default_initial_size); 
+	 r.set_initial_structure;
+      else r:=grow_if_necc end;
+      if r.use_map then return insert_hash(r,e); 
+      else return insert_list(r,e) end;
+   end;
+
+   insert_list(r: SAME,e:T): SAME is
+      -- If this is called, there should be at least enough space
+      -- for one more insert
+      -- Check for existing element first
+      i ::= 0; sz ::= r.hsize;
+      loop until!(i=sz);
+	 if elt_eq(e,r[i]) then r[i] := e; return r end;
+	 i := i + 1;
+      end;
+      -- Otherwise insert into the last position
+      r[r.hsize] := e;
+      r.hsize := r.hsize+1;
+      return r;
+   end;
+
+   insert_hash(r: SAME,e:T): SAME is
+      asz::=r.asize;
+      orig_h::=r.elt_hash(e).band(asz-2);
+      h::=orig_h;
+      loop te::=r[h];
+	 if is_elt_nil(te) then break!
+	 elsif elt_eq(te,e) then r[h]:=e; 
+	    return r 
+	 end;
+	 h:=h+1 
+      end;
+      if h=asz-1 then		-- Look through whole table from beginning
+	 -- until you find at least one blank element.
+	 h:=0;	-- hit sentinel
+	 loop te::=r[h];
+	    if is_elt_nil(te) then break!
+	    elsif elt_eq(te,e) then r[h]:=e;     return r   end;
+	    h:=h+1 
+	 end;
+	 assert h/=asz-1 
+      end; -- table mustn't be filled	
+      assert not_too_many(orig_h,h); -- Look for excessive collisions
+      r[h]:=e; 
+      r.hsize:=r.hsize+1; 
+      return r 
+   end;
+
+   private not_too_many(start, finish:INT):BOOL is
+      -- A function called in an assert to check that really bad
+      -- hashing isn't happening, which would probably be a
+      -- performance bug.  Since it is in an assert, this isn't called
+      -- unless checking is on.
+      if finish>start+50 then
+	 #ERR+"Found a problem: excessive collisions in "
+	       +SYS::str_for_tp(SYS::tp(self))
+	       +", probably\n"
+	       +"due to a bad hash function in the class "
+	       +SYS::str_for_tp(SYS::tp([start]))
+	       +".\n";
+	 #ERR + "Snowballing values:\n";
+	 i ::= 0; last ::= finish-1;
+	 loop until!(i = finish-1);
+	    -- i::=start.upto!(finish-1);
+	    e::=[i];
+	    h::=elt_hash(e);
+	    #ERR + i + '\t' + h.hex_str + '\t' + h.band(asize-2);
+	    if void(e) then #ERR+" Void elt" ;
+	    else
+	       tp ::= SYS::tp(e);
+	       tp_str ::= SYS::str_for_tp(tp);
+	       #ERR+" Type:"+tp_str;
+	       -- typecase e
+	       -- when $AM then #ERR+ " Source:"+e.source.str+" "; else end;
+	    end;
+	    typecase e when $STR then #ERR + '\t' + e.str.pretty; else end;
+	    #ERR+'\n';
+	    i := i + 1;
+	 end;
+	 return false;
+      end;
+      return true;
+   end;
+   
+   private halve_size:SAME pre ~void(self) and hsize<(asize-1)/4 is
+      -- A new table of half the size of self with self's entries
+      -- copied over. 
+      -- For now, don't transition downward
+      r::=allocate((asize-1)/2+1);
+      r.switch_structure(use_map,true);
+      loop r:=r.insert(elt!) end;
+      SYS::destroy(self);   -- The old set should never be used now.
+      return r
+   end;
+
+   private should_shrink:BOOL is
+      return asize>=33 and hsize<(asize-1)/(load_ratio*2);
+   end;
+   
+   delete(e:T):SAME is
+      -- A possibly new table which deletes the element `e' if it is
+      -- contained in self. Doesn't modify the table if arg is not
+      -- contained. Usage: `tbl:=tbl.delete(e)'.  Self may be void.
+      if void(self) then return void end;
+      if use_map then return delete_map(e) 
+      else return delete_list(e) end;
+      
+   end;
+
+   delete_list(e: T): SAME is
+      delete_elt_ind:INT := -1;
+      hash_table_size:INT := hsize;
+      i:INT := 0; 
+      loop until!(i >= hash_table_size); 
+	 if elt_eq(e,[i]) then delete_elt_ind := i; break!;  end;
+	 i := i + 1;
+      end;
+      if 0 <= delete_elt_ind  and delete_elt_ind < hsize then
+	 empty_loc: INT := delete_elt_ind; 
+	 second_to_last_index: INT := hsize - 2;
+	 -- Empty_loc goes from the delete element index to the pre-last elt
+	 loop until!(empty_loc > second_to_last_index);
+	    next: INT := empty_loc+1;
+	    [empty_loc] := [next];
+	    empty_loc := next;
+	 end;
+	 hsize := hsize - 1;
+      end;
+      return self;
+   end;
+
+   delete_map(e: T): SAME is
+      h::=elt_hash(e).band(asize-2);
+      loop 
+	 te::=[h];
+	 if is_elt_nil(te) then return self
+	 elsif elt_eq(te,e) then break!
+	 end;
+	 if h=asize-2 then h:=0 
+	 else h:=h+1 
+	 end 
+      end;
+      [h]:=elt_nil; 
+      hsize:=hsize-1; 
+      i::=h; -- h is the index of arg
+      -- Now check the block after h for collisions.
+      loop 
+	 if i=asize-2 then i:=0 
+	 else i:=i+1
+	 end;
+	 te::=[i];
+	 if is_elt_nil(te) then break! end;
+	 hsh::=elt_hash(te).band(asize-2);
+	 if hsh<=i then		-- block doesn't wrap around
+	    if h<i and h>=hsh then -- hole in way
+	       [h]:=[i]; 
+	       h:=i; 
+	       [i]:=elt_nil
+	    end
+	 else			-- block wraps
+	    if h>=hsh or h<i then -- hole in way
+	       [h]:=[i]; 
+	       h:=i; 
+	       [i]:=elt_nil 
+	    end
+	 end
+      end;
+      if should_shrink then return halve_size
+      else return self
+      end
+   end;
+
+   clear:SAME is
+      -- Clear out self, return the space if it has 17 or less entries
+      -- otherwise return void. Self may be void.
+      if void(self) then return void end;
+      if asize<=17 then 
+	 r::=self; 
+	 r.hsize:=0;
+	 loop r.aset!(elt_nil) end;
+	 return r
+      else return void 
+      end
+   end;
+
+   is_empty:BOOL is		
+      -- True if the set is empty. Self may be void.
+      return (void(self)) or (hsize=0)
+   end;
+   
+   equals(s:SAME):BOOL is	
+      -- True if `s' has the same elements as self. Self may be void.
+      loop 
+	 if ~s.test(elt!) then return false end
+      end;
+      loop 
+	 if ~test(s.elt!) then return false end
+      end;
+      return true
+   end;
+   
+   is_disjoint_from(s:SAME):BOOL is
+      -- True if self and `s' have no elements in common.
+      -- Self may be void.
+      loop 
+	 if s.test(elt!) then return false end
+      end;
+      return true 
+   end;
+   
+   intersects(s:SAME):BOOL is
+      -- True if self and `s' have elements in common.
+      -- Self may be void.
+      return ~is_disjoint_from(s) 
+   end;
+   
+   is_subset(s:SAME):BOOL is
+      -- True if all elements of self are contained in `s'.
+      -- Self may be void.
+      loop 
+	 if ~s.test(elt!) then return false end
+      end;
+      return true 
+   end;
+   
+   to_union(s:SAME):SAME is
+      -- The union of self and `s', modifies self.
+      -- Self may be void.
+      r::=self; 
+      loop r:=r.insert(s.elt!) end; 
+      return r 
+   end;
+   
+   union(s:SAME):SAME is
+      -- A new set which is the union of self and `s'.
+      -- Self may be void.
+      return copy.to_union(s) 
+   end;
+   
+   to_intersect(s:SAME):SAME is
+      -- The intersection of self and `s', modifies self.
+      -- Self may be void.  Can't think of a way to do this
+      -- in place.
+      return intersect(s)
+   end;
+   
+   intersect(s:SAME):SAME is
+      -- A new set which is the intersection of self and s.
+      -- Self may be void.
+      r:SAME;
+      loop 
+	 e::=elt!;
+	 if s.test(e) then r:=r.insert(e) end 
+      end; 
+      return r 
+   end;
+   
+   to_difference(s:SAME):SAME is
+      -- The difference of self and `s', modifies self.
+      -- Self may be void.
+      r::=self; 
+      loop r:=r.delete(s.elt!) end; 
+      return r 
+   end;
+   
+   difference(s:SAME):SAME is
+      -- A new set which is the difference between self and `s'.
+      -- Self may be void.
+      r:SAME;
+      loop 
+	 e::=elt!;
+	 if ~s.test(e) then r:=r.insert(e) end 
+      end; 
+      return r 
+   end;
+   
+   to_sym_difference(s:SAME):SAME is
+      -- The symmetric difference of self and `s', modifies self.
+      -- Self may be void.
+      r::=self;
+      loop 
+	 e::=s.elt!;
+	 if r.test(e) then r:=r.delete(e)
+	 else r:=r.insert(e)
+	 end
+      end;
+      return r
+   end;
+   
+   sym_difference(s:SAME):SAME is
+      -- A new set which is the symmetric difference between self 
+      -- and `s'. Self may be void.
+      r:SAME;
+      loop 
+	 e::=elt!; 
+	 if ~s.test(e) then r:=r.insert(e) end
+      end;
+      loop 
+	 e::=s.elt!; 
+	 if ~test(e) then r:=r.insert(e) end 
+      end;
+      return r 
+   end;
+
+   str: STR is 
+      if void(self) then return "{}" else return ELT_ALG{T}::str(self) end;
+   end;
+   
+end; -- class FSET{T}
+-------------------------------------------------------------------

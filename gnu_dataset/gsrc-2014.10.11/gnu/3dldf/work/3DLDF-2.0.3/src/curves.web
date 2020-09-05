@@ -1,0 +1,2118 @@
+@q curves.web @>
+
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Curves.@>
+@** Curves\quad ({\tt curves\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2003.11.12.}  
+Removed the version control identifiers from the CWEB
+files for the distribution of 3DLDF 1.1.  They're still used in my
+development versions.
+
+\initials{LDF 2003.12.10.}  
+Put the version control identifiers back
+into my release versions for 3DLDF 1.1.4.  I've already put some of
+them back in, now I'm doing the rest of them.  However, the release
+versions are now in their own RCS repository.
+\ENDLOG
+
+@f Curve Path
+
+@q * Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.05.09.}  Now including \filename{creatnew.h}. 
+
+\initials{LDF 2004.05.21.}  Now including \filename{pens.web}.
+\ENDLOG 
+
+@<Include files@>=
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++"
+#include "pictures.h++"  
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+
+@q * (0) Regular closed plane curve.@>
+@** Regular closed plane curve.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2002.11.12.}  
+Changed the name ``|Regular_Closed_Plane_Curve|'' to 
+``|Reg_Cl_Plane_Curve|'', because the former caused too many
+``Overfull boxes'' when running \cweave/.
+\ENDLOG 
+
+@q * (1) Reg_Cl_Plane_Curve class definition.@>
+@* {\bf Reg\_Cl\_Plane\_Curve} class definition.
+\initials{LDF Undated.}
+
+A |Reg_Cl_Plane_Curve| is assumed to be closed, planar, convex, and
+have at least 3  points. The functions that create and modify\newline  
+|Reg_Cl_Plane_Curves|
+must ensure that these assumptions are correct!
+\initials{LDF Undated.}
+
+|Reg_Cl_Plane_Curve| is intended to be used as a base
+class.  No objects of type |Reg_Cl_Plane_Curve| should be defined, however,
+it is not an abstract class, so it is possible to do so.
+\initials{LDF 2002.11.05.}  
+
+@f Reg_Cl_Plane_Curve Curve
+
+@<Define |class Reg_Cl_Plane_Curve|@>=
+
+class Reg_Cl_Plane_Curve : public Path
+{
+  protected:
+    Point center;
+    unsigned short number_of_points;
+  public:
+    @<Declare |Reg_Cl_Plane_Curve| functions@>@;
+};
+
+@q * (1) Reflection in a |Plane|.@> 
+@ Reflection in a |Plane|.
+\initials{LDF 2004.10.03.}
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{reflect\_in}@>
+
+Please note that this function tries to allocate memory on the free 
+store for the |Reg_Cl_Plane_Curve| pointed to by the pointer to
+|Shape| which is its return value.  Therefore, programmers who use
+this function must ensure that this memory is freed.
+\initials{LDF 2004.10.03.}
+
+If allocation fails, this function throws a |bad_alloc| exception.  
+If the reflection of |*this| cannot be found in the |Plane|, 
+this function returns 0.
+\initials{LDF 2004.10.03.}
+
+\LOG
+\initials{LDF 2004.10.03.}
+Added this function.
+
+\initials{LDF 2004.10.12.}
+Rewrote this function.
+Following a system update, 
+having |Shape*| as the return value no longer worked.
+\ENDLOG
+
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+virtual 
+int
+reflect_in(const Plane& p, 
+           void* v,
+           const Scanner_Node scanner_node = 0) const;
+
+
+@q ** (2) Definition.@>
+
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+int
+Reg_Cl_Plane_Curve::reflect_in(const Plane& p,
+                               void* v,
+                               const Scanner_Node scanner_node) const
+
+
+{
+
+@q *** (3) Preliminaries.@> 
+
+  bool DEBUG = false; /* |true|  */
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+  if (scanner_node)
+     scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                   &error_stop_value,
+                                                   &warning_stop_value);
+
+
+@q *** (3).@> 
+
+  Reg_Cl_Plane_Curve* reg_cl_plane_curve_reflection = static_cast<Reg_Cl_Plane_Curve*>(v);  
+
+@q *** (3) If |reg_cl_plane_curve_reflection == static_cast<Reg_Cl_Plane_Curve*>(0)|, @>
+@q *** (3) try to allocate memory on the free store for it.                           @> 
+
+@ If |reg_cl_plane_curve_reflection == static_cast<Reg_Cl_Plane_Curve*>(0)|, 
+try to allocate memory on the free store for it.                            
+\initials{LDF 2004.10.12.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+ if (reg_cl_plane_curve_reflection == static_cast<Reg_Cl_Plane_Curve*>(0))
+ {
+  try
+     {
+       reg_cl_plane_curve_reflection = create_new<Reg_Cl_Plane_Curve>(0, scanner_node);
+     }
+
+@q **** (4) Error handling:  |new Reg_Cl_Plane_Curve| failed.  Rethrow |bad_alloc|.@> 
+
+@ Error handling:  |new Reg_Cl_Plane_Curve| failed.  Rethrow |bad_alloc|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+
+  catch (bad_alloc)
+     {
+
+       cerr_strm << thread_name << "ERROR! In `Point::reflect_in()':" 
+                 << endl
+                 << "`create_new<Reg_Cl_Plane_Curve>()' failed. "
+                 << "Rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       throw;
+
+       
+     } /* |catch (bad_alloc)|  */
+
+  
+@q *** (3).@> 
+
+  } /* |if (reg_cl_plane_curve_reflection == static_cast<Reg_Cl_Plane_Curve*>(0))|  */
+
+@q *** (3) Call |Path::reflect_in()|.@> 
+
+@ Call |Path::reflect_in()|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+  Path path_reflection;
+
+  int status;
+
+
+  try
+     {
+       status = Path::reflect_in(p,
+                            static_cast<void*>(&path_reflection),
+                            scanner_node);  
+     }
+
+@q **** (4) Error handling:  |Path::reflect_in()| threw |bad_alloc|.@> 
+
+@ Error handling:  |Path::reflect_in()| threw |bad_alloc|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+  catch (bad_alloc)
+     {
+       cerr_strm << thread_name << "ERROR! In `Reg_Cl_Plane_Curve::reflect_in():'"
+                 << endl 
+                 << "`Path::reflect_in()' threw `bad_alloc'."
+                 << endl << "Deleting `reg_cl_plane_curve_reflection' and "
+                 << "rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       delete reg_cl_plane_curve_reflection;
+
+       throw;
+
+     } /* |catch (bad_alloc)|  */
+
+@q **** (4) Error handling:  |Path::reflect_in()| returned 1.@> 
+
+@ Error handling:  |Path::reflect_in()| returned 1.
+\initials{LDF 2004.10.12.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+  if (status == 1)
+    {
+
+      cerr_strm << thread_name << "ERROR! In `Reg_Cl_Plane_Curve::reflect_in():'"
+                << endl 
+                << "`Path::reflect_in()' failed and returned 1."
+                << endl << "Deleting `reg_cl_plane_curve_reflection' "
+                << "and exiting function with return value 1.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm, error_stop_value);
+      cerr_strm.str("");
+  
+      delete reg_cl_plane_curve_reflection;
+
+      return 1;
+
+      
+    }  /* |if (status == 1)|  */
+
+@q **** (4) |Path::reflect_in()| succeeded.@> 
+
+@ |Path::reflect_in()| succeeded.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name << "In `Reg_Cl_Plane_Curve::reflect_in()':"
+                  << endl << "`Path::reflect_in()' succeeded.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */ 
+
+   reg_cl_plane_curve_reflection->Path::operator=(path_reflection);
+
+@q *** (3) Set other data members of |*reg_cl_plane_curve_reflection|.@> 
+
+@ Set other data members of |*reg_cl_plane_curve_reflection|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+  reg_cl_plane_curve_reflection->center  = center; 
+  reg_cl_plane_curve_reflection->number_of_points  = number_of_points; 
+
+@q *** (3) Exit function successfully with   @> 
+@q *** (3) return value 0.@> 
+
+@ Exit function successfully with return value 0.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>= 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name << "In `Reg_Cl_Plane_Curve::reflect_in()':"
+                  << endl << "Exiting function successfully with "
+                  << "return value 0.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */ 
+
+  return 0;
+
+} /* End of |Reg_Cl_Plane_Curve::reflect_in()| definition.  */
+
+
+
+
+
+@q * Returning elements and information.@>
+@* Returning elements and information.
+\initials{LDF 2002.11.05.}  The |virtual| functions in this section
+are meant to be overloaded by member
+functions of types derived from |Reg_Cl_Plane_Curve|.
+
+\LOG
+\initials{LDF 2002.11.03.}  Removed
+|Reg_Cl_Plane_Curve::is_planar()|.\newline   
+A |Reg_Cl_Plane_Curve|
+can be manipulated into a non-planar state, so it's safer to use the |Path|
+version, which tests whether it's really planar or not.  
+\ENDLOG 
+
+@q ** Is quadratic.@>
+@ Is quadratic.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{is\_quadratic}@>
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+inline
+virtual 
+bool
+is_quadratic() const
+{
+  return false;
+}
+
+@q ** Is cubic.@>
+@ Is cubic.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{is\_cubic}@>
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+inline
+virtual 
+bool
+is_cubic() const
+{
+  return false;
+}
+
+@q ** Is quartic.@>
+@ Is quartic.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{is\_quartic}@>
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+inline
+virtual 
+bool
+is_quartic() const
+{
+  return false;
+}
+
+@q ** Get coefficients.@>
+@ Get coefficients.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{get\_coefficients}@>
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+inline
+virtual 
+Real_Triple 
+get_coefficients(real, real) const
+{
+  return Real_Triple(INVALID_REAL, INVALID_REAL, INVALID_REAL);
+}
+
+@q * Solve.@>
+@* Solve.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{solve}@>
+\initials{LDF 2002.11.05.}  This |virtual| function is meant to be overloaded by
+member functions of types derived from |Reg_Cl_Plane_Curve|.
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+inline
+virtual 
+pair<real, real> 
+solve(char, real) const
+{
+    return pair<real, real>(INVALID_REAL, INVALID_REAL);
+}
+
+@q * (1) Location of a point.@>
+@* Location of a point.  
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{location}@>
+|location()| returns a |signed short|
+indicating the location of its |Point| argument with respect to the
+|Reg_Cl_Plane_Curve|.   
+
+\initials{LDF 2002.11.05.}  @:!! TO DO@> TO DO: 
+Currently, the programmer must ensure that a
+|Reg_Cl_Plane_Curve| is planar.  It might be worthwhile to check that it
+really is by using |Path::get_normal()|, since some manipulations may
+cause a |Reg_Cl_Plane_Curve| to become non-planar.  
+
+\initials{LDF 2002.11.05.}  
+The number of |Points| in a |Reg_Cl_Plane_Curve| must be a multiple of
+4, and that the |Point| |number_of_points@t$/4$@>| 
+must be at $90^\circ$ to |Point| 0.
+Also, |ref_pt| can't be |Point| 0.
+
+\initials{LDF 2003.07.16.}  |Reg_Cl_Plane_Curve| now has a data member named
+|center|.  However, a\newline
+|Reg_Cl_Plane_Curve| need not have a meaningful
+center.  Usually, when an object of a class derived from
+|Reg_Cl_Plane_Curve| calls this function, its |center| will
+be passed as the |ref_pt| argument.  However, this need not be the
+case. 
+
+@:!! TO DO@> TO DO: 
+Check whether it will work if |pt0.x < 0|.  
+I think it should.
+
+\initials{LDF 2003.06.14.}  !! CHECK.  Bug, when |Reg_Cl_Plane_Curve| is 
+rotated about x and z-axes only.  
+
+@q ** Return values.@>
+The following values are returned if the |Point| is in the same plane
+as |*this| and this function has worked properly:
+
+\BRVS{-1}
+
+\RV{-1}\relax  The |Point| lies outside the |Reg_Cl_Plane_Curve|.
+
+\RV{0}\relax   The |Point| lies on the perimeter of the |Reg_Cl_Plane_Curve|.
+
+\RV{1}\relax   The |Point| lies inside the perimeter of the |Reg_Cl_Plane_Curve|.
+  
+\ERVS
+
+\noindent
+These values are returned in cases where errors have occurred:
+
+\BRVS{-5}\relax
+
+\RV{-2}\relax  The |Point| is not in the same plane as the
+|Reg_Cl_Plane_Curve|.  
+
+\RV{-3}\relax  Something has gone terribly wrong.
+
+\RV{-4}\relax  The normal to the |Reg_Cl_Plane_Curve| has 0 magnitude,
+  i.e., the |Points| on the\newline
+  |Reg_Cl_Plane_Curve| are colinear.
+
+\RV{-5}\relax  An error occurred in putting the |Reg_Cl_Plane_Curve|
+  in one of the major planes.
+
+\RV{-6}\relax  The |Reg_Cl_Plane_Curve| is non-planar.
+\ERVS
+
+\LOG
+\initials{LDF 2002.04.03.}  Added  and tested all cases.  Seems to work properly.  
+
+\initials{LDF 2002.11.12.}  Added ``\.{\char`\\relax}'' after the arguments to
+``\.{\char`\\RV}'' in the {\TeX} code above in order to suppress a
+space at the beginning of the first line of the following indented
+paragraph.  I couldn't figure out a way of suppressing the space
+within the definition of \.{\char`\\RV} (which is currently 
+``\.{\char`\\let}'' to \.{\char`\\ARG}).
+
+
+\initials{LDF 2003.06.03.}  Changed the line where |Plane::get_distance()| is
+called below.  It now returns a\newline
+|Real_Short|, so ``|.first|'' has to
+be added, in order to get the |real| value.
+
+\initials{LDF 2003.06.13.}  Changed |pt0.epsilon()| to |Point::epsilon()|.
+
+\initials{LDF 2003.06.14.}  Added error handling code for the case that
+|get_plane()| fails.
+
+\initials{LDF 2003.06.14.}  No longer taking absolute value of the |real| value
+|r0| returned by |Plane::get_distance()|, since it will always be
+positive, anyway.  Comment at place below, where I made this change. 
+
+\initials{LDF 2003.07.01.}  Added argument |suppress_warnings|.
+
+
+\initials{LDF 2003.07.16.}  Changed name of |center| argument to |ref_pt|,
+because I've made |center| a data member of |Reg_Cl_Plane_Curve|.
+
+
+\initials{LDF 2004.05.25.}  
+Commented-out some drawing commands.  This was necessary, because
+|current_picture| is no longer a global 
+variable, and drawing requires a |Picture|.  
+
+\initials{LDF 2004.06.08.}  Changed |origin| to |origin_pt|, because I've
+removed the global variable |origin|.  I'm replacing it with a predefined
+variable defined in |Scanner_Type::create()|.
+
+\initials{LDF 2007.08.26.}
+Added optional |Scanner_Node| argument with default $0$.
+\ENDLOG 
+
+
+@q ** (2) Declaration.@>
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+virtual
+signed short
+location(Point ref_pt, 
+         Point pt0, 
+         const bool suppress_warnings = false) const;
+   
+@q ** (2) Definition.@>
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+signed short
+Reg_Cl_Plane_Curve::location(Point ref_pt, Point pt0, const bool suppress_warnings) const
+{
+
+    bool DEBUG = false; /* |true| */
+
+    if (DEBUG)
+      {
+        cerr << "Entering Reg_Cl_Plane_Curve::location()\n";
+        ref_pt.show("ref_pt");
+        pt0.show("pt0");
+      }
+
+    Point origin_pt(0, 0, 0);
+
+
+    unsigned short orientation;
+    const unsigned short X_Y = 0;
+    const unsigned short X_Z = 1;
+    const unsigned short Z_Y = 2;
+
+    Plane pl(get_plane());
+    
+    if (pl == INVALID_PLANE) /* LDF 2003.06.14.  Added this error 
+                                handling code.  */
+      {
+        cerr << "ERROR! In Reg_Cl_Plane_Curve::location():"
+             <<  "The Reg_Cl_Plane_Curve is non-planar.\n"
+             << "Returning -6\n\n";
+        return -6;
+      }
+
+    real r0 = pl.get_distance(pt0).first;  
+
+    if (r0 > Point::epsilon())      /* LDF 2003.06.14.  Changed.
+                                       |r0| will always be positive, 
+                                       so I now longer take its 
+                                       absolute value.  */
+      {
+        if (!suppress_warnings)
+          cerr << "WARNING! In Reg_Cl_Plane_Curve::location().\n"
+               << "Point is not in plane of regular closed plane curve.\n"
+               << "Returning -2.\n\n";
+          return -2;
+      }
+
+    Reg_Cl_Plane_Curve copy(*this);
+
+    if (ref_pt != origin_pt)
+      pt0 *= ref_pt *= copy.shift(-ref_pt);  /* LDF 2002.11.05.
+                                                Simplified.  */
+
+    Point copy_normal = copy.get_normal();
+
+    if (DEBUG)
+      copy_normal.show("copy_normal");
+
+    if (copy_normal.magnitude() == ZERO_REAL)
+      {
+          cerr << "ERROR! In Reg_Cl_Plane_Curve::location().\n"
+            << "Normal has no magnitude. Returning -4\n\n";
+              
+          return -4;
+      }
+    
+    else if (fabs(copy_normal.get_x()) < Point::epsilon()
+             && fabs(copy_normal.get_y()) < Point::epsilon())
+      {
+          if (DEBUG)
+            cerr << "Regular closed plane curve is already in x-y plane.\n";
+          orientation = X_Y;
+      }
+
+    else if (fabs(copy_normal.get_x()) < Point::epsilon()
+             && fabs(copy_normal.get_z()) < Point::epsilon())
+      {
+          if (DEBUG)
+            cerr << "Regular closed plane curve is already in x-z plane.\n";
+          orientation = X_Z;
+      }
+    else if (fabs(copy_normal.get_z()) < Point::epsilon()
+             && fabs(copy_normal.get_y()) < Point::epsilon())
+      {
+          if (DEBUG)
+            cerr << "Regular closed plane curve is already in z-y plane.\n";
+          orientation = Z_Y;
+      }
+    else
+      {
+          if (DEBUG)
+            cerr << "Putting regular closed plane curve into x-z plane.\n";
+          Transform t1;
+          t1.align_with_axis(ref_pt, copy.get_point(0), 'x');
+          
+          copy *= ref_pt *= pt0 *= t1;
+
+          Point pt_c4(copy.get_point(number_of_points / 4));
+
+          Transform t2;
+          t2.align_with_axis(ref_pt,
+                             pt_c4,
+                             'z');
+
+          copy *= ref_pt *= pt0 *= t2;
+          orientation = X_Z;
+      }
+    if (DEBUG)
+      {
+          cerr << "orientation == " << orientation << endl;
+#if 0 
+
+/* Commented-out, because |current_picture| is no longer a global
+  variable, and drawing requires a |Picture|.  
+  \initials{LDF 2004.05.25.}  */@;
+
+          copy.draw(Colors::blue);
+          copy.show("copy");
+          ref_pt.dotlabel("C");
+          pt0.dotlabel("pt0");
+          pt0.show("pt0");
+#endif 
+      }
+
+    Transform t3;
+    Point pt1 = copy.get_point(0);
+    pt1 -= ref_pt;
+    pt1.unit_vector(true);
+
+    Point x_axis(1, 0, 0);
+    Point z_axis(0, 0, 1);
+
+    if (orientation == X_Y || orientation == X_Z)
+      {
+        if (pt1 != x_axis && pt1 != -x_axis)
+          {
+            t3.align_with_axis(ref_pt, pt1, 'x');
+            copy *= ref_pt *= pt0 *= t3;
+          }
+      }
+    else if (orientation == Z_Y)
+      {
+        if (pt1 != z_axis && pt1 != -z_axis)
+          {
+            t3.align_with_axis(ref_pt, pt1, 'z');
+            copy *= t3;
+            ref_pt *= t3;
+            pt0 *= t3;
+          }
+      }
+
+    Real_Pair rr;
+    real pt0_v;  /* \initials{LDF 2002.11.05.}  Vertical.  */
+    real pt0_h;  /* \initials{LDF 2002.11.05.}  Horizontal.  */
+    
+    if (orientation == X_Y)
+      {
+          pt0_h = pt0.get_x();
+          pt0_v = pt0.get_y();
+      }
+    else if (orientation == X_Z)
+      {
+          pt0_h = pt0.get_x();
+          pt0_v = pt0.get_z();
+      }
+
+    else if (orientation == Z_Y)
+      {
+          pt0_h = pt0.get_z();
+          pt0_v = pt0.get_y();
+      }
+
+    else
+      {
+          cerr << "ERROR! In Reg_Cl_Plane_Curve::location().\n"
+            << "orientation has invalid value: " << orientation
+              << "\nReturning -5\n\n";
+          return -5;
+      }
+
+    rr = solve('v', pt0_h);  /* \initials{LDF 2002.11.05.}  TO DO:  Explain.  */
+
+    if (rr.first == INVALID_REAL && rr.second == INVALID_REAL)
+      {
+          if (DEBUG)
+            {
+              cerr << "Point is outside regular closed plane curve. "
+                   << "Returning -1.\n";
+              cerr << "Exiting Reg_Cl_Plane_Curve::location()\n";
+            }
+          return -1;
+      }
+    
+    else if ((fabs(fabs(pt0_v) - fabs(rr.first)) < Point::epsilon())
+             || (fabs(fabs(pt0_v) - fabs(rr.second)) < Point::epsilon()))
+      {
+          if (DEBUG)
+            {
+                cerr << "Point is on regular closed plane curve. "
+                     << "Returning 0.\n"
+                     << "Exiting Reg_Cl_Plane_Curve::location()\n";
+            }
+          return 0;
+      }
+
+    else if (fabs(pt0_v) < fabs(rr.first))
+      {
+          if (DEBUG)
+            {
+                cerr << "Point is inside regular closed plane curve. "
+                     << "Returning 1.\n";
+                cerr << "Exiting Reg_Cl_Plane_Curve::location()\n";
+            }
+          return 1;
+      }
+    else if (fabs(pt0_v) > fabs(rr.first)) /* This case should never
+                                              occur, I believe.  
+                                              \initials{LDF 2002.11.05.}  
+                                              Why not??  */
+      {
+          if (DEBUG)
+            {
+                cerr << "Point is outside regular closed plane curve. "
+                     << "Returning -1.\n"
+                     << "Exiting Reg_Cl_Plane_Curve::location()\n";
+            }
+          return -1;
+      }
+    else
+      {
+          cerr << "ERROR! In Reg_Cl_Plane_Curve::location().\n"
+            << "This can't happen! Returning -3.\n";
+
+          if (DEBUG)
+            cerr << "Exiting Reg_Cl_Plane_Curve::location()\n";
+          return -3;
+        }
+  }
+
+@q * Angle point.@>
+@* Angle point.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{angle\_point}@>
+\initials{LDF 2003.01.05.}  @:!! TO DO@> TO DO:  Find out why this function isn't
+|const|! 
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+virtual
+Point
+angle_point(real angle);
+
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+Point
+Reg_Cl_Plane_Curve::angle_point(real angle)
+{
+    cerr << "ERROR! In Reg_Cl_Plane_Curve::angle_point().\n"
+         << "This virtual function doesn't have a real definition for "
+         << "ordinary Reg_Cl_Plane_Curves.\nReturning INVALID_POINT.\n\n";
+    return INVALID_POINT;
+}
+
+@q * (1) Intersection points.@>
+@* Intersection points.  
+\initials{LDF 2002.11.05.}  
+
+Intersection with a line.
+|intersection_points()| returns a 
+|Bool_Point_Pair|.  The |bool| in a |Bool_Point|
+indicates whether the |Point| is on the
+line segment in question.  
+If one of the |bools| is |false|, but the |Point|
+is not |== INVALID_POINT|, then the {\it line\/} (as opposed to the
+segment) does intersect the
+|Reg_Cl_Plane_Curve|, and the |Point| indicates
+one of the intersection points.
+So, |intersection_points()| can be
+used whether you want to restrict the intersection points to ones that
+are actually on a particular line segment or not.  
+\initials{LDF 2002.11.05.}  
+
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:@>  
+\initials{LDF 2002.04.12.}  
+In the specializations, I should check
+whether the intersection points are on the curve in question.  I
+should also write a version of this for |Lines|, where there's no test
+for whether the intersection points are on the segment, since there's
+no segment.
+\ENDTODO
+
+The versions of |intersection_points()| belonging to classes derived
+from |Reg_Cl_Plane_Curve| will most likely call on the functions
+described in this section, passing
+|center| as the |ref_pt| argument.  However, this need not be the
+case, and |Reg_Cl_Plane_Curves| need not have a meaningful |center|.
+|ref_pt| in these functions merely refers to the |Point| which should be placed
+at the origin by the transformation.  \initials{LDF 2003.07.16.}
+
+@q ** (2) |Point| arguments.@>
+@*1 {\bf Point} arguments.@>
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{intersection\_points}@>
+
+
+\LOG
+\initials{LDF 2003.06.20.}  
+Rewrote this function.  The perpendicular and
+non-parallel, non-coplanar cases are handled in exactly the same way.
+In these cases, there can only be one intersection point.\newline
+|Plane::intersection_point()| and |Reg_Cl_Plane_Curve::location()| are
+now used to find it, if it exists.
+
+\initials{LDF 2003.06.20.}  
+The coplanar case was the one that was causing
+difficulty.  The copy of |*this| is now always put into the x-z plane,
+even if it is in one of the major planes, or in a plane parallel to
+one of these.  The advantage of this, is that it simplifies the code.
+The disadvantage is, that additional rotations reduce the accuracy of
+the calculation of the intersection points.
+
+\initials{LDF 2003.06.20.}  
+|Transform::align_with_axis()| is no longer used for
+putting the copy of |*this| and the line into the x-z plane.  It might
+be possible to use it, but I used |Point::angle()| while debugging, in
+order to see what was happening better.  It might be possible to
+go back to using |Transform::align_with_axis|, but I don't see any
+advantage to doing so.
+
+\initials{LDF 2003.06.20.}  
+I've tested this function for coplanar lines for
+planes with various orientations.  I hope that it works properly for
+all planes now!
+
+\initials{LDF 2003.07.01.}  
+Added |true| as |silent| argument to |unit_vector()|
+when I call it on |cross|.  This prevents |unit_vector()| from issuing
+a warning message, when |cross| has magnitude 0, which occurs when 
+|surface_vector| and |pt_vector| are colinear.  Since this case is
+handled correctly, the warning messages are unnecessary and distracting.
+
+\initials{LDF 2003.07.01.}  
+@:BUG FIX@> BUG FIX:  Made changes to the way
+|on_segment| is used in the coplanar case.  The way it was before
+handled certain cases wrong.
+
+\initials{LDF 2003.07.04.}  
+Removed unreachable statement at end of function: 
+|return bpp|.  GCC didn't complain, but the DEC compiler issued a
+warning. 
+
+\initials{LDF 2003.07.16.}  
+Changed name of |center| argument to |ref_pt|,
+because I've made |center| a data member of |Reg_Cl_Plane_Curve|.
+
+\initials{LDF 2004.05.25.}  
+Commented-out some drawing commands.  This was necessary, because
+|current_picture| is no longer a global 
+variable, and drawing requires a |Picture|.  
+
+\initials{LDF 2004.06.08.}  Changed |origin| to |origin_pt|, because I've
+removed the global variable |origin|.  I'm replacing it with a predefined
+variable defined in |Scanner_Type::create()|.
+\ENDLOG
+
+
+@q *** (3) Declaration.@>
+
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+
+virtual
+Bool_Point_Pair
+intersection_points(Point ref_pt, Point p0, Point p1) const;
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+Bool_Point_Pair
+Reg_Cl_Plane_Curve::intersection_points(Point ref_pt, Point pt0,
+                                       Point pt1) const   
+{
+
+  bool DEBUG = false; // true
+
+    if(DEBUG)
+      cerr << " *** Entering Reg_Cl_Plane_Curve::"
+           << "intersection_points()\n"; 
+  Bool_Point_Pair bpp = INVALID_BOOL_POINT_PAIR;
+
+  Point origin_pt(0, 0, 0);
+
+  Plane pl = get_plane();
+
+  if (DEBUG) 
+    pl.normal.show("pl.normal");
+  
+  Point surface_vector = (get_point(0) - ref_pt);
+  surface_vector.unit_vector(true);
+
+  Point pt_vector(pt1 - pt0);
+  pt_vector.unit_vector(true);
+
+  Point cross = surface_vector.cross_product(pt_vector);
+  cross.unit_vector(true, true);
+
+
+    if (DEBUG)
+      {
+        surface_vector.show("surface_vector");
+        pt_vector.show("pt_vector");
+        cross.show("cross");
+        pl.normal.show("pl.normal");
+      }
+
+  short distance = pl.get_distance(pt0).second;
+
+
+
+@q **** (4) Degenerate cases, error handling.@>
+@ Degenerate cases, error handling.
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+  if (pt_vector == INVALID_POINT || 
+      pl.normal == INVALID_POINT || 
+      pt_vector == origin_pt || 
+      pl.normal == origin_pt)
+    {
+        cerr << "ERROR! In Reg_Cl_Plane_Curve:intersection_points():\n"
+             << "Something is wrong with the normals:\n";
+        pt_vector.show("pt_vector:");
+        pl.normal.show("pl.normal");
+        cerr << "Returning INVALID_BOOL_POINT_PAIR.\n\n";
+        if (DEBUG) 
+          cerr << "Exiting Polygon::intersection_points().\n\n";
+        return INVALID_BOOL_POINT_PAIR;
+    }
+
+@q **** (4) Parallel and coplanar cases.@>
+@ Parallel and coplanar cases.
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+else if (surface_vector == pt_vector || surface_vector == -pt_vector
+         || cross == pl.normal || cross == -pl.normal)
+  {
+@q ***** (5) Coplanar case.@>
+@ Coplanar case.
+
+\LOG
+\initials{LDF 2004.05.02.}  Changed |Point x_axis_pt(1)| to 
+|Point x_axis_pt(1, 0, 0)| because this |Point| constructor now
+requires three explicit |real| arguments.  This is because |CURR_Y| and 
+|CURR_Z| are no longer |static| members of |class Point|, but rather 
+internal quantities, stored in |Scanner_Type.id_map_node->id_map|.  This way, 
+each |Scanner_Node| can its own |CURR_Y| and |CURR_Z|, and code using them 
+will be reentrant.
+\ENDLOG 
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+  if (distance == ZERO_REAL)
+    {
+        if (DEBUG)
+          cerr << "Line and Reg_Cl_Plane_Curve are coplanar.\n";
+        
+        Transform t0;
+        
+        Reg_Cl_Plane_Curve copy(*this);
+        Point curve_0 = copy.get_point(0);
+
+        if (DEBUG)
+          {
+            cerr << "After copying:" << endl;
+            show("this:");
+            copy.show("copy:");
+            curve_0.show("curve_0");
+          }
+
+        t0 *= curve_0 *= pt0 *= pt1 *= copy.shift(-ref_pt);
+
+        if (DEBUG)
+          {
+            cerr << "After shift:" << endl;
+            copy.show("copy:");
+            curve_0.show("curve_0");         
+            pt0.show("pt0");
+            pt1.show("pt1");
+          }
+
+        if (curve_0.get_x() < 0)
+          {
+           
+            t0 *= curve_0 *= pt0 *= pt1 *= copy.rotate(0, 0, 180);
+          }
+
+        if (DEBUG)
+          {
+            cerr << "After rotating so curve_0 has positive x:" << endl;
+            copy.show("copy:");
+            curve_0.show("curve_0");         
+            pt0.show("pt0");
+            pt1.show("pt1");
+          }
+
+        Point trace_x_z_0 = curve_0;
+        trace_x_z_0.shift(0, -(curve_0.get_y()));
+        Point x_axis_pt(1, 0, 0);
+
+        real ang = trace_x_z_0.angle(x_axis_pt);
+        
+        if (DEBUG)
+          {
+            cerr << "ang == " << ang << endl;
+          }
+
+        if (ang != ZERO_REAL)
+          {
+            if (curve_0.get_z() > 0)
+              ang *= -1;
+            t0 *= curve_0 *= pt0 *= pt1 *= copy.rotate(0, ang);
+          }
+        if (DEBUG)
+          {
+            cerr << "After rotating so the trace of curve_0 is on x-axis:" << endl;
+            copy.show("copy:");
+            curve_0.show("curve_0");         
+            pt0.show("pt0");
+            pt1.show("pt1");
+          }
+
+        ang = curve_0.angle(x_axis_pt);
+
+        if (ang != ZERO_REAL)
+          {
+            if (curve_0.get_y() > 0)
+              ang *= -1;
+            t0 *= curve_0 *= pt0 *= pt1 *= copy.rotate(0, 0, ang);
+          }
+
+        if (DEBUG)
+          {
+            cerr << "After rotating so curve_0 is on x-axis:" << endl;
+            copy.show("copy:");
+            pt0.show("pt0");
+            pt1.show("pt1");
+          }
+
+        Point curve_4 = copy.get_point(number_of_points / 4);
+        Point z_axis_pt(0, 0, 1);
+        ang = curve_4.angle(z_axis_pt);
+
+        if (DEBUG)
+          {
+            curve_4.show("curve_4");
+            cerr << "ang == " << ang << endl;
+          }
+
+
+        if (ang != ZERO_REAL)
+          {
+            if (curve_4.get_y() > 0)
+              ang *= -1;
+            t0 *= curve_4 *= pt0 *= pt1 *= copy.rotate(ang);
+          }
+
+        if (DEBUG)
+          {
+            cerr << "After rotating so curve_4 is on z-axis:" << endl;
+            copy.show("copy:");
+            curve_4.show("curve_4");         
+            pt0.show("pt0");
+            pt1.show("pt1");
+          }
+
+        if (DEBUG)
+          {
+
+#if 0 
+/* Commented-out, because |current_picture| is no longer a global
+  variable, and drawing requires a |Picture|.  
+  \initials{LDF 2004.05.25.}  */@;
+
+            copy.draw(Colors::blue);
+            pt0.draw(pt1, Colors::black, "evenly");
+            for (int i = 0; i < 16; i += 4)
+              copy.get_point(i).dotlabel(i); 
+
+            pt0.dotlabel("pt0"); 
+            pt1.dotlabel("pt1");
+            copy.get_center().dotlabel("copy center");
+
+            draw_axes();
+
+#endif 
+          } /* |if (DEBUG)|  */@;
+
+
+        real pt0_h = pt0.get_x();
+        real pt0_v = pt0.get_z();
+
+        real pt1_h = pt1.get_x();
+        real pt1_v = pt1.get_z();  /* |pt1_v| isn't used.  
+                                      Leaving it here, just in case.
+                                      \initials{LDF 2003.08.27.}  */
+
+        real Slope = pt1.slope(pt0, 'x', 'z');
+
+        if (DEBUG)
+          cerr << "Slope == " << Slope << endl;
+        Real_Pair rr;
+
+/* BEGIN */
+
+@q ****** (6) Slope is 0 (line is horizontal).@>
+@ Slope is 0 (line is horizontal).
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+
+    if (Slope == ZERO_REAL) /* v is known, h is unknown. */
+      {
+        if (DEBUG)
+          {
+            cerr << "Slope == ZERO_REAL" << endl;
+             
+          }
+        rr = solve('h', pt0_v);
+        if(rr.first != INVALID_REAL)
+          {
+            bpp.first.pt.set(rr.first, 0, pt0_v);
+          }
+        else
+          bpp.first.pt = INVALID_POINT;
+
+        if(rr.second != INVALID_REAL)
+          {
+              bpp.second.pt.set(rr.second, 0, pt0_v);
+          }
+        else
+          bpp.second.pt = INVALID_POINT;
+
+        if (DEBUG)
+          {
+            bpp.first.pt.show("bpp.first.pt");
+            bpp.second.pt.show("bpp.second.pt");
+             
+          }
+      } /* End |Slope == ZERO_REAL|. */
+
+@q ****** (6) Slope is undefined (line is vertical).@>
+@ Slope is undefined (line is vertical).
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+    else if (Slope == INVALID_REAL) 
+      {
+        if (DEBUG)
+          {
+            cerr << "Line is vertical.\n";
+             
+          }
+
+        rr = solve('v', pt1_h);   
+
+        if(rr.first != INVALID_REAL)
+          {
+            bpp.first.pt.set(pt0_h, 0, rr.first);
+          }
+        else
+          bpp.first.pt = INVALID_POINT;
+        
+
+        if(rr.second != INVALID_REAL)
+          {
+              bpp.second.pt.set(pt0_h, 0, rr.second);
+          }
+        else
+          bpp.second.pt = INVALID_POINT;
+
+      } /* End |Slope == INVALID_REAL|. */
+
+@q ****** (6) Slope $\in$ |real| is defined and $\neq0$.@>
+@ Slope $\in$ |real| is defined and $\neq0$.
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+    else
+      {
+        real v_intercept;
+        v_intercept = pt0_v - (Slope * pt0_h);
+        if (DEBUG)
+          cerr << "v_intercept == " << v_intercept << endl;
+
+        Real_Triple coeffs = get_coefficients(Slope, v_intercept);
+
+        /* New h-values. */
+        if (is_quadratic())
+          {
+            if (DEBUG)
+              {
+                cerr << "Solving quadratic.\n";
+                 
+              }
+            rr = solve_quadratic(coeffs.first, coeffs.second,
+                                 coeffs.third); 
+          }
+        else
+          {
+            cerr << "Not a quadratic. "
+                 << "Haven't programmed this case yet.\n";
+             
+          }
+
+          real v_coord;
+        
+        if(rr.first != INVALID_REAL)
+          {
+            v_coord = (Slope * rr.first) + v_intercept;
+        
+              bpp.first.pt.set(rr.first, 0, v_coord);
+          }
+          else
+            bpp.first.pt = INVALID_POINT;
+        
+
+        if(rr.second != INVALID_REAL)
+          {
+            v_coord = (Slope * rr.second) + v_intercept;
+            
+              bpp.second.pt.set(rr.second, 0, v_coord);
+          }
+        else
+          bpp.second.pt = INVALID_POINT;
+      }
+@q ***** (5) Common code for the ``coplanar'' case.@>
+@ Common code for the ``coplanar'' case.
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+
+
+Bool_Real on_segment;
+
+if (bpp.first.pt == INVALID_POINT)
+  {
+    on_segment.first = false;
+    on_segment.second = INVALID_REAL;
+  }
+ else 
+   on_segment = bpp.first.pt.is_on_segment(pt0, pt1);
+
+if (DEBUG)
+  {
+    cerr << "on_segment.first == "
+      << on_segment.first << endl;
+    cerr << "on_segment.second == "
+      << on_segment.second << endl;
+  }
+     
+
+if (on_segment.first == true)
+  bpp.first.b = true;
+else
+  bpp.first.b = false;
+
+Transform t_inverse;
+t_inverse = t0.inverse();
+
+
+if(bpp.first.pt != INVALID_POINT)
+  {
+          if (DEBUG)
+            cerr << "Transforming bpp.first.pt\n";
+          bpp.first.pt *= t_inverse;
+        }
+else
+  {
+    if (DEBUG)
+      cerr << "bpp.first.pt is invalid\n";
+  }
+        
+
+if (bpp.second.pt == INVALID_POINT)
+  {
+    on_segment.first = false;
+    on_segment.second = INVALID_REAL;
+  }
+ else 
+   on_segment = bpp.second.pt.is_on_segment(pt0, pt1);
+
+if (on_segment.first == true)
+  bpp.second.b = true;
+else
+  bpp.second.b = false;
+
+if (DEBUG)
+  {
+    cerr << "on_segment.first == "
+      << on_segment.first << endl;
+    cerr << "on_segment.second == "
+      << on_segment.second << endl;
+  }
+        
+if(bpp.second.pt != INVALID_POINT)
+  {
+    if (DEBUG)
+      cerr << "Transforming bpp.second.pt\n";
+    bpp.second.pt *= t_inverse;
+  }
+else 
+  {
+    bpp.second.pt = INVALID_POINT;
+    if (DEBUG)
+      cerr << "bpp.second.pt is invalid\n";
+  }
+        
+if(DEBUG)
+  {
+    cerr << "rr.first == " << rr.first << endl;
+    cerr << "rr.second == " << rr.second << endl;
+    cerr << "bpp.first.b == "
+      << bpp.first.b << endl;
+    cerr << "bpp.second.b == "
+      << bpp.second.b << endl;
+    bpp.first.pt.show("bpp.first.pt");
+    bpp.second.pt.show("bpp.second.pt");
+  }
+return bpp;
+} /* End of coplanar case.  */    
+
+@q ***** (5) Parallel case.@>
+@ Parallel case.
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+else
+  {
+        cerr << "WARNING! In Reg_Cl_Plane_Curve::intersection_points():\n"
+             << "Line and Reg_Cl_Plane_Curve are in parallel planes.\n"
+             << "No intersections. Returning INVALID_BOOL_POINT_PAIR."
+             << endl << endl;
+      return INVALID_BOOL_POINT_PAIR;
+  }
+} /* End of parallel and coplanar cases.  */
+  
+@q **** (4) Perpendicular and non-coplanar cases.@>
+@ Perpendicular and non-coplanar cases.
+\initials{LDF 2003.06.13.}  These cases are handled in exactly the same way.
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+  else 
+    {
+        if (pl.normal == pt_vector || pl.normal == -pt_vector)
+          {
+              if (DEBUG) 
+                cerr << "The line is perpendicular to the "
+                     << "Reg_Cl_Plane_Curve.\n"; 
+          }
+
+        else
+          {
+              if (DEBUG) 
+                cerr << "The line and the Reg_Cl_Plane_Curve "
+                     << "are non-coplanar.\n"; 
+          }
+
+        Bool_Point bp = pl.intersection_point(pt0, pt1);
+        
+        if (DEBUG)
+          {
+              bp.pt.show("bp.pt");
+          }
+
+        short s = location(ref_pt, bp.pt);
+        
+        if (DEBUG) 
+          cerr << "location: s == " << s << endl;
+
+        if (s > -1)
+          {
+            bpp.first.pt = bp.pt;
+            bpp.first.b = bp.pt.is_on_segment(pt0, pt1).first;
+        
+            if (DEBUG)
+              cerr << "On segment: == " << bpp.first.b << endl;
+            return bpp;
+
+          }
+        else
+          return INVALID_BOOL_POINT_PAIR;
+
+      } /* End of ``Perpendicular and non-coplanar cases''.  */
+}
+
+@q ** (2) |Path| argument.@>
+@*1 {\bf Path} arguments.@>
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{intersection\_points}@>
+\initials{LDF 2003.06.20.}  
+
+\LOG
+\initials{LDF 2003.06.20.}  
+Added this function.
+
+\initials{LDF 2003.07.16.}  
+Changed name of |center| argument to |ref_pt|,
+because I've made |center| a data member of |Reg_Cl_Plane_Curve|.
+\ENDLOG 
+
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+Bool_Point_Pair
+intersection_points(const Point& ref_pt, const Path& p) const;
+
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+Bool_Point_Pair
+Reg_Cl_Plane_Curve::intersection_points(const Point& ref_pt, const Path& p) const   
+{
+  if (!p.is_linear())
+    {
+      cerr << "ERROR! In Reg_Cl_Plane_Curve::intersection_points():\n"
+           << "Path argument p is non-linear. "
+           << "Returning INVALID_BOOL_POINT_PAIR.\n\n";
+      return INVALID_BOOL_POINT_PAIR;
+    }
+  return intersection_points(ref_pt, p.get_point(0), p.get_last_point());
+}
+
+@q * (1) |Reg_Cl_Plane_Curve| segments. @>
+@* {\bf Reg\_Cl\_Plane\_Curve} segments.
+The functions in this section require that the\newline 
+|Reg_Cl_Plane_Curve|
+have a meaningful |center|, in order to make it possible to rotate the
+segments.  \initials{LDF 2003.07.16.}
+
+\LOG
+\initials{LDF 2003.07.16.}  
+Added this section and its subsections, including the
+declarations and definitions of |segment()|, |half()|, and
+|quarter()|.  They were formerly members of |Circle|.
+\ENDLOG 
+
+@q ** (2) Segment.@>
+@*1 Segment.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{segment}@>
+\initials{LDF 2002.11.10.}  
+
+|segment()| returns a subpath of the
+|Reg_Cl_Plane_Curve| representing a segment of |*this|.  
+\initials{LDF 2002.11.10.}  
+
+\BARGS{|bool closed|}
+\ARG{|int factor|}\relax
+   Determines how large a segment of the |Reg_Cl_Plane_Curve| is returned.
+   |factor| must be $>1$ and less than or equal to the number of points on the
+   |Reg_Cl_Plane_Curve|.   
+
+\ARG{|real angle|}\relax
+   Optional, with 0 as the default.  If|angle| is $\neq 0$, a |Point| is
+   found in the direction of the normal to the |Reg_Cl_Plane_Curve| 
+   from the center of the
+   |Reg_Cl_Plane_Curve|, and the segment is rotated around the center and this
+   |Point|.  
+
+\ARG{|bool closed|}\relax
+  If |true|, the |Path| is made a ``{\bf cycle}'' and the ends of the
+  segment are joined by concatenating the curved |Path| with the
+  straight line segment from its last to its first |Point| using the
+  connector |"&"|. 
+\EARGS
+
+\initials{LDF 2003.07.27.}  @:!! TO DO@> TO DO:  Make arguments |const|, if
+possible.  |angle| can't be, though.  If |factor == number_of_points|,
+return |*this|, cast to a |Path|, with warning.
+
+\LOG  
+\initials{LDF 2002.11.12.}  
+Added ``\.{\char`\\relax}'' after the arguments to
+``\.{\char`\\ARG}'' in the {\TeX} code above in order to suppress a
+space at the beginning of the first line of the following indented
+paragraph.  I couldn't figure out a way of suppressing the space
+within the definition of \.{\char`\\ARG}.
+
+\initials{LDF 2003.05.20.}  
+Changed the way the last connector is set when
+|closed == true|. 
+
+\initials{LDF 2003.07.27.}  
+Made |const|.
+
+\initials{LDF 2003.08.20.}  
+@:BUG FIX@> BUG FIX: 
+Added |unsigned short subpath_size|.  Changed the way the subpath is
+created, when |closed| is |true|.  Now concatenating the curved
+subpath with the straight line segment from the last to the first
+|Points| of the subpath using |"&"|.
+
+\initials{LDF 2004.11.26.}
+Rewrote this function.  Replaced the |int factor| argument with the
+|unsigned int| arguments |start| and |end|.  Added the optional 
+|Scanner_Node scanner_node| argument with default 0.  Made the debugging
+output thread-safe.
+\ENDLOG 
+
+@q *** Declaration.@>
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+Path
+segment(unsigned int start = 0,
+        unsigned int end = INT_MAX,
+        real angle = 0,
+        bool closed = false,
+        Scanner_Node scanner_node = 0) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+Path
+Reg_Cl_Plane_Curve::segment(unsigned int start,
+                            unsigned int end,
+                            real angle,
+                            bool closed,
+                            Scanner_Node scanner_node) const 
+{
+
+@q **** (4) Preliminaries.@>
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+   Path p;
+
+
+@q **** (4) |start >= points.size()|.@> 
+@ |start >= points.size()|.
+\initials{LDF 2004.11.25.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+    
+    if (start >= points.size())
+       {
+
+@q ***** (5) |is_cycle()|.@> 
+
+@ |is_cycle()|.  Normally, |Reg_Cl_Plane_Curves| will be cyclical, 
+but it is possible to make them non-cyclical.
+\initials{LDF 2004.11.25.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+          if (is_cycle())
+              {
+
+                 start %= points.size();               
+
+              }  /* |if (is_cycle())|  */
+
+@q ***** (5) |!is_cycle()|.@> 
+
+@ |!is_cycle()|.
+\initials{LDF 2004.11.25.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+ 
+          else /* |!is_cycle()|  */
+             {
+                
+
+                 cerr_strm << thread_name 
+                           << "WARNING!  In `Reg_Cl_Plane_Curve::segment():"
+                           << start << "`start' >= `points.size()' and "
+                           << "the `Reg_Cl_Plane_Curve' isn't cyclical."
+                           << start << "Setting `start' to 0 "
+                           << "and continuing.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm, warning_stop_value);
+                cerr_strm.str();
+
+                start = 0;
+
+             }  /* |else| (|!is_cycle()|)  */             
+
+@q ***** (5) .@> 
+
+       }  /* |if (start >= points.size())|  */
+
+
+@q **** (4) |end >= points.size()|.@> 
+@ |end >= points.size()|.
+\initials{LDF 2004.11.25.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+    
+    if (end >= points.size())
+       {
+
+@q ***** (5) |is_cycle()|.@> 
+
+@ |is_cycle()|.  Normally, |Reg_Cl_Plane_Curves| will be cyclical, 
+but it is possible to make them non-cyclical.
+\initials{LDF 2004.11.25.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+          if (is_cycle())
+              {
+
+                 end %= points.size();               
+
+              }  /* |if (is_cycle())|  */
+
+@q ***** (5) |!is_cycle()|.@> 
+
+@ |!is_cycle()|.
+\initials{LDF 2004.11.25.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+ 
+          else /* |!is_cycle()|  */
+             {
+                
+                 end = points.size() - 1;
+
+                 cerr_strm << thread_name 
+                           << "WARNING!  In `Reg_Cl_Plane_Curve::segment():"
+                           << endl << "`end' >= `points.size()' and "
+                           << "the `Reg_Cl_Plane_Curve' isn't cyclical."
+                           << endl << "`end' has been set to " 
+                           << end
+                           << " (`points.size()' - 1).  Continuing.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm, warning_stop_value);
+                cerr_strm.str();
+
+             }  /* |else| (|!is_cycle()|)  */             
+
+@q ***** (5) .@> 
+
+       }  /* |if (end >= points.size())|  */
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name << "start == " << start 
+                   << ", end == " << end << ".";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm, true);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+
+@q **** (4) WARNING:  |start == end|.@> 
+
+@ WARNING:  |start == end|.
+Issue a warning and return a degenerate |Path| with a single |Point| 
+and no connectors.
+\initials{LDF 2004.11.25.}
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+ 
+    if (start == end)
+      {
+     
+                 cerr_strm << thread_name 
+                           << "WARNING!  In `Reg_Cl_Plane_Curve::segment():"
+                           << endl << "`start' == `end' == " << start 
+                           << "." << endl 
+                           << "Returning a degenerate `Path' with one "
+                           << "`Point' and no connectors.";
+                            
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm, warning_stop_value);
+                 cerr_strm.str();
+
+                 p += get_point(start); 
+                
+                 return p;
+
+      } /* |if (start == end)|  */
+
+
+@q **** (4) |start > end|.@> 
+
+@ |start > end|.
+Copy |*this|, reverse the copy, exchange the values of |start| and |end|, 
+and extract a subpath from the copy using these values.
+\initials{LDF 2004.11.25.}
+
+\LOG
+\initials{LDF 2009.09.15.}
+Changed ``\.{&}'' to ``\.{..}''.
+\ENDLOG 
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+   Path q;
+  
+   const Path* ptr;
+
+
+   if (start > end)
+      {
+         unsigned int temp = start;
+         start = end;
+         end = temp;
+       
+         q = *this;
+         q.reverse(true, scanner_node);
+         ptr = &q;
+
+      }  /* |if (start > end)|  */
+
+   else
+     ptr = this;
+
+
+@q **** (4).@> 
+
+
+    for (int i = start; i <= end; ++i)
+        {
+           p += ptr->get_point(i);
+           p += ptr->get_connector(i);
+        }
+ 
+    p.set_cycle(false);
+
+    if (closed)
+      {
+        p += "..";
+        p += p.get_last_point();
+        p += "--";
+        p += p.get_point(0);
+        p += "..";
+        p.set_cycle();
+      }
+
+    angle = fmod(angle, 360);
+
+    if (angle != ZERO_REAL)
+      {
+          Point normal = ptr->get_normal();
+          normal.shift(center);
+          p.rotate(center, normal, angle);
+      }
+      
+    return p;
+
+} /* End of |Reg_Cl_Plane_Curve::segment()| definition.  */
+
+
+@q ** (2) Half.@>
+@*1 Half.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{half}@>
+\initials{LDF Undated.} 
+
+|half()| creates a curve using half of the points in |points|
+starting from point 0.  If the argument |angle| is not zero, the
+resulting |Path| is rotated by that amount about a line from |center|
+in the direction of the normal to the |Reg_Cl_Plane_Curve|.
+If the argument |closed| is |true|, then the segment is closed and can
+be filled using |fill()| or |filldraw()|.
+\initials{LDF Undated.} 
+
+
+\LOG
+\initials{LDF 2004.11.26.}
+Changed the call to |Reg_Cl_Plane_Curve::segment()| to reflect
+its new calling convention.
+
+\initials{LDF 2004.11.26.}
+Rewrote this function and made it virtual and non-inline.
+Added the optional arguments |vector<Point*>::size_type start| 
+and |Scanner_Node scanner_node|, both with default 0.
+
+\initials{LDF 2007.07.09.}
+Changed call to |Path::get_size| to a call to |Path::size|.  
+Removed the former function, since it simply duplicated the latter one.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+virtual
+Path
+half(vector<Point*>::size_type start = 0,
+     real angle = 0, 
+     bool closed = true,
+     Scanner_Node scanner_node = 0) const; 
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+Path
+Reg_Cl_Plane_Curve::half(vector<Point*>::size_type start,
+                         real angle, 
+                         bool closed,
+                         Scanner_Node scanner_node) const 
+{
+
+    vector<Point*>::size_type path_size = size();
+    vector<Point*>::size_type half_size = path_size / 2;
+    vector<Point*>::size_type end = start + half_size;
+    
+@q **** (4) @>   
+
+    if (start < half_size)
+      {
+         return segment(start, end, angle, closed, scanner_node);
+      }
+
+@q **** (4) @>   
+
+    else /* |start >= half_size|  */
+     {
+        Path p;
+
+        vector<Point*>::size_type i = start;
+        vector<Point*>::size_type j = i;
+
+@q ***** (5) @>   
+
+        for (; i <= end; ++i, ++j)
+           {
+              if (j == path_size)
+                 j = 0;
+                                
+              p += get_point(j);
+              if (i != end)
+                 p += get_connector(j);
+
+           } /* |for|  */
+
+@q ***** (5) @>   
+@
+\LOG
+\initials{LDF 2009.09.15.}
+Changed ``\.{&}'' to ``\.{..}''.
+\ENDLOG 
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+        if (closed)
+           {
+              p += "..";
+              p += p.get_last_point();
+              p += "--";
+              p += p.get_point(0);
+              p += "..";
+              p.set_cycle(true);
+
+           } /* |if (closed)|  */
+       
+
+@q ***** (5) @>   
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+        if (angle != ZERO_REAL)
+           {
+              Point normal = get_normal();
+              p.rotate(center, normal, angle);
+
+           }  /* |if (angle != ZERO_REAL)|  */
+
+        return p;
+
+     }   /* |else| (|start >= half_size|)  */
+
+@q **** (4) @>   
+
+} /* End of |Reg_Cl_Plane_Curve::half()| definition.  */
+
+@q ** (2) Quarter.@>
+@*1 Quarter.
+@^\cfunc{Reg\_Cl\_Plane\_Curve}{quarter}@>
+
+|quarter()| creates a curve using a quarter of the points in
+|points| starting from point 0.  If the argument |angle| is not zero, the
+resulting |Path| is rotated by that amount about a line from |center|
+in the direction of the normal to the |Reg_Cl_Plane_Curve|.
+If the argument |closed| is |true|, then the segment is closed and can
+be filled using |fill()| or |filldraw()|.
+\initials{LDF Undated.} 
+
+\LOG
+\initials{LDF 2004.11.26.}
+Changed the call to |Reg_Cl_Plane_Curve::segment()| to reflect
+its new calling convention.
+
+\initials{LDF 2004.11.26.}
+Rewrote this function and made it virtual and non-inline.
+Added the optional arguments |vector<Point*>::size_type start| 
+and |Scanner_Node scanner_node|, both with default 0.
+
+\initials{LDF 2007.07.09.}
+Changed call to |Path::get_size| to a call to |Path::size|.  
+Removed the former function, since it simply duplicated the latter one.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Reg_Cl_Plane_Curve| functions@>=
+
+virtual
+Path
+quarter(vector<Point*>::size_type start = 0,
+        real angle = 0, 
+        bool closed = true,
+        Scanner_Node scanner_node = 0) const; 
+
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+Path
+Reg_Cl_Plane_Curve::quarter(vector<Point*>::size_type start,
+                            real angle, 
+                            bool closed,
+                            Scanner_Node scanner_node) const 
+{
+
+    vector<Point*>::size_type path_size = size();
+    vector<Point*>::size_type quarter_size = path_size / 4;
+    vector<Point*>::size_type end = start + quarter_size;
+    
+@q **** (4) @>   
+
+    if (start < quarter_size)
+      {
+         return segment(start, end, angle, closed, scanner_node);
+      }
+
+@q **** (4) @>   
+
+    else /* |start >= quarter_size|  */
+     {
+        Path p;
+
+        vector<Point*>::size_type i = start;
+        vector<Point*>::size_type j = i;
+
+@q ***** (5) @>   
+
+        for (; i <= end; ++i, ++j)
+           {
+              if (j == path_size)
+                 j = 0;
+                                
+              p += get_point(j);
+              if (i != end)
+                 p += get_connector(j);
+
+           } /* |for|  */
+
+@q ***** (5) @>   
+@
+\LOG
+\initials{LDF 2009.09.15.}
+Changed ``\.{&}'' to ``\.{..}''.
+\ENDLOG 
+
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+        if (closed)
+           {
+              p += "..";
+              p += p.get_last_point();
+              p += "--";
+              p += p.get_point(0);
+              p += "..";
+              p.set_cycle(true);
+
+           } /* |if (closed)|  */
+       
+
+@q ***** (5) @>   
+@
+@<Define |Reg_Cl_Plane_Curve| functions@>=
+
+        if (angle != ZERO_REAL)
+           {
+              Point normal = get_normal();
+              p.rotate(center, normal, angle);
+
+           }  /* |if (angle != ZERO_REAL)|  */
+
+        return p;
+
+     }   /* |else| (|start >= quarter_size|)  */
+
+@q **** (4) @>   
+
+} /* End of |Reg_Cl_Plane_Curve::quarter()| definition.  */
+
+@q * Putting Reg_Cl_Plane_Curve together.@>
+@ Putting {\bf Reg\_Cl\_Plane\_Curve} together.
+
+This is what's compiled.
+@c
+@<Include files@>@;
+@<Define |class Reg_Cl_Plane_Curve|@>@;
+@<Define |Reg_Cl_Plane_Curve| functions@>@;
+
+@ This is what's written to \filename{curves.h}.
+@(curves.h@>=
+@<Define |class Reg_Cl_Plane_Curve|@>@;
+
+
+@q Local Variables:          @>
+@q mode:CWEB                 @>
+@q eval:(display-time)       @>
+@q abbrev-mode:t             @>
+@q eval:(read-abbrev-file)   @>
+@q indent-tabs-mode:nil      @>
+@q eval:(outline-minor-mode) @>
+@q End:                      @>

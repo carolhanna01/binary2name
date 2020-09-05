@@ -1,0 +1,228 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class GUI_APP_END is
+    -- The application-end code for the GUI.
+    -- Though, the application programmer will normally use only
+    -- GUI_UTIL and the Widget classes.
+    
+    private shared asynch_socket: SOCKET;
+    -- Used for commands from App->Server, and callbacks from Server->App.
+    private shared synch_socket: SOCKET;
+    -- Synchronous command socket - for commands with return values
+    private shared buffer: FSTR;
+    private shared do_buffer: BOOL;
+    
+    shared debug: BOOL := false;
+    shared tcldebug: BOOL := false;
+    shared is_done: BOOL := false;
+    
+    startup(do_fork,use_inet_sockets:BOOL) is
+	-- Create the other end if `do_fork' is true.  In any case, initialize.
+	-- Use the indicated type of sockets.
+	if do_fork then
+	 deb("Getting SATHER_HOME");
+	    sather_home: STR := UNIX::get_env("SATHER_HOME");
+	    if void(sather_home) then 
+		raise "gui_app_end: couldn't find SATHER_HOME!" 
+	    end;
+	    hostname:STR;	  if use_inet_sockets then hostname:="localhost " end;
+	    deb("Execing gui_server_end...");
+	    res ::= UNIX::system
+		  ("stty -tostop;" + sather_home
+		   + "/System/Platforms/dualgui/dual_gui_server "
+		   + hostname + "&");
+	else
+	    deb("Not forking off server process! User must startup server");
+	end;
+	init(use_inet_sockets);
+	deb("Preliminary poll");
+	poll;
+    end;
+    
+    terminate is eval("terminate"); is_done:=true end;
+    
+    private init(use_inet:BOOL) is
+	deb("Initializing...");
+	deb("Starting asynch socket...");
+	if ~use_inet then
+	    asynch_socket:=SOCKET::create_initiating_unix("GUI_ASYNCH")
+	else
+	    asynch_socket:=SOCKET::create_initiating_inet(5000)
+	end;
+	if asynch_socket.is_dead then 
+	    raise "gui_app_end: Failed to create initiating asynch_socket\n";  
+	end;
+	deb("Starting synch socket...");
+	if ~use_inet then
+	    synch_socket:=SOCKET::create_initiating_unix("GUI_SYNCH")
+	else
+	    synch_socket:=SOCKET::create_initiating_inet(5001)
+	end;
+	if synch_socket.is_dead then 
+	    raise "gui_app_end: Failed to create initiating synch_socket\n";  
+	end;
+	deb("Done with init");
+    end;
+    
+    eval(s: STR): STR is
+	if is_done then return("") end;
+	if debug then deb("Synch evaluating string:"+s) end;
+	synch_socket+s;
+	if synch_socket.is_dead then 
+	    raise "gui_app_end: synch socket dead in sending eval string"
+	end;
+	if tcldebug then #ERR+s+"\n"; end;
+	if debug then deb("Sent string") end;
+	res ::= synch_socket.get_str;
+	if synch_socket.is_dead then 
+	    raise "gui_app_end: synch socket dead in receiving response"  
+	end;
+	if debug then
+	    if ~void(res) then deb("Recev:"+res) else deb("Received void") end
+	end;
+	return res;
+    end;
+    
+    start_buffering is
+	buffer := #FSTR("");
+	do_buffer := true;
+    end;
+    
+    stop_buffering is
+	flush_buffer;
+	do_buffer := false;
+    end;
+    
+    flush_buffer is
+	if ~do_buffer then return end;
+	if asynch_socket.is_dead then 
+	    raise "gui_app_end: asynch socket dead in sending buffer string"
+	end;
+	asynch_socket+buffer.str;
+	if asynch_socket.is_dead then 
+	    raise "gui_app_end: asynch socket dead in sending eval string"
+	end;
+	if tcldebug then #ERR+buffer.str+"\n"; end;
+	if debug then deb("Sent buffered string") end;
+	buffer := #FSTR("");
+    end;
+    
+    eval(s: STR) is 
+	if is_done then return end;
+	if debug then deb("Asynch evaluating string:"+s) end;
+	if do_buffer then
+	    buffer := buffer+s+"\n";
+	else
+	    asynch_socket+s;
+	    if asynch_socket.is_dead then 
+		raise "gui_app_end: asynch socket dead in sending eval string"
+	    end;
+	    if tcldebug then #ERR+s+"\n"; end;
+	    if debug then deb("Sent string") end;
+	end;
+    end;
+    
+    main_loop is
+	-- Execute in a loop, blocking until commands become available
+	loop  until!(is_done); blocking_poll;     end;
+    end;
+    
+    poll is
+	-- Execute pending callback commands, but don't block if
+	-- nothing is available
+	if is_done then return end;
+	loop until!(~asynch_socket.can_read_without_block);
+	    blocking_poll;
+	end;
+    end;
+    
+    blocking_poll is
+	-- Get/execute the next command from the socket, blocking if necessary
+	if debug then deb("Executing pending callbacks"); end;
+	widget_name ::= get_cb_str;
+	deb("Widget name:"+widget_name);
+	n_args: INT := to_int(get_cb_str);
+	if debug then deb("Num args="+n_args) end;
+	raw_args: ARRAY{STR} := #(n_args);
+	loop i ::= n_args.times!; raw_args[i] := get_cb_str end;
+	if debug then deb("Callback arguments:"+arr_str(raw_args)); end;
+	if widget_name="app_debug"  then 
+	    debval ::= raw_args[0];
+	    if debval = "true" then
+		debug:=true;
+		deb("gui_app_end: turned on app debugging");
+	    else
+		deb("gui_app_end: turning off app debugging");
+		debug := false;
+	    end;
+	elsif widget_name="app_tcldebug"  then 
+	    debval ::= raw_args[0];
+	    if debval = "true" then 
+		tcldebug := true;
+		deb("gui_app_end: turned on tcldebug debugging");
+	    else
+		deb("gui_app_end: turning off tcldebug debugging");
+		tcldebug := false;
+	    end;
+	else
+	    if raw_args.size < 1 then raise "Not enough arguments!"  end;
+	    if debug then deb("Converting id to int") end;
+	    action_id ::= to_int(raw_args[0]);
+	    if debug then deb("Action id is:"+action_id); end;
+	    widget: $TK_WIDGET := TK_WIDGET_MAP::get_widget(widget_name);
+	    if debug then deb("Calling command...") end;
+	    widget.act_on(action_id,raw_args);
+	    if debug then deb("Sent back result"); end;
+	end;
+    end;
+    
+    arr_str(a: ARRAY{STR}): STR is
+	res ::= "";
+	loop res := res+" "+a.elt!; end;
+	return res;
+    end;
+    
+    private int_if_poss(s: STR,default: INT): INT is
+	c ::= #STR_CURSOR(s);
+	res ::= c.int;
+	if c.has_error then return default  else return res end;
+    end;
+    
+    private to_int(s: STR): INT is
+	c ::= #STR_CURSOR(s);
+	res ::= c.int;
+	if c.has_error then
+	    #ERR+"Error in converting:"+s+" to int\n";
+	end;
+	return res;
+    end;
+    
+    private get_cb_str: STR is 
+	if debug then deb("Getting callback string...") end;
+	s ::= asynch_socket.get_str; 
+	if asynch_socket.is_dead then 
+	    #ERR+"oops, it's dead\n";
+	    raise "gui_app_end:"
+		  " dead asynch socket upon reading callback string"
+	end;
+	if debug then deb("Got callback string:"+s) end;
+	return s;
+    end;
+    
+    deb(s: STR) is
+	if debug then #ERR+"GUI_APP_END::debug: "+s+"\n" end;
+    end;      
+    
+end; 
+-------------------------------------------------------------------

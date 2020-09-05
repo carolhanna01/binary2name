@@ -1,0 +1,534 @@
+@node Parameter file
+@unnumbered 2 Parameter file
+The parameter file contains keywords, which must begin in column 1, followed by appropriate parameters. If the parameter is a string, it must be enclosed in double quotation marks, "string". Parameters which are single characters or numbers are not enclosed in quotation marks. If a keyword does not begin in column 1, that line is ignored when the parameter file is read. Comments can be inserted in a parameter file if they are preceded by a hash character, #. The # character and comment can appear anywhere after the parameters in a line containing a keyword and corresponding parameters:
+
+@example
+keyword   parameters   # comment
+@end example
+
+A comment can also appear on a separate line of its own. If it is desired to insert a # character in a parameter string (for keywords @code{xlabel}, @code{ylabel}, @code{title}, etc), the # character must be preceded by a backslash, \, to distinguish it from a comment:
+
+@example
+title   "Plot \#1"   # comment
+@end example
+
+This line will result in a plot title of Plot #1. If a string of at least five # characters (#####) is inserted in the parameter file, beginning in column 1, then all following lines are ignored. Notes or other information can be added after this line and will not affect program execution. Multiline parameter strings can be created by inserting \n, the newline escape sequence in C, where a line break is desired. The possible keywords are:
+
+@example
+file_name
+file_format
+plot_type
+plot_style
+axis_type
+axis_scale
+axis_limits
+view3d
+minor_ticks
+grid
+xlabel
+ylabel
+zlabel
+title
+bin_width
+bin_value
+bin_ref
+ninterp
+contours
+contour_color
+mesh_color
+stems
+rect_coords
+rect_style
+ellipse_coords
+ellipse_style
+line_coords
+line_style
+symbol_coords
+symbol_style
+legend_string
+legend_coords_abs
+legend_coords_rel
+legend_anchor
+text_string
+text_coords_abs
+text_coords_rel
+text_anchor
+image_filename
+image_coords_abs
+image_coords_rel
+image_anchor
+date_time
+save
+save_close
+background_color
+background_image
+window_size
+plot_box
+x_tick_marks
+y_tick_marks
+z_tick_marks
+x_tick_labels
+y_tick_labels
+z_tick_labels
+font_name
+font_size_date_time
+font_size_legend
+font_size_text
+font_size_tick_labels
+font_size_axis_labels
+font_size_title
+@end example
+
+Each of these keywords and the parameters which follow it are described below. A list of keywords with example parameters is in the Keyword summary section.
+
+@section 2.1 @code{file_name}
+The keyword, @code{file_name}, specifies the name (and path) of a data file. The maximum number of data files and the maximum number of data points in each file are not limited by the program.
+
+@section 2.2 @code{file_format}
+The keyword, @code{file_format}, specifies the format of the data contained in the data file using the conventions of the C programming language (see Brian W. Kernighan and Dennis M. Ritchie, @cite{The C Programming Language}, Second Edition, Section B1.3 Formatted Input, pages 245 - 246). Since all numbers read from data files are stored as double-precision numbers, a double-precision format must be used. The format @code{%lf} may be used exclusively since it covers numbers with optional sign, optional decimal point, and optional exponent. Inserting an asterisk (*) between the percent sign (%) and lf, as in @code{%*lf}, will cause that column of numbers to be ignored. The @code{file_format} for each data file must be specified for @code{"points"} and @code{"histogram"} plot types but not for @code{"mesh"}, @code{"contour"}, and @code{"color"} plot types.
+
+@section 2.3 @code{plot_type}
+The keyword, @code{plot_type}, specifies the type of plot to be drawn. The possible parameters are:
+
+@example
+"points"      (linear, semilogx, semilogy, loglog, polar, and 3d axis types)
+"histogram"   (linear axis type only)
+"contour"     (linear and 3d axis types)
+"color"       (linear and 3d axis types)
+"mesh"        (3d axis type only)
+@end example
+
+The @code{"points"} plot type refers to plots where the corresponding data file has columns of x and y, theta and r, or x, y, and z coordinates to be plotted. This plot type is supported for all axis types (see the @code{axis_type} keyword below).
+
+The @code{"histogram"} plot type refers to plots where the corresponding data file has a column of numbers whose histogram is to be calculated. This plot type is supported for only 2d linear axes.
+
+The @code{"color"} plot type refers to plots where z-axis data is interpolated over the entire area of the plot and converted to corresponding colors. This plot type is supported for 2d linear and 3d axes. For 2d linear axes a color axis is drawn to the right of the plot showing the relationship between plotted colors and z-axis values.
+
+The @code{"contour"} plot type is supported for both 2d linear and 3d axes. In the case of 2d contour plots z-axis data is represented in either of two ways. One method uses contour lines of a single color and contour-line labels to specify the z-axis values. The labeling function is activated by clicking the View menu button and then the Label Contours button. The mouse cursor changes to a cross hair when this button is clicked the first time. As the mouse is moved interpolated values of the z coordinate at the mouse position are drawn in the upper left corner of the plot window. The contour plot corresponding to the z-axis values is indicated above the z-axis values as shown below.
+
+@example
+plot 1
+z = 1.23456
+@end example
+
+If there is more than one contour plot, the up-arrow key can be clicked to change to the next contour plot. Clicking the down-arrow key changes to an earlier plot. When the cursor is positioned on or near a contour line and the left mouse button is pressed, the contour value of the nearest contour line is drawn at the mouse position. The font size of contour labels is the same as that for text. To leave this mode and return the mouse cursor to its default shape, click the Label Contours button a second time. The second method of drawing 2d contour plots uses contour lines of various colors, where the color of the contour line specifies the z-axis value. A color axis is drawn to the right of the plot showing the relationship between plotted colors and z-axis values.
+
+The @code{"mesh"} plot type is supported for 3d axes. The data formats for @code{"color"}, @code{"contour"}, and @code{"mesh"} plots are the same and are described in the section on data files.
+
+@section 2.4 @code{plot_style}
+The keyword, @code{plot_style}, specifies how the plot is to be drawn and has one, two, or three parameters. The following sections will describe @code{plot_style} parameters for each plot type.
+
+@subsection 2.4.1 2d points plot type
+For @code{"points"} plot types the first @code{plot_style} parameter is a character specifying the line or symbol used for plotting and is one of the following:
+
+@example
+character   line/symbol
+
+    l       solid line
+    d       dashed line
+    .       dotted line
+    c       circle, unfilled
+    C       circle, filled
+    t       triangle, unfilled
+    T       triangle, filled
+    s       square, unfilled
+    S       square, filled
+    i       diamond, unfilled
+    I       diamond, filled
+    p       pentagon, unfilled
+    P       pentagon, filled
+    h       hexagon, unfilled
+    H       hexagon, filled
+    +       plus sign
+    x       multiplication sign
+    r       star, 5 points
+    a       asterisk, 6 points
+@end example
+
+The second parameter is a character or hexadecimal number specifying line or symbol color. Following is a list of the color characters used by GSEGrafix, the corresponding color names used by web browsers, and the hexadecimal rgb (red, green, blue) color numbers:
+
+@image{./figures/color_characters, , , color_characters.png, .png}
+
+If it is desired to use a color other than one of those above, then a hexadecimal rgb number can be used. The rgb number must be preceded by 0x or 0X in the parameter file to distinguish it as a hexadecimal value, and an additional pair of hexadecimal digits must be added to specify the alpha value (opaqueness) of the color. The opaqueness of the color increases as the alpha value increases. If alpha = 0x00, the color is completely transparent (no color at all). If alpha = 0xFF, the color is opaque. For example, to specify translucent red an alpha value of 0xC0 might be used. The hexadecimal color number in the parameter file would then be 0xFF0000C0. All colors specified with a color character (kaswrylqbfmogtnp) are opaque (alpha = 0xFF). Further information on color specification is given below.
+
+An optional integer third parameter may be added to specify line width or symbol size. The default line width is 1, and the default symbol size is 6. Shown below are lines and symbols for line widths of 1, 3, and 5 and symbol sizes of 6, 8, and 10:
+
+@image{./figures/symbols, , , symbols.png, .png}
+
+See Examples 1, 2, 3, and 5 below.
+
+@subsection 2.4.2 2d histogram plot type
+For @code{histogram"} plot types the first @code{plot_style} parameter specifies whether lines or bars are used for plotting and is one of the following:
+
+@example
+l (solid line)
+b (bar, unfilled)
+B (bar, filled)
+@end example
+
+The second parameter is a character or hexadecimal number specifying line or bar color and is defined in the same ways as for line and symbol color above.
+
+An optional integer third parameter may be added to specify line width if lines, rather than bars, have been chosen for plotting. The default value is 1. See Example 4 below.
+
+@subsection 2.4.3 2d contour plot type
+For 2d @code{"contour"} plot types the first @code{plot_style} parameter is a character or hexadecimal number specifying contour-line color (for constant-color contour lines) or "auto" to specify varying contour-line colors. An optional second integer parameter can be used to specify contour line-width. The default value for line width is 1. See Example 9 below.
+
+@subsection 2.4.4 2d color plot type
+For @code{"color"} plot types the first @code{plot_style} parameter must be either @code{"nearest"} or @code{"bilinear"} to specify how colors are to be calculated. The parameter, @code{"nearest"}, specifies nearest-neighbor interpolation to calculate pixel color. The parameter, @code{"bilinear"}, specifies bilinear interpolation to calculate pixel color.
+
+Optional second and third parameters can be added to specify z-axis values below or above which colors will be black or white, respectively. See Examples 10 and 11 below.
+
+@subsection 2.4.5 3d points plot type
+The @code{plot_style} parameters for 3d points plot types are the same as for 2d points plot types. See Example 6 below.
+
+@subsection 2.4.6 3d contour plot type
+For 3d @code{"contour"} plot types two @code{plot_style} parameters are used to specify color information. The first parameter specifies the color of the upper surface of the plot, and the second parameter specifies the color of the lower surface. Any color character listed above may be specified for either of the fill colors, with the addition of x, which specifies that the color is transparent (alpha = 0x00). Hexadecimal color values may also be used for either or both parameters. The default contour-line color is black if the @code{background_color} is white (the default value) and is white if the background_color is black. Contour-line color may be changed by using the @code{contour_color} keyword described below. See Example 8 below.
+
+@subsection 2.4.7 3d color plot type
+For 3d @code{"color"} plot types a single parameter, @code{"auto"}, specifies that the colors of the plotted surface are a function of z-axis values. The colors range from blue (for the minimum z-axis value) through cyan, green, yellow, and red (for the maximum z-axis value). An optional second parameter can be added to specify the alpha value of these colors. The alpha value must be specified as a two-digit hexadecimal number preceded by 0x or 0X, such as 0xC0. When alpha is less than 0xFF, it is possible to see the axes through the plotted surface, or perhaps a plotted line below the surface. However, hidden parts of the plotted surface cannot be seen regardless of the value of alpha; they are not drawn in 3d color plots as they are in 3d mesh plots (Example 7). Only parts of the plotted surface that are not blocked by other parts of the surface are drawn and are visible. The default value for alpha is 0xFF (opaque).
+
+This plot type uses bilinear interpolation between x and y values, which specify the data grid, to calculate corresponding additional values of z. The default interpolation procedure divides each interval in x and y data into 20 additional intervals. An example is:
+
+@example
+original x values:         0 1 2 3 4 4.5 5.0 5.5 6 7 8 9 10
+no. original x values:     nx = 13
+interpolated x values:     0 0.05 0.10 ... 4 4.025 4.050 ...
+                           6 6.05 6.10 ... 10
+no. interpolated x values: nx_interp = 20*(nx - 1) + 1 = 241
+@end example
+
+Dividing each interval in the original x and y data into 20 additional intervals may not be enough to calculate z values for every pixel in the surface to be displayed. It may be adequate for relatively smooth surfaces. If there are areas where z changes rapidly, more interpolated values may be needed. Regions of the original x and y data with intervals smaller than the rest of the data will continue to have smaller intervals than the rest of the data after interpolation. The keyword, @code{ninterp} can be used to specify a higher (or lower) number of interpolated values.
+
+@subsection 2.4.8 3d mesh plot type
+For 3d @code{"mesh"} plot types two plot_style parameters are used to specify color information as described above for 3d contour plot types, or a single parameter, @code{"auto"}, can be used to specify that the colors of both upper and lower surfaces are a function of z-axis values. The colors range from blue (for the minimum z-axis value) through cyan, green, yellow, and red (for the maximum z-axis value). The default mesh color is black if the @code{background_color} is white (the default value) and is white if the background_color is black. Mesh color may be changed by using the @code{mesh_color} keyword described below.
+
+When the parameter, @code{"auto"}, is used, an optional second parameter can be added to specify the alpha value of these colors. The alpha value must be specified as a two-digit hexadecimal number preceded by 0x or 0X, such as 0xC0. The default value for alpha is 0xFF (opaque). See Example 7 below.
+
+@section 2.5 @code{axis_type}
+The keyword, @code{axis_type}, specifies the type of axes to be drawn. The possible parameters are:
+
+@example
+"linear"     (points, histogram, contour, and color plot types)
+"semilogx"   (points plot type only)
+"semilogy"   (points plot type only)
+"loglog"     (points plot type only)
+"polar"      (points plot type only)
+"3d"         (points, contour, color, and mesh plot types)
+@end example
+
+@section 2.6 @code{axis_scale}
+(Linear axes and points plot type only)
+
+The keyword, @code{axis_scale}, specifies the relationship between the plot axes and the data. The possible parameters are:
+
+@example
+"auto"
+"equal"
+@end example
+
+The auto axis scale means that axis tick-mark values are chosen to be "nice" values with increments between tick marks equal to 1, 2, or 5 (times the appropriate power of 10) and tick-mark values equal to integer multiples of these increments. The equal axis scale means that axis tick-mark values are still "nice," but axis minimum and maximum values are chosen so that equal distances on each axis correspond to equal changes in coordinate values. The default parameter for @code{axis_scale} is @code{"auto"}. See Example 2 for use of the equal axis scale.
+
+@section 2.7 @code{axis_limits}
+The keyword, @code{axis_limits}, specifies minimum and maximum values of axes which override axis limits automatically calculated from the data. Four values must be specified for all plots displaying only x and y data (two-dimensional points plots, including polar plots and histograms). Six values must be specified for plots displaying x, y, and z data (two-dimensional contour and color plots and three-dimensional points, contour, and mesh plots). If fewer changes need to be specified, the missing values must be indicated with an asterisk (*). In polar plots theta (angle) coordinates are analogous to x coordinates in rectangular plots, and r (radial) coordinates are analogous to y coordinates in rectangular plots. Theta coordinates always vary from 0 to 360 degrees so that theta limits cannot be changed; only radial axis limits can be changed. When using the @code{axis_limits} keyword with polar plots, the radial axis limits must be specified the same way y-axis limits are specified for rectangular plots. The formats for @code{axis_limits} parameters are then:
+
+@example
+xmin xmax ymin ymax (rectangular plots displaying 2d data)
+@end example
+
+or:
+
+@example
+* * rmin rmax (polar plots)
+@end example
+
+or:
+
+@example
+xmin xmax ymin ymax zmin zmax (plots displaying 3d data)
+@end example
+
+See Examples 2, 5, 8, 9 and 10 below.
+
+If the @code{axis_scale} keyword is used with a parameter of @code{"auto"} (the default parameter), then use of the @code{axis_limits} keyword will result in axis limits with the specified values. If the @code{axis_scale} keyword is used with a parameter of @code{"equal"}, then use of the @code{axis_limits} keyword must be consistent with @code{"equal"} axes or it may not have the desired effect. The ratio of the vertical to horizontal dimensions of the plot box for two-dimensional plots is 3 to 4. If complete axis limits, such as:
+
+@example
+axis_limits   0 4 0 3
+@end example
+
+are specified, then the plot axes will have these limits (a 3-to-4 axis ratio is requested). If limits such as 0 4 0 2 are specified, the resulting plot axis limits will be 0 4 -0.5 2.5. If limits such as 0 3 0 3 are specified, the resulting plot axis limits will be -0.5 3.5 0 3. To maintain the required 3-to-4 ratio for equal axes, the axis limits are always expanded, never reduced; and the axis limits are chosen to center the mean value of the specified limits.
+
+@section 2.8 @code{view3d}
+(3d plots only)
+
+The keyword, @code{view3d}, specifies the azimuth and elevation of the view direction for three-dimensional plots. The first parameter, azimuth, is the angle of the view direction measured counterclockwise from the x axis in the x-y plane. The second parameter, elevation, is the angle of the view direction measured up from the x-y plane. Both positive and negative azimuth values are allowed, but elevation may vary only from 0 to 90 degrees (0 ≤ elevation ≤ 90 deg). The default values for view3d are azimuth = 30 degrees and elevation = 30 degrees. See Examples 6, 7, and 8, below.
+
+@section 2.9 @code{minor_ticks}
+The keyword, @code{minor_ticks}, specifies whether minor tick marks are drawn on all axes or not. It has two possible parameters, @code{"on"} and @code{"off"}. The default parameter for @code{minor_ticks} is @code{"off"}. See Examples 1, 3, 5, 7, and 9, below.
+
+@section 2.10 @code{grid}
+The keyword, @code{grid}, specifies whether grid lines should be drawn and how they should be drawn. If grid lines should be drawn, there are two parameters. The first parameter is a character specifying whether grid lines are solid, dashed, or dotted:
+
+@example
+l (solid lines)
+d (dashed lines)
+. (dotted lines)
+@end example
+
+The second parameter is a character or hexadecimal number specifying line color. The color characters are the same as those used for the plot_style parameter. If it is desired to use a color other than one of those specified by color characters, then a hexadecimal rgb number may be used. These are also described in the plot_style section. If the single parameter, @code{"off"}, is used, then grid lines will not be drawn. The default parameter for @code{grid} is @code{"off"}.
+
+@section 2.11 @code{xlabel}, ...
+The keywords, @code{xlabel}, @code{ylabel}, @code{zlabel}, and @code{title}, specify the labels for each of the axes and the title of the plot. For polar plots @code{xlabel} refers to the angle (theta) values, and @code{ylabel} refers to the radial (r) values. The escape sequence, \n, may be inserted in any of these strings to create additional lines. However, if font sizes are large, there may not be enough room in the plot window to display additional lines.
+
+@section 2.12 @code{bin_width}
+(Histograms only)
+
+The keyword, @code{bin_width}, specifies the histogram bin width (width of the plotted bars). If no bin width is specified, a theoretical value is used. Two formulas for bin-width estimation are:
+
+@example
+@math{bin_width = 3.49*sigma/N^(1/3)}    Scott1
+@math{bin_width = 2*(Q3 - Q1)/N^(1/3)}   Freedman, Diaconis2
+@end example
+
+The Scott formula is based on the gaussian (normal) distribution and uses the sample standard deviation and number of samples. The Freedman-Diaconis formula is based on the interquartile range and number of samples. Q1 and Q3 are the first and third quartile values, respectively. The Freedman-Diaconis formula is used as the default bin-width estimate.
+
+References:
+
+@enumerate
+@item
+David W. Scott, "On Optimal and Data-based Histograms," @cite{Biometrika}, @strong{66}, 605-610, 1979.
+@item
+David Freedman and Persi Diaconis, "On the Histogram as a Density Estimator: L_2 Theory," @cite{Zeitschrift für @* Wahrscheinlichkeitstheorie und Verwandte Gebiete}, @strong{57}, 453-476, 1981.
+@end enumerate
+
+@section 2.13 @code{bin_value}
+(Histograms only)
+
+The keyword, @code{bin_value}, specifies what quantity is to be plotted for each bin. The possible quantities are:
+
+@example
+"number"
+"fraction"
+"percent"
+@end example
+
+The @code{"number"} bin-value means that the number of samples in each bin will be plotted. The @code{"fraction"} bin-value means that the number of samples in each bin divided by the total number of samples will be plotted. The @code{"percent"} bin-value means that 100 times the number of samples in each bin divided by the total number of samples will be plotted. The default parameter for @code{bin_value} is @code{"percent"}.
+
+@section 2.14 @code{bin_ref}
+(Histograms only)
+
+The keyword, @code{bin_ref}, specifies a histogram bin reference. The possible values are:
+
+@example
+"mean"
+"zero"
+"integers"
+@end example
+
+The @code{"mean"} bin-reference means that a bin will be centered on the sample mean, and enough bins will be added below and above that bin to include all sample values. The @code{"zero"} bin-reference assumes that all sample values are necessarily greater than or equal to zero and makes the lowest bin start at 0. The @code{"integers"} bin-reference assumes that all sample values are integers and centers bins on consecutive integers from the minimum sample value to the maximum sample value. The bin width for this bin reference is set to 1. This case may be useful if, for example, the frequency of occurrence of various pixel intensities in an image is of interest. The intensity values might then be integers from 0 to 255. The default parameter for @code{bin_ref} is @code{"mean"}.
+
+@section 2.15 @code{ninterp}
+(3d color plots only)
+
+The keyword, @code{ninterp}, specifies the number of additional intervals into which x and y data are divided. The default value is 20. For example, if x and y data have 10 intervals (11 values), then 20 additional intervals between each pair of x values and each pair of y values results in a total of 201 interpolated x and y values. See the discussion for the 3d color plot type.
+
+@section 2.16 @code{contours}
+(Contour plots only)
+
+The keyword, @code{contours}, specifies the number of contour lines to be drawn. The default number is:
+
+@example
+2*nzticks - 1
+@end example
+
+where nzticks is the number of tick marks on the z axis. Contour lines are drawn for each tick-mark value on the z axis plus values half way between each pair of tick marks. If a number greater than one is specified using the @code{contours} keyword, then that number of equally-spaced contour lines will be drawn beginning with the minimum z-axis tick-mark value and ending with the maximum z-axis tick-mark value. See Examples 8 and 9 below.
+
+@section 2.17 @code{contour_color}
+(3d contour plots only)
+
+The keyword, @code{contour_color}, specifies the color of contour lines in three-dimensional contour plots. The color can be specified using one of the color characters described in the plot_style section, or it can be specified using rgba values as also described in the plot_style section. The default color is black if the @code{background_color} is white (the default value) and is white if the background_color is black.
+
+@section 2.18 @code{mesh_color}
+(3d mesh plots only)
+
+The keyword, @code{mesh_color}, specifies the color of mesh lines in three-dimensional mesh plots. The color can be specified using one of the color characters described in the plot_style section, or it can be specified using rgba values as also described in the plot_style section. The default color is black if the @code{background_color} is white (the default value) and is white if the background_color is black.
+
+@section 2.19 @code{stems}
+(Points plots only)
+
+The keyword, @code{stems}, specifies that for rectangular two-dimensional points plots vertical lines (parallel to the y axis) are drawn from each data point to the x axis (minimum y value) or to a specified y value. For polar plots radial lines are drawn from each data point to the origin (minimum r value) or to a specified r value. For three-dimensional points plots vertical lines (parallel to the z axis) are drawn from each data point to the xy plane at the minimum z value or to the xy plane at a specified z value. The color of the lines will be the color specified for the corresponding plot-style keyword. The possible parameters are @code{"on"} (lines drawn to ymin, rmin, or zmin), @code{"off"} (no lines drawn), or a specific y, r, or z value. The default parameter is @code{"off"}.
+
+@section 2.20 @code{rect_coords}
+(Linear axis type only)
+
+The keyword, @code{rect_coords}, specifies five coordinates, or properties, of a rectangle that is to be added to a plot. The coordinates of the rectangle are x and y coordinates of the center of the rectangle, rectangle width (long dimension) and height (short dimension), and the angle (degrees) the rectangle is to be rotated counterclockwise from the positive x axis.
+
+@section 2.21 @code{rect_style}
+(Linear axis type only)
+
+The keyword, @code{rect_style}, specifies the type, color, and width of line used to draw a rectangle on a plot and is similar to the @code{plot_style} keyword. The first parameter is a character specifying the type of line used to draw the rectangle and is l for solid lines, d for dashed lines, or . for dotted lines. The second parameter is either a character or hexadecimal color value specifying line color. The line color can be specified by any of the characters listed in the plot_style section or by a hexadecimal color value. The hexadecimal color value must be preceded by 0x to distinguish it as a hexadecimal value. The line width is a positive integer whose default value is 1.
+
+@section 2.22 @code{ellipse_coords}
+(Linear axis type only)
+
+The keyword, @code{ellipse_coords}, specifies five coordinates, or properties, of an ellipse that is to be added to a plot. The coordinates of the ellipse are x and y coordinates of the center of the ellipse, ellipse width (major axis) and height (minor axis), and the angle (degrees) the ellipse is to be rotated counterclockwise from the positive x axis.
+
+@section 2.23 @code{ellipse_style}
+(Linear axis type only)
+
+The keyword, @code{ellipse_style}, specifies the type, color, and width of line used to draw an ellipse on a plot and is similar to the @code{plot_style} keyword. The first parameter is a character specifying the type of line used to draw the ellipse and is l for solid lines, d for dashed lines, or . for dotted lines. The second parameter is either a character or hexadecimal color value specifying line color. The line color can be specified by any of the characters listed in the plot_style section or by a hexadecimal color value. The hexadecimal color value must be preceded by 0x to distinguish it as a hexadecimal value. The line width is a positive integer whose default value is 1.
+
+@section 2.24 @code{line_coords}
+The keyword, @code{line_coords}, specifies the coordinates of a line to be added to a plot. The coordinates of the end points of the line are specified as x1 x2 y1 y2 for a two-dimensional plot and as x1 x2 y1 y2 z1 z2 for a three-dimensional plot. See Example 4 below.
+
+@section 2.25 @code{line_style}
+The keyword, @code{line_style}, specifies the type, color, and width of a line to be drawn on a plot and is similar to the plot_style keyword. The first parameter is a character specifying the type of line to be drawn and is l for a solid line, d for a dashed line, or . for a dotted line. The second parameter is either a character or hexadecimal color value specifying line color. The line color can be specified by any of the characters listed in the plot_style section or by a hexadecimal color value. The hexadecimal color value must be preceded by 0x to distinguish it as a hexadecimal value. The line width is a positive integer whose default value is 1. See Example 4 below.
+
+@section 2.26 @code{symbol_coords}
+The keyword, @code{symbol_coords}, specifies the coordinates of a symbol to be added to a plot. The coordinates of the symbol location are specified as x y for a two-dimensional plot and as x y z for a three-dimensional plot. See Example 2 below.
+
+@section 2.27 @code{symbol_style}
+The keyword, @code{symbol_style}, specifies the type (circle, triangle, square, diamond, pentagon, hexagon, +, x, star, or asterisk), color, and size of a symbol to be added to a plot and is similar to the plot_style keyword. The first parameter is a character specifying the type of symbol to be drawn and is one of the following: c (unfilled circle), C (filled circle), t (unfilled triangle), s (unfilled square), S (filled square), i (unfilled diamond), I (filled diamond), p (unfilled pentagon), P (filled pentagon), h (unfilled hexagon), H (filled hexagon), +, x, r, or a. The second parameter is either a character or hexadecimal color value specifying symbol color. The symbol color can be specified by any of the characters listed in the plot_style section or by a hexadecimal color value. The hexadecimal color value must be preceded by 0x to distinguish it as a hexadecimal value. The symbol size is a positive integer whose default value is 6. See Example 2 below.
+
+@section 2.28 @code{legend_string}
+The keyword, @code{legend_string}, specifies the text string to be used in each line of the legend. There should be one line of text for each plot that is drawn. See Examples 1 and 4 below.
+
+@section 2.29 @code{legend_coords_abs}
+The parameters of the keyword, @code{legend_coords_abs}, specify the absolute position of the legend anchor point using axis values. For two-dimensional plots there are two parameters (x and y), and for three-dimensional plots there are three parameters (x, y, and z).
+
+@section 2.30 @code{legend_coords_rel}
+The parameters of the keyword, @code{legend_coords_rel}, specify the legend anchor point relative to the plot box. The first parameter specifies the fractional distance of the legend anchor point between the leftmost and rightmost points of the plot box. The second parameter specifies the fractional distance of the anchor point between the lowermost and uppermost points of the plot box. Values of 0.10 and 0.90 result in the anchor point being 10 percent of the width of the plot box measured from the left side of the plot box and 90 percent of the height of the plot box measured from the bottom of the plot box. Values between 0 and 1 result in the anchor point being inside the plot box. Values less than 0 and greater than 1 result in the anchor point being outside the plot box.
+
+@section 2.31 @code{legend_anchor}
+The keyword, @code{legend_anchor}, specifies the direction of the legend anchor point from the legend. The possible parameters are:
+
+@example
+"center"
+"north"
+"northeast"
+"east"
+"southeast"
+"south"
+"southwest"
+"west"
+"northwest"
+@end example
+
+Here @code{"north"} means the anchor point is centered directly above the legend; @code{"east"} means the anchor point is centered directly to the right of the legend; etc. All lines containing the keyword, @code{legend_string}, should immediately follow one another (no blank lines between them). The lines containing the keywords, @code{legend_coords_abs}, @code{legend_coords_rel}, and @code{anchor_legend}, should immediately follow the last line containing the keyword, @code{legend_string}.
+
+@section 2.32 @code{text_string}
+The keyword, @code{text_string}, specifies lines of text which can be added to a plot. See Examples 2, 4, 5, 6, 7, and 8 below.
+
+@section 2.33 @code{text_coords_abs}
+The parameters of the keyword, @code{text_coords_abs}, specify the absolute position of the text anchor point using axis values. For two-dimensional plots there are two parameters (x and y), and for three-dimensional plots there are three parameters (x, y, and z).
+
+@section 2.34 @code{text_coords_rel}
+The parameters of the keyword, @code{text_coords_rel}, specify the text anchor point relative to the plot box. The first parameter specifies the fractional distance of the text anchor point between the leftmost and rightmost points of the plot box. The second parameter specifies the fractional distance of the anchor point between the lowermost and uppermost points of the plot box.
+
+@section 2.35 @code{text_anchor}
+The keyword, @code{text_anchor}, specifies the direction of the text anchor point from the text. The possible parameters are:
+
+@example
+"center"
+"north"
+"northeast"
+"east"
+"southeast"
+"south"
+"southwest"
+"west"
+"northwest"
+@end example
+
+Here @code{"north"} means the anchor point is centered directly above the text; @code{"east"} means the anchor point is centered directly to the right of the text; etc. All lines containing the keyword, @code{text_string}, should immediately follow one another (no blank lines between them). The lines containing the keywords, @code{text_coords_abs}, @code{text_coords_rel}, and @code{anchor_text}, should immediately follow the last line containing the keyword, @code{text_string}.
+
+@section 2.36 @code{image_filename}
+The keyword, @code{image_filename}, specifies the file name of an image which can be added to a plot. See Example 1 below.
+
+@section 2.37 @code{image_coords_abs}
+The parameters of the keyword, @code{image_coords_abs}, specify the absolute position of the image anchor point using axis values. For two-dimensional plots there are two parameters (x and y), and for three-dimensional plots there are three parameters (x, y, and z).
+
+@section 2.38 @code{image_coords_rel}
+The parameters of the keyword, @code{image_coords_rel}, specify the image anchor point relative to the plot box. The first parameter specifies the fractional distance of the image anchor point between the leftmost and rightmost points of the plot box. The second parameter specifies the fractional distance of the anchor point between the lowermost and uppermost points of the plot box.
+
+@section 2.39 @code{image_anchor}
+The keyword, @code{image_anchor}, specifies the direction of the image anchor point from the image. The possible parameters are:
+
+@example
+"center"
+"north"
+"northeast"
+"east"
+"southeast"
+"south"
+"southwest"
+"west"
+"northwest"
+@end example
+
+Here @code{"north"} means the anchor point is centered directly above the image; @code{"east"} means the anchor point is centered directly to the right of the image; etc. The lines containing the keywords, @code{image_coords_abs}, @code{image_coords_rel}, and @code{image_anchor}, should immediately follow the line containing the keyword, @code{image_string} (no blank lines between them).
+
+@section 2.40 @code{date_time}
+The keyword, @code{date_time}, specifies whether a date-and-time string should be drawn in the window and where. Its only parameter specifies the location of the date-time string. If the parameter is @code{"off"}, then the date-time string will not be drawn. The possible parameters are:
+
+@example
+"north"
+"northeast"
+"southeast"
+"south"
+"southwest"
+"northwest"
+"off"
+@end example
+
+Here @code{"north"} means the date-time string is centered at the upper edge of the window; @code{"northeast"} means the string is in the upper right corner of the window; etc. The default parameter for date_time is @code{"off"}. See Example 1 below.
+
+@section 2.41 @code{save}
+The keyword, @code{save}, specifies that the plot should be saved as an image file immediately after the plot is drawn. Its only parameter specifies the image file name (and path) to use. The file name must have an extension which indicates the image file format. The supported image file formats are bmp (Windows Bitmap), jpeg (Joint Photographic Experts Group), and png (Portable Network Graphics).
+
+@section 2.42 @code{save_close}
+The keyword, @code{save_close}, specifies that the plot should be saved as an image file immediately after the plot is drawn, and then the plot window should be closed. Its only parameter specifies the image file name (and path) to use. The requirements for the image file name are the same as for the keyword, @code{save}, above.
+
+@section 2.43 @code{background_color}
+The keyword, @code{background_color}, specifies the background color of the plot window. It has two possible parameters, @code{"white"} and @code{"black"}. If @code{"black"} is chosen, the plot box, tick marks, axis labels, title, and text are white. The default value is @code{"white"}.
+
+@section 2.44 @code{background_image}
+(2d plots only).
+
+The keyword, @code{background_image}, specifies the file name of a background image, such as a map, to be displayed in the plot box and how it should be scaled. It has two parameters, the background-image file name and the background-image style, which specifies scaling of the image. The background-image style has four possible values:
+
+@example
+"center"
+"fill"
+"scale"
+"zoom"
+@end example
+
+The first value, @code{"center"}, means that the image is centered in the plot box, and as much of it is displayed as possible with no scaling. The second value, @code{"fill"}, means that the image is scaled in both the horizontal and vertical directions so that it fills the plot box. The third value, @code{"scale"}, means that the image is scaled the same amount in both directions so that the entire image is contained in the plot box and fills the plot box in at least one direction. The fourth value, @code{"zoom"}, means that the image is scaled the same amount in both directions so that it fills the plot box in at least one direction and overflows, but is clipped, in the other direction. The default value for background-image style is @code{"fill"}.
+
+@section 2.45 @code{window_size}
+The keyword, @code{window_size}, takes two integer parameters which specify the width and height of the plot window in pixels. The default values are 768 (width), and 576 (height).
+
+@section 2.46 @code{plot_box}
+The keyword, @code{plot_box}, specifies whether the box surrounding the plot is drawn or not. It has two possible parameters, @code{"on"} and @code{"off"}. The default parameter for @code{plot_box} is @code{"on"}.
+
+@section 2.47 @code{x_tick_marks}, ...
+The keywords, @code{x_tick_marks}, @code{y_tick_marks}, and @code{z_tick_marks}, specify whether tick marks are drawn for each axis. They have two possible parameters, @code{"on"} and @code{"off"}. The default parameters are @code{"on"}.
+
+@section 2.48 @code{x_tick_labels}, ...
+The keywords, @code{x_tick_labels}, @code{y_tick_labels}, and @code{z_tick_labels}, specify whether labels are drawn at each tick mark for each axis. They have two possible parameters, @code{"on"} and @code{"off"}. The default parameters are @code{"on"}.
+
+@section 2.49 @code{font_name}
+The keyword, @code{font_name}, specifies the font name, or family, to be used in labeling the plot. The default font is @code{"Sans"}.
+
+@section 2.50 @code{font_size_date_time}, ...
+The keywords, @code{font_size_date_time}, @code{font_size_legend}, @code{font_size_text}, @code{font_size_tick_labels}, @code{font_size_axis_labels}, and @code{font_size_title}, specify font sizes, in pixels, of the date-time string, legend, text, tick-mark labels, axis labels, and plot title, respectively. Default font sizes are:
+
+@example
+date-time string: 12
+legend:           12
+text:             12
+tick-mark labels: 14
+axis labels:      16
+plot title:       18
+@end example
+

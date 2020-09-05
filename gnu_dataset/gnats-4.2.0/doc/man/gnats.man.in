@@ -1,0 +1,275 @@
+.\" -*- nroff -*-
+.\" ---------------------------------------------------------------------------
+.\"    man page for GNATS (by Heinz G. Seidl, hgs@cygnus.com)
+.\"    updated April 1993 for GNATS @VERSION@ by Jeffrey Osier, jeffrey@cygnus.com
+.\"
+.\"    This file is part of the GNU Problem Report Management System (GNATS)
+.\"    Copyright 1993 Cygnus Support
+.\"
+.\"    This program is free software; you can redistribute it and/or
+.\"    modify it under the terms of the GNU General Public
+.\"    License as published by the Free Software Foundation; either
+.\"    version 3 of the License, or (at your option) any later version.
+.\"
+.\"    This program is distributed in the hope that it will be useful,
+.\"    but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\"    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+.\"    General Public License for more details.
+.\"
+.\"    You should have received a copy of the GNU Library General Public
+.\"    License along with this program; if not, write to the Free
+.\"    Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA
+.\"
+.\" ---------------------------------------------------------------------------
+.\" 
+.TH gnats 7 "August 2003" "GNATS @VERSION@" "Problem Report Management System"
+.SH NAME
+gnats \- Problem Report Management System
+.SH DESCRIPTION
+.B GNATS
+is a bug-tracking tool designed for use at a central support site.
+Software users who experience problems use tools provided with GNATS
+to submit Problem Reports to the the maintainers of that software;
+.B GNATS
+partially automates the tracking of these problems by:
+.TP
+.B \(bu
+organizing problem reports into a database and notifying responsible
+parties of suspected bugs;
+.TP
+.B \(bu
+allowing support personnel and their managers to edit, query and report
+on accumulated bugs; and
+.TP
+.B \(bu
+providing a reliable archive of problems with a given program and a
+history of the life of the program by preserving its reported problems
+and their subsequent solutions.
+.LP
+.B GNATS
+offers many of the same features offered by more generic databases.
+You can query and edit existing problem reports (\fIPR\fPs) as well as
+obtain reports on groups of PRs.  The database itself is simply an
+ordered repository for problem reports; each PR receives a unique,
+incremental PR number which identifies it throughout its lifetime.
+.LP
+Many of the primary functions available with 
+.B GNATS
+are accessible from within GNU 
+.BR Emacs .
+.SH "PROBLEM REPORT STATES"
+PRs go through several states in their lifetimes.  The set of states is
+site-specific.
+.LP
+The default set of states are:
+.TP 2i
+.I open
+the initial state of every PR;
+this means the PR has been filed and the person or group responsible
+for it has been notified of the suspected problem
+.TP
+.I analyzed
+the problem has been examined and work toward a solution has begun
+.TP
+.I feedback
+a solution has been found and tested at the support site, and sent to
+the party who reported the problem; that party is testing the solution
+.TP
+.I closed
+the solution has been confirmed by the party which reported it
+.LP
+In some cases, it may be necessary to suspend work on a bug; in this
+case, its state changes to
+.I suspended
+rather than 
+.IR closed .
+.SH STRUCTURE
+Incoming PRs are assigned an incremental serial number and filed
+according to category.  An index is kept concurrently to accelerate
+searches of the database.
+.LP
+All 
+.B GNATS
+administration and database files are located in subdirectories of a
+directory associated with each database.  Databases are named, and 
+the association between database names and directories is described
+by the \fBdatabases\fR file, which is found on this system in 
+.B @sysconfdir@/gnats/databases.
+.LP
+.I Problem Reports
+are segregated into subdirectories within the database directory by
+category.  For example, problems submitted with a category of
+.I gcc
+will be filed in the database subdirectory
+.BR gcc .
+.LP
+.B GNATS
+administration files are kept in the database subdirectory
+.BR gnats-adm :
+.TP 1.5i
+
+.B addresses
+contains mappings between submitter IDs and corresponding e-mail
+addresses
+.TP
+.B categories
+table of valid categories and parties responsible for them
+.TP
+.B classes
+table of valid classes of Problem Reports
+.TP
+.B current
+keeps track of incremental PR numbers assigned
+.TP
+.B dbconfig
+describes the structure of the database, and various database-specific
+options
+.TP
+.B gnatsd.user_access
+lists host names and access levels of hosts authorized to access the
+database
+.TP
+.B gnatsd.user_access
+lists user names, passwords and access levels of users authorized to
+access the database
+.TP
+.B index
+database index
+.TP
+.B locks
+directory containing lock files
+.TP
+.B responsible
+table of responsible parties and their email addresses
+.TP
+.B states
+table of valid states of Problem Reports
+.TP
+.B submitters
+database of sites which submit PRs
+.LP
+Administrative programs and programs internal to
+.B GNATS
+are kept in the directory
+.BR @libexecdir@/gnats
+while those meant for public use are installed in
+.BR @bindir@.
+.LP
+.B @libexecdir@/gnats
+contains the programs:
+.TP 1.5i
+.B mkdb
+used by the
+.B GNATS
+administrator to create a new database
+.TP
+.B mkcat
+used by the
+.B GNATS
+administrator to create new categories [obsolete]
+.TP
+.B rmcat
+used by the
+.B GNATS
+administrator to remove outdated categories [obsolete]
+.TP
+.B gen\-index
+used by the
+.B GNATS
+administrator to generate a new version of the index
+.TP
+.B queue-pr
+mail control program which accepts incoming messages and periodically
+submits them to the database via 
+.B cron
+by feeding them through the program
+.BR file-pr (8)
+.TP
+.B pr-edit
+program which is mainly responsible for editing existing PRs and filing
+new ones; it is used by
+.BR edit\-pr \ and\  file\-pr
+.TP
+.B file-pr
+script which uses \fBpr\-edit\fR to file new PRs
+.TP
+.B at-pr
+automatically notifies responsible parties if a PR is not analyzed
+within a requisite period defined in the
+.B submitters
+file
+.TP
+.B delete-pr
+used to delete closed PRs
+.LP
+.B @bindir@
+contains the programs
+.TP 1.5i
+.B query-pr
+used to query the database
+.TP
+.B edit-pr
+used to edit individual PRs
+.TP
+.B send-pr
+used to submit problems to 
+.B GNATS
+.LP
+Documentation exists for all programs associated with
+.B GNATS.
+.SH "SEE ALSO"
+.I Keeping Track: Managing Messages With GNATS
+(also installed as the GNU Info file
+.BR gnats.info )
+.LP
+.BR databases (5),
+.BR dbconfig (5),
+.BR delete-pr (8),
+.BR edit-pr (1)
+.BR file-pr (8),
+.BR gen-index (8),
+.BR gnats (7),
+.BR gnatsd (8),
+.BR mkcat (8),
+.BR mkdb (8),
+.BR pr-edit (8),
+.BR query-pr (1),
+.BR queue-pr (8),
+.BR send-pr (1).
+.SH HISTORY
+.B GNATS 
+was greatly inspired by the BSD 
+.BR sendbug (1)
+and
+.BR bugfiler (8)
+programs.  It was originally written in C++, Elisp, shell script, and
+awk.  It presently consists of utilities written in C, shell script,
+and Elisp.
+.SH AUTHORS
+.B GNATS
+was originally written by Heinz G. Seidl (Cygnus Support).  Subsequent
+iterations were developed by Brendan Kehoe (Cygnus Support) and Jason
+Merrill (Cygnus Support), with help from Tim Wicinski.  Documentation
+was initially developed by Jeffrey Osier (Cygnus Support) and Brendan
+Kehoe (Cygnus Support).
+.P
+Version 4.x was a substantial rewrite done by Bob Manson (Juniper
+Networks), Milan Zamazal and Yngve Svendsen (Clustra Systems / Sun
+Microsystems)
+.SH COPYING
+Copyright (c) 1992, 1993, 1999, 2000, 2003, Free Software Foundation
+.PP
+Permission is granted to make and distribute verbatim copies of
+this manual provided the copyright notice and this permission notice
+are preserved on all copies.
+.PP
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided that the
+entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+.PP
+Permission is granted to copy and distribute translations of this
+manual into another language, under the above conditions for modified
+versions, except that this permission notice may be included in
+translations approved by the Free Software Foundation instead of in
+the original English.

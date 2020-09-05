@@ -1,0 +1,63 @@
+#! /bin/sh
+# Copyright (C) 2015 Free Software Foundation, Inc.
+
+# This file is part of GNUnited Nations.
+
+# GNUnited Nations is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# GNUnited Nations is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with GNUnited Nations.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test gnun-preconvert and gnun-merge-preconverted.
+
+date_mask='....-..-.. ..:.\{5,7\}'
+timestamp='1983-09-27 12:36-0500'
+# The lines beginning with `#: ' will depend on $(bulddir).
+# The POT-Creation-Date will depend on the time of checking.
+# The Language and Content-Transfer-Encoding fields depend on gettext version.
+cat "${srcdir}/conv.pr.html" > conv.pr.html || exit 1
+"${bindir}/gnun-preconvert" conv.pr.html "${srcdir}/conv.html" \
+  || exit 1
+"${SED}" -i -e '/^#: /d' -e '/^"Language: .*\\n"$/d' -e \
+  's/^\("Content-Type:.*charset=\).*\\n"$/\1ascii\\n"/' -e \
+  's/^\("Content-Transfer-Encoding:\) .*\\n"$/\1 ENCODING"/' -e \
+  's/^\("POT-Creation-Date:\) '"$date_mask"'\\n"$/\1 '"$timestamp"'\\n"/' \
+conv.pr.po
+diff "${srcdir}/preconv.pr.po" conv.pr.po || exit 1
+"${bindir}/gnun-preconvert" -e ascii conv.pr.html -- "${srcdir}/conv.html" \
+  || exit 1
+"${SED}" -i -e '/^#: /d' -e '/^"Language: .*\\n"$/d' -e \
+  's/^\("Content-Transfer-Encoding:\) .*\\n"$/\1 ENCODING"/' -e \
+  's/^\("POT-Creation-Date:\) '"$date_mask"'\\n"$/\1 '"$timestamp"'\\n"/' \
+  conv.pr.po
+diff "${srcdir}/preconv.pr.po" conv.pr.po || exit 1
+cat conv.pr.po > conv0.pr.po
+
+"${bindir}/gnun-merge-preconverted" conv.pr.po "${srcdir}/conv.pot"
+"${SED}" -i -e '/^"Language: .*\\n"$/d' -e \
+  's/^\("POT-Creation-Date:\) '"$date_mask"'\\n"$/\1 '"$timestamp"'\\n"/' \
+  conv.pr.po
+
+case "x$WDIFF" in
+  x ) file=conv-no-diffs.pr.po ;;
+  * ) file=conv.pr.po ;;
+esac
+diff "${srcdir}/$file" conv.pr.po || exit 1
+rm conv.pr.html conv.pr.po
+
+"${bindir}/gnun-merge-preconverted" -d conv0.pr.po "${srcdir}/conv.pot"
+"${SED}" -i -e '/^"Language: .*\\n"$/d' -e \
+  's/^\("POT-Creation-Date:\) '"$date_mask"'\\n"$/\1 '"$timestamp"'\\n"/' \
+  conv0.pr.po
+diff "${srcdir}/conv-no-diffs.pr.po" conv0.pr.po || exit 1
+
+rm conv0.pr.po
+exit 0

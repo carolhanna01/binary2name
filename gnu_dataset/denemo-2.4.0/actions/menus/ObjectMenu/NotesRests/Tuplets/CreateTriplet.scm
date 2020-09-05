@@ -1,0 +1,20 @@
+;;CreateTriplet
+(let ((nonprinting (MidiInput?)))
+(if  (and nonprinting (Appending?))
+    (begin  
+        (d-MoveCursorLeft)
+        (if (Music?)
+        (let ((duration (d-GetNoteBaseDuration)))
+            (d-StartTriplet)
+            (d-MoveCursorRight)
+            (eval-string (string-append "(d-" (number->string duration) ")"))
+            (if (and nonprinting (not (d-GetMarkedMidiNote)))
+                     (d-SetNonprinting))                
+            (eval-string (string-append "(d-" (number->string duration) ")"))
+            (if (and nonprinting (not (d-GetMarkedMidiNote)))
+                     (d-SetNonprinting))                    
+            (d-EndTuplet))
+         (begin
+            (d-MoveCursorRight)
+            (d-ToggleTripleting))))
+    (d-ToggleTripleting)))

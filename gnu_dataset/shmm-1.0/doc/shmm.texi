@@ -1,0 +1,304 @@
+\input texinfo @c -*-texinfo-*-
+@c %**start of header
+@setfilename shmm.info
+@include version.texi
+@settitle GNU shmm @value{VERSION}
+@c %**end of header
+
+@copying
+This manual is for GNU shmm (version @value{VERSION}, @value{UPDATED}),
+
+Copyright @copyright{} 2008, Jeannie BOFFEL.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with the Front-Cover Texts being ``A GNU Manual,''
+and with the Back-Cover Texts as in (a) below.  A copy of the license
+is included in the section entitled ``GNU Free Documentation
+License.''
+
+(a) The FSF's Back-Cover Text is: ``You are free to copy and modify
+this GNU Manual. Buying copies from GNU Press supports the FSF in
+developing GNU and promoting software freedom.''
+@end quotation
+@end copying
+
+@c Define a new index for options.
+@defcodeindex op
+@c Combine everything into one index (arbitrarily chosen to be the
+@c concept index).
+@syncodeindex op cp
+
+@dircategory Basics
+@direntry
+* shmm: (shmm).               shmm, GNU world.
+@end direntry
+
+@titlepage
+@title GNU shmm
+@subtitle for version @value{VERSION}, @value{UPDATED}
+@author Jeannie BOFFEL (@email{jboffel@@gmail.com})
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@contents
+
+
+@ifnottex
+@node Top
+@top GNU shmm
+
+This manual is for GNU shmm (version @value{VERSION}, @value{UPDATED}).
+@end ifnottex
+
+@menu
+* Overview::		General purpose and information.
+* Sample output::	Sample output from @code{shmm}.
+* Invoking shmm::	How to run @code{shmm}.
+* Reporting bugs::	Sending bug reports and feature suggestions.
+* Copying this manual:: Copying and sharing this documentation.
+* Concept index::	Index of concepts.
+@end menu
+
+
+@node Overview
+@chapter Overview
+
+@cindex overview
+
+The GNU @code{shmm} program produces a read, write or command
+action like lock or unlock a shared memory segment identified
+by key and size.
+
+@itemize
+
+@item
+@cindex Gnulib
+It uses Gnulib (@pxref{Top,,Gnulib,gnulib,GNU Gnulib}) to enhance
+portability and avoid duplication of common sources.
+
+@item
+@cindex Gettext
+GNU Gettext (@pxref{Top,,Introduction,gettext,GNU Gettext}) is used
+for internationalization support.
+
+@item
+@opindex --help
+Internally, shmm uses the GNU @code{getopt_long} function
+(@pxref{Getopt Long Options,,,libc,GNU C Library}) to parse options,
+thus supporting GNU-style long options such as @option{--help}.
+
+@item
+@cindex Help2man
+Man pages are generated with GNU @code{help2man}
+(@pxref{Top,,Overview,help2man,GNU @code{help2man}}) from the
+@option{--help} output.  This relieves the maintainers of the burden
+of maintaining man documentation separately, yet provides a reasonable
+overview for man devotees.
+
+@item
+@cindex Texinfo
+Finally, Texinfo (@pxref{Top,,Introduction,texinfo,Texinfo}) is the
+documentation format for this manual.  It supports output in Info,
+HTML, PDF, DVI, plain text, XML, and other formats.
+
+@end itemize
+
+GNU shmm is implemented in C.
+
+@cindex authors
+@cindex Jeannie, BOFFEL
+GNU @code{shmm} was written by Jeannie BOFFEL.
+
+
+@node Sample output
+@chapter Sample output
+
+@cindex sample output
+@cindex examples
+
+Here are some realistic examples of running GNU @code{shmm}.
+
+This is the output of the command @samp{shmm -s 0x00000001:0660:5 -w"test"}
+(be aware that if shared memory doesn't exit, it'll try to create it with only '\0' inside before writing anything, take care also not to put a space between -w and the string you wan't to write):
+
+@example
+@end example
+
+This is the output of the command @samp{shmm -rs 0x00000001:0660:5}:
+
+@example
+test
+@end example
+
+This is the output of the command @samp{shmm -brs 0x00000001:0660:5}:
+
+@example
+t e s t 0x00
+@end example
+
+
+@node Invoking shmm
+@chapter Invoking @code{shmm}
+
+@cindex invoking
+@cindex options
+@cindex usage
+@cindex help
+
+The format for running the @code{shmm} program is:
+
+@example
+shmm @var{option} @dots{}
+@end example
+
+@code{shmm} supports the following options:
+
+@table @option
+@item --shm-access=@var{text}
+@itemx -s @var{text}
+@opindex --shm-access
+@opindex -s
+Try to attach a memory segment corresponding to key:permission:size.
+
+@item --help
+@itemx -h
+@opindex --help
+@opindex -h
+Print an informative help message on standard output and exit
+successfully.
+
+@cindex environment variables, help for
+For the @option{--help} output of GNU programs, it's strongly
+encouraged to include a brief (one or two sentences) description of
+what the program does, as well as the synopsis of how to run the
+program.
+
+@item --read
+@itemx -r
+@opindex --read
+@opindex -r
+Print a string content of a shared memory segment attached through
+'shm-access' or 'id'
+
+@item --write=@var{text}
+@itemx -w@var{text}
+@opindex --write
+@opindex -w
+Write a string in an attached shared memory segment through
+'shm-access' or 'id'
+
+@item --offset=@var{numeric}
+@itemx -o @var{numeric}
+@opindex --offset
+@opindex -o
+Start to read or write from offset specified.
+
+@item --command=@var{char}
+@itemx -c @var{char}
+@opindex --command
+@opindex -c
+Execute a command 'l'ock or 'u'nlock on an attached memory segment through
+'shm-access' or 'id'
+
+@item --binary
+@itemx -b
+@opindex --binary
+@opindex -b
+Print read content in caracters when they are printable and hex value
+if not like "t e s t 0x00"
+
+@item --id=@var{shmid}
+@itemx -i @var{shmid}
+@opindex --id
+@opindex -i
+Access to an existing shared memory segment directly from the id instead 
+of the key and the size.
+
+@item --file=@var{file}
+@itemx -f @var{file}
+@opindex --file
+@opindex -f
+File argument can be used to read data from a file to write them in 
+memory when combinated with -w and to write data to a file when 
+combinated to -r.
+
+@item --update=@var{text}
+@itemx -u @var{text}
+@opindex --update
+@opindex -u
+Update argument permit you to change current user id, group id and 
+permission associated to a shared memory segment (creator user id 
+and group id stay inchaned of course so even if you change this 
+value to another uid and gid you keep creator access permission to 
+your shared memory segment).
+Format is : uid:gid:perm with perm like 0xxx (ex: 0666)
+
+@item --version
+@itemx -v
+@opindex --version
+@opindex -v
+Print the version number and licensing information of @code{shmm} on
+standard output and then exit successfully.
+
+@end table
+
+
+@node Reporting bugs
+@chapter Reporting bugs
+
+@cindex bug reporting
+@cindex problems
+@cindex reporting bugs
+
+To report bugs or suggest enhancements for GNU @code{shmm}, please
+send electronic mail to @email{jboffel@@gmail.com}.
+
+@cindex checklist for bug reports
+For bug reports, please include enough information for the maintainers
+to reproduce the problem.  Generally speaking, that means:
+
+@itemize @bullet
+@item The version numbers of shmm (which you can find by running
+      @w{@samp{shmm --version}}) and any other program(s) or
+      manual(s) involved.
+@item Hardware and operating system names and versions.
+@item The contents of any input files necessary to reproduce the bug.
+@item The expected behavior and/or output.
+@item A description of the problem and samples of any erroneous output.
+@item Options you gave to @command{configure} other than specifying
+      installation directories.
+@item Anything else that you think would be helpful.
+@end itemize
+
+When in doubt whether something is needed or not, include it.  It's
+better to include too much than to leave out something important.
+
+@cindex patches, contributing
+Patches are welcome; if possible, please make them with @samp{@w{diff
+-c}} (@pxref{Top,, Overview, diff, Comparing and Merging Files}) and
+include @file{ChangeLog} entries (@pxref{Change Log,,, emacs, The GNU
+Emacs Manual}).  Please follow the existing coding style.
+
+
+@node Copying this manual
+@appendix Copying this manual
+
+@menu
+* GNU Free Documentation License::  License for copying this manual.
+@end menu
+
+@include fdl.texi
+
+
+@node Concept index
+@unnumbered Concept index
+
+@cindex tail recursion
+@printindex cp
+
+@bye

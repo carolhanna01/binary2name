@@ -1,0 +1,69 @@
+proc Synopsis_Summary {prid ln} {
+    global Print
+
+    ##workingMsg
+    headingMsg "Doing $prid..."
+
+    set fout $Print(fout)
+    print_parsepr_medium $prid flds
+    
+    if {$Print(first_time) == 1} {
+        # title section
+        set dat "[clock format [clock seconds] -format "%a %b %e %H:%M %Y"]"
+        putlines $fout { {.po 0.375i} {.ll 7.75i} }
+        putlines $fout { {.TS} {expand, tab(%);} }
+        putlines $fout [list {Cbp12w(7.75i).} "Problem Report Synopsis Summary   --   $dat" {.TE}]
+        puts     $fout ".sp"
+        
+        # format section
+        putlines $fout {
+            {.\" format section}
+            {.ds CF "                \\n(yr / \\n(mo / \\n(dy}
+            {.TS H}
+            {box;}
+            {Cb|Lb|Lb|Lb|Lb|Lbw(2.6i)}
+            {^|Lb|Lb|Lb|Lb|^}
+            {N|L|L|L|L|L.}
+            {.\" table heading}
+            {Id	Arrival Date	Responsible	Category	Priority	Synopsis}
+            {	Last Modified	Originator	State	Severity}
+            {=}
+            {.TH}
+        }
+    }
+
+    ###################################
+
+    putfldvalbold $fout flds {>Number}
+    puts          $fout "\t" nonewline
+    putfldval1    $fout flds {>Arrival-Date}
+    puts          $fout "\t" nonewline
+    putfldval1    $fout flds {>Responsible}
+    puts          $fout "\t" nonewline
+    putfldval1    $fout flds {>Category}
+    puts          $fout "\t" nonewline
+    putfldval1    $fout flds {>Priority}
+    puts          $fout "\t" nonewline
+    putfldval2    $fout flds {>Synopsis}
+    puts          $fout "\\^\t" nonewline
+    putfldval1    $fout flds {>Last-Modified}
+    puts          $fout "\t" nonewline
+##  putfldval1    $fout flds {>Originator}
+    puts          $fout [lrange [split [ftrim $flds(>Originator)]] 0 0] nonewline
+    puts          $fout "\t" nonewline
+    putfldval1    $fout flds {>State}
+    puts          $fout "\t" nonewline
+    putfldval1    $fout flds {>Severity}
+    # putfldval1    $fout flds {>Class}
+    # putfldval1    $fout flds {>Submitter-Id}
+    puts $fout "\t\\^\n_"
+
+    ###################################
+    
+    if {$Print(last_time) == 1} {
+        # trailer
+        puts $fout ".TE"
+    }
+
+    return 0
+}

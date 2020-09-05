@@ -1,0 +1,69 @@
+#! /bin/sh
+#  -*- Mode: Shell-script -*-
+# get.test --- test get functionality
+#
+# Time-stamp:        "2005-03-07 13:05:32 bkorb"
+# Author:            Bruce Korb <bkorb@gnu.org>
+# Maintainer:        Bruce Korb <bkorb@gnu.org>
+# Created:           Fri Oct 1 10:27:31 PDT 1999
+# Last Modified:     $Date: 2006/09/24 02:11:15 $
+#            by: bkorb
+#
+# $Id: get.test,v 4.4 2006/09/24 02:11:15 bkorb Exp $
+# ----------------------------------------------------------------------
+
+. ./defs
+
+# # # # # # # # # # TEMPLATE FILE # # # # # # # # #
+
+echo creating $testname.tpl
+cat > $testname.tpl <<_EOF_
+[= AutoGen5 template test =]
+[=
+
+IF (not (exist? "foo.bar.baz"))  =][=
+  (error "foo.bar.baz does, too, exist!")   =][=
+
+ELIF (not (= "mumble" (get "foo.bar.baz"))) =][=
+  (error (sprintf "We got the wrong baz.  We got:  %s"
+         (get "foo.bar.baz")))   =][=
+ELSE
+      =]A OK[=
+ENDIF =][=
+
+- bogus "\nA OK2" =][=
+- foo   "\nBOGUS" =]
+_EOF_
+
+# # # # # # # # # # DEFINITIONS FILE # # # # # # # # #
+
+echo creating $testname.def
+cat > $testname.def <<_EOF_
+AutoGen definitions $testname;
+
+foo = { bar = { nada = nothing; }; };
+foo = { bar = { baz  = mumble;  }; };  /* this is the one */
+foo = { bar = { baz  = grumble; }; };
+_EOF_
+
+# # # # # # # # # # EXPECTED OUTPUT FILE # # # # # # #
+set -x
+echo creating $testname.out
+# this is the output we should expect to see
+cat > $testname.out <<'_EOF_'
+A OK
+A OK2
+_EOF_
+
+${AGexe} $testname.def || failure ${AGexe} failed
+cmp -s $testname.test $testname.out || failure unexpected output
+
+cleanup
+
+## Local Variables:
+## Mode: shell-script
+## indent-tabs-mode: nil
+## sh-indentation: 2
+## End:
+
+# end of get.test

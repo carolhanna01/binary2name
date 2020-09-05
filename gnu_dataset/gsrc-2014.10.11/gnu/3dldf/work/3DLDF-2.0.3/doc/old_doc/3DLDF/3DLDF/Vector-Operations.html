@@ -1,0 +1,277 @@
+<html lang="en">
+<head>
+<title>Vector Operations - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Point-Reference.html#Point-Reference" title="Point Reference">
+<link rel="prev" href="Projecting-Points.html#Projecting-Points" title="Projecting Points">
+<link rel="next" href="Points-and-Lines.html#Points-and-Lines" title="Points and Lines">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Vector-Operations"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Points-and-Lines.html#Points-and-Lines">Points and Lines</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Projecting-Points.html#Projecting-Points">Projecting Points</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Point-Reference.html#Point-Reference">Point Reference</a>
+<hr>
+</div>
+
+<h3 class="section">22.15 Vector Operations</h3>
+
+<p>Mathematically speaking, vectors and points are not the same.  However,
+they can both be represented as triples of real numbers (in a
+three-dimensional Cartesian space).  It is sometimes convenient to treat
+points as though they were vectors, and vice versa.  In particular, it
+is convenient to use the same data type, namely <code>class Point</code>, to
+represent both points and vectors in 3DLDF.
+
+<div class="defun">
+&mdash; <code>const</code> function: real <b>dot_product</b> (<var>Point p</var>)<var><a name="index-dot_005fproduct-427"></a></var><br>
+<blockquote><p>Returns the dot or scalar product of <code>*this</code> and <var>p</var>.
+
+        <p>If P and Q are <code>Points</code>,
+     <pre class="display">          P \dot Q = x_P * x_Q + y_P * y_Q + z_P * z_Q = |P||Q| * cos(\theta)
+</pre>
+        <p>where  |P|
+and |Q| are the magnitudes of
+P and Q, respectively, and \theta
+is the angle between P and Q.
+
+        <p>Since
+     <pre class="display">          \theta = arccos(P \dot Q / |P||Q|),
+</pre>
+        <p>the dot product can be used for finding the angle between two vectors.
+
+     <pre class="example">          Point P(1, -1, -1);
+          Point Q(3, 2, 5);
+          cout &lt;&lt; P.angle(Q);
+          -| 112.002
+          cout &lt;&lt; P.dot_product(Q);
+          -| -4
+          real P_Q_angle = (180.0 / PI)
+                           * acos(P.dot_product(Q)
+                           / (P.magnitude() * Q.magnitude()));
+          cout &lt;&lt; P_Q_angle;
+          -| 112.002
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF86.png"
+alt="[Figure 86. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 86. 
+<br>
+</p>
+
+        <p>If the angle \theta between two vectors P and Q is
+90 degrees
+, then
+\cos(\theta) is 0, so
+P \dot Q
+will also be 0.  Therefore,
+<code>dot_product()</code> can be used as a test for the orthogonality of vectors.
+
+     <pre class="example">          Point P(2);
+          Point Q(P);
+          Point Q0(P0);
+          Q0 *= Q.rotate(0, 0, 90);
+          P *= Q.rotate(0, 45, 45);
+          P *= Q.rotate(45);
+          cout &lt;&lt; P.angle(Q);
+          -| 90
+          cout &lt;&lt; P.dot_product(Q);
+          -| 0
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF87.png"
+alt="[Figure 87. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 87. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> function: Point <b>cross_product</b> (<var>Point p</var>)<var><a name="index-cross_005fproduct-428"></a></var><br>
+<blockquote><p>Returns the cross or vector product of <code>*this</code> and <var>p</var>.
+
+        <p>If P and Q are <code>Points</code>,
+
+     <pre class="display">          P * Q = ((y_P * z_Q - z_P * y_Q), (z_P * x_Q - x_P * z_Q),
+          (x_P * y_Q - y_P * x_Q)) = |P||Q| * sin(\theta) * n,
+</pre>
+        <p>where |P| and |Q| are the magnitudes of
+P and Q, respectively,
+\theta is the angle between P and Q, and n
+is a unit vector
+perpendicular to both P and Q in the direction of a
+right-hand screw from P towards Q.  Therefore,
+<code>cross_product()</code> can be used to find the normals to planes.
+
+     <pre class="example">          Point P(2, 2, 2);
+          Point Q(-2, 2, 2);
+          Point n = P.cross_product(Q);
+          n.show("n:");
+          -| n: (0, -8, 8)
+          real theta = (PI / 180.0) * P.angle(Q);
+          cout &lt;&lt; theta;
+          -| 1.23096
+          real n_mag = P.magnitude() * Q.magnitude() * sin(theta);
+          cout &lt;&lt; n_mag;
+          -| 11.3137
+          n /= n_mag;
+          cout &lt;&lt; n.magnitude();
+          -| 1
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF88.png"
+alt="[Figure 88. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 88. 
+<br>
+</p>
+
+        <p>If
+\theta = 0 degrees or 180 degrees,
+\sin(\theta) will be 0, and
+P * Q
+ will be (0, 0, 0). 
+The cross product thus provides a test for parallel vectors.
+
+     <pre class="example">          Point P(1, 2, 1);
+          Point Q(P);
+          Point R;
+          R *= Q.shift(-3, -1, 1);
+          Point s(Q - R);
+          Point n = P.cross_product(s);
+          n.show("n:");
+          -| n: (0, 0, 0)
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF89.png"
+alt="[Figure 89. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 89. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> function: real <b>magnitude</b> (<var>void</var>)<var><a name="index-magnitude-429"></a></var><br>
+<blockquote><p>Returns the magnitude of the <code>Point</code>.  This is its distance from
+<code>origin</code> and is equal to
+sqrt(x^2 + y^2 + z^2).
+
+     <pre class="example">          Point P(13, 15.7, 22);
+          cout &lt;&lt; P.magnitude();
+          -| 29.9915
+</pre>
+        </blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> function: real <b>angle</b> (<var>Point p</var>)<var><a name="index-angle-430"></a></var><br>
+<blockquote><p>Returns the angle in degrees between two <code>Points</code>.
+
+     <pre class="example">          Point P(3.75, -1.25, 6.25);
+          Point Q(-5, 2.5, 6.25);
+          real angle = P.angle(Q);
+          cout &lt;&lt; angle;
+          -| 73.9084
+          Point n = origin.get_normal(P, Q);
+          n.show("n:");
+          -| n: (0.393377, 0.91788, -0.0524503)
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF90.png"
+alt="[Figure 90. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 90. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Function: Point <b>unit_vector</b> (<var>const bool assign, </var>[<var>const bool silent = false</var>])<var><a name="index-unit_005fvector-431"></a></var><br>
+&mdash; <code>const</code> function: Point <b>unit_vector</b> (<var>void</var>)<var><a name="index-unit_005fvector-432"></a></var><br>
+<blockquote><p>These functions return a <code>Point</code> with the x, y, and z-coordinates
+of <code>world_coordinates</code> divided by the magnitude of the <code>Point</code>. 
+The magnitude of the resulting <code>Point</code> is thus 1.  The first
+version assigns the result to <code>*this</code> and should only ever be
+called with <var>assign</var> = <code>true</code>.  Calling it with the
+argument <code>false</code> is equivalent to calling the <code>const</code> version,
+with no assignment.  If <code>unit_vector()</code> is called with <var>assign</var>
+and <var>silent</var> both <code>false</code>, it issues a warning message is
+issued and the <code>const</code> version is called.  If <var>silent</var> is
+<code>true</code>, the message is suppressed.
+
+     <pre class="example">          Point P(21, 45.677, 91);
+          Point Q = P.unit_vector();
+          Q.show("Q:");
+          -| Q: (0.201994, 0.439357, 0.875308)
+          P.rotate(30, 25, 10);
+          P.show("P:");
+          P: (-19.3213, 82.9627, 59.6009)
+          cout &lt;&lt; P.magnitude();
+          -| 103.963
+          P.unit_vector(true);
+          P.show("P:");
+          -| P: (-0.185847, 0.797999, 0.573287)
+          cout &lt;&lt; P.magnitude();
+          -| 1
+</pre>
+        </blockquote></div>
+
+   </body></html>
+

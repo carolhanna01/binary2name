@@ -1,0 +1,870 @@
+\input texinfo   @c -*-texinfo-*-
+@comment $Id: texinfo.txi,v 1.204 2007/07/29 14:55:43 karl Exp $
+@comment %**start of header
+@setfilename pyconfigure.info
+@include version.texi
+@settitle pyconfigure @value{VERSION}
+@syncodeindex pg cp
+@comment %**end of header
+@copying
+This manual is for pyconfigure (version @value{VERSION}, updated 
+@value{UPDATED}).
+
+Copyright @copyright{} 2012, 2013 Brandon Invergo
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts and no Back-Cover Texts.  A
+copy of the license is included in the section entitled ``GNU Free
+Documentation License.''
+@end quotation
+@end copying
+
+@dircategory Miscellaneous
+@direntry
+* pyconfigure: (pyconfigure)GNU Standards-compliant Python
+  configuration and installation
+@end direntry
+
+@titlepage
+@title pyconfigure
+@subtitle for version @value{VERSION}, @value{UPDATED}
+@author @email{bug-pyconfigure@@gnu.org}
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@c *******************************************************************
+@contents
+
+@ifnottex
+@node Top, Introduction, (dir), (dir)
+@top pyconfigure
+
+This manual is for pyconfigure (version @value{VERSION}, @value{UPDATED}).
+@end ifnottex
+
+@menu
+* Introduction::                pyconfigure in brief.
+* Installation::                How to install pyconfigure.
+* Invoking pyconf::             How to invoke the pyconf script.
+* Existing projects::
+* Customization::               How to customize the template files for your package
+* Appendix::
+* GNU Free Documentation License::
+
+@detailmenu
+ --- The Detailed Node Listing ---
+
+Introduction
+
+* Configuring Python packages::
+
+Invoking pyconf
+
+* PKG-INFO metadata::
+
+Customization
+
+* configure.ac::
+* Makefile.in::
+* setup.py.in::
+
+configure.ac
+
+* Required macros::
+* Verifying the Python version::
+* Checking for a module or function::
+* Writing test programs::
+* Using Sphinxbuild to build documentation::
+
+Makefile.in
+
+* Makefile.in (distutils)::
+* Makefile.in (Make)::
+
+Appendix
+
+* Autoconf macros::
+
+@end detailmenu
+@end menu
+
+@c *******************************************************************
+@node Introduction, Installation, Top, Top
+@chapter Introduction
+
+Python packages typically are configured and installed through the use
+of the @code{distutils} module or one of its derivatives. The user
+performs necessary actions via a Python script called
+@file{setup.py}. For simple programs, this is
+straight-forward. However, for more complex software packages,
+especially for those which also include code in other languages such
+as C or Fortran, the limitations of the @code{distutils} method
+quickly become apparent.
+
+The configuration and installation of GNU software and many other
+programs, on the other hand, is done according to the use of standard
+@file{configure} scripts and Make recipes. This method has the
+advantage of being language-agnostic, very flexible, and
+time-proven. pyconfigure consists of all the files necessary to begin
+using the standard GNU build process to configure and install a Python
+package.
+
+@menu
+* Configuring Python packages::
+@end menu
+
+@c *******************************************************************
+@node Configuring Python packages,  , Introduction, Introduction
+@section Configuring Python packages
+
+Configuring and installing Python packages which use
+pyconfigure follows the familiar steps of all standard GNU
+software:
+
+@example
+$ ./configure
+$ make
+$ make install
+@end example
+
+As usual, the user may pass arguments to @file{configure} in order to
+specify how she wants the software to be installed. By default, the
+generated @file{configure} script takes the following useful
+arguments, among others:
+
+@multitable @columnfractions .25 .75
+@headitem
+Argument
+@tab
+Description
+
+@item
+@option{--prefix}
+@tab
+Set the root directory in which to install files (default=/usr/local)
+
+@item
+@option{--with-virtualenv}
+@tab
+Install to a virtualenv at @code{$prefix}
+
+@item
+@env{PYTHON}
+@tab
+Path to the Python interpreter to use
+
+@item
+@env{PYTHONPATH}
+@tab
+The PYTHONPATH to use during the installation
+
+@end multitable
+
+However, as the developer is expected to customize these files, the
+final @file{configure} script may take many more arguments. The
+developer is expected to provide proper documentation in this case.
+
+@c *******************************************************************
+@node Installation, Invoking pyconf, Introduction, Top
+@chapter Installation
+
+Pyconfigure includes the template files that you will use in your
+projects, the @file{pyconf} script to copy those files into a
+project's directory, and this documentation. In order for their usage
+to be convenient, it is recommended to install them. Installation of
+pyconfigure follows the standard GNU installation procedure. Upon
+unpacking the source, navigate into its directory and run the
+following command sequence:
+
+@example
+$ ./configure --prefix=/usr/local
+$ make install
+@end example
+
+If you wish the files to be installed to a different location, specify
+it using the @option{--prefix} option.
+
+@c *******************************************************************
+@node Invoking pyconf, Existing projects, Installation, Top
+@chapter Invoking pyconf
+
+Before invoking the @file{pyconf} script, you first must decide
+whether you would prefer to have your installation logic written in
+Python or in Make. If you choose the former, the generated Makefile
+will be a wrapper around the Python installation script
+(i.e. @file{setup.py}), while if you choose the latter, the Python
+installation script will be a wrapper around the Makefile. 
+
+Next, you must create a @file{PKG-INFO} file containing standard
+metadata about your project (@pxref{PKG-INFO metadata}). Finally, in
+the most basic case, you would navigate to your project's directory
+and simply invoke @command{pyconf} on your project's @file{PKG-INFO}
+file:
+
+@example
+$ pyconf PKG-INFO
+@end example
+
+This will generate a @file{configure.ac} Autoconf file, a
+@file{configure} script generated from that Autoconf file, a
+@file{setup.py.in} installation file (to be configured by the user
+upon the invocation of @file{configure}) and a @file{Makefile.in} file
+which wraps the functionality of @file{setup.py}. If any of these
+files already exist, @command{pyconf} will not overwrite them unless
+the @option{--overwrite} option is passed.
+
+If you wish the files to be copied into a different directory, you may
+add the @option{--output} option (or its short form @code{-o}) to
+specify the directory into which you would prefer the files to be
+copied.
+
+@example
+$ pyconf -output=$HOME/Projects/pyproject PKG-INFO
+@end example
+
+If you would prefer to write your installation logic using Make, pass
+the @option{--prefer-make} (@option{-m}) option:
+
+@example
+$ pyconf --prefer-make PKG-INFO
+@end example
+
+Now, the @file{setup.py.in} script that is generated will instead be a
+wrapper around the @file{Makefile.in} file. You would then extend the
+installation process in the latter file.
+
+If you would prefer a pure-Python approach, pyconf may optionally not
+generate any Makefile by passing the @option{--no-make} option. Finally,
+if you only need pyconfigure's Autoconf macros, you may pass the
+@option{--macros-only} option, which causes @command{pyconf} to exit
+immediately after copying the macros into your package directory.
+
+
+@menu
+* PKG-INFO metadata::
+@end menu
+
+@node PKG-INFO metadata,  , Invoking pyconf, Invoking pyconf
+@section PKG-INFO metadata
+
+As a base, the @file{pyconf} script requires a @file{PKG-INFO} file
+containing metadata about the project. This file should fit the
+requirements of the @file{PKG-INFO} metadata file format as outlined
+in the @url{http://www.python.org/dev/peps/pep-0345/, PEP 345
+document}. The file consists of several @code{Key: value} pairs. Some
+keys may be specified more than once, meaning that the package has
+several such values, while others may appear only once. Refer to PEP
+345 for the authoritative specification.
+
+For the purposes of pyconfigure, only four keys are required. The
+first, ``Metadata-Version'' must have a value of 1.2 or higher;
+earlier metadata specification versions are not supported. ``Name'',
+which may only appear once, contains the package's name. Similarly,
+``Version'' contains the package version number. Finally,
+``Author-email'' contains the principal email address for the
+project. Other keys are required to fully meet the PEP 345
+specification; refer to that document for more information.
+
+Here is a minimal example required to get started: 
+
+@example
+Metadata-Version: 1.2
+Name: foo
+Version: 1.5
+Author-email: bug-foo@@gnu.org
+@end example
+
+@c *******************************************************************
+@node Existing projects, Customization, Invoking pyconf, Top
+@chapter Existing projects
+
+Using pyconfigure with existing projects is easy. For example, if your
+project already has a @file{setup.py} script, there is no need to
+replace it with pyconfigure. In this case, the best way to proceed
+would be to run @command{pyconf} to copy all of the files into your
+project's directory. Next, you simply need to copy the contents of
+your @file{setup.py} script into @file{setup.py.in}. Be sure not to
+just overwrite the file directly! Inside @file{setup.py.in} you will
+see several strings like @code{@@PACKAGE_NAME@@}. These are strings that
+will be replaced by the configure script and they should remain
+as they are. Most of the contents of the standard @code{setup}
+function should have already been filled in through the information in
+the @file{PKG-INFO} file but if not, they can be filled in
+manually. The default @file{setup.py.in} script is otherwise very
+simple, meaning any extensions to it that you have written in your
+@file{setup.py} script can simply be copied in.
+
+If your project does not yet have a @file{setup.py} script but it
+already has a @file{Makefile}, the process is even easier. Simply
+call @command{pyconf} with @option{--prefer-make} and the
+@file{setup.py.in} file that is generated in your project's directory
+will simply wrap your @file{Makefile} (just be sure not to pass the
+@option{--overwrite} option!).
+
+@c *******************************************************************
+@node Customization, Appendix, Existing projects, Top
+@chapter Customization
+
+Once @file{pyconf} has generated the files in your project's
+directory, you should customize them to meet your project's needs.
+
+ In particular, you will want to customize @file{configure.ac} and
+@file{Makefile.in} or @file{setup.py.in}. @file{configure.ac} contains
+a series of macros which are used by Autoconf to build a portable
+@file{configure} shell script. This script either guesses important
+system settings or is provided them by the user. When the user invokes
+@file{configure}, it uses @file{Makefile.in} and @file{setup.py.in} as
+templates to create the Make recipe @file{Makefile} and the Python
+setup script @file{setup.py}.
+
+@menu
+* configure.ac::
+* Makefile.in::
+* setup.py.in::
+@end menu
+
+@c *******************************************************************
+@node configure.ac, Makefile.in, Customization, Customization
+@section configure.ac
+
+There are some minimum modifications that should be made in
+@file{configure.ac}. The file contains a significant amount of
+information in the form of comments, so it is possible to discern your
+needs while editing. For more advanced usage, it is recommended to
+refer to the @inforef{Autoconf, Autoconf manual, autoconf}.
+
+In this file you will see a macro called @code{AC_INIT}. This is a
+standard Autoconf macro. The arguments to this are automatically
+generated from the @file{PKG-INFO} file that you used. These three
+values are used extensively in the files modified by the configure
+script, so it is important that they be correct.
+
+Further down, you will also find a macro called @code{PC_INIT}. This
+is the core macro of pyconfigure. This will build the code necessary
+to find a suitable Python interpreter on the user's computer. To that
+end, you can pass arguments to this macro which specify the minimum
+and/or maximum supported Python versions.
+
+While the default @file{configure.ac} script will likely be sufficient
+for a basic Python-based project, it may be made to be much more
+powerful for packages with more complex needs. To that end, several
+Autoconf macros are provided in the file @file{m4/python.m4} to
+allow the developer to write robust tests @xref{Autoconf macros}. Note
+that when you distribute your software, you must include this
+directory and file with your distribution if you also distribute your
+@file{configure.ac} file.
+
+Once you modify your @file{configure.ac} to your liking, you must
+regenerate your @file{configure} script with the @file{bootstrap.sh}
+script that is generated by pyconfigure.
+
+@example
+$ ./bootstrap.sh
+@end example
+
+A full explanation of the general use of Autoconf macros is beyond the
+scope of this document, however it is worth presenting some examples.
+
+@menu
+* Required macros::
+* Verifying the Python version::
+* Checking for a module or function::
+* Writing test programs::
+* Using Sphinxbuild to build documentation::
+@end menu
+
+@c *******************************************************************
+@node Required macros, Verifying the Python version, configure.ac, configure.ac
+@subsection Required macros
+
+Several macros are required in @file{configure.ac} to use
+pyconfigure. These are:
+
+@example
+AC_INIT([project_name], [project_version], [project-email])
+@end example
+
+This initializes Autoconf and also substitutes your project name and
+version in any output that it generates. The initial argument values
+are automatically generated by pyconfigure when you first run the
+@file{pyconf} script. Note that the arguments are surrounded by braces
+in all cases. This is to prevent M4 from trying to expand the
+arguments using whatever macros it knows. 
+
+@example
+AC_CONFIG_MACRO_DIR([m4])
+@end example
+
+This macro imports all of the Python Autoconf macros. If you choose to
+write your own macros for other purposes, you should include them in
+the @file{m4} directory as well.
+
+@example
+PC_INIT([2.5], [3.3.1])
+@end example
+
+This is the key macro. It finds a Python interpreter available on the
+system that meets optional version requirements specified in its
+arguments and saves its path in the @env{PYTHON} variable. Generally
+speaking, the highest-version Python interpreter found within the
+given version range (inclusive) will be used. Note, however, that
+minor version differences may cause discrepancies. For example, the
+user may have Python 3.3.1 installed but a slight difference in its
+release may cause the interpreter to internally report a slightly
+higher version, causing this interpreter to not pass the version
+check. To be safe, set the maximum version one bugfix release higher
+(i.e. ``3.3.2'' in this case).
+
+@example
+PC_PYTHON_SITE_PACKAGE_DIR
+PC_PYTHON_EXEC_PACKAGE_DIR
+@end example
+
+These two macros figure out where Python expects packages to be
+installed (i.e. @file{/usr/lib/python2.7/site-packages/}) and saves
+them in the variables @code{pkgpythondir} and @code{pkgpyexecdir},
+respectively, for use in @file{Makefile.in}. These macros are only
+required if you will be writing your installation logic in Make.
+
+
+@c *******************************************************************
+@node Verifying the Python version, Checking for a module or function, Required macros, configure.ac
+@subsection Verifying the Python version
+
+As described in the previous section, @code{PC_INIT} finds the
+Python interpreter with the highest version that meets the provided
+requirements. You may wish to perform other tests on the version
+number yourself. There is a macro available to simplify this,
+@code{PC_PYTHON_VERIFY_VERSION} (indeed, @code{PC_INIT} uses this
+macro internally).
+
+@example
+m4_define(python_min_ver, 2.6.1)
+PC_PYTHON_VERIFY_VERSION([>=], python_min_ver, ,
+                         [AC_MSG_ERROR(Python interpreter too old)])
+@end example
+
+In this example, we set the minimum version to 2.6.1 through the use
+of an M4 macro. We then check if the interpreter stored in the
+@env{PYTHON} variable (either set by the user or found by
+@code{PC_INIT}) is at least of that version. If it is not, the
+resulting @file{configure} script will exit with an appropriate error
+message. You may use any mathematical comparison operator that Python
+recognizes for the first argument (``=='', ``<='', ``>'', etc.).
+
+@c *******************************************************************
+@node Checking for a module or function, Writing test programs, Verifying the Python version, configure.ac
+@subsection Checking for a module or function
+
+It's reasonable to assume that many Python packages will have
+dependencies on other, external modules. With the provided pyconfigure
+macros, it is simple to check for the presence of dependencies on the
+system. All you have to do is use the @code{PC_PYTHON_CHECK_MODULE}
+macro as follows:
+
+@example
+PC_PYTHON_CHECK_MODULE([foo])
+@end example
+
+In this example, we checked for the presence of a module ``foo.''
+
+If the module is a hard requirement, you may provide actions to do if
+it is not present:
+
+@example
+PC_PYTHON_CHECK_MODULE([foo], , AC_MSG_ERROR([Module foo is not installed]))
+@end example
+
+If you need more fine-grained control, you can also test for a
+specific function, for example @code{foo.bar(arg1, arg2)}:
+
+@example
+PC_PYTHON_CHECK_FUNC([foo], [bar], [arg1, arg2])
+@end example
+
+Remember that you may omit arguments to Autoconf macros: in the
+previous example, the final two arguments, which correspond to the
+action to take if the test is successful and if it fails simply are
+not present in the argument list. Similarly, if you do not need to
+pass arguments to the test function, you can entirely omit the third
+argument to the macro:
+
+@example
+PC_PYTHON_CHECK_FUNC([foo], [bar])
+@end example
+
+
+@c *******************************************************************
+@node Writing test programs, Using Sphinxbuild to build documentation, Checking for a module or function, configure.ac
+@subsection Writing test programs
+
+One great benefit of Autoconf is the ability to embed test programs
+inside @file{configure}. The pyconfigure macros allow for this by
+defining Python as a language within Autoconf. You then would proceed
+to write test programs as you would in any other language that
+Autoconf supports like C.
+
+@example
+AC_LANG_PUSH(Python)[]
+AC_RUN_IFELSE([AC_LANG_PROGRAM([dnl
+# some code here
+import foo
+], [dnl
+    # some more code here
+    foo.bar()
+])], [ACTION-IF-SUCCESSFUL], [ACTION-IF-FAILED])
+AC_LANG_POP(Python)[]
+@end example
+
+The first argument to @code{AC_LANG_PROGRAM} is the so-called
+``prolog'', and typically will contain your @code{import} statements
+or function definitions. The second argument contains the main body of
+the program, which will be in the scope of an @code{if __name__=="__main__":}
+block. So, you must be sure to indent the code appropriately.
+
+@node Using Sphinxbuild to build documentation,  , Writing test programs, configure.ac
+@subsection Using Sphinxbuild to build documentation
+
+Using pyconfigure and Autoconf to test for other tools is quite
+easy. For example, many Python packages use Sphinxbuild to build their
+documentation. If this is the case for your project, you might do
+something like the following:
+
+@example
+AC_CHECK_PROGS([SPHINXBUILD], [sphinx-build sphinx-build3 sphinx-build2], [no])
+AS_IF([test "x$SPHINXBUILD" = xno], 
+	    AC_MSG_WARN(sphinx-build is required to build documentation))
+@end example
+
+We simply use Autoconf's @code{AC_CHECK_PROGS} macro to check for a
+series of possible Sphinxbuild binaries and save the result to the
+SPHINXBUILD variable, which may then be used in @file{Makefile.in}:
+
+@example
+docs/build/index.html: $(wildcard $(srcdir)/docs/source/*)
+ifneq ($(SPHINXBUILD),no)
+ 	$(SPHINXBUILD) -b html docs/source/ docs/build/ 
+endif
+@end example
+
+@c *******************************************************************
+@node Makefile.in, setup.py.in, configure.ac, Customization
+@section Makefile.in
+
+How you will customize the file @file{Makefile.in} and, indeed, what
+you will find in the file when it is first generated both depend on
+whether you specified if you prefer to write your installation logic
+in Make @xref{Invoking pyconf}.
+
+@menu
+* Makefile.in (distutils)::
+* Makefile.in (Make)::
+@end menu
+
+@c *******************************************************************
+@node Makefile.in (distutils), Makefile.in (Make), Makefile.in, Makefile.in
+@subsection Makefile.in (distutils)
+
+If you did not specify @code{--prefer-make}, @file{Makefile.in} will
+be a wrapper around the functionality of the Python @file{setup.py}
+script. For a basic program, no great amount of customization of this
+file will be necessary. The file contains many comments, which
+introduce its various sections.
+
+By default, the file supports installing to a Virtualenv, depending on
+whether the user has specified to do so when running
+@file{configure}. You will likely not have to change the ``install''
+recipe. If you have other files to install, it is recommended to
+create new targets to install them, and to add those targets as
+prerequisites to the ``install'' target. For example, if you have
+extra data files to install, you might create a ``install-data''
+target and corresponding recipe, and then add ``install-data'' as a
+prerequisite to ``install'':
+
+@example
+install: installdirs install-data
+@end example
+
+If you do install more files, be sure that they are properly removed
+when the user runs @code{make uninstall} by modifying the recipe for
+the ``uninstall'' target. Note that, at this time, Python's
+@code{distutils} does not have its own ``uninstall'' target, so this
+must be done manually.
+
+If you intend to produce source distributions via the @file{Makefile},
+which is more flexible than doing so via @file{setup.py}, it is
+important to modify the @code{DIST_FILES} variable located near the
+top of @file{Makefile.in}. Any file or directory you list there will
+be included in your source distribution.
+
+Finally, you may write recipes to build your package's documentation,
+which may not be covered by your @file{setup.py} script. How you
+accomplish this is highly dependent upon how you have organized your
+documentation sources. One example of how you might do it is included
+in the @file{Makefile.in}, commented-out at the end.
+
+@c *******************************************************************
+@node Makefile.in (Make),  , Makefile.in (distutils), Makefile.in
+@subsection Makefile.in (Make)
+
+If you passed the option @code{--prefer-make} to @file{pyconf},
+@file{Makefile.in} will contain all of the installation logic for your
+package. It is highly recommended that you be familiar with basic Make
+usage. See the @inforef{Make, Make manual, make}.
+
+By default, @file{Makefile.in} will contain the logic necessary to
+install a basic Python package consisting of one or more modules. The
+primary customization may be performed via the variables found at the
+beginning of the file: @code{PYPACKAGES}, @code{PYPACKAGE_ROOT},
+@code{SCRIPTS}, @code{PKG_DATA}, @code{DATA}, and @code{DATA_ROOT}.
+
+@code{PYPACKAGES} should contain a space-separated list of all of the
+Python modules in your package (i.e. top-level directories containing
+a @file{__init__.py} file). When your package is installed to the
+user's computer, these modules will be stored in the Python package
+directory (generally
+@file{$prefix/lib/python$version/@{site,dist@}-packages/}). If the
+modules are contained in a sub-directory, say @file{src}, of your
+source directory, you may set the @code{PYPACKAGE_ROOT} variable to
+that directory.
+
+@example
+PYPACKAGES = foo bar
+PYPACKAGE_ROOT = src
+@end example
+
+In this example, there are two modules to install: ``foo'' and
+``bar''. The modules are to be found under the @file{src} directory;
+thus, for example, module ``foo'' is to be found at @file{src/foo}. 
+
+The directories listed under @code{PYPACKAGES} will only have their
+Python files installed. If your modules depend on other, non-Python
+data files, you may list these under the @code{PKG_DATA}
+variable. Data files should be listed relative to their parent
+module. Thus, if module ``foo'' contains a file called @file{bar.dat},
+set @code{PKG_DATA = foo/bar.dat}.
+
+Other data files, which are not specific to any of the Python modules,
+may be specified under the @code{DATA} variable. As before, if your
+data files are all stored under a particular sub-directory, you may
+specify it in @code{DATA_ROOT}. Files listed under @code{DATA} are
+installed to the package's data directory, which is typically
+@file{/usr/local/share/$package}). 
+
+Finally, if your package has any scripts to install, list them under
+the @code{SCRIPTS} variable. They should be listed as files relative
+to the directory containing @file{Makefile.in}. Thus, if your script
+@file{baz} is located in the sub-directory @file{bin}, you would set
+@code{SCRIPTS = bin/baz}.
+
+One particular advantage of writing the installation logic in Make is
+the ease with which you may work with non-Python code in your project,
+such as extensions written in C. How these recipes are to be written
+is dependent upon the build requirements of this code, and you are
+thus referred to the @inforef{Make, Make manual, make}. Any
+installation recipes should be given their own targets and made as
+prerequisites of the ``install'' target. 
+
+@c *******************************************************************
+@node setup.py.in,  , Makefile.in, Customization
+@section setup.py.in
+
+@file{pyconf} will automatically generate a @file{setup.py.in} file,
+to be configured by the @file{configure} script to produce the Python
+@file{setup.py} script. If the @code{--prefer-make} option was
+specified, this file will merely contain Python code which calls Make
+on the generated @file{Makefile}, and needs not to be
+modified. Otherwise, the file will contain basic Python code to use
+@code{distutils} for package installation. The reader is referred to
+the Python documentation for more information on how to customize this
+file. 
+
+@c *******************************************************************
+@node Appendix, GNU Free Documentation License, Customization, Top
+@chapter Appendix
+
+@menu
+* Autoconf macros::
+@end menu
+
+
+@c *******************************************************************
+@node Autoconf macros,  , Appendix, Appendix
+@section Autoconf macros
+
+@multitable @columnfractions .33 .33 .33
+@headitem
+Macro Name & Arguments
+@tab
+Description
+@tab
+Variables exported
+
+@item
+@code{PC_INIT([MINIMUM-VERSION], [MAXIMUM-VERSION])}
+@tab
+Initialize pyconfigure by finding the highest-version Python
+interpreter that meets the specified requirements.
+@tab
+@code{PYTHON}
+
+@item
+@code{AC_PROG_PYTHON([NAME-TO-CHECK])}
+@tab
+Find the highest-version Python interpreter
+@tab
+@code{PYTHON}
+
+@item
+@code{PC_PROG_PYTHON_CONFIG([NAME-TO-CHECK])}
+@tab
+Find a python-config program
+@tab
+@code{PYTHON_CONFIG}
+
+@item
+@code{PC_PYTHON_VERIFY_VERSION([OPERATOR], [VERSION], [ACTION-IF-TRUE], [ACTION-IF-NOT-TRUE])}
+@tab
+Verify that the Python interpreter is of a sufficient version number
+according to some comparison operator ("==", "<=", etc.)
+@tab
+
+@item
+@code{PC_PYTHON_CHECK_VERSION}
+@tab
+Get the version of the Python interpreter
+@tab
+@code{PYTHON_VERSION}
+
+@item
+@code{PC_PYTHON_CHECK_PREFIX}
+@tab
+Check what Python thinks is the prefix
+@tab
+@code{PYTHON_PREFIX}
+
+@item
+@code{PC_PYTHON_CHECK_EXEC_PREFIX}
+@tab
+Check what Python thinks is the exec_prefix
+@tab
+@code{PYTHON_EXEC_PREFIX}
+
+@item
+@code{PC_PYTHON_CHECK_INCLUDES}
+@tab
+Check the include flags ('-I[header]...') for including the Python
+header files
+@tab
+@code{PYTHON_INCLUDES}
+
+@item
+@code{PC_PYTHON_CHECK_HEADERS}
+@tab
+Check for the Python header files (i.e. @file{Python.h})
+@tab
+@code{HAVE_PYTHON_H}
+
+@item
+@code{PC_PYTHON_CHECK_LIBS}
+@tab
+Check for the proper LIBS flags to load the Python shared libraries
+@tab
+@code{PYTHON_LIBS}
+
+@item
+@code{PC_PYTHON_TEST_LIBS}
+@tab
+Test for the presence of the Python shared libraries
+@tab
+@code{HAVE_LIBPYTHON}
+
+@item
+@code{PC_PYTHON_CHECK_CFLAGS}
+@tab
+Find the CFLAGS that Python expects
+@tab
+@code{PYTHON_CFLAGS}
+
+@item
+@code{PC_PYTHON_CHECK_LDFLAGS}
+@tab
+Find the LDFLAGS that Python expects
+@tab
+@code{PYTHON_LDFLAGS}
+
+@item
+@code{PC_PYTHON_CHECK_EXTENSION_SUFFIX}
+@tab
+Check the extension suffix given to Python extension modules (Python 3
+only)
+@tab
+@code{PYTHON_EXTENSION_SUFFIX}
+
+@item
+@code{PC_PYTHON_CHECK_ABI_FLAGS}
+@tab
+Check the ABI flags used by Python (Python 3 only)
+@tab
+@code{PC_PYTHON_ABI_FLAGS}
+
+@item
+@code{PC_PYTHON_CHECK_PLATFORM}
+@tab
+Check what platform Python thinks this is
+@code{PYTHON_PLATFORM}
+
+@item
+@code{PC_PYTHON_CHECK_SITE_DIR}
+@tab
+Check the appropriate place to install Python packages (i.e.
+@file{$(prefix)/lib/python2.7/site-packages})
+@tab
+@code{pythondir}
+
+@item
+@code{PC_PYTHON_SITE_PACKAGE_DIR}
+@tab
+A convenience macro; adds the package's name to @code{pythondir}
+@tab
+@code{pkgpythondir}
+
+@item
+@code{PC_PYTHON_CHECK_EXEC_DIR}
+@tab
+Check directory for installing Python extension modules
+@tab
+@code{pyexecdir}
+
+@item
+@code{PC_PYTHON_EXEC_PACKAGE_DIR}
+@tab
+A convenience macro; adds the package's name to @code{pyexecdir}
+@tab
+@code{pkgpyexecdir}
+
+@item
+@code{PC_PYTHON_CHECK_MODULE}
+@tab
+Test if a given Python module can be successfully loaded
+@tab
+
+@item
+@code{PC_PYTHON_CHECK_FUNC}
+@tab
+Test if a given Python function can be called successfully.
+@tab
+@end multitable
+
+@node GNU Free Documentation License,  , Appendix, Top
+@appendix GNU Free Documentation License
+
+@include fdl.texi
+
+@bye
+

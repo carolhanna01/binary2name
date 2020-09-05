@@ -1,0 +1,406 @@
+@c gstransf.texi
+  
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+@node Transforms, Drawing and Labeling Points, Transforming Points, Top
+@chapter Transforms
+
+@tindex Transform 
+When @code{Points} are transformed using @code{shift()}, @code{shear()},
+or one of the other transformation functions, the 
+@code{world_coordinates} are not modified directly.  Instead,
+another data member of @code{class Point} is used to store the
+information about the transformation, namely @code{transform} of
+type @code{class Transform}.  A @code{Transform} object has a single
+data element of type @code{Matrix} and a number of member functions.  A
+@code{Matrix} is 
+simply a 
+@c
+@iftex
+@tex 
+$4\times 4$
+@end tex
+@end iftex
+@c
+@ifnottex
+@math{4 X 4} 
+@end ifnottex
+@c
+array@footnote{It is unfortunate that 
+the terms ``array'', ``matrix'', and ``vector'' have different meanings
+in @cpp{} and in normal mathematical usage. However, in practice, these
+discrepancies turn out not to cause many problems.  Stroustrup,
+@cite{The @cpp{} Programming Language}, @SECT{} 22.4, p.@: 662.}  
+@c
+of @code{reals}
+defined using @code{typedef real Matrix[4][4]}.  
+Such a matrix suffices for performing all
+of the transformations (affine and perspective) possible in
+three-dimensional space.@c
+@c
+@footnote{In fact, none of the operations for
+transformations require all of the elements of a 
+@c
+@iftex
+@tex 
+$4\times 4$
+@end tex
+@end iftex
+@c
+@ifnottex
+@math{4 X 4} 
+@end ifnottex
+@c
+matrix.  In many
+3D graphics programs, the matrix operations are modified to use smaller
+transformation matrices, which reduces the storage requirements of the
+program.  This is a bit tricky, because the affine transformations and
+the perspective transformation use different elements of the matrix.  I
+consider that the risk of something going wrong, possibly producing
+hard-to-find bugs, outweighs any benefits from saving memory (which
+is usually no longer at a premium, anyway).  In addition, there may be
+some interesting non-affine transformations that would be worth
+implementing.  Therefore, I've decided to
+use full 
+@c
+@iftex
+@tex 
+$4\times 4$
+@end tex
+@end iftex
+@c
+@ifnottex
+@math{4 X 4} 
+@end ifnottex
+@c
+matrices in 3DLDF.}
+@c
+Any combination of transformations can be represented by a single
+transformation matrix.  This means that consecutive transformations
+of a @code{Point} can be ``saved up'' and applied to its coordinates 
+all at once when needed, rather than updating them for each
+transformation.  
+
+@cindex homogeneous coordinates 
+@c
+@code{Transforms} work by performing matrix multiplication of
+@code{Matrix} with the homogeneous @code{world_coordinates} of
+@code{Points}.  
+If a set of homogeneous coordinates 
+@math{\alpha = (x, y, z, w)} 
+and 
+@c
+@iftex 
+@tex 
+$${\rm @code{Matrix}~} M=\pmatrix{a&e&i&m\cr
+                                  b&f&j&n\cr
+                                  c&g&k&o\cr
+                                  d&h&l&p\cr}$$
+@end tex
+@end iftex
+@c
+@ifnottex 
+@display 
+@code{Matrix M} =
+a e i m
+b f j n
+c g k o
+d h l p
+@end display
+@end ifnottex 
+@c
+then the set of homogeneous coordinates @math{\beta} resulting from
+multiplying @math{\alpha} and @math{M} is calculated as follows:
+@c
+@iftex 
+@tex 
+$$ \beta = 
+\alpha\times M=((xa + yb + zc + wd), 
+                (xe + yf + zg + wh), (xi + yj + zk + wl),
+                (xm + yn + zo + wp))$$
+@end tex
+@end iftex
+@ifnottex 
+@display
+@math{\beta = \alpha\times M = ((xa + yb + zc + wd),  (xe + yf + zg + wh), 
+(xi + yj + zk + wl), (xm + yn + zo + wp))}
+@end display
+@end ifnottex 
+@c
+Please note that each coordinate of @math{\beta} can be influenced by all of the
+coordinates of @math{\alpha}.  
+
+Operations on
+matrices are very important in computer graphics applications and are
+described in many books about computer graphics and geometry.  For
+3DLDF, I've mostly used Huw Jones' 
+@cite{Computer Graphics through Key Mathematics} 
+and David Salomon's @cite{Computer Graphics and Geometric Modeling}.  
+
+@c
+@tindex Transform
+@c
+It is often useful to declare and use @code{Transform} objects in 3DLDF,
+just as it is for @code{transforms} in Metafont.  Transformations can be
+stored in @code{Transforms} and then be used to transform @code{Points} 
+by means of @code{Point::operator*=(const Transform&)}.
+
+@example
+@r{1.} Transform t;
+@r{2.} t.shift(0, 1);
+@r{3.} Point p(1, 0, 0);
+@r{4.} p *= t;
+@r{5.} p.show("p:");
+@print{} p: (1, 1, 0)
+@end example
+
+
+@cindex identity matrix 
+@cindex matrix, identity 
+@cindex matrix operations 
+@cindex operations, matrix 
+@c
+When a @code{Transform} is declared (line 1), it is
+initialized to an @dfn{identity matrix}.  All identity matrices are
+square, all of the elements of the main diagonal (upper left to lower
+right) are 1, and all of the other elements are 0.
+So a 
+@c
+@iftex
+@tex 
+$4\times 4$
+@end tex
+@end iftex
+@c
+@ifnottex
+@math{4 X 4} 
+@end ifnottex
+@c
+identity matrix, as used in 3DLDF, looks like this:
+@c
+@iftex 
+@tex
+$$\pmatrix{1&0&0&0\cr
+           0&1&0&0\cr
+           0&0&1&0\cr
+           0&0&0&1\cr}$$
+@end tex
+@end iftex
+@c
+@ifnottex 
+@display 
+1 0 0 0
+0 1 0 0
+0 0 1 0
+0 0 0 1
+@end display
+@end ifnottex 
+@c
+If a matrix @math{A} is multiplied with an identity matrix @math{I}, the result is
+identical to @math{A}, i.e., 
+@c
+@iftex
+@tex
+$A \times I = A$.
+@end tex
+@end iftex
+@ifnottex 
+A * I = A.
+@end ifnottex 
+@c
+This is the salient property of an identity matrix.  
+
+The same affine transformations are applied in the same way to
+@code{Transforms} as they are to @code{Points}, i.e., the functions 
+@code{scale()}, @code{shift()}, 
+@code{shear()}, and @code{rotate()} 
+correspond to the @code{Point}
+versions of these functions, and they take the same arguments:
+
+@example
+Point p;
+Transform t;
+p.shift(3, 4, 5);
+t.shift(3, 4, 5);
+@result{} p.transform @equiv{} t
+p.show_transform("p:");
+@print{} p:
+   Transform:
+         0   0.707   0.707       0 
+    -0.866   0.354  -0.354       0 
+      -0.5  -0.612   0.612       0 
+         0       0       0       1 
+t.show("t:");
+@print{} t:
+         0   0.707   0.707       0 
+    -0.866   0.354  -0.354       0 
+      -0.5  -0.612   0.612       0 
+         0       0       0       1 
+
+@end example
+ 
+
+@menu
+* Applying Transforms to Points Intro::  
+* Inverting Transforms::        
+@end menu
+
+@node Applying Transforms to Points Intro, Inverting Transforms, Transforms, Transforms
+@section Applying Transforms to Points
+
+A @code{Transform} @math{t} is applied to a
+@code{Point} @math{P} using the binary @code{*=} operation
+(@code{Point::operator*=(const Transform&)})
+which performs matrix multiplication of @code{P.transform} by @code{t}.
+@xref{Point Operators, ,Point Reference; Operators}. 
+
+@example
+Point P(0, 1);
+Transform t;
+t.rotate(90);
+t.show("t:");
+@print{} t:
+   1       0       0       0 
+   0       0      -1       0 
+   0       1       0       0 
+   0       0       0       1 
+P *= t;
+P.show_transform("P:");
+@print{} P:
+Transform:
+   1       0       0       0 
+   0       0      -1       0 
+   0       1       0       0 
+   0       0       0       1 
+P.show("P:");
+@print{} P: (0, 0, -1)
+@end example
+
+
+In the example above, there is no real need to use a @code{Transform},
+since @code{P.rotate(90)} could  have been called directly.
+As constructions become more complex, the power of @code{Transforms}
+becomes clear:
+
+
+@c !! TO DO: Maybe make @code{Points} the same to begin with.  
+@c LDF 2003.08.15. 
+@c
+@example
+@r{1.} Point p0(0, 0, 0);
+@r{2.} Point p1(10, 5, 10);
+@r{3.} Point p2(16, 14, 32);
+@r{4.} Point p3(25, 50, 99);
+@r{5.} Point p4(12, 6, 88);
+@r{6.} Transform a;
+@r{7.} a.shift(2, 3, 4);
+@r{8.} a.scale(1, 3, 1);
+@r{9.} p2 *= p3 *= a;
+@r{10.} a.rotate(p0, p1, 75);
+@r{11.} p4 *= a;
+@r{12.} p2.show("p2:");
+   @print{} p2: (18, 51, 36)
+@r{13.} p3.show("p3:");
+   @print{} p3: (27, 159, 103)
+@r{14.} p4.show("p4:");
+   @print{} p4: (24.4647, -46.2869, 81.5353)
+@end example
+
+
+@c !!  TO DO: If I change the example above, I may have to change this
+@c paragraph.  LDF 2003.08.15.
+@c
+In this example, @math{a} is shifted and scaled, and @math{a} is applied
+to both in line 9.  This works, because
+the binary operation   
+@code{operator*=(const Transform& t)} returns @var{t},
+making it possible to chain invocations of @code{*=}.
+Following this, @math{a} is rotated 
+@DEG{75}
+about the line through @math{p_0} and @math{p_1}.  
+Finally, all three transformations, which are stored in @math{a}, are
+applied to @math{p_4}. 
+
+@node Inverting Transforms,  , Applying Transforms to Points Intro, Transforms
+@section Inverting Transforms
+
+@cindex matrix inversion 
+@cindex inversion 
+@dfn{Inversion} is another operation that can be performed on
+@code{Transforms}.  This makes it possible to reverse the effect of a
+@code{Transform}, which may represent multiple transformations.
+
+@example
+@group
+Point p;
+Transform t;
+t.shift(1, 2, 3);
+t.scale(2, 3, 4);
+t.rotate(45, 45, 30);
+t.show("t:");
+@print{} t:
+   1.22   0.707    1.41       0 
+  0.238    2.59    -1.5       0 
+  -3.15    1.45       2       0 
+  -7.74    10.2    4.41       1 
+p *= t;
+p.show("p:");
+@print{} p: (-7.74, 10.2, 4.41)
+Transform u;
+u = t.inverse();
+u.show("u:");
+@print{} u:
+  0.306  0.0265  -0.197 2.85e-09 
+  0.177   0.287  0.0906 -1.12e-09 
+  0.354  -0.167   0.125       0 
+     -1      -2      -3       1 
+p *= u;
+p.show("p:");
+@print{} p: (0, 0, 0)
+u *= t;
+u.show("u:");
+@print{} u:
+      1       0       0       0
+      0       1       0       0
+      0       0       1       0
+      0       0       0       1
+@end group
+@end example
+
+If @code{inverse()} is called with no argument, or with the argument
+@code{false}, it returns a
+@code{Transform} representing its inverse, and remains unchanged.  If it
+is called with the argument @code{true}, it is set to its inverse.
+
+Complete reversal of the transformations applied to a @code{Point}, as
+in the previous example, probably won't make much sense.  However,
+partial reversal is a valuable technique.  For example, it is used in 
+@code{rotate()} for rotation about a line defined by two @code{Points}. 
+The following example merely demonstrates the basic principle;  an
+example that does something useful would be too complicated.  
+
+@c !! TO DO:  Change this example so that it demonstrates rotation about
+@c a line defined by two @code{Points}.  Change the paragraph above to
+@c correspond.  LDF 2003.08.15.
+@c
+@example
+@group 
+Transform t;
+t.shift(3, 4, 5);
+t.rotate(45);
+t.scale(2, 2, 2);
+Point p;
+p *= t;
+p.show("p:");
+@print{} p: (6, 12.7279, 1.41421)
+t.inverse(true);
+p.rotate(90, 90);
+p *= t;
+p.show("p:");
+@print{} p: (3.36396, -5.62132, -2.37868)
+@end group
+@end example
+   

@@ -1,0 +1,229 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- This class is the simplest attach class possible. You can attach
+-- threads to it, and sync works. You can ask how many threads are
+-- attached through .threads_attached.
+class ATTACH < $ATTACH, $MUTEX, $COND_LOCK is
+   include COND_LOCK; 
+   include ATTACH_INCLUDE{INT} init->attach_init;
+			   --acquirable->,acquire->,release->,
+   			  --request->,cancel_request->,wait_for->,
+			  --combinations->,combined_with->;
+   private const mutex_t,no_threads_t,threads_t;
+   readonly attr no_threads,threads:$MUTEX;
+   create:SAME is
+      r::=new;
+      r.init_cond_lock;
+      r.attach_init;
+      r.no_threads:=#COND_LOCK_HELPER(r,no_threads_t);
+      r.threads:=#COND_LOCK_HELPER(r,threads_t);
+      LM_MULTIPLE_LOCK_MANAGER::create(|r,r.no_threads,r.threads|);
+      return r;
+   end;
+
+   private test_cond(cond:INT):BOOL is
+      case cond
+      when no_threads_t then return threads_attached=0;
+      when threads_t then return threads_attached/=0;
+      else end;
+      return true;
+   end;
+end;
+
+-- the following version of PAR_ATTACH does not use the fast lock interface
+-- class PAR_ATTACH < $ATTACH, $MUTEX, $COND_LOCK is include ATTACH; end;
+
+class PAR_ATTACH_NO_THREAD < $MUTEX is
+   include SMUTEX;
+   readonly attr primary:PAR_ATTACH;
+
+   create(p:PAR_ATTACH):SAME is
+      r::=new;
+      r.locked_by:=THREAD_ID::nil;
+      r.primary:=p;
+      return r;
+   end;
+   acquirable(tid:THREAD_ID):BOOL is return primary.threads_attached = 0; end;
+
+end;
+
+class PAR_ATTACH < $ATTACH, $MUTEX is
+   include SMUTEX; 
+   readonly attr threads_attached:INT;
+   readonly attr threads_in_sync:INT;
+   private attr sync1:SPINLOCK;
+   private attr sync2,sync3:LL_LOCK;
+   private attr no_threads_lock:MUTEX;
+   readonly attr no_threads:$MUTEX;
+
+   create:SAME is 
+      r::=new;
+      r.init;
+      r.no_threads:=#PAR_ATTACH_NO_THREAD(r);
+      LM_MULTIPLE_LOCK_MANAGER::create(|r,r.no_threads,r.no_threads_lock|);
+      return r;
+   end;
+
+   init is
+      sync1:=#SPINLOCK; -- synchronizes the execution of birth and death 
+		        -- (mainly update to threads_attached and threads_in_sync)
+      sync2:=#LL_LOCK;
+      sync3:=#LL_LOCK;
+      no_threads_lock:=#MUTEX;
+      sync2.lck;
+      sync3.lck;
+   end;
+
+   -- the runtime guarantees that self has been locked
+   -- note that for parloops and fork birth is called by
+   -- the thread that CREATES the new thread, not by the new
+   -- thread. This is different to the normal attach!
+   birth is
+      sync1.lck;
+      SYS::import;
+      threads_attached:=threads_attached+1;
+      SYS::export;
+      sync1.unlck;
+   end;
+
+   death is
+      sync1.lck;
+      SYS::import;
+      if threads_attached=threads_in_sync+1 and threads_in_sync>0 then
+	 threads_in_sync:=threads_in_sync+1;
+	 sync2.unlck;
+	 sync3.lck;
+	 threads_in_sync:=0;
+      end;
+      threads_attached:=threads_attached-1;
+      -- If required, create an event for the lock manager.
+      if threads_attached=0 then lock no_threads_lock then end; end;
+      SYS::export;
+      sync1.unlck;
+   end;
+
+   synchronize is
+      SYS::export;
+      sync1.lck;
+      SYS::import;
+      if threads_in_sync=0 and threads_attached=1 then
+         sync1.unlck;
+	 SYS::export;
+	 return;
+      end;
+      threads_in_sync:=threads_in_sync+1;
+         
+      SYS::export;
+      if threads_in_sync=threads_attached then
+         sync2.unlck;
+	 sync3.lck;
+	 threads_in_sync:=0;
+	 sync1.unlck;
+      else
+	 sync1.unlck;
+         sync2.lck;
+	 SYS::import;
+	 threads_in_sync:=threads_in_sync-1;
+	 SYS::export;
+	 if threads_in_sync=1 then
+	    sync3.unlck;
+	 else
+	    sync2.unlck;
+	 end;
+      end;
+      SYS::import;
+   end;
+
+end;
+
+-- this class should be included in a class
+-- which is a subtype of $LOCK.
+-- to prevent the compiler from type checking this class (which would
+-- fail for example in the lock statements) we add a dummy type parameter.
+-- This will be fixed as soon as partial classes have been implemented
+class ATTACH_INCLUDE{T} is
+   readonly attr threads_attached:INT;
+   readonly attr threads_in_sync:INT;
+   private attr sync1,sync2,sync3:LL_LOCK;
+
+   create:SAME is 
+      r::=new;
+      r.init;
+      return r;
+   end;
+
+   init is
+      sync1:=#LL_LOCK;
+      sync2:=#LL_LOCK;
+      sync3:=#LL_LOCK;
+      sync2.lck;
+      sync3.lck;
+   end;
+
+   -- the runtime guarantees that self has been locked
+   birth is
+      sync1.lck;
+      threads_attached:=threads_attached+1;
+      sync1.unlck;
+      -- #OUT+(TIMING::str+" PA("+SYS::id(self)+") birth "+THREAD_ID::me.str+" as "+threads_attached+"\n");
+   end;
+
+   death is
+      lock when self then
+	 sync1.lck;
+	 if threads_attached=threads_in_sync+1 and threads_in_sync>0 then
+	    threads_in_sync:=threads_in_sync+1;
+	    sync2.unlck;
+	    sync3.lck;
+	    threads_in_sync:=0;
+	 end;
+	 threads_attached:=threads_attached-1;
+	 sync1.unlck;
+      end;
+   end;
+
+   synchronize is
+      SYS::export;
+      sync1.lck;
+      SYS::import;
+      if threads_in_sync=0 and threads_attached=1 then
+         sync1.unlck;
+	 SYS::export;
+	 return;
+      end;
+      threads_in_sync:=threads_in_sync+1;
+         
+      SYS::export;
+      if threads_in_sync=threads_attached then
+         sync2.unlck;
+	 sync3.lck;
+	 threads_in_sync:=0;
+	 sync1.unlck;
+      else
+	 sync1.unlck;
+         sync2.lck;
+	 SYS::import;
+	 threads_in_sync:=threads_in_sync-1;
+	 SYS::export;
+	 if threads_in_sync=1 then
+	    sync3.unlck;
+	 else
+	    sync2.unlck;
+	 end;
+      end;
+      SYS::import;
+   end;
+end;
+
+-- vim:sw=3:nosmartindent

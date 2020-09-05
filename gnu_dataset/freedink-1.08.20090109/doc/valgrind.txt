@@ -1,0 +1,34 @@
+Valgrind is a suite of tools for debugging and profiling GNU/Linux
+programs. Here are various tips to use its memory debugger:
+
+
+Strip errors from SDL
+=====================
+
+Run::
+
+ valgrind --leak-check=yes --gen-suppressions=yes ./freedink -window -nosound
+
+Copy paste the relevant output in::
+
+ grep -v ^== >> /tmp/suppressions
+
+Then give those exclusions to Valgrind::
+
+ valgrind --leak-check=yes --suppressions=/tmp/suppressions ./freedink -window -nosound
+
+
+'alleyoop' is a GUI for valgrind. Apparently it can be used to select
+suppressions from the full list of generated memory warnings, which
+could be easier than the above.
+
+
+Use with Autotools
+==================
+
+CFLAGS default to "-O2 -g", but Valgrind recommends avoiding using
+-O2. The simplest way to remove that option that is passing CFLAGS to
+./configure (not to 'make', since it would also erase other CFLAGS
+such as the SDL include path)::
+
+ CFLAGS="-g" ./configure

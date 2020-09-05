@@ -1,0 +1,30 @@
+#! /bin/sh
+set -x
+
+# Time-stamp:        "2006-09-23 19:47:51 bkorb"
+# Last Committed:    $Date: 2006/09/24 02:59:00 $
+
+egrep '#undef +AUTOOPTS_ENABLED' ${top_builddir}/config.h >/dev/null && \
+ exit 0
+
+srcdir=`dirname $0`
+srcdir=`cd ${srcdir} ; pwd`
+rm -f ${destdir}/options.h
+exec 3> ${destdir}/options.h
+sed '/^#include <sys/q' ${srcdir}/autoopts/options.h >&3
+
+if egrep 'define +HAVE_STDINT_H' ${top_builddir}/config.h >/dev/null
+then echo '#include <stdint.h>' >&3
+else echo '#include <inttypes.h>' >&3 ; fi
+
+if egrep 'define +HAVE_LIMITS_H' ${top_builddir}/config.h >/dev/null
+then echo '#include <limits.h>' >&3
+else echo '#include <sys/limits>' >&3 ; fi
+
+if egrep 'define +HAVE_U_INT' ${top_builddir}/config.h >/dev/null
+then :
+else echo 'typedef unsigned int u_int;' >&3 ; fi
+
+sed '1,/endif.*HAVE_LIMITS/d' ${srcdir}/autoopts/options.h >&3
+
+exec 3>&-

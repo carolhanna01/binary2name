@@ -1,0 +1,69 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class FUTURE{T} < $ATTACH{T}, $MUTEX, $COND_LOCK is
+   include COND_LOCK;
+   private const mutex_t,has_value_t,no_value_t,has_thread_t,no_thread_t;
+   private attr in_use:BOOL;
+   private attr val:T;
+   private attr got_future:BOOL;
+   readonly attr has_value,no_value,has_thread,no_thread:$MUTEX;
+
+   create:SAME is
+      r::=new;
+      r.has_value:=#COND_LOCK_HELPER(r,has_value_t);
+      r.no_value:=#COND_LOCK_HELPER(r,no_value_t);
+      r.has_thread:=#COND_LOCK_HELPER(r,has_thread_t);
+      r.no_thread:=#COND_LOCK_HELPER(r,no_thread_t);
+      r.init_cond_lock;
+      LM_MULTIPLE_LOCK_MANAGER::create(|r,r.has_value,r.no_value,
+					r.has_thread,r.no_thread|);
+      return r;
+   end;
+
+   is_used:BOOL is return in_use; end;
+   is_finished:BOOL is return in_use and got_future; end;
+
+   private test_cond(cond:INT):BOOL is
+      case cond 
+      when has_value_t then return got_future; 
+      when no_value_t then return ~got_future;
+      when has_thread_t then return in_use and ~got_future;
+      when no_thread_t then return ~in_use or got_future;
+      else end;
+      return true;
+   end;
+
+   birth is
+      if in_use then
+         raise "using future a second time";
+      end;
+      in_use:=true;
+   end;
+
+   death(v:T) is
+      lock when self then
+         got_future:=true;
+	 val:=v;
+      end;
+   end;
+
+   get:T is
+      lock when has_value then
+         return val;
+      end;
+   end;
+
+   synchronize is return; end;
+end;
+

@@ -1,0 +1,106 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- helper classes usefull for mutex like locks
+abstract class $COND_LOCK < $MUTEX is
+   primary:$LOCK;
+   acquirable(tid:THREAD_ID,tp:INT):BOOL;
+end;
+
+class COND_LOCK_HELPER < $MUTEX is
+   include LOCK_INCLUDE;
+   primary:$LOCK is return p.primary; end;
+   readonly attr p:$COND_LOCK;
+   readonly attr tp:INT;
+   create(g:$COND_LOCK,t:INT):SAME is
+      r::=new;
+      r.p:=g;
+      r.tp:=t;
+      return r;
+   end;
+
+   acquirable(tid:THREAD_ID):BOOL is
+      return p.acquirable(tid,tp);
+   end;
+   acquire(tid:THREAD_ID) is p.acquire(tid); end;
+   release(tid:THREAD_ID) is p.release(tid); end;
+   wait_for(tid:THREAD_ID):ARRAY{THREAD_ID} is
+      return p.wait_for(tid);
+   end;
+   request(tid:THREAD_ID) is p.request(tid); end;
+   cancel_request(tid:THREAD_ID) is p.cancel_request(tid); end;
+end;
+
+partial class COND_LOCK is
+   include LOCK_INCLUDE;
+   primary:SAME is return self; end;
+   private attr locked_by:THREAD_ID;
+   private attr locked:INT;
+   private attr count:INT;
+   private attr request:INT;
+
+   private init_cond_lock is end;
+   
+   -- this function is meant to be overwritten
+   private stub test_cond(cond:INT):BOOL;
+
+   acquirable(tid:THREAD_ID):BOOL is
+      return acquirable(tid,mutex_t);
+   end;
+
+   acquirable(tid:THREAD_ID,cond:INT):BOOL is
+      return (locked=0 or locked_by=tid) and test_cond(cond);
+   end;
+
+   request(tid:THREAD_ID) is
+      SYS::import;
+      request:=request+1;
+      SYS::export;
+   end;
+
+   cancel_request(tid:THREAD_ID) is
+      SYS::import;
+      request:=request-1;
+      SYS::export;
+   end;
+
+   acquire(tid:THREAD_ID)
+   pre locked=0 or locked_by=tid
+   is
+      SYS::import;
+      locked:=locked+1;
+      locked_by:=tid;
+      SYS::export;
+   end;
+
+   release(tid:THREAD_ID) 
+   pre locked>0 and locked_by=tid
+   is
+      SYS::import;
+      locked:=locked-1;
+      if locked=0 then 
+         locked_by:=THREAD_ID::nil; 
+      end;
+      SYS::export;
+   end;
+
+   wait_for(tid:THREAD_ID):ARRAY{THREAD_ID} is
+      if locked>0 and tid/=locked_by then
+	 return |locked_by|;
+      end;
+      return void;
+   end;
+
+end;
+
+-- vim:sw=3:nosmartindent

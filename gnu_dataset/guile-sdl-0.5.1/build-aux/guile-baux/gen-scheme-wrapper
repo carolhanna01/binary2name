@@ -1,0 +1,175 @@
+#!/bin/sh
+exec ${GUILE-guile} -e '(guile-baux gen-scheme-wrapper)' -s $0 "$@" # -*- scheme -*-
+!#
+;;; gen-scheme-wrapper --- create two Scheme forms to wrap foo.so
+
+;; Copyright (C) 2011 Thien-Thi Nguyen
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 3, or
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this software; see the file COPYING.  If not, write to
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
+;;; Commentary:
+
+;; Usage: gen-scheme-wrapper [options] la-file
+;;
+;; Output two Scheme forms that can dynamically link and
+;; initialize the shared object library represented by libtool
+;; archive description file LA-FILE, additionally (re-)exporting
+;; the library's interface elements.  LA-FILE should be named
+;; STEM.la.
+;;
+;; Options (defaults in square braces):
+;;  -o, --output OUTFILE  -- Write to OUTFILE [stdout].
+;;  -g, --group GROUP     -- Use GROUP as module name prefix.
+;;  -m, --module NAME     -- Specify NAME explicitly.
+;;  -e, --exports FILE    -- Read exports from FILE [STEM.exports].
+;;  -t, --thunk FUNC      -- Call FUNC to initialize the module.
+;;  -i, --instdir DIR     -- Look for shared object library in DIR.
+;;  -d, --dlname          -- Mine dlname from LA-FILE [STEM].
+;;  -v, --verbose         -- Display progress messages to stderr.
+;;
+;; If ‘--module NAME’ is specified, that is the module name to use.
+;; Otherwise, the GROUP (either a single symbol or a list of symbols)
+;; is appropriately prefixed onto STEM to form the module name.
+;;
+;; Both ‘--thunk’ and ‘--instdir’ are required.  If FUNC contains
+;; the two-character sequence "~A", then that portion is replaced
+;; by the module name, without parentheses, and with characters not
+;; in ‘char-set:letter+digit’ replaced by underscore.
+
+;;; Code:
+
+(define-module (guile-baux gen-scheme-wrapper)
+  #:export (main)
+  #:use-module ((guile-baux common) #:select (fs fso fse
+                                                 die
+                                                 check-hv qop<-args))
+  #:use-module ((guile-baux read-string) #:select (read-string))
+  #:use-module ((guile-baux forms-from) #:select (forms<-file))
+  #:use-module ((srfi srfi-13) #:select (string-prefix?
+                                         string-contains
+                                         string-skip
+                                         string-concatenate-reverse
+                                         string-trim-both))
+  #:use-module ((srfi srfi-14) #:select (char-set:letter+digit
+                                         char-set))
+  #:use-module ((ice-9 rdelim) #:select (read-line)))
+
+(define (badness s . args)
+  (apply die #f (fs "~A: ~A~%" (basename (car (command-line))) s)
+         args))
+
+(define (find var filename)
+  (let ((p (open-input-file filename))
+        (prefix (fs "~A=" var)))
+    (let loop ()
+      (let ((line (read-line p)))
+        (cond ((eof-object? line) (badness "could not find ~A in ~A"
+                                           var filename))
+              ((string-prefix? prefix line)
+               (close-port p)
+               ;; rv
+               (string-trim-both line #\' (string-length prefix)))
+              (else
+               (loop)))))))
+
+(define (spew module exports thunk so-filename)
+  (fso "(define-module ~S #:export ~S)~%" module exports)
+  (fso "(dynamic-call ~S (dynamic-link ~S))~%" thunk so-filename))
+
+(define (me)
+  (basename (car (command-line))))
+
+(define (flat module)
+  (let ((s (string-trim-both (object->string module)
+                             (char-set #\( #\)))))
+    (let loop ((prev 0) (acc '()))
+      (define (snip end)
+        (substring s prev end))
+      (cond ((string-skip s char-set:letter+digit prev)
+             => (lambda (pos)
+                  (loop (1+ pos) (cons* "_" (snip pos) acc))))
+            (else
+             (string-concatenate-reverse
+              acc (snip (string-length s))))))))
+
+(define (main/qop qop)
+  (let* ((verbose? (qop 'verbose))
+         (la (let ((args (qop '())))
+               (cond ((null? args) (badness "missing arg LA-FILE"))
+                     ((pair? (cdr args)) (badness "too many args"))
+                     (else (car args)))))
+         (stem (basename la ".la"))
+         (group (qop 'group (lambda (s)
+                              (let ((v (read-string s)))
+                                (if (pair? v)
+                                    v
+                                    (list v))))))
+         (module (or (qop 'module read-string)
+                     (append (or group '())
+                             (list (string->symbol stem)))))
+         (dlname (if (qop 'dlname)
+                     (find "dlname" la)
+                     stem))
+         (exports (forms<-file (or (qop 'exports)
+                                   (fs "~A.exports" stem))))
+         (thunk (let ((raw (qop 'thunk)))
+                  (if (string-contains raw "~A")
+                      (fs raw (flat module))
+                      raw)))
+         (instdir (qop 'instdir))
+         (outp (qop 'output open-output-file)))
+    (and verbose?
+         (let ((prefix (string-append (me) ": ")))
+           (define (say s . args)
+             (apply fse (string-append prefix s "~%") args))
+           (say "module: ~S" module)
+           (say "dlname: ~S" dlname)
+           (say "exports: ~S ~S" (length exports) exports)
+           (say "thunk: ~S" thunk)
+           (say "instdir: ~S" instdir)))
+    (and outp (set-current-output-port outp))
+    (spew module exports thunk (in-vicinity instdir dlname))
+    (and verbose? outp (fse "~A: wrote file: ~A~%"
+                            (me) (port-filename outp)))
+    (close-port (current-output-port))))
+
+(define (main args)
+
+  (define (value-taking-option req?)
+    (lambda (c name)
+      `(,name
+        (single-char ,c)
+        (value #t)
+        (required? ,req?))))
+
+  (check-hv args '((package . "Guile-BAUX")
+                   (version . "1.0")
+                   (help . commentary)))
+  (main/qop
+   (qop<-args args (let ((o? (value-taking-option #f))
+                         (o! (value-taking-option #t)))
+                     (list
+                      (o? #\o 'output)
+                      (o? #\g 'group)
+                      (o? #\m 'module)
+                      (o? #\e 'exports)
+                      (o! #\t 'thunk)
+                      (o! #\i 'instdir)
+                      '(dlname (single-char #\d))
+                      '(verbose (single-char #\v))))))
+  #t)
+
+;;; gen-scheme-wrapper ends here

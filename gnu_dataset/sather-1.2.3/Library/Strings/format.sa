@@ -1,0 +1,425 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1996 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- format.sa: Formatting a string a la printf
+-- Author: Benedict A. Gomes <gomes@icsi.berkeley.edu>
+-- Author: Holger Klawitter <holger@icsi.berkeley.edu>
+
+abstract class $FMT --  > INT, FLT, FLTD, STR, CHAR, BOOL
+-- Formattable classes inherit from this type.
+is
+   fmt( fmt: STR ): STR;
+   -- Arg fmt: contains the format information.
+   -- Returns: a formatter version of self.
+end; -- abstract class $FMT
+
+-------------------------------------------------------------------
+class FMT < $STR
+--PURPOSE: It is convenient to generate formatted output with a
+-- printf-like command, especially when text and values are closely
+-- interspersed.  The Sather way for this is creating an object of
+-- type FMT and printing it out immeduately. The first argument of all
+-- FMT creations is a formatting string. All pairs of angle brackets
+-- "<" ">" are considered as format expressions and passed to the
+-- corresponding object to format itself.
+-- 
+--EXAMPLES:
+--    #FMT( "<> + <> %> <###>", 1,2,0 ) returns "1 + 2 >   0"
+--    #FMT( "<+###.##>", 3.14159 )      returns "  +3.14"
+--    #FMT( "<##.##e##>", 3.14159 )     returns " 3.14e00"
+--    #FMT( "<^#####>", "left" )        returns "left  "
+--    #FMT( "<F*###^###>", false )      returns "*false*"
+--GENERAL SYNTAX:
+--    fmt-expr   -> "<" [selector] [options] pad-expr [options] ">"
+--    selector   -> positive integer ":"
+--    pad-expr   -> [sign] padding [prec-pad] | anchor-pad
+--    anchor-pad -> [filling] padding
+--    filling    -> "F" followed by any single character.
+--    sign       -> "+" or "-".
+--    padding    -> hash-chars ["^" hash-chars]
+--    hash_chars -> arbitrary number of "#".
+--    prec-pad   -> "." followed by an arbitrary number of "#".
+--RESTRICTIONS:
+--    * Exponents are possible and considered as an option to floating
+--    point numbers.
+--    * Options can be used by user defined classes to feature special
+--    print formats. User defined options should always start with a
+--    lower case letter.
+--    * Only numbers can have precisions.
+--    * Fillings are not (yet) allowed with numbers.
+--    * Precision and anchors cannot be used together.
+--CLASSES:
+--    (in format.sa)
+--    $FMT        : Base class for formatible objects.
+--    FMT        : The core class of the formating engine.
+--              (calls fmt(STR):STR in the objects)
+--    (in base_format.sa)
+--    $FLT        : Aritificial base class for FLT and FLTD.
+--    BASE_FORMAT    : "Strategy" for output of Basic types.
+--              (called by the basic classes themselves)
+--    FMT_NUMBERS    : Formatting routines for numbers.
+--              (included by BASE_FORMAT)
+--SEE ALSO:
+--    A tutorial and more information for the format classes can be
+--    found under:
+--    http://www.icsi.berkeley.edu/~holger/Sather/format.html
+----------------------------------------------------------------------
+is
+   include FMT_ERROR_FLAGS;
+   
+   readonly attr str: STR;
+   -- the result of the formatting process.
+
+-- Routines to be called from outside:
+   
+   create(f: STR,a0: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0|;
+      return(new.parse(f,a));
+   end;
+   
+   create(f: STR,a0,a1: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1|;
+      return(new.parse(f,a));
+   end;
+   
+   create(f: STR,a0,a1,a2: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2|;
+      return(new.parse(f,a));
+   end;
+   
+   create(f: STR,a0,a1,a2,a3: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3|;
+      return(new.parse(f,a));
+   end;
+   
+   create(f: STR,a0,a1,a2,a3,a4: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3,a4|;
+      return(new.parse(f,a));
+   end;
+
+   create(f: STR,a0,a1,a2,a3,a4,a5: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3,a4,a5|;
+      return(new.parse(f,a));
+   end;
+
+   create(f: STR,a0,a1,a2,a3,a4,a5,a6: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3,a4,a5,a6|;
+      return(new.parse(f,a));
+   end;
+
+   create(f: STR,a0,a1,a2,a3,a4,a5,a6,a7: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3,a4,a5,a6,a7|;
+      return(new.parse(f,a));
+   end;
+   
+   create(f: STR,a0,a1,a2,a3,a4,a5,a6,a7,a8: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3,a4,a5,a6,a7,a8|;
+      return(new.parse(f,a));
+   end;
+
+   
+   create(f: STR,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3,a4,a5,a6,a7,a8,a9|;
+      return(new.parse(f,a));
+   end;
+   
+   create(f: STR,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10: $FMT): SAME is
+      a: ARRAY{$FMT} := |a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10|;
+      return(new.parse(f,a));
+   end;
+
+   create(f: STR): SAME is
+      -- Should never be used... some special case?
+      a: ARRAY{$FMT} := #(0);
+      return(new.parse(f,a));
+   end;
+   
+   format(f: STR,a: ARRAY{$FMT}): SAME is
+      -- Generic version to process an arbitrary number of formattable
+      -- objects. Interface for `parse'.
+      return(new.parse(f,a));
+   end;
+
+-- Internal routines
+   
+   const -- States when parsing the format expression:
+	 s_norm, -- scanning a plain string
+	 s_prct, -- scanning when '%' found
+	 s_cfmt, -- scanning C style format
+	 s_sfmt, -- scanning Sather format
+	 s_esc;  -- scanning something in a sather format behind a single '%'
+   
+   private parse( s: STR, args: ARRAY{$FMT} ): SAME
+   -- The core routine of the formatter.
+   is
+      sz ::= s.length;
+      
+      str := "";
+      fmt ::= "";
+      
+      state ::= s_norm;
+      pos ::= 0;
+      cur_arg ::= 0;
+      next: CHAR;
+      
+      loop
+	 until!( pos >= sz );
+	 next := s[pos];
+	 case state
+	 when s_norm then
+	    case next
+	    when '%' then
+	       state := s_prct
+	    when '<' then
+	       state := s_sfmt
+	    else
+	       str := str + next 
+	    end
+	 when s_prct then
+	    assert fmt = "";
+	    case next
+	    when '%','<','>' then
+	       str := str + next;
+	       state := s_norm;
+	    when 'd','i','o','u','x','X','f','E','e','g','G','c','s' then
+	       str := str + cformat( "%" + next, args, inout cur_arg );
+	       state := s_norm;
+	    else
+	       fmt := "%" + next;
+	       state := s_cfmt;
+	    end
+	 when s_cfmt then
+	    case next
+	    when 'd','i','o','u','x','X','f','E','e','g','G','c','s' then
+	       str := str + cformat( fmt + next, args, inout cur_arg );
+	       state := s_norm;
+	       fmt := ""
+	    else
+	       fmt := fmt + next;
+	    end;
+	 when s_sfmt then
+	    case next
+	    when '%' then
+	       state := s_esc
+	    when '>' then
+	       str := str + sformat( fmt, args, inout cur_arg );
+	       state := s_norm;
+	       fmt := "";
+	    else
+	       fmt := fmt + next
+	    end
+	 when s_esc then
+	    fmt := fmt + next;
+	    state := s_sfmt;
+	 end; -- case state
+	 pos := pos + 1
+      end; -- loop
+      
+      if state /= s_norm then
+	  str := str + err(unexpected_end_format,
+			   "Unexpected end of format in \""+s+"\"." ).str;
+      end;
+      return self
+   end; -- parse
+   
+   -- Processing Sather style formats
+   -----------------------------------
+   
+   private sformat( s: STR, args: ARRAY{$FMT}, inout argnum: INT ): STR
+   -- Processing one Sather style format expression
+   -- Returns the string representation of the `next' object.
+   is
+      sz ::= s.length;
+      p ::= 0;
+      num ::= 0;
+      is_position ::= false;
+      loop
+	 until!( p >= sz );
+	 next ::= s[p];
+	 if next = ':' then
+	    is_position := true;
+	    break!;
+	 end;
+	 until!( ~ next.is_digit );
+	 num := num * 10 + next.int - '0'.int;
+	 p := p + 1
+      end;
+      if is_position then
+	 s := s.substring( p+1, sz-p-1 );
+	 num := num - 1
+      else
+	 num := argnum
+      end;
+      if num >= args.size then
+	 return err(illegal_arg_number,"Illegal argument number '"
+		   + (num+1).str + "'.").str;
+      end;
+      argnum := num + 1;
+      return do_fmt(args[num],s);
+   end; -- sformat
+
+   private do_fmt( ob: $FMT, fmt: STR ): STR
+   -- Hook for later additions to format classes.
+   is
+      return ob.fmt(fmt)
+   end; -- do_fmt
+      
+   -- Processing C style formats
+   -----------------------------------
+   
+   private cformat( s: STR, args: ARRAY{$FMT}, inout argnum:INT ): STR
+   -- Processing one C style format expression.
+   -- Returns the string representation of the `next' object.
+   is
+      sz ::= s.length;
+      p ::= 1;
+      num ::= 0;
+      is_position ::= false;
+      loop
+	 until!( p>=sz );
+	 next ::= s[p];
+	 if next = '$' then
+	    is_position := true;
+	    break!;
+	 end;
+	 until!( ~ next.is_digit );
+	 num := num * 10 + next.int - '0'.int;
+	 p := p + 1;
+      end;
+      if is_position then
+	 s := "%" + s.substring( p+1, sz-p-1 );
+	 num := num - 1;
+      else
+	 num := argnum
+      end;
+      if num>=args.size then
+	 return err(illegal_arg_number,"Illegal argument number '"
+		   + (num+1).str + "'.").str;
+      end;
+      argnum := num + 1;
+      return sprintf( s, args[num] );
+   end; --cformat
+   
+   private sprintf( fmt: STR, ob: $FMT ): STR
+   -- Interface to "sprintf" in C.
+   is
+      buf ::= #FSTR(512); -- buffer for C program to write to.
+      cptr: EXT_OB;       -- temp variable to convert char*'s properly.
+      char: CHAR := fmt[fmt.length-1]; -- letter of '%' expression
+      --res: INT;           -- result of C sprintf.
+      --Unused due to incompaibilities between SYS5 and BSD.
+      --sprintf returns `char*' in BSD and `int' in SYS5.
+      typecase ob
+	       
+      when INT then
+	 check_type( "INT", "diouxX", char );
+	 i ::= ob; -- ensure correct boxing
+	 SYS::inlined_C("sprintf(#buf->arr_part,fmt->arr_part,#i);");
+	 
+      when CHAR then
+	 check_type( "CHAR", "diouxXc", char );
+	 c ::= ob;
+	 SYS::inlined_C("sprintf(#buf->arr_part,fmt->arr_part,#c);");
+	 
+      when FLT then
+	 check_type( "FLT", "fgGeE", char );
+	 f ::= ob;
+	 SYS::inlined_C("sprintf(#buf->arr_part,fmt->arr_part,#f);");
+	 
+      when FLTD then
+	 check_type( "FLTD", "fgGeE", char );
+	 f2 ::= ob;
+	 SYS::inlined_C("sprintf(#buf->arr_part,fmt->arr_part,#f2);");
+	 
+      when STR then
+	 check_type( "STR", "s", char );
+	 s ::= ob.fstr;
+	 SYS::inlined_C("sprintf(#buf->arr_part,fmt->arr_part,#s->arr_part);");
+	 
+      else
+	 return err(bad_type,"'%' expression got unexpected type.").str;
+      end;
+      --if res <= 0 then
+      --   return err(sprintf_failed,"C style formatter \""+fmt+"\" failed.").str;
+      --end;
+      
+      -- Ensure passing the correct size to the result.
+      SYS::inlined_C( "#cptr=#buf->arr_part;" );
+      return STR::create_from_c_string(cptr);
+   end; -- c_sprintf
+   
+   private check_type( typename: STR, expect: STR, got: CHAR )
+   -- Checks whether the character `got' is legal for type of type
+   -- `typename'. `expect' is the list of legal letters.
+   -- Raises an expection if the check fails.
+   is
+      if expect.search( got ) < 0 then
+	 raise #FMT_ERROR( wrong_type, typename + " needs \"" + expect
+			  + "\" but got '" + got + "'." );
+      end;
+   end; -- check_type
+
+   private err( errno: INT, s: STR ): FMT_ERROR
+   -- Generic error function for convenience.
+   is
+      return #FMT_ERROR( errno, s );
+   end; -- err
+
+end; -- class FMT
+
+-------------------------------------------------------------------
+class FMT_ERROR_FLAGS
+-- Enumeration of possible errors raised by FMT
+is
+   const
+	 not_supported,        -- Wait for next release :-)
+	 wrong_type,           -- Argument type conflicts with C style letter.
+	 bad_type,             -- Type does not support C style format.
+	 unexpected_end_format,-- Format expression without proper end.
+	 malformed_format,     -- Syntax error in Sather style format.
+	 illegal_arg_number,   -- Argumentnumber bigger than number of args.
+	 sprintf_failed;       -- sprintf returned an error.
+	 
+end; -- class FMT_ERROR_FLAGS
+-------------------------------------------------------------------
+
+immutable class FMT_ERROR < $STR
+-- Errors raised by FMT belong to this class.
+is
+    include FMT_ERROR_FLAGS;
+
+    shared raise_exceptions: BOOL := false;
+    -- Most of the exceptions are returned instead of the string translation
+    -- of the number. If this flag is set to 'true' all exceptions are being
+    -- raised for user processing.
+    -- NEVER touch this variable from within a library!
+    
+    create(err:INT,s:STR): SAME
+    is
+	res: FMT_ERROR := error(err).str(s);
+	if raise_exceptions then raise res end;
+	return res;
+    end; -- create
+
+   create(s:STR): SAME
+   is
+      return create(malformed_format,s)
+   end; -- create
+   
+   readonly attr error: INT;
+   -- Error type as defined in FMT_ERROR_FLAGS.
+   
+   readonly attr str: STR;
+   -- Literal message for the user providing more information.
+   
+end; -- class FMT_ERROR

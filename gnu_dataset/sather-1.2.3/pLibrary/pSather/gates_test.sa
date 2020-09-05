@@ -1,0 +1,173 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+immutable class VG < $STR, $IS_LT{VG} is
+   -- Some small class for testing gates
+   include COMPARABLE;
+   attr i:INT;
+   attr o:$STR;
+   attr f:STR;
+   str:STR is
+      return i.str+":"+o+":"+f;
+   end;
+   is_lt(t:SAME):BOOL is return i<t.i; end;
+   is_eq(t:SAME):BOOL is return i=t.i; end;
+end;
+
+class TEST_GATES is
+   include R_TEST;
+    
+   wait_for_not_empty(g1,g2:GATE) is
+      g2.set;
+      lock when g1.not_empty then
+         test("not_empty",g1.size,1);
+	 g1.dequeue;
+         test("not_empty 2",g1.size,0);
+      end;
+   end;
+
+   wait_for_empty(g1,g2:GATE) is
+      g2.dequeue;
+      lock when g1.empty then
+         test("empty",g1.size,0);
+	 g1.enqueue;
+         test("empty 2",g1.size,1);
+      end;
+   end;
+      
+   gate_in_locks is
+      g1,g2,g3:GATE;
+      g1:=#;
+      g2:=#;
+      g3:=#;
+      g1:-wait_for_not_empty(g1,g2);
+      lock when g2.not_empty,g1.empty then end;
+      lock when g1.threads then 
+         test("threads",g1.has_thread,true);
+      end;
+      g3:-wait_for_empty(g1,g2);
+      lock when g1.no_threads then 
+         test("no_threads",g1.has_thread,false);
+	 g1.dequeue;
+      end;
+      test("g1,g2",g1.size.str+" "+g2.size,"0 0");
+      -- lock when g2.empty,g1.empty then end;        -- fails on ALPHA
+
+   end;
+
+   gate_set is 
+	#OUT+(THREAD_ID::me.str+" started\n");
+   end;
+
+   gate_set:INT is 
+	return here 
+   end;
+   gate_set(i:INT):VG is
+      a:VG;
+      #OUT+THREAD_ID::me+" in gate_set(INT):VG\n";
+      a:=a.i(here).o(clusters).f("cluster "+here);
+      return a;
+   end;
+
+   main is
+      class_name("GATE");
+      g:GATE:=#;
+      g.enqueue;
+      g.enqueue;
+      g.enqueue;
+      g.enqueue;
+      test("enqueue",g.size,"4");
+      g.get;
+      test("get",g.size,"4");
+      g.dequeue;
+      g.dequeue;
+      test("dequeue",g.size,"2");
+      g.dequeue;
+      g.dequeue;
+      test("dequeue 2",g.size,"0");
+      g.set;
+      test("set",g.size,"1");
+      g.set;
+      test("set 2",g.size,"1");
+      g.dequeue;
+      test("dequeue 3",g.size,"0");
+
+      -------------------------------------------------------
+      -- breaks on Myrinet
+(*      
+      loop 
+	 g:-gate_set@clusters!;
+      end;
+      lock when g.no_threads then end;
+      
+      test("dist enqueue",g.size,clusters); *)
+      -------------------------------------------------------
+      
+      finish;
+
+      class_name("GATE{INT}");
+      gi:GATE{INT}:=#;
+      gi.enqueue(1);
+      test("get",gi.get,1);
+      gi.enqueue(2);
+      gi.enqueue(3);
+      test("enqueue/size",gi.size,3);
+      test("get 2",gi.get,1);
+      gi.set(4);
+      test("set/get",gi.get,4);
+      test("dequeue",gi.dequeue,4);   
+      test("dequeue",gi.dequeue,2);
+      test("dequeue",gi.dequeue,3);
+      test("size",gi.size,0);
+
+      -- ocassionally breaks for distributed platforms
+      (*
+      ar:ARRAY{BOOL}:=#(clusters);
+      ar1::=ar;
+      loop gi:-gate_set@clusters!; end;
+      lock when g.no_threads then end;
+
+      loop while!(gi.size>0);
+         ar[gi.dequeue]:=true;
+      end;
+      loop ar1.set!(true); end;
+      test("dist enqueue done",ar.str,ar1.str); *)
+      finish;
+
+      class_name("GATE{VG}");
+
+      gv:GATE{VG}:=#;
+      loop cc::=clusters!;gv:-gate_set(cc)@clusters!; end;
+      lock when gv.no_threads then end;  
+      test(":-",gv.size,clusters);
+
+      arv:ARRAY{VG}:=#(clusters);
+      arv1::=arv;
+      loop arv.set!(gv.dequeue); end;
+      arv.sort;
+      loop 
+      a:VG;
+      a:=a.i(0.up!).o(clusters).f("cluster "+0.up!);
+               arv1.set!(a);
+      end;
+      test("enqueue/dequeue",arv.str,arv1.str);
+      finish;
+
+      class_name("GATE in locks");
+      gate_in_locks;
+      finish;
+   end;
+    
+end; -- class GATE_TEST
+
+-------------------------------------------------------------------

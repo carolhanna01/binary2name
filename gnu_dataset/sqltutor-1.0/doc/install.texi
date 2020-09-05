@@ -1,0 +1,213 @@
+@c This file is intended to be included within another document,
+@c hence no sectioning command or @node.
+
+Sqltutor is a CGI script and a PostgreSQL database of SQL tutorials,
+collections of SQL questions and answers.
+
+@section How to get Sqltutor
+
+The project is hosted at the Savannah software forge
+
+@url{http://savannah.gnu.org/projects/sqltutor/,
+     http://savannah.gnu.org/projects/sqltutor/,
+     http://savannah.gnu.org/projects/sqltutor/}
+
+@noindent A copy of the Sqltutor can be get by anonymous GIT access
+
+@url{http://git.sv.gnu.org/cgit/sqltutor.git,
+     git clone git://git.sv.gnu.org/sqltutor.git,
+     git clone git://git.sv.gnu.org/sqltutor.git}
+
+@url{http://git.sv.gnu.org/cgit/sqltutor/datasets.git,
+     git clone git://git.sv.gnu.org/sqltutor/datasets.git,
+     git clone git://git.sv.gnu.org/sqltutor/datasets.git}
+
+@c admin RW: git clone  cepek@git.sv.gnu.org:/srv/git/sqltutor.git
+
+@noindent If you download Sqltutor from GIT, you must generate @code{configure}
+script by running @code{./autogen.sh} first (which is not needed if
+you download the package from an
+@c
+@url{http://ftp.gnu.org/gnu/sqltutor/, FTP, FTP} server).
+
+
+@section Installer script
+
+Under most circumstances installing Sqltutor is a very simple process
+and takes only answering a few questions to be completed. The whole
+installation is guided by @code{sqltutor-installer.sh} script found in
+Sqltutor git repository.
+
+@example
+$ ./sqltutor-installer.sh
+@end example
+
+@noindent To run the script you need to have @code{sudo} installed
+and must be listed in the list of users which may execute sudo
+(@code{sudoers}). The user running the script needs also rights to
+create PostgreSQL databases and create and maintain database roles.
+
+Installer calls script @code{autogen.sh} to create standard
+@code{configure} script, patches implicit settings and finally installs
+database, CGI script, info files and datasets and tutorials.
+
+@ifnotinfo
+@float Figure,installer
+@image{fig/sqltutor-install,,3.5in}
+@caption{Installer script}
+@end float
+@end ifnotinfo
+
+@section How to change implicit settings
+
+All Sqltutor database objects are defined in the SCHEMA
+@code{sqltutor}.  Five output variables are defined in
+@file{configure.ac} with the following implicit values.
+
+@table @env
+@item SQLTUTOR_DATABASE=sqltutor
+PostgreSQL database name used by Sqltutor.
+
+@item SQLTUTOR_WWW_USER=sqlquiz
+WWW user for CGI script @code{sqlutor} with full access rights to all
+tables.
+
+@item SQLTUTOR_PASSWORD=sqlkrok
+Password for CGI script for the user @env{SQLTUTOR_WWW_USER}
+
+@item SQLTUTOR_WWW_EXEC=sqlexec
+Database role used for running queries entered by
+users. @env{SQLTUTOR_WWW_EXEC} is granted @code{SLECT} to datasets'
+tables and revoked all rigths on all other @code{sqltutor} tables.
+
+@item SQLTUTOR_PASSEXEC=sqlkrok
+Password for CGI script for the user @env{SQLTUTOR_WWW_EXEC}
+(implicitly the same password as for @env{SQLTUTOR_WWW_USER}).
+@end table
+
+@noindent These macros are used by all modules and you can change
+their implicit values if needed in the @file{configure.ac} file.
+
+@section Creating the database
+
+To create a database, the PostgreSQL server must be up and
+running. Database is created with SQL command
+
+@example
+CREATE DATABASE SQLTUTOR_DATABASE
+@end example
+
+Two database roles must be created for Sqltutor with SQL command
+@code{CREATE ROLE}
+
+@example
+CREATE ROLE SQLTUTOR_WWW_USER LOGIN;
+CREATE ROLE SQLTUTOR_WWW_EXEC LOGIN;
+@end example
+
+@noindent To set passwords for these new roles run @command{psql} and
+enter SQL @command{ALTER} command
+
+@example
+ALTER USER SQLTUTOR_WWW_USER WITH PASSWORD 'xxx';
+ALTER USER SQLTUTOR_WWW_EXEC WITH PASSWORD 'yyy';
+@end example
+
+@noindent or passwords can be set directly when creating roles
+
+@example
+CREATE ROLE SQLTUTOR_WWW_USER PASSWORD 'xxx' LOGIN;
+CREATE ROLE SQLTUTOR_WWW_EXEC PASSWORD 'yyy' LOGIN;
+@end example
+
+
+If PostgreSQL language is not defined in datatabase @code{template1}
+you must create it explicitly in the Sqltutor database
+
+@example
+su -
+su - postgres
+psql SQLTUTOR_DATABASE
+CREATE LANGUAGE plpgsql;
+@end example
+
+@section Building and installing Sqltutor
+
+To create all Makefiles needed for building binary CGI script
+@file{sqltutor}, populating Sqltutor database and making info manual
+go to Sqltutor home directory and run
+
+@example
+   ./autogen.sh
+@end example
+
+@noindent to create a @file{configure} script (if it is not allready present)
+and then
+
+@example
+   ./configure --bindir=/usr/lib/cgi-bin [ --infodir=/usr/share/info ]
+@end example
+
+@noindent Parameter @code{--bindir} defines to which directory
+CGI script @file{sqltutor} will be installed. For general
+information on using GNU autotool see the standard Basic Installation
+instructions in the @file{INSTALL}.
+
+Sqltutor CGI binary with info manual is installed and the database is
+populated by running
+
+@example
+make DESTDIR=@emph{install_root_directory} install
+@end example
+
+@noindent from the main source directory.  Parameter @code{DESTDIR} is
+optional and defines a root directory into which binary
+@file{sqltutor} and @file{sqltutor.info} will be installed.  This
+parameter is needed if you do not have access ritght for writing to
+@file{/usr/local/cgi-bin} and @file{/usr/share/info} (implicit values).
+
+
+@section Populating tutorials and datasets
+
+Tutorials and dataset are stored in a separate git repository
+
+@url{git clone git://git.sv.gnu.org/sqltutor/datasets.git}
+
+
+Because @file{configure} script is not included in the repository, you
+have to create it first
+
+@example
+$ ./autogen
+@end example
+
+@noindent Then run
+
+@example
+$ ./configure
+$ make install
+@end example
+
+and that's all.  Datasets and tutorial can be reinstalled as many
+times as needed.
+
+
+To enable postgis extension, you must create geometry type in your
+database (sqltutor in the following example)
+
+@example
+$ su
+# su postgres
+$ psql -d sqltutor -f /usr/share/postgresql/9.6/contrib/postgis-2.3/postgis.sql
+$ psql -d sqltutor -f /usr/share/postgresql/9.6/contrib/postgis-2.3/spatial_ref_sys.sql
+@end example
+
+@noindent and explicitly enable postgis tutorials
+
+@example
+$ ./configure --enable-postgis
+$ make install
+@end example
+
+PostGIS geometry type must be created by a superuser, because normal
+users do not have permissions to create C procedures in a database.

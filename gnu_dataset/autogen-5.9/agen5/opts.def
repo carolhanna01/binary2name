@@ -1,0 +1,777 @@
+/* -*- Mode: Text -*- */
+
+autogen definitions options;
+
+/*
+ *   $Id: opts.def,v 4.23 2007/02/04 17:44:12 bkorb Exp $
+ *  Time-stamp:        "2007-02-03 10:36:50 bkorb"
+ *  Last Committed:    $Date: 2007/02/04 17:44:12 $
+ *
+ *  AutoGen copyright 1992-2007 Bruce Korb
+ *
+ *  AutoGen is free software.
+ *  You may redistribute it and/or modify it under the terms of the
+ *  GNU General Public License, as published by the Free Software
+ *  Foundation; either version 2, or (at your option) any later version.
+ *
+ *  AutoGen is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with AutoGen.  See the file "COPYING".  If not,
+ *  write to:  The Free Software Foundation, Inc.,
+ *             51 Franklin Street, Fifth Floor,
+ *             Boston, MA  02110-1301, USA.
+ */
+
+copyright = {
+    date  = "1992-2006";
+    owner = "Bruce Korb";
+    eaddr = 'autogen-users@lists.sourceforge.net';
+    type  = gpl;
+};
+
+/*
+ *  "XML2AG" is a wrapper around AutoGen.  Therefore, this file serves
+ *  to describe the options for both programs.  Which is being described
+ *  depends on the definition state of "XML2AG".
+ */
+#ifndef XML2AG
+prog-name      = "autogen";
+prog-title     = "The Automated Program Generator";
+homerc         =  $HOME, ".";
+environrc;
+
+#else
+prog-name      = xml2ag;
+prog-title     = "XML to AutoGen Definiton Converter";
+#endif
+package        = 'GNU AutoGen';
+
+argument       = "[ <def-file> ]";
+long-opts;
+
+version = `
+    if test ! -d "${top_srcdir}"; then
+        echo "NOTICE:  Setting top_srcdir to .." >&2
+        top_srcdir=..
+    fi
+    test -f ${top_srcdir}/VERSION || \
+        die "error ${top_srcdir}/VERSION file missing"
+    eval \`egrep '^AG_[A-Z_]*='  ${top_srcdir}/VERSION\` 2> /dev/null
+    echo $AG_VERSION `;
+
+#ifndef XML2AG
+include = <<-  _END_INCLUDE
+	#include "autogen.h"
+	#ifdef HAVE_DLOPEN
+	# ifdef HAVE_DLFCN_H
+	#  include <dlfcn.h>
+	# else
+	   extern void* dlopen(char const*,int);
+	# endif
+
+	# ifndef  RTLD_GLOBAL
+	#  define RTLD_GLOBAL 0
+	# endif
+
+	# ifndef  RTLD_NOW
+	#  ifdef  RTLD_LAZY
+	#   define RTLD_NOW DL_LAZY
+	#  else
+	#   define RTLD_NOW 0
+	#  endif
+	# endif
+	#endif
+	typedef void (init_proc_t)( void );
+	tCC* pzTemplFileName = NULL;
+	_END_INCLUDE;
+
+export = 'extern tCC* pzTemplFileName;';
+
+explain =
+"AutoGen creates text files from templates using external definitions.";
+
+detail = <<-  _END_DETAIL
+	The definitions file (`<def-file>') can be specified with the
+	`definitions' option or as the command argument, but not both.
+	Omitting it or specifying `-' will result in reading definitions from
+	standard input.
+
+	The output file names are based on the template, but generally use the
+	base name of the definition file.  If standard in is read for the
+	definitions, then `stdin' will be used for that base name.  The
+	suffixes to the base name are gotten from the template.  However, the
+	template file may specify the entire output file name.  The generated
+	files are always created in the current directory.  If you need to
+	place output in an alternate directory, `cd' to that directory and use
+	the `--templ_dirs' option to search the original directory.
+
+	`loop-limit' is used in debugging to stop runaway expansions.
+	_END_DETAIL;
+#endif /* XML2AG */
+
+flag = {
+    name      = templ-dirs;
+    value     = L;
+    arg-type  = string;
+    descrip   = "Template search directory list";
+    max       = NOLIMIT;
+    arg-name  = dir;
+    stack-arg;
+#ifndef XML2AG
+    settable;
+    doc = <<-  _EOF_
+	Add a directory to the list of directories to search when opening
+	a template, either as the primary template or an included one.
+	The last entry has the highest priority in the search list.
+	That is to say, they are searched in reverse order.
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name      = override-tpl;
+    value     = T;
+    arg-type  = string;
+    arg-name  = tpl-file;
+    descrip   = "Override template file";
+#ifndef XML2AG
+    no-preset;
+    doc = <<-  _EOF_
+	Definition files specify the standard template that is to be expanded.
+	This option will override that name and expand a different template.
+	_EOF_;
+
+    flag-code = "    pzTemplFileName = pOptDesc->pzLastArg;";
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name      = lib-template;
+    value     = l;
+    arg-type  = string;
+    arg-name  = tpl-file;
+    descrip   = "Library template file";
+    max       = NOLIMIT;
+#ifndef XML2AG
+    doc = <<-  _EOF_
+	DEFINE macros are saved from this template file for use in processing
+	the main macro file.  Template text aside from the DEFINE macros is
+	is ignored.
+	_EOF_;
+
+    flag-code = <<- _EOCode_
+	    tTemplate* pT;
+	    procState = PROC_STATE_LIB_LOAD;
+	    pT = loadTemplate(pOptDesc->pzLastArg, NULL);
+	    unloadTemplate( pT );
+	    procState = PROC_STATE_OPTIONS;
+	_EOCode_;
+#else
+    stack-arg;
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name      = base-name;
+    value     = b;
+    arg-type  = string;
+    arg-name  = name;
+    descrip   = "Base name for output file(s)";
+#ifndef XML2AG
+    no-preset;
+    doc = <<-  _EOF_
+	A template may specify the exact name of the output file.  Normally,
+	it does not.  Instead, the name is composed of the base name of the
+	definitions file with suffixes appended.  This option will override the
+	base name derived from the definitions file name.  This is required if
+	there is no definitions file and advisable if definitions are being
+	read from stdin.  If the definitions are being read from standard in,
+	the base name defaults to @file{stdin}.  Any leading directory components
+	in the name will be silently removed.  If you wish the output file to
+	appear in a particular directory, it is recommended that you "cd" into
+	that directory first, or use directory names in the format specification
+	for the output suffix lists, @xref{pseudo macro}.
+	_EOF_;
+#else
+    settable;
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name      = "definitions";
+    arg-type  = string;
+    arg-name  = file;
+    descrip   = "Definitions input file";
+#ifndef XML2AG
+    disable   = no;
+    no-preset;
+    enabled;
+    settable;
+    doc = <<-  _EOF_
+	Use this argument to specify the input definitions file with a
+	command line option.  If you do not specify this option, then
+	there must be a command line argument that specifies the file,
+	even if only to specify stdin with a hyphen (@code{-}).
+	Specify, @code{--no-definitions} when you wish to process
+	a template without any active AutoGen definitions.\n
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name      = load-scheme;
+    value     = S;
+    arg-type  = string;
+    arg-name  = file;
+    descrip   = "Scheme code file to load";
+#ifndef XML2AG
+    settable;
+    doc = <<-  _EOF_
+	Use this option to pre-load Scheme scripts into the Guile
+	interpreter before template processing begins.
+	Please note that the AutoGen specific functions are not loaded
+	until after argument processing.  So, though they may be specified
+	in lambda functions you define, they may not be invoked until after
+	option processing is complete.
+	_EOF_;
+
+    flag-code = <<-  _EOF_
+	    teProcState saveState = procState;
+	    char* pz;
+	    char  zPath[ MAXPATHLEN ];
+	    tSCC* apzSfx[] = { "scm", NULL };
+
+	    if (! SUCCESSFUL(
+	            findFile( pOptDesc->pzLastArg, zPath, apzSfx, NULL))) {
+	        fprintf( stderr, "Cannot locate scheme file `%s'\n",
+	                 pOptDesc->pzLastArg );
+	        USAGE( EXIT_FAILURE );
+	    }
+
+	    pz = aprf( "(load \"%s\")", zPath );
+	    procState = PROC_STATE_GUILE_PRELOAD;
+	    (void)ag_scm_c_eval_string_from_file_line(
+	                   pz, __FILE__, __LINE__);
+	    free( pz );
+	    procState = saveState;
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name      = load-functions;
+    value     = F;
+    arg-type  = string;
+    arg-name  = file;
+    descrip   = "Load scheme function library";
+    ifdef     = HAVE_DLOPEN;
+#ifndef XML2AG
+    doc = <<-  _EOF_
+	This option is used to load Guile-scheme functions.  The automatically
+	called initialization routine @code{scm_init} must be used to register
+	these routines or data.  This routine can be generated by using the
+	following command and the `snarf.tpl' template.  Read the introductory
+	comment in `snarf.tpl' to see what the `getdefs(1AG)' comment must
+	contain.
+
+	First, create a config file for @code{getdefs},
+	and then invoke @code{getdefs} loading that file:
+	@example
+	cat > getdefs.cfg <<EOF
+	subblock    exparg=arg_name,arg_desc,arg_optional,arg_list
+	defs-to-get gfunc
+	template    snarf
+	srcfile
+	linenum
+	assign      group = name_of_some_group
+	assign      init  = _init
+	EOF
+
+	getdefs load=getdefs.cfg <<source-file-list>>
+	@end example
+
+	@noindent
+	Note, however, that your functions must be named:
+
+	@example
+	name_of_some_group_scm_<<function_name>>(...)
+	@end example
+
+	@noindent
+	so you may wish to use a shorter group name.
+	_EOF_;
+
+    flag-code = <<-  _EOF_
+	    void* hdl = dlopen( pOptDesc->pzLastArg, RTLD_NOW|RTLD_GLOBAL );
+	    init_proc_t* proc;
+
+	    if (hdl == NULL) {
+	        char const* pzErr = dlerror();
+	        fprintf( stderr, "dlopen(%s) error %d\n%s\n",
+	                 pOptDesc->pzLastArg, errno, pzErr );
+	        exit( EXIT_FAILURE );
+	    }
+	    proc = (init_proc_t*)dlsym( hdl, "scm_init" );
+	    if (proc == NULL) {
+	        fprintf( stderr, "dlsym(scm_init) not found in %s\n"
+	                 "\tyou must initialize the library yourself\n",
+	                 pOptDesc->pzLastArg );
+	    }
+	    else (*proc)();
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name       = skip-suffix;
+    value      = s;
+    arg-type   = string;
+    arg-name   = suffix;
+    descrip    = "Omit the file with this suffix";
+    max        = NOLIMIT;
+    stack-arg;
+#ifndef XML2AG
+    no-preset;
+    doc = <<-  _EOF_
+	Occasionally, it may not be desirable to produce all of the output
+	files specified in the template.  (For example, only the @file{.h}
+	header file, but not the @file{.c} program text.)  To do this
+	specify @code{--skip-suffix=c} on the command line.
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name       = select-suffix;
+    value      = o;
+    arg-type   = string;
+    arg-name   = suffix;
+    arg-optional;
+    descrip    = "specify this output suffix";
+    max        = NOLIMIT;
+#ifndef XML2AG
+    no-preset;
+    doc = <<-	_EOF_
+	If you wish to override the suffix specifications in the template,
+	you can use one or more copies of this option.  See the suffix
+	specification in the @ref{pseudo macro} section of the info doc.
+	_EOF_;
+    flag-code = <<- _EOF_
+	    if (  (pOptDesc->pzLastArg != NULL)
+	       && (*(pOptDesc->pzLastArg) != NUL))
+	        (void)doSuffixSpec( pOptDesc->pzLastArg, NULL, -1 );
+	_EOF_;
+#else
+    stack-arg;
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name       = source-time;
+    descrip    = "set mod times to latest source";
+#ifndef XML2AG
+    disable    = no;
+    doc = <<-  _EOF_
+	If you stamp your output files with the `DNE' macro output, then
+	your output files will always be different, even if the content has
+	not really changed.  If you use this option, then the modification
+	time of the output files will change only if the input files change.
+	This will help reduce unneeded builds.
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name       = no-fmemopen;
+    descrip    = "Do not use in-mem streams";
+    value      = m;
+    ifdef      = ENABLE_FMEMOPEN;
+#ifndef XML2AG
+    doc = <<-  _EOF_
+	If the local C library supports "@code{fopencookie(3GNU)}", or
+	"@code{funopen(3BSD)}" then AutoGen prefers to use in-memory stream
+	buffer opens instead of anonymous files.  This may lead to problems
+	if there is a shortage of virtual memory.  If, for a particular
+	application, you run out of memory, then specify this option.
+	This is unlikely in a modern virtual memory environment.
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name        = equate;
+    arg-name    = char-list;
+    arg-type    = string;
+    descrip     = "characters considered equivalent";
+#ifndef XML2AG
+    arg-default = "_-^" /* default equivalence */;
+    doc = <<-  _EODoc_
+	This option will alter the list of characters considered equivalent.
+	The default are the three characters, "_-^".  (The last is conventional
+	on a Tandem/HP-NonStop, and I used to do a lot of work on Tandems.)
+	_EODoc_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name       = writable;
+    descrip    = "Allow output files to be writable";
+    disable    = not;
+#ifndef XML2AG
+    settable;
+    no-preset;
+    doc = <<-  _EODoc_
+	This option will leave output files writable.
+	Normally, output files are read-only.
+	_EODoc_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+#ifndef XML2AG
+flag = {
+    name        = doc-debug;
+    documentation;
+    descrip =
+'The following options are often useful while debugging new templates:';
+};
+#endif
+
+flag = {
+    name        = loop-limit;
+    arg-type    = number;
+    arg-default = 256;
+    arg-range   = "-1";
+    arg-range   = "1->0x1000000"; /* 16 million */
+    arg-name    = lim;
+    descrip     = "Limit on increment loops";
+#ifndef XML2AG
+    doc = <<-  _EODoc_
+	This option prevents runaway loops.  For example, if you accidentally
+	specify, "FOR x (for-from 1) (for-to -1) (for-by 1)", it will take a
+	long time to finish.  If you do have more than 256 entries in tables,
+	you will need to specify a new limit with this option.
+	_EODoc_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name        = timeout;
+    value       = t;
+    arg-type    = number;
+    arg-range   = "0->3600"; /* one hour limit */
+    arg-name    = time-lim;
+
+    descrip     = "Time limit for servers";
+#ifndef XML2AG
+    ifdef       = SHELL_ENABLED;
+    doc = <<-  _EOF_
+	AutoGen works with a shell server process.  Most normal commands will
+	complete in less than 10 seconds.  If, however, your commands need more
+	time than this, use this option.
+
+	The valid range is 0 to 3600 seconds (1 hour).
+	Zero will disable the server time limit.
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name        = trace;
+    arg-type    = keyword;
+    arg-default = nothing;
+    arg-name    = level;
+    descrip     = "tracing level of detail";
+    keyword     = nothing, server-shell, templates, block-macros,
+                  expressions, everything;
+
+#ifndef XML2AG
+	doc = <<-  _EOF_
+	This option will cause AutoGen to display a trace of its template
+	processing.  There are six levels, each level including messages from
+	the previous levels:
+
+	@table @samp
+	@item nothing
+	Does no tracing at all (default)
+
+	@item server-shell
+	Traces all input and output to the server shell.  This includes a shell
+	"independent" initialization script about 30 lines long.  Its output is
+	discarded and not inserted into any template.
+
+	@item templates
+	Traces the invocation of @code{DEFINE}d macros and @code{INCLUDE}s
+
+	@item block-macros
+	Traces all block macros.  The above, plus @code{IF}, @code{FOR},
+	@code{CASE} and @code{WHILE}.
+
+	@item expressions
+	Displays the results of expression evaluations.
+
+	@item everything
+	Displays the invocation of every AutoGen macro, even @code{TEXT} macros
+	(i.e. the text outside of macro quotes).
+	@end table
+	_EOF_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name        = trace-out;
+    arg-type    = string;
+    arg-name    = file;
+    descrip     = "tracing output file or filter";
+#ifndef XML2AG
+
+    doc = <<-  _EOF_
+	The output specified may be either a file name, or, if the option
+	argument begins with the @code{pipe} operator (@code{|}), a command
+	that will receive the tracing output as standard in.  For example,
+	@code{--traceout='| less'} will run the trace output through the
+	@code{less} program.
+	_EOF_;
+
+    flag-code = <<- FLAG_CODE_END
+	    if (*(pOptDesc->pzLastArg) == '|')
+	        pfTrace = popen( pOptDesc->pzLastArg + 1, "w" );
+	    else
+	        pfTrace = fopen( pOptDesc->pzLastArg, "w" );
+
+	    if (pfTrace == NULL) {
+	        fprintf( stderr, "Error %d (%s) opening `%s' for output",
+	                 errno, strerror( errno ), pOptDesc->pzLastArg );
+	        exit( EXIT_FAILURE );
+	    }
+	FLAG_CODE_END ;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+/*
+ *  These are for debugging AutoGen itself:
+ */
+flag = {
+    name        = show-defs;
+    descrip     = "Show the definition tree";
+#ifndef XML2AG
+    no-preset;
+    ifdef       = DEBUG_ENABLED;
+    doc =
+    "This will print out the complete definition tree before processing\n"
+    "the template.";
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+#ifdef DAEMON_ENABLED
+flag = {
+    name        = daemon;
+    value       = d;
+    arg-type    = string;
+    arg-name    = connect-type;
+    descrip     = "TCP port or fattach file name";
+    woops       = (error "Daemon-ization is not ready for prime time");
+#ifndef XML2AG
+    ifdef       = DAEMON_ENABLED;
+    no-preset;
+    flag-code   = '    SET_OPT_DEFINITIONS("-");';
+    doc = <<-  _EODoc_
+
+	If you wish to be able to run AutoGen as a daemon process, specify
+	this option.  The resulting daemon will be able to receive requests on
+	either a socket or over a named pipe.  The syntax of the connect-type
+	argument determines the kind of connection:
+
+        @table @samp
+        @item is a number
+        The address family will default to AF_INET and the number must
+	represent the port number AutoGen will listen on.
+
+	@item contains a colon
+	The string up to the colon will be looked up.  If it matches an
+        address family, the string after the colon is presumed to be an
+        address of the appropriate kind. "unix:" addresses should be a
+        path name with existing directory names, but a non-existent base
+        file name.  "inet:" and "inet6" should be followed by a port number.
+
+        @item some other string
+	The string represents a named pipe.  If your system supports
+	@code{fattach} and @code{connld}, then that will be the name of the
+        bi-directional pipe that any number of processes can open and
+        communicate over.  If your system does @strong{not} support such things,
+        then the input pipe will be suffixed with "-in" and the output pipe
+        suffixed with "-out" and only one client may connect at a time.
+	@end table
+
+	_EODoc_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+#endif // DAEMON_ENABLED
+
+#ifndef XML2AG
+flag = {
+    name        = doc-control;
+    documentation;
+    descrip = <<-  _EODoc_
+	These options can be used to control what gets processed
+	in the definitions files and template files.
+	_EODoc_;
+};
+#endif
+
+flag = {
+    name        = define;
+    value       = D;
+    arg-type    = string;
+    arg-name    = value;
+    max         = NOLIMIT;
+    descrip     = "name to add to definition list";
+    stack-arg;
+#ifndef XML2AG
+    settable;
+    doc = <<-  _EODoc_
+	The AutoGen define names are used for the following purposes:
+
+	@enumerate
+	@item
+	Sections of the AutoGen definitions may be enabled or disabled
+	by using C-style #ifdef and #ifndef directives.
+	@item
+	When defining a value for a name, you may specify the index
+	for a particular value.  That index may be a literal value,
+	a define option or a value #define-d in the definitions themselves.
+	@item
+	The name of a file may be prefixed with @code{$NAME/}.
+	The @code{$NAME} part of the name string will be replaced with
+	the define-d value for @code{NAME}.
+	@item
+	When AutoGen is finished loading the definitions, the defined values
+	are exported to the environment with, @code{putenv(3)}.
+	These values can then be used in shell scripts with @code{$@{NAME@}}
+	references and in templates with @code{(getenv "NAME")}.
+	@item
+	While processing a template, you may specify an index to retrieve
+	a specific value.  That index may also be a define-d value.
+	@end enumerate
+	_EODoc_;
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+flag = {
+    name        = undefine;
+    value       = U;
+    arg-type    = string;
+    arg-name    = name-pat;
+    max         = NOLIMIT;
+    descrip     = "definition list removal pattern";
+    unstack-arg = define;
+#ifndef XML2AG
+    no-preset;
+    settable;
+    doc =
+    "Just like 'C', AutoGen uses @code{#ifdef/#ifndef} preprocessing\n"
+    "directives.  This option will cause the matching names to be\n"
+    "removed from the list of defined values.";
+#else
+    doc = "Pass-through AutoGen argument";
+#endif
+};
+
+#ifndef XML2AG
+#define SHORT_HELP_FLAG
+#include stdoptions
+#endif
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *
+ *  Program Documentation
+ */
+
+#ifndef XML2AG
+detail = <<- _EndOfDetail_
+	AutoGen is a tool designed for generating program files that contain
+	repetitive text with varied substitutions.  Details in the info doc.
+	_EndOfDetail_;
+
+prog-man-descrip = <<-  _END_MAN_DESCRIP
+	\fBAutoGen\fP is designed for generating program files that contain
+	repetitive text with varied substitutions.  The goal is to simplify the
+	maintenance of programs that contain large amounts of repetitious text.
+	This is especially valuable if there are several blocks of such text
+	that must be kept synchronized.
+	.PP
+	One common example is the problem of maintaining the code required for
+	processing program options.  Processing options requires a minimum of
+	four different constructs be kept in proper order in different places
+	in your program.  You need at least: The flag character in the flag
+	string, code to process the flag when it is encountered, a global
+	state variable or two, and a line in the usage text.
+	You will need more things besides this if you choose to implement
+	long option names, rc/ini file processing, environment variables
+	and so on.
+
+	All of this can be done mechanically; with the proper templates
+	and this program.
+	_END_MAN_DESCRIP;
+
+man-doc = <<- _EndOfMan_
+	.SH "SEE ALSO"
+	This program is documented more fully in the
+	.IR AutoGen
+	Info system documentation.
+
+	.SH "EXAMPLES"
+	.ti +4
+	autogen -T man.tpl --base-name=autogen opts.def
+	.sp
+
+	This command produced this man page from the AutoGen option definition
+	file.  It overrides the template specified in \fIopts.def\fP (normally
+	\fIoptions.tpl\fP) and uses \fIman.tpl\fP.  It also overrides the
+	\fBbase-name\fP of the output file, which is normally derived from
+	the input definition file name (viz. \fIopts\fP).
+	_EndOfMan_;
+
+#endif /* XML2AG */
+
+/* end of opts.def */

@@ -1,0 +1,1989 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- inline.sa: Code for inlining calls.
+
+-------------------------------------------------------------------
+abstract class $INLINE_ROUT_SIG is
+    -- Information about a signature to enable it to be inlined.
+    
+    sig:SIG;			-- The signature this is info for.
+    is_special:BOOL;            -- True if the inlined code is due
+                                -- to special purpose inlining, 
+                                -- false otherwise
+    
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR;
+    -- Return a replacement for the call `call'.
+
+end;
+    
+-------------------------------------------------------------------   
+abstract class $INLINE_ITER_SIG is
+    -- Information about a signature to enable it to be inlined.
+
+    sig:SIG;			-- The signature this is info for.
+    is_special:BOOL;
+
+    inline(call:AM_ITER_CALL_EXPR):$AM_EXPR;
+    -- Return a replacement for the call `call'.
+
+end;
+    
+-------------------------------------------------------------------   
+class INLINE_ATTR_READ < $INLINE_ROUT_SIG is
+    -- A reference/value attribute read.
+    -- The signature has the form: "FOO::name:BAR".
+
+    shared inlined,routines:INT;
+
+    attr sig:SIG;
+    attr is_special:BOOL;
+    attr self_tp:$TP;
+    attr at:IDENT;
+    attr tp_at:$TP;
+    
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	inlined:=inlined+1;
+	r::=#AM_ATTR_EXPR(call.source);
+	r.ob:=call[0].expr;
+	r.self_tp:=self_tp;
+	r.at:=at;
+	r.tp_at:=tp_at;
+        return r;
+    end;
+
+    create(am:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.sig:=am.sig;
+	r.is_special := true;
+	stmt::=am.code;
+	typecase stmt when AM_RETURN_STMT then
+	    val::=stmt.val;
+	    typecase val when AM_ATTR_EXPR then
+		r.at:=val.at;
+		r.self_tp:=val.self_tp;
+		r.tp_at:=val.tp_at;
+	    end;
+	end;
+	routines:=routines+1;
+	return r;
+    end;
+    
+end;
+
+-------------------------------------------------------------------
+class INLINE_ATTR_WRITE < $INLINE_ROUT_SIG is 
+    -- A reference attribute write.
+    -- The signature has the form: "FOO::name(BAR)".
+
+    shared inlined,routines:INT;
+
+    attr sig:SIG;
+    attr is_special:BOOL;
+    attr self_tp:$TP;
+    attr at:IDENT;
+    attr tp_at:$TP;
+    
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	inlined:=inlined+1;
+	a::=#AM_ATTR_EXPR(call.source);
+	a.ob:=call[0].expr;
+	a.self_tp:=self_tp;
+	a.at:=at;
+	a.tp_at:=tp_at;
+	as::=#AM_ASSIGN_STMT(call.source);
+	as.dest:=a;
+	as.src:=call[1].expr;
+	r::=#AM_STMT_EXPR(call.source); r.stmts:=as; return r end;
+    
+    create(am:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.sig:=am.sig;
+	r.is_special := true;
+	stmt::=am.code;
+	typecase stmt when AM_ASSIGN_STMT then
+	    dest::=stmt.dest;
+	    typecase dest when AM_ATTR_EXPR then
+		r.self_tp:=dest.self_tp;
+		r.at:=dest.at;
+		r.tp_at:=dest.tp_at;
+	    end;
+	end;
+	routines:=routines+1;
+	return r;
+    end;
+
+end;
+
+-------------------------------------------------------------------
+class INLINE_INT_FOLD < $INLINE_ROUT_SIG is
+    -- Constant folding for INT::plus(INT):INT
+
+    shared inlined,routines:INT;
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	arg1::=call[0].expr;
+	arg2::=call[1].expr;
+	typecase arg1
+	when AM_INT_CONST then
+	    typecase arg2
+	    when AM_INT_CONST then
+		r::=#AM_INT_CONST(arg1.source);
+		r.val:=arg1.val+arg2.val;
+		r.tp_at:=arg1.tp_at;
+		-- this isn't quite right if it should
+		-- have overflowed.
+		inlined:=inlined+1;
+		return r;
+	    else
+	    end;
+	else
+	end;
+	return call;
+    end;
+
+    create(s:SIG):SAME is
+	r::=new;
+	r.sig:=s;
+	r.is_special:=true;
+	routines:=routines+1;
+	return r;
+    end;    
+    
+end;
+
+-------------------------------------------------------------------
+class INLINE_GLOBAL_READ < $INLINE_ROUT_SIG is
+    -- A value attribute read.
+    -- The signature has the form: "FOO::name:BAR".
+
+    shared inlined,routines:INT;
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    attr tp_at:$TP;
+    attr class_tp:$TP;
+    attr is_const:BOOL;
+    attr init:$AM_EXPR;
+    attr name:IDENT;
+    attr as_type:AS_TYPE_SPEC;
+
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+      inlined:=inlined+1;
+      r::=#AM_SHARED_EXPR(call.source);
+      r.tp_at:=tp_at;
+      r.name := name;
+      r.class_tp:=class_tp;
+      r.init := init;
+      r.is_const := is_const;
+      r.as_type := as_type;
+      return r;
+    end;
+
+    create(am:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.sig:=am.sig;
+	r.is_special:=true;
+	stmt::=am.code;
+	typecase stmt when AM_RETURN_STMT then
+	    val::=stmt.val;
+	    typecase val when AM_SHARED_EXPR then
+	       r.tp_at:=val.tp_at;
+	       r.name := val.name;
+	       r.class_tp:=val.class_tp;
+	       r.init := val.init;
+	       r.is_const := val.is_const;
+	       r.as_type := val.as_type;
+	    end;
+	end;
+	routines:=routines+1;
+	return r;
+    end;
+end;
+
+-------------------------------------------------------------------
+class INLINE_GLOBAL_WRITE < $INLINE_ROUT_SIG is
+    -- A reference attribute write
+    -- The signature has the form: "FOO::name(BAR)".
+
+    shared inlined,routines:INT;
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    attr tp_at:$TP;
+    attr class_tp:$TP;
+    attr is_const:BOOL;
+    attr init:$AM_EXPR;
+    attr name:IDENT;
+    attr as_type:AS_TYPE_SPEC;
+
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+      inlined:=inlined+1;
+      g::=#AM_SHARED_EXPR(call.source);
+      g.tp_at:=tp_at;
+      g.name := name;
+      g.class_tp:=class_tp;
+      g.init := init;
+      g.is_const := is_const;
+      g.as_type := as_type;
+      
+      stmt ::= #AM_ASSIGN_STMT(call.source);
+      stmt.dest := g;
+      stmt.src := call[1].expr;
+      r::=#AM_STMT_EXPR(call.source); r.stmts:=stmt; 
+      return r; 
+   end;
+
+    create(am:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.sig:=am.sig;
+	r.is_special:=true;
+	stmt::=am.code;
+	typecase stmt when AM_ASSIGN_STMT then
+	    dest::=stmt.dest;
+	    typecase dest when AM_SHARED_EXPR then
+	       r.tp_at:=dest.tp_at;
+	       r.name := dest.name;
+	       r.class_tp:=dest.class_tp;
+	       r.init := dest.init;
+	       r.is_const := dest.is_const;
+	       r.as_type := dest.as_type;
+	    end;
+	end;
+	routines:=routines+1;
+	return r;
+    end;
+end;
+
+-------------------------------------------------------------------
+class INLINE_VATTR_WRITE < $INLINE_ROUT_SIG is 
+    -- A value attribute write.
+    -- The signature has the form: "FOO::name(BAR)".
+    
+    shared inlined,routines:INT;
+
+    attr sig:SIG;
+    attr is_special:BOOL;
+    attr at:IDENT;
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	inlined:=inlined+1;
+	r::=#AM_VATTR_ASSIGN_EXPR(call.source);
+	r.ob:=call[0].expr;
+	r.val:=call[1].expr;
+	r.at:=at;
+	r.real_tp:=call.fun.args[0].tp;
+	return r;
+    end;
+    
+    create(am:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.sig:=am.sig;
+	r.is_special:=true;
+	stmt::=am.code;
+	typecase stmt when AM_RETURN_STMT then
+	    val::=stmt.val;
+	    typecase val when AM_VATTR_ASSIGN_EXPR then
+		r.at:=val.at;
+	    end;
+	end;
+	routines:=routines+1;
+	return r;
+    end;
+end;
+
+-------------------------------------------------------------------
+class INLINE_ARR_READ < $INLINE_ROUT_SIG is 
+    -- A reference array read.
+    -- The signature has the form: "FOO::name(ind:INT):BAR".   
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	return call
+    end;
+    
+end;
+
+-------------------------------------------------------------------
+class INLINE_ARR_WRITE < $INLINE_ROUT_SIG is 
+    -- A reference array write.
+    -- The signature has the form: "FOO::name(ind:INT,val:BAR)".   
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	return call
+    end;
+    
+end;
+
+-------------------------------------------------------------------
+class INLINE_VARR_READ < $INLINE_ROUT_SIG is 
+    -- A value array read.
+    -- The signature has the form: "FOO::name(ind:INT):BAR".      
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	return call
+    end;
+    
+end;
+
+-------------------------------------------------------------------
+class INLINE_VARR_WRITE < $INLINE_ROUT_SIG is
+    -- A value array write.   
+    -- The signature has the form: "FOO::name(ind:INT,val:BAR):FOO".      
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	return call
+    end;
+end;
+
+-------------------------------------------------------------------
+class INLINE_BUILTIN < $INLINE_ROUT_SIG is
+    -- A builtin routine call.
+    -- Any signature.
+    
+    attr sig:SIG;
+    attr is_special:BOOL;
+
+    inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	return call
+    end;
+    
+end;
+
+
+-- Helper for the below classes.  Code considered for inlining has to be
+-- short, and have a very definite structure.  Brevity is measured by
+-- the number of call expressions, assignments, and control structures
+-- in the code.
+class WEIGH_CODE is
+    readonly attr weight:INT;  -- "Weight" of the code encountered so far.
+    readonly attr max_weight:INT;  -- Maximum weight of an inlined routine.
+    const rout_call_weight:INT:=2;
+    const iter_call_weight:INT:=4;
+    const assign_weight:INT:=1;
+    const if_weight:INT:=1;
+
+    readonly attr level:INT;   -- Current level of nesting.
+    uplevel is level:=level-1 end;
+    readonly attr badstmt:$AM_STMT;  -- The unacceptable statement.
+    clear_badstmt is badstmt:=void end;
+
+    -- A hack used in inlining iterators.
+    readonly attr enclosing_if:AM_IF_STMT;
+    readonly attr true_branch:BOOL;
+
+    -- Ivin: Structure (there is no particular reason for it, except without
+    -- gotos in AM you can't implement a return not from the end).
+    -- basic block;
+    -- [if expr then same structure else same structure end]*
+    -- basic block;
+    -- [return expr]  -- must be last statement of a routine.
+    -- basic block consists of precondition, postcondition, initial value,
+    -- assert, invariant, assignment and side-effect statements.
+    -- This covers everything simple in the runtime library except, of course,
+    -- the built-in routines, which conveniently have raise statements.
+    calc_stmt_list_weight (code:$AM_STMT) is
+	level:=level+1;
+	loop
+	    while! (~void(code));
+	    calc_stmt_weight(code);
+	    if ~void(badstmt) or weight>max_weight then return end;
+	    code:=code.next
+	end;
+	level:=level-1
+    end;
+
+    calc_stmt_weight (stmt:$AM_STMT) is
+    typecase stmt
+	when AM_ASSIGN_STMT then
+	    weight:=weight+assign_weight;
+	    if weight>max_weight then return end;
+	    calc_expr_weight(stmt.dest);
+	    if ~void(badstmt) or weight>max_weight then return end;
+	    calc_expr_weight(stmt.src);
+	when AM_PRE_STMT then
+	    calc_expr_weight(stmt.test);
+	when AM_POST_STMT then
+	    calc_expr_weight(stmt.test);
+	when AM_INITIAL_STMT then
+	    calc_stmt_list_weight(stmt.stmts);
+	when AM_ASSERT_STMT then
+	    calc_expr_weight(stmt.test);
+	when AM_INVARIANT_STMT then
+	    weight:=weight+rout_call_weight+if_weight;
+	    if weight>max_weight then return end;
+	when AM_EXPR_STMT then
+	    calc_expr_weight(stmt.expr);
+	when AM_BREAK_STMT then -- costs nothing.
+
+	when AM_IF_STMT then
+	    weight:=weight+if_weight;
+	    if weight>max_weight then return end;
+	    calc_expr_weight(stmt.test);
+	    if ~void(badstmt) or weight>max_weight then return end;
+
+	    old_eif::=enclosing_if;
+	    enclosing_if:=stmt;
+	    true_branch:=true;
+	    calc_stmt_list_weight(stmt.if_true);
+	    if ~void(badstmt) or weight>max_weight then return end;
+
+	    true_branch:=false;
+	    calc_stmt_list_weight(stmt.if_false);
+	    if ~void(badstmt) or weight>max_weight then return end;
+	    enclosing_if:=old_eif;
+	when AM_CASE_STMT then
+	    calc_expr_weight(stmt.test);
+	    if ~void(badstmt) or weight>max_weight then return end;
+	    loop
+		weight:=weight+if_weight;
+		if weight>max_weight then return end;
+		calc_stmt_list_weight(stmt.stmts.elt!);
+		if ~void(badstmt) or weight>max_weight then return end;
+	    end;
+	    calc_stmt_list_weight(stmt.else_stmts);
+	when AM_TYPECASE_STMT then
+	    loop
+		calc_stmt_list_weight(stmt.stmts.elt!);
+		if ~void(badstmt) or weight>max_weight then return end;
+	    end;
+	    calc_stmt_list_weight(stmt.else_stmts);
+	when AM_WAITFOR_STMT then
+	when AM_PREFETCH_STMT then
+	    weight:=weight+assign_weight;
+	    if weight>max_weight then return end;
+	    calc_expr_weight(stmt.dest);
+	    if ~void(badstmt) or weight>max_weight then return end;
+	    calc_expr_weight(stmt.src);
+	else
+	    badstmt:=stmt;  -- An illegal statement.
+	end
+    end;
+
+    calc_expr_weight (expr:$AM_EXPR) is
+	if ~void(expr) then
+	    typecase expr
+	    when AM_LOCAL_EXPR then -- No cost.
+	    when AM_ARRAY_EXPR then
+		weight:=weight+rout_call_weight;
+		if weight>max_weight then return end;
+		loop
+		    calc_expr_weight(expr.elt!);
+		    if ~void(badstmt) or weight>max_weight then return end;
+		end
+	    when AM_BND_CREATE_EXPR then
+		loop
+		    calc_expr_weight(expr.elt!.expr);
+		    if ~void(badstmt) or weight>max_weight then return end;
+		end
+	    when AM_IF_EXPR then
+		weight:=weight+if_weight;
+		if weight>max_weight then return end;
+		calc_expr_weight(expr.test);
+		if ~void(badstmt) or weight>max_weight then return end;
+		calc_expr_weight(expr.if_true);
+		if ~void(badstmt) or weight>max_weight then return end;
+		calc_expr_weight(expr.if_false);
+	    when AM_NEW_EXPR then
+		weight:=weight+rout_call_weight;
+	    when AM_IS_VOID_EXPR then
+		weight:=weight+if_weight;
+	    when AM_SHARED_EXPR then -- No cost.
+	    when AM_ATTR_EXPR then
+		calc_expr_weight(expr.ob);
+	    when AM_VATTR_ASSIGN_EXPR then
+		weight:=weight+assign_weight;
+		if weight>max_weight then return end;
+		calc_expr_weight(expr.ob);
+		if ~void(badstmt) or weight>max_weight then return end;
+		calc_expr_weight(expr.val);
+	    when AM_EXCEPT_EXPR then -- No cost.
+	    when AM_STMT_EXPR then
+		calc_expr_weight(expr.expr);
+		if ~void(badstmt) or weight>max_weight then return end;
+		level:=level-1;  -- Same level as this code.
+		calc_stmt_list_weight(expr.stmts);
+		level:=level+1;
+		if ~void(badstmt) or weight>max_weight then return end;
+	    when AM_ROUT_CALL_EXPR then
+		-- don't inline routines containing calls to
+		-- inline_C. We currently don't have any knowledge
+		-- of semantics of the literal representing C code,
+		-- and there could be different kinds of name capture
+		-- effects if inlining were enabled.
+		if ((expr.fun.tp.str = "SYS") and
+		   (expr.fun.name.str ="inlined_C")) then
+		   weight := max_weight+1;
+		   return;
+		end;
+		
+		weight:=weight+rout_call_weight;
+		if weight>max_weight then return end;
+		loop
+		    calc_expr_weight(expr.elt!.expr);
+		    if ~void(badstmt) or weight>max_weight then return end;
+		end;
+	    when AM_ITER_CALL_EXPR then
+		weight:=weight+iter_call_weight;
+		if weight>max_weight then return end;
+		loop
+		    calc_expr_weight(expr.elt!.expr);
+		    if ~void(badstmt) or weight>max_weight then return end;
+		end;
+		level:=level-1;  -- Same level as this code.
+		calc_stmt_list_weight(expr.init);
+		level:=level+1;
+	    when AM_BND_ROUT_CALL_EXPR then
+		weight:=weight+rout_call_weight;
+		if weight>max_weight then return end;
+		loop
+		    calc_expr_weight(expr.elt!.expr);
+		    if ~void(badstmt) or weight>max_weight then return end;
+		end;
+		calc_expr_weight(expr.br);
+	    when AM_BND_ITER_CALL_EXPR then
+		-- inliner gets confused if iters containing calls to bound iter
+		-- objects, we prevent therefore the inlining of these kind of
+		-- iters. If you want to know more about it talk to Arno.
+		
+		-- this prevents anything calling a bnd iter from being inlined,
+		-- will be fixed later.
+		weight := max_weight+1; -- so that weight > max_weight ! 
+		return;
+		
+		
+		--weight:=weight+iter_call_weight;
+		--if weight>max_weight then return end;
+		--loop
+		-- calc_expr_weight(expr.elt!.expr);
+		--if ~void(badstmt) or weight>max_weight then return end;
+		--end;
+		--level:=level-1;  -- Same level as this code.
+		--calc_stmt_list_weight(expr.init);
+		--level:=level+1;
+		--if ~void(badstmt) or weight>max_weight then return end;
+		--calc_expr_weight(expr.bi);
+	    when AM_EXT_CALL_EXPR then
+		weight:=weight+rout_call_weight;
+		if weight>max_weight then return end;
+		loop
+		    calc_expr_weight(expr.elt!.expr);
+		    if ~void(badstmt) or weight>max_weight then return end;
+		end;
+		-- I don't have a cost model for pSather extensions.
+	    when AM_GLOBAL_EXPR then -- No cost.
+	    when AM_HERE_EXPR then -- No cost.
+	    when AM_ANY_EXPR then -- No cost.
+	    when AM_CLUSTER_EXPR then -- No cost.
+	    when AM_CLUSTER_SIZE_EXPR then -- No cost.
+	    when AM_WHERE_EXPR then -- No cost.
+	    when AM_NEAR_EXPR then -- No cost.
+	    when AM_FAR_EXPR then -- No cost.
+	    when AM_AT_EXPR then
+		calc_expr_weight(expr.at);
+		if ~void(badstmt) or weight>max_weight then return end;
+		calc_expr_weight(expr.e);
+	    when $AM_CONST then -- No cost.
+	    end
+	end;
+    end;
+	
+    create (threshold:INT):SAME is
+	r::=new;
+	r.max_weight:=threshold;
+	r.weight:=0;
+	r.level:=0;
+	return r
+    end
+end;
+
+
+-- Another helper class used to copy code.
+class XFORM_CODE is
+
+    attr record_calls:BOOL;
+    readonly attr calls:FLIST{$AM_EXPR}; -- Calls made out of the body.
+    readonly attr return_val:$AM_EXPR;  -- Value returned in the code.
+    readonly attr yield_val:$AM_EXPR;   -- Ditto for iterators.
+    readonly attr loop_stmt:AM_LOOP_STMT;  -- The loop we stopped inside.
+    attr new_loop_stmt:AM_LOOP_STMT;  -- When transforming stuff inside a loop.
+
+    -- A hack used in inlining iterators.
+    private attr enclosing_if:AM_IF_STMT;
+    private attr true_branch:BOOL;
+    -- The if statement containing the yield, if any.
+    readonly attr if_encl_yield:AM_IF_STMT;
+    -- True if the yield is in the then branch.
+    readonly attr true_br_yield:BOOL;
+    -- The statements following the yield.
+    readonly attr after_yield:$AM_STMT;
+
+    -- Parameter & local variable -> new local variable.
+    private attr subst:FMAP{AM_LOCAL_EXPR,AM_LOCAL_EXPR};
+
+    create (subst:FMAP{AM_LOCAL_EXPR,AM_LOCAL_EXPR}):SAME is
+	xc::=new;
+	xc.subst:=subst;
+	return xc
+    end;
+
+    -- Copy the body of the routine, replacing references to formal parameters
+    -- and local variables with references to "new" local variables.
+    xform_stmt_list (code:$AM_STMT):$AM_STMT is
+	if void(code) then return void end;
+	temp::=xform_stmt(code);
+	if void(temp) then return void end;
+	copy::=temp;
+	loop
+	    code:=code.next;
+	    until!(void(code));
+	    temp.next:=xform_stmt(code);
+	    temp:=temp.next;
+	    until!(void(temp))
+	end;
+	return copy
+    end;
+
+    xform_stmt (stmt:$AM_STMT):$AM_STMT is
+	typecase stmt
+	    when AM_ASSIGN_STMT then
+		snew::=#AM_ASSIGN_STMT(stmt.source);
+		snew.dest:=xform_expr(stmt.dest);
+		snew.src:=xform_expr(stmt.src);
+		return snew
+	    when AM_PRE_STMT then
+		snew::=#AM_PRE_STMT(stmt.source);
+		snew.tp:=stmt.tp;
+		snew.test:=xform_expr(stmt.test);
+		return snew
+	    when AM_POST_STMT then
+		snew::=#AM_POST_STMT(stmt.source);
+		snew.tp:=stmt.tp;
+		snew.test:=xform_expr(stmt.test);
+		return snew
+	    when AM_INITIAL_STMT then
+		snew::=#AM_INITIAL_STMT(stmt.source);
+		snew.tp:=stmt.tp;
+		snew.stmts:=xform_stmt_list(stmt.stmts);
+		return snew
+	    when AM_ASSERT_STMT then
+		snew::=#AM_ASSERT_STMT(stmt.source);
+		snew.tp:=stmt.tp;
+		snew.test:=xform_expr(stmt.test);
+		return snew
+	    when AM_INVARIANT_STMT then
+		snew::=#AM_INVARIANT_STMT(stmt.source);
+		snew.sig:=stmt.sig;
+		return snew
+	    when AM_EXPR_STMT then
+		snew::=#AM_EXPR_STMT(stmt.source);
+		snew.expr:=xform_expr(stmt.expr);
+		return snew
+	    when AM_IF_STMT then
+		snew::=#AM_IF_STMT(stmt.source);
+		old_eif::=enclosing_if;
+		enclosing_if:=snew;
+		snew.test:=xform_expr(stmt.test);
+		true_branch:=true;
+		snew.if_true:=xform_stmt_list(stmt.if_true);
+		true_branch:=false;
+		snew.if_false:=xform_stmt_list(stmt.if_false);
+		enclosing_if:=old_eif;
+		return snew
+	    when AM_CASE_STMT then
+		snew::=#AM_CASE_STMT(stmt.source);
+		snew.test:=xform_expr(stmt.test);
+		snew.tgts:=stmt.tgts;
+		snew.stmts:=#FLIST{$AM_STMT}(stmt.stmts.size);
+		loop
+		    snew.stmts := snew.stmts.push
+			(xform_stmt_list(stmt.stmts.elt!))
+		end;
+		snew.no_else:=stmt.no_else;
+		if ~snew.no_else then
+		    snew.else_stmts:=xform_stmt_list(stmt.else_stmts) end;
+		return snew
+	    when AM_TYPECASE_STMT then
+		snew::=#AM_TYPECASE_STMT(stmt.source);
+		snew.test:=subst.get(stmt.test);
+		snew.tgts:=stmt.tgts;
+		snew.stmts:=#FLIST{$AM_STMT}(stmt.stmts.size);
+		loop
+		    snew.stmts := snew.stmts.push
+			(xform_stmt_list(stmt.stmts.elt!))
+		end;
+		snew.no_else:=stmt.no_else;
+		if ~snew.no_else then
+		    snew.else_stmts:=xform_stmt_list(stmt.else_stmts) end;
+		return snew
+	    when AM_RETURN_STMT then
+		return_val:=xform_expr(stmt.val);
+		return void
+	    when AM_YIELD_STMT then
+		yield_val:=xform_expr(stmt.val);
+		if_encl_yield:=enclosing_if;
+		true_br_yield:=true_branch;
+		after_yield:=xform_stmt_list(stmt.next);
+		return void
+	    when AM_BREAK_STMT then
+		return #AM_BREAK_STMT(stmt.source);
+	    when AM_LOOP_STMT then
+		loop_stmt:=stmt;
+		return void
+	end
+    end;
+
+    -- any node that can be optimized MUST be a copy, so that the optimizer
+    -- can use the node to store optimization results.  There is an
+    -- assertion in INVAR_OPT::get_ent that checks for this.
+    xform_expr (expr:$AM_EXPR):$AM_EXPR is
+	arg: AM_CALL_ARG;
+	if void(expr) then return void end;
+	typecase expr
+	    when AM_LOCAL_EXPR then
+		return subst.get(expr);
+	    when AM_ARRAY_EXPR then
+		enew::=#AM_ARRAY_EXPR(expr.asize,expr.source);
+		enew.tp_at:=expr.tp_at;
+		loop enew.set!(xform_expr(expr.elt!)) end;
+		return enew;
+	    when AM_BND_CREATE_EXPR then
+		enew::=#AM_BND_CREATE_EXPR(expr.asize,expr.source);
+		enew.fun:=expr.fun;
+		enew.bnd_args:=expr.bnd_args;
+		enew.unbnd_args:=expr.unbnd_args;
+		enew.tp_at:=expr.tp_at;
+	        loop
+		    arg:= expr.elt!;
+		    enew.set!(#AM_CALL_ARG(xform_expr(arg.expr), arg.mode));
+		end;
+		return enew;
+	    when AM_IF_EXPR then
+		enew::=#AM_IF_EXPR(expr.source);
+		enew.test:=xform_expr(expr.test);
+		enew.if_true:=xform_expr(expr.if_true);
+		enew.if_false:=xform_expr(expr.if_false);
+		enew.tp_at:=expr.tp_at;
+		return enew;
+	    when AM_NEW_EXPR then
+		enew::=#AM_NEW_EXPR(expr.source);
+		enew.tp_at:=expr.tp_at;
+		enew.asz:=xform_expr(expr.asz);
+		return enew;
+	    when AM_IS_VOID_EXPR then
+		enew::=#AM_IS_VOID_EXPR(expr.source);
+		enew.tp_at:=expr.tp_at;
+		enew.arg:=xform_expr(expr.arg);
+		return enew;
+	    when AM_SHARED_EXPR then
+	        enew::=#AM_SHARED_EXPR(expr.source);
+	        enew.tp_at:=expr.tp_at;
+	        enew.name :=expr.name;
+	        enew.class_tp:=expr.class_tp;
+	        enew.init := expr.init;
+	        enew.is_const := expr.is_const;
+	        enew.as_type := expr.as_type;
+	        return enew;
+	    when AM_ATTR_EXPR then
+		enew::=#AM_ATTR_EXPR(expr.source);
+		enew.ob:=xform_expr(expr.ob);
+		enew.self_tp:=expr.self_tp;
+		enew.at:=expr.at;
+		enew.tp_at:=expr.tp_at;
+		enew.as_type:=expr.as_type;
+		return enew;
+	    when AM_VATTR_ASSIGN_EXPR then
+		enew::=#AM_VATTR_ASSIGN_EXPR(expr.source);
+		enew.ob:=xform_expr(expr.ob);
+		enew.at:=expr.at;
+		enew.val:=xform_expr(expr.val);
+		enew.real_tp:=expr.real_tp;
+		return enew;
+	    when AM_VARR_ASSIGN_EXPR then
+		enew::=#AM_VARR_ASSIGN_EXPR(expr.source);
+		enew.ob:=xform_expr(expr.ob);
+		enew.ind:=xform_expr(expr.ind);
+		enew.val:=xform_expr(expr.val);
+		return enew;
+	    when AM_EXCEPT_EXPR then
+		return expr;
+	    when AM_HERE_EXPR then
+		return expr;
+	    when AM_GLOBAL_EXPR then
+		return expr;
+	    when AM_ANY_EXPR then
+		return expr;
+	    when AM_CLUSTER_SIZE_EXPR then
+		return expr;
+	    when AM_CLUSTER_EXPR then
+		return expr;
+	    when AM_WHERE_EXPR then
+		enew::=#AM_WHERE_EXPR(expr.source);
+		enew.arg:=xform_expr(expr.arg);
+		return enew;
+	    when AM_NEAR_EXPR then
+		enew::=#AM_NEAR_EXPR(expr.source);
+		enew.arg:=xform_expr(expr.arg);
+		return enew;
+	    when AM_FAR_EXPR then
+		enew::=#AM_FAR_EXPR(expr.source);
+		enew.arg:=xform_expr(expr.arg);
+		return enew;
+	    when AM_AT_EXPR then
+		enew::=#AM_AT_EXPR(expr.source);
+		enew.at:=xform_expr(expr.at);
+		enew.e:=xform_expr(expr.e);
+		return enew;
+	    when AM_ROUT_CALL_EXPR then
+		enew::=#AM_ROUT_CALL_EXPR(expr.asize,expr.source);
+		enew.fun:=expr.fun;
+		enew.as_type:=expr.as_type;
+ 	        loop arg:=expr.elt!;
+		    enew.set!(#AM_CALL_ARG(xform_expr(arg.expr),arg.mode)); 
+		end;
+		if record_calls then calls:=calls.push(enew) end;
+		return enew;
+	    when AM_ITER_CALL_EXPR then
+		enew::=#AM_ITER_CALL_EXPR(expr.asize,expr.source);
+		enew.fun:=expr.fun;
+		enew.init:=xform_stmt_list(expr.init);
+		enew.lp:=new_loop_stmt;
+		new_loop_stmt.its:=new_loop_stmt.its.push(enew);
+	        loop 
+		    arg := expr.elt!;
+		    enew.set!(#AM_CALL_ARG(xform_expr(arg.expr), arg.mode)); 
+		end;
+		if record_calls then calls:=calls.push(enew) end;
+		return enew;
+	    when AM_BND_ROUT_CALL_EXPR then
+		enew::=#AM_BND_ROUT_CALL_EXPR(expr.asize,expr.source);
+		enew.br:=xform_expr(expr.br);
+		enew.br_tp:=expr.br_tp;
+	        loop 
+		    arg := expr.elt!;
+		    enew.set!(#AM_CALL_ARG( xform_expr(arg.expr), arg.mode)); 
+		end;
+		if record_calls then calls:=calls.push(enew) end;
+		return enew;
+	    when AM_BND_ITER_CALL_EXPR then
+		enew::=#AM_BND_ITER_CALL_EXPR(expr.asize,expr.source);
+		enew.bi:=xform_expr(expr.bi);
+		enew.bi_tp:=expr.bi_tp;
+		enew.init:=xform_stmt_list(expr.init);
+		enew.lp:=new_loop_stmt;
+	        new_loop_stmt.bits:=new_loop_stmt.bits.push(enew);
+	        loop 
+		    arg := expr.elt!;
+		    enew.set!(#AM_CALL_ARG(xform_expr(arg.expr), arg.mode)); 
+		end;
+		if record_calls then calls:=calls.push(enew) end;
+		return enew;
+	    when AM_EXT_CALL_EXPR then
+		enew::=#AM_EXT_CALL_EXPR(expr.asize,expr.source,expr.nm);
+	        enew.fun:=expr.fun;
+	        loop 
+		    arg := expr.elt!;
+		    enew.set!(#AM_CALL_ARG(xform_expr(arg.expr), arg.mode)); 
+		end;
+		if record_calls then calls:=calls.push(enew) end;
+		return enew;
+	    when $AM_CONST then
+		return expr;
+	    when AM_STMT_EXPR then
+		enew::=#AM_STMT_EXPR(expr.source);
+		save_calls::=calls;
+		calls:=void;
+		enew.stmts:=xform_stmt_list(expr.stmts);
+		enew.calls:=calls;
+		calls:=save_calls.concat(calls);
+		enew.locals:=#(expr.locals.size);
+		loop enew.locals := enew.locals.push
+		    (subst.get(expr.locals.elt!)) end;
+		enew.expr:=xform_expr(expr.expr);
+		return enew;
+	end
+    end
+end;
+
+
+-- Helper to deal with local variables.
+class CHANGE_VARS is
+    -- The routine's parameters and local variables.
+    readonly attr saved_vars:FLIST{AM_LOCAL_EXPR};
+    -- Statements parm1:=void; on instantiation become parm1:=arg1.
+    -- One list for routines, and two for iterators.  Also, for iterators
+    -- lists of indices of hot and non-hot parameters.  Also, a list of
+    -- initialization statements for variables that need them.
+    readonly attr init_parms,init_hot,init_nonhot:$AM_STMT;
+    readonly attr pind_hot,pind_nonhot:ARRAY{INT};
+    readonly attr init_vars:$AM_STMT;
+    -- Variables in the routine -> variables in the saved routine.
+    readonly attr saved_subst:FMAP{AM_LOCAL_EXPR,AM_LOCAL_EXPR};
+    -- New routine's parameters and local variables.
+    readonly attr new_vars:FLIST{AM_LOCAL_EXPR};
+    -- Variables in the saved routine -> variables in the new routine.
+    readonly attr new_subst:FMAP{AM_LOCAL_EXPR,AM_LOCAL_EXPR};
+
+    -- For every argument and local variable in the routine,
+    -- create a new local variable and record this in the substitutions table.
+    -- Also generate statements to initialize the local variables that need
+    -- to be initialized, and to assign actual arguments to formal parameters.
+    create (rout:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.saved_subst:=#(rout.size+rout.locals.size);
+	r.saved_vars:=#(rout.size+rout.locals.size);
+	if rout.is_iter then
+	    r.init_hot:=void;
+	    r.pind_hot:=#(rout.size);
+	    r.init_nonhot:=void;
+	    r.pind_nonhot:=#(rout.size);
+	else
+	    r.init_parms:=void;
+	end;
+	r.init_vars:=void;
+	loop
+	    l::=rout.elt!.expr;
+	    m::=#AM_LOCAL_EXPR(rout.source);
+	    m.is_volatile:=l.is_volatile;
+	    m.name:=#IDENT(rout.sig.name.str+"_"+l.name.str);
+	    m.tp_at:=l.tp_at;
+	    m.needs_init:=l.needs_init;
+	    -- For iterators, only initialize hot arguments; once arguments
+	    -- are dealt with elsewhere.
+	    if rout.is_iter then
+		as::=#AM_ASSIGN_STMT(rout.source);
+		as.dest:=m;
+		as.src:=void;  -- Will become something else later.
+		i::=0.up!;
+		if void(rout.sig.hot) or i=0 or ~rout.sig.hot[i-1] then
+		    if void(r.init_nonhot) then r.init_nonhot:=as
+			else r.init_nonhot.append(as) end;
+		    r.pind_nonhot.set!(i);
+		else
+		    if void(r.init_hot) then r.init_hot:=as
+			else r.init_hot.append(as) end;
+		    r.pind_hot.set!(i);
+		end
+	    else
+		as::=#AM_ASSIGN_STMT(rout.source);
+		as.dest:=m;
+		as.src:=void;  -- Will become something else later.
+		if void(r.init_parms) then r.init_parms:=as
+		    else r.init_parms.append(as) end;
+	    end;
+	    m.no_assign:=l.no_assign;
+	    r.saved_subst:=r.saved_subst.insert(l,m);
+	    r.saved_vars:=r.saved_vars.push(m)
+	end;
+	loop
+	    l::=rout.locals.elt!;
+	    m::=#AM_LOCAL_EXPR(rout.source);
+	    m.is_volatile:=l.is_volatile;
+	    m.name:=l.name;
+	    m.tp_at:=l.tp_at;
+	    m.needs_init:=l.needs_init;
+	    if m.needs_init then
+		as::=#AM_ASSIGN_STMT(rout.source);
+		as.dest:=m;
+		vconst::=#AM_VOID_CONST(rout.source);
+		vconst.tp_at:=m.tp_at;
+		as.src:=vconst;
+		if void(r.init_vars) then r.init_vars:=as
+		    else r.init_vars.append(as) end
+	    end;
+	    m.no_assign:=l.no_assign;
+	    r.saved_subst:=r.saved_subst.insert(l,m);
+	    r.saved_vars:=r.saved_vars.push(m)
+	end;
+	return r
+    end;
+
+    -- Destroy the stuff only useful in INLINE_{ROUT,ITER}::create
+    after_saving is
+	SYS::destroy (saved_subst)
+    end;
+
+    -- Copy the list of local variables from the saved code to the new code
+    -- (every inlined copy has to have its own local variables).
+    new_copy (source:SFILE_ID) is
+	new_subst:=#(saved_vars.size);
+	new_vars:=#(saved_vars.size);
+	loop
+	    l::=saved_vars.elt!;
+	    m::=#AM_LOCAL_EXPR(source);
+	    m.is_volatile:=l.is_volatile;
+	    m.name:=l.name;
+	    m.tp_at:=l.tp_at;
+	    m.needs_init:=l.needs_init;
+	    m.no_assign:=l.no_assign;
+	    new_subst:=new_subst.insert(l,m);
+	    new_vars:=new_vars.push(m)
+	end
+    end;
+
+    -- Destroy the stuff useful in inlining a single routine.
+    after_one_use is
+	SYS::destroy (new_subst)
+    end;
+end;
+
+
+-------------------------------------------------------------------
+-- Iterator of the form
+-- flatiter!(nonhot:T1,hot:T2) is
+--     var::=iv;  BEFLOOP;
+--     loop IINIT; yield yield_val; ITERM end
+-- end
+-- called from
+-- loop
+--     ...
+--     x:=flatiter!(nh1,h1)
+--     ...
+-- end
+-- is transformed into
+-- flatiter_if_first:BOOL;
+-- flatiter_if_first:=true;
+-- loop
+--     ...
+--     if flatiter_if_first then
+--         flatiter_nonhot:=nh1
+--     end;
+--     flatiter_hot:=h1;
+--     if flatiter_if_first then
+--         flatiter_var:=iv;
+--         BEFLOOP;
+--         flatiter_if_first:=false
+--     else
+--         ITERM
+--     end;
+--     IINIT;
+--     x:=yield_val;
+--     ...
+-- end
+-------------------------------------------------------------------
+-- Iterator of the form
+-- conditer!(nonhot:T1,hot:T2) is
+--     var::=iv;  BEFLOOP;
+--     loop
+--         IINIT;
+--         if yield_cond then WYBEF; yield yield_val; WYAFT else WNOY end;
+--         ITERM
+--     end
+-- end
+-- called from
+-- loop
+--     ...
+--     x:=conditer!(nh1,h1)
+--     ...
+-- end
+-- is transformed into
+-- conditer_if_first:BOOL;
+-- conditer_if_first:=true;
+-- conditer_if_yld:BOOL;
+-- loop
+--     ...
+--     if conditer_if_first then
+--         conditer_nonhot:=nh1
+--     end;
+--     conditer_hot:=h1;
+--     if conditer_if_first then
+--         conditer_var:=iv;
+--         BEFLOOP;
+--         conditer_if_first:=false
+--     else
+--         WYAFT;
+--         ITERM
+--     end;
+--     conditer_if_yld:=false;
+--     loop
+--         IINIT;
+--         if yield_cond then conditer_if_yld:=true; break! end;
+--         WNOY;
+--         ITERM
+--     end;
+--     if conditer_if_yld then
+--         WYBEF
+--     else
+--         break!
+--     end;
+--     x:=yield_val;
+--     ...
+-- end
+
+class INLINE_ITER < $INLINE_ITER_SIG is
+
+    shared inlined,iters:INT;
+    attr is_special:BOOL;
+    -- Mechanism for transforming local variables and parameters.
+    private attr change_vars:CHANGE_VARS;
+    -- The code before the regular loop structure.
+    private attr BEFLOOP_code:$AM_STMT;
+    -- Yield directly in the loop?
+    private attr flat_yield:BOOL;
+    -- The code before flat yield (or if); after flat yield (or if).
+    -- In other words, initialize or terminate the iteration.
+    private attr IINIT_code:$AM_STMT;
+    private attr ITERM_code:$AM_STMT;
+    -- Non-flat yield: condition when to yield, code before yield, code after
+    -- yield, the other branch of the if statement.
+    private attr yield_cond:$AM_EXPR;
+    private attr WYBEF_code,WYAFT_code,WNOY_code:$AM_STMT;
+    -- The value yielded.
+    private attr yield_val:$AM_EXPR;
+    -- Variables that used to be set to true before the loop.  They have to be
+    -- set to true before the new loop, too.
+    private attr loop_firsts:FLIST{AM_LOCAL_EXPR};
+
+    private attr signature:SIG;
+    sig:SIG is return signature end;
+
+    -- Note that the way DFS is done on routines, there can be no recursive
+    -- expansion (and the body of the routine is already expanded).
+
+   -- Can an iterator be inlined?
+    is_inlineable (rout:AM_ROUT_DEF,threshold:INT, prog:PROG):BOOL is
+        if prog.generate_am.sig_recursive.test(rout.sig) then
+	   return false;
+        end;      
+        -- Skip the beginning.
+	sb::=#WEIGH_CODE(threshold);
+	sb.calc_stmt_list_weight(rout.code);
+	if sb.weight>threshold then SYS::destroy(sb); return false end;
+	loopstmt:AM_LOOP_STMT;
+	badstmt::=sb.badstmt;
+	sb.clear_badstmt;
+	typecase badstmt
+	    when AM_LOOP_STMT then
+		if sb.level/=1 or ~badstmt.has_yield then
+		    SYS::destroy(sb); return false
+		else
+		    loopstmt:=badstmt
+		end;
+	    else
+		SYS::destroy(sb); return false
+	end;
+
+	-- Find the single yield statement - either unconditional or
+	-- under one condition.
+	sb.calc_stmt_list_weight(loopstmt.body);
+	if sb.weight>threshold then SYS::destroy(sb); return false end;
+	yieldstmt:AM_YIELD_STMT;
+	badstmt:=sb.badstmt;
+	sb.clear_badstmt;
+	typecase badstmt
+	    when AM_YIELD_STMT then
+	-- we ignore complex iters completely, as they are very rare,
+	-- and the way they are inlined here poses some problems. The 
+	-- resulting code may have iters that are not associated with 
+	-- the innermost loop. The optimizer gets very confused with 
+	-- iters.
+	--	if ~(sb.level=2 or (sb.level=3 and ~void(sb.enclosing_if))) then
+		if ~(sb.level=2) then
+		    SYS::destroy(sb); return false
+		else
+		    yieldstmt:=badstmt
+		end;
+	    else
+		SYS::destroy(sb); return false
+	end;
+	sb.calc_expr_weight(yieldstmt.val);
+	if sb.weight>threshold then SYS::destroy(sb); return false end;
+    
+	-- Skip stuff after the single yield.
+	sb.calc_stmt_list_weight(yieldstmt.next);
+	if ~void(sb.badstmt) or sb.weight>threshold then
+	    SYS::destroy(sb); return false end;
+	sb.uplevel;
+	if sb.level=2 then
+	    if sb.true_branch then
+		sb.calc_stmt_list_weight(sb.enclosing_if.if_false);
+	    else
+		sb.calc_stmt_list_weight(sb.enclosing_if.if_true);
+	    end;
+	    if ~void(sb.badstmt) or sb.weight>threshold then
+		SYS::destroy(sb); return false end;
+	    sb.calc_stmt_list_weight(sb.enclosing_if.next);
+	    if ~void(sb.badstmt) or sb.weight>threshold then
+		SYS::destroy(sb); return false end;
+	    sb.uplevel;
+	end;
+
+	-- Nothing should come after the loop.
+	if ~void(loopstmt.next) then
+	    SYS::destroy(sb); return false end;
+	sb.uplevel;
+
+	SYS::destroy(sb);
+	return true
+    end;
+
+    -- Create a new inlineable iterator.  Copy the code, so that when the code
+    -- is emitted and destroyed, the inlined table will remain intact.
+    -- Add initializations of local variables.
+    create (rout:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.signature:=rout.sig;
+	r.is_special := false;  -- general purpose inlining
+	r.copy_iter (rout);
+	iters:=iters+1;
+	-- #OUT + "Able to inline: " +rout.sig.str+'\n';
+	return r
+    end;
+
+    copy_iter (rout:AM_ROUT_DEF) is
+	change_vars:=#(rout);
+	xc::=#XFORM_CODE(change_vars.saved_subst);
+	xc.record_calls:=false;
+	proxy_loop_stmt::=#AM_LOOP_STMT(void);
+	xc.new_loop_stmt:=proxy_loop_stmt;
+
+	-- The code before the loop statement.
+	BEFLOOP_code:=xc.xform_stmt_list(rout.code);
+	if void(xc.loop_stmt) then
+	    flat_yield:=true;
+	    change_vars.after_saving;
+	    SYS::destroy(xc);
+	    return
+	end;
+	loop_firsts:=#(xc.loop_stmt.firsts.size);
+	loop
+	    loop_firsts:=loop_firsts.push
+		(change_vars.saved_subst.get(xc.loop_stmt.firsts.elt!))
+	end;
+
+	-- The code before and after the yield.
+	IINIT_code:=xc.xform_stmt_list(xc.loop_stmt.body);
+	iey::=xc.if_encl_yield;
+	flat_yield:=void(iey);
+	if flat_yield then
+	    ITERM_code:=xc.after_yield;
+	else
+	    s1::=IINIT_code;
+	    if SYS::ob_eq(s1,iey) then
+		IINIT_code:=void
+	    else
+		loop until!(SYS::ob_eq(s1.next,iey)) end;
+		s1.next:=void
+	    end;
+	    ITERM_code:=iey.next;
+	end;
+	yield_val:=xc.yield_val;
+
+	-- For a yield inside an if:
+	if ~flat_yield then
+            #OUT+"found complex iter to be inlined: "+rout.sig.str+" ("+rout.sig.srcsig.str+")\n";
+	    if xc.true_br_yield then
+		yield_cond:=iey.test;
+		WYBEF_code:=iey.if_true;
+		WYAFT_code:=xc.after_yield;
+		WNOY_code:=iey.if_false;
+	    else
+		-- the yield condition is not (the if statement condition).
+		bool_tp::=TP_BUILTIN::bool;
+		notsig::=#SIG(bool_tp,#ARRAY{$TP}(0),
+			      IDENT_BUILTIN::not_ident,void,bool_tp,false);
+		--notsig.tp:=bool_tp;
+		--notsig.name:=IDENT_BUILTIN::not_ident;
+		--notsig.ret:=bool_tp;
+		yc::=#AM_ROUT_CALL_EXPR(1,iey.test.source);
+		yc.fun:=notsig;
+		yc[0]:=#(iey.test);
+		yield_cond:=yc;
+		WYBEF_code:=iey.if_false;
+		WYAFT_code:=xc.after_yield;
+		WNOY_code:=iey.if_true;
+	    end
+	end;
+
+	SYS::destroy(proxy_loop_stmt);
+	change_vars.after_saving;
+	SYS::destroy(xc)
+    end;
+
+    -- Do inline the iterator.
+    inline (call:AM_ITER_CALL_EXPR):$AM_EXPR is
+	inlined:=inlined+1;
+
+	-- Useful stuff.
+	bcfalse::=#AM_BOOL_CONST(call.source);
+	bcfalse.tp_at:=TP_BUILTIN::bool;
+	bcfalse.val:=false;
+	bctrue::=#AM_BOOL_CONST(call.source);
+	bctrue.tp_at:=TP_BUILTIN::bool;
+	bctrue.val:=true;
+
+	-- Make new copies of all variables.
+	se::=#AM_STMT_EXPR(call.source);
+	change_vars.new_copy(call.source);
+	se.locals:=change_vars.new_vars;
+
+	-- Code transformer.
+	xc::=#XFORM_CODE(change_vars.new_subst);
+	xc.record_calls:=true;
+	proxy_loop_stmt::=#AM_LOOP_STMT(call.source);
+	xc.new_loop_stmt:=proxy_loop_stmt;
+
+	-- Once parameters. Implicit ``in'' mode
+	init_nonhot::=xc.xform_stmt_list(change_vars.init_nonhot);
+        s::=init_nonhot;
+	loop
+	    until!(void(s));
+	    typecase s when AM_ASSIGN_STMT then
+		if void(s.src) then
+		    s.src:=call[change_vars.pind_nonhot.elt!].expr;
+		end
+	    end;
+	    s:=s.next
+	end;
+
+	-- Parameters that will be passed on every iteration.
+	init_hot::=xc.xform_stmt_list(change_vars.init_hot);
+	s:=init_hot;
+	loop
+	    until!(void(s));
+	    typecase s when AM_ASSIGN_STMT then
+	       if void(s.src) then
+		  ind ::= change_vars.pind_hot.elt!;
+		  ca ::= call[ind];
+		  stp ::=call.fun.args[ind-1].tp;
+		  if ~SYS::ob_eq(ca.mode, MODES::out_mode) then
+		     s.src:=ca.expr;
+		  else
+		     vconst::=#AM_VOID_CONST(ca.source);
+		     vconst.tp_at:=stp;
+		     s.src := vconst;
+		  end;
+		end
+	    end;
+	    s:=s.next
+	end;
+
+	-- Statements to execute the first time over - initializing non-hot
+	-- parameters (comes in 2 stages - the general non-inlined iterator
+	-- code assigns actual arguments to nameless variables in call.init;
+	-- we have to assign these to formal parameters).  Also initialize all
+	-- hot parameters and local variables of the iterator, and execute
+	-- the code before the loop statement.  Hot parameters should be
+	-- initialized once, so emit two if statements.
+	ftm1::=call.init;
+	if ~void(ftm1) then ftm1.append(init_nonhot) else ftm1:=init_nonhot end;
+	if_first::=#AM_LOCAL_EXPR(call.source,
+	    #IDENT(sig.name.str+"_if_first"),TP_BUILTIN::bool);
+	se.locals:=se.locals.push(if_first);
+	iffstmt1::=#AM_IF_STMT(call.source);
+	iffstmt1.test:=if_first;
+	iffstmt1.if_true:=ftm1;
+	iffstmt1.if_false:=void;
+	se.stmts:=iffstmt1;
+
+	init_vars::=xc.xform_stmt_list(change_vars.init_vars);
+	ftm2::=init_vars;
+	BEFLOOP::=xc.xform_stmt_list(BEFLOOP_code);
+	if ~void(ftm2) then ftm2.append(BEFLOOP) else ftm2:=BEFLOOP end;
+	ass::=#AM_ASSIGN_STMT(call.source);
+	ass.dest:=if_first;
+	ass.src:=bcfalse;
+	if ~void(ftm2) then ftm2.append(ass) else ftm2:=ass end;
+	nftm2:$AM_STMT;
+	if ~flat_yield then nftm2:=xc.xform_stmt_list(WYAFT_code) end;
+	ITERM::=xc.xform_stmt_list(ITERM_code);
+	if ~void(nftm2) then nftm2.append(ITERM) else nftm2:=ITERM end;
+	if ~void(init_hot) then
+	    se.stmts.append(init_hot);
+	    iffstmt2::=#AM_IF_STMT(call.source);
+	    iffstmt2.test:=if_first;
+	    iffstmt2.if_true:=ftm2;
+	    iffstmt2.if_false:=nftm2;
+	    se.stmts.append(iffstmt2)
+	else
+	    if ~void(iffstmt1.if_true) then
+		iffstmt1.if_true.append(ftm2)
+	    else
+		iffstmt1.if_true:=ftm2
+	    end;
+	    iffstmt1.if_false:=nftm2
+	end;
+
+	-- To distinguish breaks in embedded iterators from yielding on
+	-- the condition, both of which break out of the inner loop of
+	-- a "conditional" iterator.
+	if ~flat_yield then
+	    if_yld::=#AM_LOCAL_EXPR(call.source,
+		#IDENT(sig.name.str+"_if_yld"),TP_BUILTIN::bool);
+	    se.locals:=se.locals.push(if_yld);
+	    ass:=#AM_ASSIGN_STMT(call.source);
+	    ass.dest:=if_yld;
+	    ass.src:=bcfalse;
+	    se.stmts.append(ass);
+
+	    -- loop IINIT; if C then if_yld:=true; break! end; WNOY; ITERM end
+	    loopstmt::=#AM_LOOP_STMT(call.source);
+	    loopstmt.has_yield:=false;
+	    lbd::=xc.xform_stmt_list(IINIT_code);
+	    ass:=#AM_ASSIGN_STMT(call.source);
+	    ass.dest:=if_yld;
+	    ass.src:=bctrue;
+	    ass.append(#AM_BREAK_STMT(call.source));
+	    ifcstmt::=#AM_IF_STMT(call.source);
+	    ifcstmt.test:=xc.xform_expr(yield_cond);
+	    ifcstmt.if_true:=ass;
+	    ifcstmt.if_false:=void;
+	    if ~void(lbd) then lbd.append(ifcstmt) else lbd:=ifcstmt end;
+	    lbd.append(xc.xform_stmt_list(WNOY_code));
+	    lbd.append(xc.xform_stmt_list(ITERM_code));
+	    loopstmt.body:=lbd;
+	    se.stmts.append(loopstmt);
+
+	    -- if if_yld then WYBEF else break! end
+	    ifzstmt::=#AM_IF_STMT(call.source);
+	    ifzstmt.test:=if_yld;
+	    ifzstmt.if_true:=xc.xform_stmt_list(WYBEF_code);
+	    ifzstmt.if_false:=#AM_BREAK_STMT(call.source);
+	    se.stmts.append(ifzstmt);
+
+	else -- Execute INIT;
+	    se.stmts.append(xc.xform_stmt_list(IINIT_code))
+	end;
+
+	-- Yielded value; calls; stuff having to do with nested iter calls.
+        if ~void(yield_val) then se.expr:=xc.xform_expr(yield_val) end;
+      
+        -- For out/inout args, copy back the results
+        s := init_hot;
+        loop
+	   until!(void(s));
+	   ca ::= call[change_vars.pind_hot.elt!];
+	   if SYS::ob_eq(ca.mode, MODES::out_mode) or 
+	      SYS::ob_eq(ca.mode,MODES::inout_mode)
+	   then
+		    typecase s when AM_ASSIGN_STMT then
+		       cp_stmt ::= #AM_ASSIGN_STMT(call.source);
+		       cp_stmt.dest := ca.expr;
+		       cp_stmt.src := s.dest;
+		       se.stmts.append(cp_stmt); 
+		    end;
+	   end;
+	   s := s.next;
+	end;
+      
+	se.calls:=xc.calls;
+	se.its:=proxy_loop_stmt.its;
+	se.bits:=proxy_loop_stmt.bits;
+	se.firsts:=#(loop_firsts.size+1);
+	se.firsts:=se.firsts.push(if_first);
+	loop
+	    se.firsts:=se.firsts.push
+		(change_vars.new_subst.get(loop_firsts.elt!))
+	end;
+
+	SYS::destroy(proxy_loop_stmt);
+	change_vars.after_one_use;
+	SYS::destroy(xc);
+	return se
+    end
+end;
+
+
+-------------------------------------------------------------------
+class INLINE_ROUT < $INLINE_ROUT_SIG is
+
+    shared inlined,routines:INT;
+
+    -- Mechanism for transforming local variables and parameters.
+    private attr change_vars:CHANGE_VARS;
+    -- The routine's transformed code without the final return.
+    private attr code:$AM_STMT;
+    -- The value returned.
+    private attr return_val:$AM_EXPR;
+
+    attr is_special:BOOL;
+    private attr signature:SIG;
+    sig:SIG is return signature end;
+    
+
+    -- Note that the way DFS is done on routines, there can be no recursive
+    -- expansion (and the body of the routine is already expanded).
+
+    -- Can a routine be inlined?
+   is_inlineable (rout:AM_ROUT_DEF,threshold:INT, prog:PROG):BOOL is
+      if prog.generate_am.sig_recursive.test(rout.sig) then
+	 return false;
+      end;
+      -- #OUT+"testing if "+rout.sig.str+" is inlineable: ";
+      sb::=#WEIGH_CODE(threshold);
+      sb.calc_stmt_list_weight(rout.code);
+      if sb.weight>threshold then SYS::destroy(sb); 
+	 -- #OUT+"no, weight "+sb.weight+" too high\n";
+	 return false end;
+      badstmt::=sb.badstmt;
+      sb.clear_badstmt;
+      if ~void(badstmt) then
+	 typecase badstmt
+	 when AM_RETURN_STMT then -- only top-level returns are allowed.
+	    if sb.level > 1 then 
+	       -- #OUT+"no, I found a non toplevel return at level " + sb.level + "\n";
+	       SYS::destroy(sb); 	       
+	       return false 
+	    end;
+	    sb.calc_expr_weight(badstmt.val);
+	    if sb.weight>threshold then
+	       SYS::destroy(sb); -- #OUT+"no, weight "+sb.weight+" too high\n";
+	       return false 
+	    end;
+	 else SYS::destroy(sb); -- #OUT+"no, expected a AM_RETURN_STMT, got a "+SYS::str_for_tp(SYS::tp(badstmt))+"\n";
+	    return false
+	 end
+      end;
+      SYS::destroy(sb);
+      -- #OUT+"yes\n";
+      return true
+   end;
+   
+    -- Create a new inlineable routine.  Copy the code, so that when the code
+    -- is emitted and destroyed, the inlined table will remain intact.
+    -- Add initializations of local variables, and strip the final return.
+    create (rout:AM_ROUT_DEF):SAME is
+	r::=new;
+	r.signature:=rout.sig;
+	r.is_special:=false;  -- general purpose inlining
+	r.copy_rout(rout);
+	routines:=routines+1;
+	return r
+    end;
+
+    private copy_rout (rout:AM_ROUT_DEF) is
+	change_vars:=#(rout);
+	xc::=#XFORM_CODE(change_vars.saved_subst);
+	xc.record_calls:=false;
+	code:=xc.xform_stmt_list(rout.code);
+	return_val:=xc.return_val;
+	change_vars.after_saving;
+	SYS::destroy(xc)
+    end;
+
+    -- Do inline the routine.  Copy the statements (since they are going
+    -- to be inserted into several lists).
+   inline (call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+      inlined:=inlined+1;
+      
+      -- Make new copies of all variables.
+      se::=#AM_STMT_EXPR(call.source);
+      change_vars.new_copy(call.source);
+      se.locals:=change_vars.new_vars;
+      
+      -- Initialize the formal parameters with actual arguments.
+      xc::=#XFORM_CODE(change_vars.new_subst);
+      xc.record_calls:=false;
+      init_parms::=xc.xform_stmt_list(change_vars.init_parms);
+      s::=init_parms;
+      i::=-1;
+      loop
+	 until!(void(s));
+	 stp:$TP;
+	 typecase s when AM_ASSIGN_STMT then
+	    if void(s.src) then
+	       ca ::= call.elt!;
+	       if i = -1 then
+		  stp := call.fun.tp;
+	       else
+		  stp := call.fun.args[i].tp;
+	       end;
+	       i := i+1;
+
+	       if ~SYS::ob_eq(ca.mode, MODES::out_mode) then
+		  s.src:=ca.expr;
+	       else
+		  vconst::=#AM_VOID_CONST(ca.source);
+		  vconst.tp_at:=stp;
+		  s.src := vconst;		  
+	       end;
+	    end
+	 end;
+	 s:=s.next
+      end;
+      
+      -- Copy the statements.
+      xc.record_calls:=true;
+      se.stmts:=xc.xform_stmt_list(code);
+      if ~void(init_parms) then
+	 init_parms.append(se.stmts); se.stmts:=init_parms end;
+      
+      -- For out/inout args, copy back the results
+      s := init_parms;
+      loop
+	 until!(void(s));
+	 ca ::= call.elt!;
+	 if SYS::ob_eq(ca.mode, MODES::out_mode) or 
+	    SYS::ob_eq(ca.mode,MODES::inout_mode)
+	 then
+	       typecase s when AM_ASSIGN_STMT then
+		  cp_stmt ::= #AM_ASSIGN_STMT(call.source);
+		  cp_stmt.dest := ca.expr;
+--		  AM_OUT::AM_out(ca.expr);
+		  cp_stmt.src := s.dest;
+		  se.stmts.append(cp_stmt); 
+	       end;
+	 end;
+	 s := s.next;
+      end;
+      
+      if ~void(return_val) then
+	 se.expr:=xc.xform_expr(return_val) end;
+      se.calls:=xc.calls;
+      SYS::destroy(xc);
+      change_vars.after_one_use;
+      return se
+   end;
+end;
+
+
+-------------------------------------------------------------------
+class INLINE < $INLINE is
+
+    include CS_COMPONENT;
+
+    const default_rout_thres := 16;  -- default thresholds for inlining
+    const default_iter_thres := 16;  -- found/guessed to be best on Sparcs
+    attr inline_routs:BOOL;
+    attr inline_iters:BOOL;
+    private attr rtbl:INLINE_ROUT_TBL;
+    private attr itbl:INLINE_ITER_TBL;
+    attr rout_thres:INT;
+    attr iter_thres:INT;
+
+    create(p:PROG):SAME is
+	r::=new;
+	r.rtbl:=#(1024);
+	r.itbl:=#(64);
+	r.prog:=p;
+	r.inline_routs:=false;  -- no default inlining
+	r.inline_iters:=false;
+	r.rout_thres:=default_rout_thres;
+	r.iter_thres:=default_iter_thres;
+	return r;
+    end;
+ 
+    init is
+	-- Insert translator for folding integer addition
+        int_tp::=TP_BUILTIN::int;
+	ar::=#ARRAY{ARG}(1);
+	ar[0]:=#(int_tp);
+	ipiis::=#SIG(int_tp, #ARRAY{$TP}(0),
+                IDENT_BUILTIN::plus_ident, ar, int_tp,true);
+	rtbl:=rtbl.insert(#INLINE_INT_FOLD(ipiis));
+    end;
+
+
+    -- Consider a procedure for inlining.  If it is known to be recursive,
+    -- make sure it is emitted, unlike most inline procedures.
+    consider (am:AM_ROUT_DEF) is
+	-- don't inline built in routines and iters!
+	if ~am.sig.is_builtin then
+	    -- #OUT+"testing function/iter "+am.sig.str+" if it may be inlined\n";
+	    if am.is_iter then
+		itbl:=itbl.test_and_insert(am,inline_iters,iter_thres,prog)
+	    else
+		rtbl:=rtbl.test_and_insert(am,inline_routs,rout_thres,prog)
+	    end
+	else
+	   -- #OUT+"the builtin function/iter "+am.sig.str+" will not be inlined\n";
+    end;
+    end;
+
+    special_inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	in::=rtbl.get_query(call.fun);
+	if void(in) then return call end;
+	if in.is_special then
+	    return in.inline(call); 
+	else
+	    return call;
+	end;
+    end;
+
+--    general_inline(call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+--	in::=rtbl.get_query(call.fun);
+--	if void(in) then return call end;
+--	if ~in.is_special then
+--	    return in.inline(call); 
+--	else
+--	    return call;
+--	end;
+--    end;
+    
+-- Returns the expression that should replace the "call" routine call
+-- It will make the necessary changes to add new calls and locals to
+-- the routine definition, but it will not change the AM_TREE of the
+-- routine.
+    general_inline(rout:AM_ROUT_DEF,call:AM_ROUT_CALL_EXPR):$AM_EXPR is
+	in::=rtbl.get_query(call.fun);
+	if void(in) then return call end;
+	if ~in.is_special then
+	    n::=in.inline(call); 
+	    typecase n when AM_STMT_EXPR then
+	       rout.calls:=rout.calls.concat(n.calls);
+	       rout.locals:=rout.locals.concat(n.locals);
+	       if rout.calls.index_of(call)<0 then
+		  if prog.opt_debug then
+		     #OUT+"WARNING: function "+call.fun.str+" is not registered in "+rout.sig.str+"\n";
+	          end;
+	       else
+	          rout.calls.delete_elt_ordered(call);
+	       end;
+	    else end;
+	    return n;
+	else
+	    return call;
+	end;
+    end;
+
+    special_inline(call:AM_ITER_CALL_EXPR):$AM_EXPR is
+	inl::=itbl.get_query(call.fun);
+	if void(inl) then return call end;
+	if inl.is_special then
+	    return inl.inline(call); 
+	else
+	    return call;
+	end;
+    end;
+
+--    general_inline(call:AM_ITER_CALL_EXPR):$AM_EXPR is
+--	inl::=itbl.get_query(call.fun);
+--	if void(inl) then return call end;
+--	if ~inl.is_special then
+--	    return inl.inline(call); 
+--	else
+--	    return call;
+--	end;
+--    end;
+
+-- Returns the expression that should replace the "call" iter call
+-- It will make the necessary changes to add new calls and locals to
+-- the routine definition, but it will not change the AM_TREE of the
+-- routine.
+    general_inline(rout:AM_ROUT_DEF,lp:AM_LOOP_STMT,call:AM_ITER_CALL_EXPR):$AM_EXPR is
+	inl::=itbl.get_query(call.fun);
+	if void(inl) then return call end;
+	if ~inl.is_special then
+	    n::=inl.inline(call); 
+	    typecase n when AM_STMT_EXPR then
+               rout.calls:=rout.calls.concat(n.calls);
+               rout.locals:=rout.locals.concat(n.locals);
+	       loop n.its.elt!.lp:=lp; end;
+	       loop n.bits.elt!.lp:=lp; end;
+               lp.its:=lp.its.concat(n.its);
+               lp.bits:=lp.bits.concat(n.bits);
+               lp.firsts:=lp.firsts.concat(n.firsts);
+	       if lp.its.index_of(call)<0 then
+		  if prog.opt_debug then
+	             #OUT+"WARNING: iter "+call.fun.str+" is not registered in LOOP_STMT\n";
+		     AM_OUT::AM_out(lp);
+		     #OUT+"END_OF_LOOP\n";
+		  end;
+	       else
+		  lp.its.delete_elt_ordered(call);
+	       end;
+	       if rout.calls.index_of(call)<0 then
+		  if prog.opt_debug then
+	             #OUT+"WARNING: iter "+call.fun.str+" is not registered in "+rout.sig.str+"\n";
+	          end;
+	       else
+	          rout.calls.delete_elt_ordered(call);
+	       end;
+	    else end;
+	    return n;
+	else
+	    return call;
+	end;
+    end;
+
+    inlined(s:SIG):BOOL is
+	if s.is_iter then
+	    inl::=itbl.get_query(s);
+	    return ~void(inl)
+	else
+	    inl::=rtbl.get_query(s);
+	    return ~void(inl)
+	end
+    end;
+
+end;
+
+
+-------------------------------------------------------------------
+class INLINE_ROUT_TBL is
+    -- A table of $INLINE_ROUT_SIG objects retrievable by signature.
+    -- Only those objects which are to be inlined are in here. If a
+    -- signature has been transformed and it isn't in here, then
+    -- it isn't inlinable.
+    -- 
+    -- `get_query(s:SIG):$INLINE_ROUT_SIG' yields the info for the sig `s'.
+    -- `test($INLINE_ROUT_SIG):BOOL' tests for the given $INLINE_ROUT_SIG.
+    -- `insert($INLINE_ROUT_SIG):SAME' inserts an inline.
+    -- `delete($INLINE_ROUT_SIG):SAME' deletes an inline.
+    -- `elt!:ELT' yields each inline.   
+    include FQSET{SIG,$INLINE_ROUT_SIG};   
+
+    query_test(s:SIG, in:$INLINE_ROUT_SIG):BOOL is
+	-- True if `in' is info for the signature `s'.
+	if void(in) then return false end;
+	return in.sig=s end;
+    
+    query_hash(s:SIG):INT is
+	-- A hash value computed from the sig `s'.
+	sc::=3; 
+	r::=s.name.hash;		-- Make depend on name.
+	r:=r.bxor(SYS::id(s.tp)*sc);	-- Make depend on type
+	loop sc:=sc.mplus(98); r:=r.bxor(SYS::id(s.args.elt!.tp).mtimes(sc)) end; -- And on params.
+	return r end;
+
+    elt_hash(in:$INLINE_ROUT_SIG):INT is
+	-- A hash value computed from the signature of `in'.
+	return query_hash(in.sig) end;
+
+    test_and_insert(am:AM_ROUT_DEF,inline_short:BOOL,threshold:INT,prog:PROG):SAME is
+	-- Test `am' for whether it should be inlinable, if it should
+	-- insert it into the table and return the table. If not, 
+	-- leave the table alone.
+	
+	if am.is_abstract or am.is_external or void(am.code) then return self; end;
+	-- if am.is_abstract or am.is_external or void(am.code) or
+	    -- (TRANS::is_some_array_sig(am.srcsig) and ~TRANS::is_array_sig(am.srcsig)) then return self end;
+
+      -- Add modes everywhere !!!!
+	-- Special cases.
+	if void(am.code.next) then
+		 stmts::=am.code;
+	    typecase stmts
+	    when AM_RETURN_STMT then
+		val::=stmts.val;
+		typecase val 
+		when AM_ATTR_EXPR then
+		    if SYS::ob_eq(val.ob,am[0].expr) then -- must be self.
+			return insert(#INLINE_ATTR_READ(am));
+		    end;
+		when AM_VATTR_ASSIGN_EXPR then --value attr write
+		    if SYS::ob_eq(val.ob,am[0].expr) then
+			return insert(#INLINE_VATTR_WRITE(am));
+		    end;
+		when AM_SHARED_EXPR then
+		    return insert(#INLINE_GLOBAL_READ(am));
+		else -- don't inline
+		end;
+	    when AM_ASSIGN_STMT then
+		dest::=stmts.dest;
+		src::=stmts.src;
+		typecase dest
+		when AM_ATTR_EXPR then --reference attribute write
+		    if am.asize>1 and SYS::ob_eq(dest.ob,am[0].expr) 
+			and SYS::ob_eq(src,am[1].expr) then
+			return insert(#INLINE_ATTR_WRITE(am));
+		    end;
+		 when AM_SHARED_EXPR then -- reference shared writes
+		    if am.size >1 and SYS::ob_eq(src,am[1].expr) and
+			  am[0].name=IDENT_BUILTIN::self_ident and
+			     am.sig.is_shared_writer_sig
+		 then
+		    return insert(#INLINE_GLOBAL_WRITE(am));
+		 end;
+		else -- don't inline
+		end;
+	    else -- don't inline
+	    end;
+	end;
+
+	
+	-- if we compile with -O_debug we don't inline any iter/routine from the
+	-- OPT_DEBUG class
+	if prog.opt_debug and am.sig.tp.str="OPT_DEBUG" then return self; end;
+
+	-- Try the general-purpose inliner.
+	if inline_short and 
+		 INLINE_ROUT::is_inlineable(am,threshold, prog) then
+	    return insert(#INLINE_ROUT(am))
+	end;
+
+	return self
+    end;
+    
+end;
+
+
+-------------------------------------------------------------------
+class INLINE_ITER_TBL is
+    -- A table of $INLINE_ITER_SIG objects retrievable by signature.
+    -- Only those objects which are to be inlined are in here. If a
+    -- signature has been transformed and it isn't in here, then
+    -- it isn't inlinable.
+    -- 
+    -- `get_query(s:SIG):$INLINE_ITER_SIG' yields the info for the sig `s'.
+    -- `test($INLINE_ITER_SIG):BOOL' tests for the given $INLINE_ITER_SIG.
+    -- `insert($INLINE_ITER_SIG):SAME' inserts an inline.
+    -- `delete($INLINE_ITER_SIG):SAME' deletes an inline.
+    -- `elt!:ELT' yields each inline.   
+    include FQSET{SIG,$INLINE_ITER_SIG};   
+
+    query_test(s:SIG, in:$INLINE_ITER_SIG):BOOL is
+	-- True if `in' is info for the signature `s'.
+	if void(in) then return false end;
+	return in.sig=s end;
+    
+    query_hash(s:SIG):INT is
+	-- A hash value computed from the sig `s'.
+	sc::=3; 
+	r::=s.name.hash;		-- Make depend on name.
+	r:=r.bxor(SYS::id(s.tp)*sc);	-- Make depend on type
+	loop sc:=sc.mplus(98); r:=r.bxor(SYS::id(s.args.elt!.tp).mtimes(sc)) end; -- And on params.
+	return r end;
+    
+    elt_hash(in:$INLINE_ITER_SIG):INT is
+	-- A hash value computed from the signature of `in'.
+	return query_hash(in.sig) end;
+
+    test_and_insert(am:AM_ROUT_DEF,inline_short:BOOL,threshold:INT,prog:PROG):SAME is
+	-- Test `am' for whether it should be inlinable, if it should
+	-- insert it into the table and return the table. If not, 
+	-- leave the table alone.
+	if am.is_abstract or am.is_external or void(am.code) then
+	    return self end;
+	-- if we compile with -O_debug we don't inline any iter/routine from the
+	-- OPT_DEBUG class
+	if prog.opt_debug and am.sig.tp.str="OPT_DEBUG" then return self; end;
+
+
+	if inline_short and INLINE_ITER::is_inlineable(am,threshold, prog) then
+	    return insert(#INLINE_ITER(am))
+	else
+	    return self
+	end
+    end;
+    
+end;
+-------------------------------------------------------------------

@@ -1,0 +1,455 @@
+%%%% strspr01.ldf
+%%%% Created by Laurence D. Finston (LDF) Fri Jan 28 14:11:11 CET 2011
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+
+
+%% Run the following commands:
+%% 3dldf strspr01.ldf
+%% mpost strspr01.mp
+%% tex strspr01.txt
+%% dvips -o strspr01.ps strspr01.dvi
+
+%% * (1) Beginning of 3DLDF code.
+
+verbatim_metapost "prologues := 3;";
+
+% verbatim_metapost "verbatimtex \font\large=cmr12 scaled \magstep2 etex;";
+% verbatim_metapost "verbatimtex \font\Large=cmr17 scaled \magstep2 etex;";
+
+%% * (1) Star spiral
+
+%% Created:       January 28, 2011
+%% Last updated:  January 28, 2011
+
+%% ** (2) Macros
+
+%% *** (3) crosshair
+
+def crosshair {point aa,
+               numeric offset} =
+
+    draw aa -- (aa shifted (offset, 0)) with_pen pencircle scaled (.25mm, .25mm, .25mm);
+    draw aa -- (aa shifted (-offset, 0)) with_pen pencircle scaled (.25mm, .25mm, .25mm);
+    draw aa -- (aa shifted (0, 0, offset)) with_pen pencircle scaled (.25mm, .25mm, .25mm);
+    draw aa -- (aa shifted (0, 0, -offset)) with_pen pencircle scaled (.25mm, .25mm, .25mm);
+
+enddef;
+
+
+%% *** (3) spiral_pattern
+
+%pentagon_scale_factor := 0.1875cm;
+
+%pentagon_help_line_length := .375cm;
+
+
+
+def spiral_pattern {bool do_labels, bool do_stars, bool do_help_lines, bool do_reverse,
+                    numeric pentagon_scale_factor, 
+                    numeric shift_value,
+                    numeric pentagon_help_line_length,
+                    numeric ang, numeric_vector NV} = 
+
+%% **** (4) pentagon and its stellations
+
+reg_polygon pentagon;
+
+point m[];
+point p[];
+point r[];
+
+path q[];
+
+circle c[];
+
+string s;
+
+pentagon := unit_pentagon scaled (pentagon_scale_factor, 0, pentagon_scale_factor) rotated (0, 180);
+
+for i = 0 upto 4:
+   m[i] := get_point (i) pentagon;
+endfor;
+
+if false: % true:
+if do_labels:
+   label(0, m0) with_text_color green;
+   label(1, m1) with_text_color green;
+   label(2, m2) with_text_color green;
+   label(3, m3) with_text_color green;
+   label(4, m4) with_text_color green;
+fi;
+fi;
+
+m5 := (m0 -- m1) intersection_point (m2 -- m3);
+
+m6 := (m2 -- m1) intersection_point (m0 -- m4);
+
+m7 := (m1 -- m2) intersection_point (m4 -- m3);
+
+m8 := (m2 -- m3) intersection_point (m0 -- m4);
+
+m9 := (m3 -- m4) intersection_point (m1 -- m0);
+
+if false: % true:
+if do_labels:
+   label(5, m5) with_text_color red;
+   label(6, m6) with_text_color red;
+   label(7, m7) with_text_color red;
+   label(8, m8) with_text_color red;
+   label(9, m9) with_text_color red;
+fi;
+fi;
+
+q2 := m0 -- m6 -- m1 -- m5 -- m2 -- m7 -- m3 -- m8 --m4 -- m9 -- m0 -- cycle;
+
+m10 := (pentagon_help_line_length * unit_vector(m6 - m0)) shifted by m6;
+m11 := (pentagon_help_line_length * unit_vector(m6 - m1)) shifted by m6;
+
+%label(11, m11) with_text_color blue;
+
+%draw pentagon;
+%draw q2;
+
+
+
+
+
+%% **** (4)
+
+set c0 with_diameter 19.5 with_point_count 64;
+
+if do_reverse:
+   filldraw c0 with_color black;
+else:
+   draw c0;
+fi;
+
+
+%draw pentagon with_color dark_grey;
+%draw q2;
+
+%% **** (4)
+
+p0 := (.25cm, 0);
+
+%r0 := p0;
+
+q0 += p0;
+q0 += ..;
+
+%q1 += r0;
+%q1 += ..;
+
+
+i := 1;
+
+forever:
+   p[i] := p0 shifted (i * shift_value, 0) rotated (0, i * ang);
+
+%   r[i] := r0 shifted (i * shift_value, 0) rotated (0, i * ang_b);
+
+   exit_if magnitude (p[i]) > 9.75;
+  
+   q0 += p[i];
+%   q1 += r[i];
+  
+   i += 1;
+
+endfor;
+
+if do_labels:
+
+   if false:
+      for i = 0 step 5 until 20:
+         s := "$p_{" & decimal i & "}$";
+         dotlabel.top(s, p[i]);
+      endfor;
+
+      for i = 23 step 3 until 50:
+         s := "$p_{" & decimal i & "}$";
+         dotlabel.top(s, p[i]);
+      endfor;
+
+      for i = 52 step 2 until 182:
+
+         s := "$p_{" & decimal i & "}$";
+         dotlabel.top(s, p[i]);
+
+      endfor;
+   fi;
+
+   for i = 0 step 5 until 99:
+      s := "$p_{" & decimal i & "}$";
+
+      if is_odd i:
+         dotlabel.lft(s, p[i]);
+      else:
+         dotlabel.rt(s, p[i]);
+      fi;
+   endfor;
+
+   i := 100;
+
+   forever:
+      exit_if magnitude(p[i]) > 9.75;
+
+      s := "$p_{" & decimal i & "}$";
+ 
+      if is_odd i:
+         dotlabel.lft(s, p[i]);
+      else:
+         dotlabel.rt(s, p[i]);
+      fi;
+
+      i += 1;
+   endfor;
+
+fi;
+
+if do_help_lines:
+   draw q0 with_color dark_grey dashed evenly;
+fi;
+
+if do_stars:
+
+for i = 0 upto (size NV - 1):
+
+   k := NV[i];
+
+   if do_help_lines:
+      draw pentagon shifted by p[k] with_color dark_grey;
+ 
+      for j = 0 upto 4:
+         draw ((m6 -- m10) rotated (0, j * 72)) shifted by p[k] dashed evenly with_color dark_grey;
+         draw ((m6 -- m11) rotated (0, j * 72)) shifted by p[k] dashed evenly with_color dark_grey;
+      endfor;
+   fi;
+
+   if do_reverse:
+      fill q2 shifted by p[k] with_color white;
+   else:
+      draw q2 shifted by p[k];
+   fi;
+
+    
+endfor;
+
+fi;
+
+
+%draw q1 with_color red;
+
+
+enddef;
+
+%% !! START HERE:  LDF 2011.01.28.
+%% Try to get the stars that are on successive turns of the spiral to 
+%% not to lie on straight lines.
+
+%% ** (2) Declarations
+
+path frame;
+
+numeric frame_wd;
+numeric frame_ht;
+
+point h[];
+
+transform frame_transform;
+
+%% ** (2) Frame path
+
+frame_wd := 20cm;
+frame_ht := 24cm;
+
+frame := origin -- (frame_wd, 0) -- (frame_wd, 0, frame_ht) -- (0, 0, frame_ht) -- cycle;
+
+frame_transform := identity shifted (-.5frame_wd, 0, -.5frame_ht);
+
+frame *= frame_transform;
+
+%% ** (2) Points for the crosshairs
+
+h0 := mediate(get_point 0 frame, get_point 1 frame) shifted (0, 0, 1cm);
+h1 := mediate(get_point 2 frame, get_point 3 frame) shifted (0, 0, -1cm);
+h2 := mediate(get_point 0 frame, get_point 1 frame, 1/16) shifted (0, 0, 1cm);
+h3 := mediate(get_point 2 frame, get_point 3 frame, 1/16) shifted (0, 0, -1cm);
+h4 := mediate(get_point 0 frame, get_point 1 frame, 15/16) shifted (0, 0, 1cm);
+h5 := mediate(get_point 2 frame, get_point 3 frame, 15/16) shifted (0, 0, -1cm);
+
+%% ** (2) Preparation for the figures
+
+pickup pencircle scaled (.5mm, .5mm, .5mm);
+
+%% ** (2) Figure 1
+
+beginfig(1); 
+
+%% *** (3) Frame and crosshairs
+
+draw frame;
+
+for i = 0 upto 5:
+   crosshair {h[i], .5};
+endfor;
+
+%% *** (3) Put the numbers of the points where the stars should go onto `nv'.
+
+%% First, one must call `spiral_pattern' with `do_labels == true'
+%% and `do_stars == false' in order to see which points are the ones where the stars 
+%% should go.
+%%
+%% LDF 2011.01.28.
+
+numeric_vector nv;
+
+nv +=  0;
+nv += 15;
+nv += 22;
+nv += 28;
+nv += 33;
+nv += 37;
+nv += 41;
+nv += 44;
+
+for i = 47 step 3 until 74:
+   nv += i;
+endfor;
+
+for i = 76 step 2 until 178:
+   nv += i;
+endfor;
+
+spiral_pattern {false, true, true, false, 0.1875cm, .05cm, .375cm, 
+                10, nv};
+
+%% Original values:
+%spiral_pattern {true, false, true, false, 0.1875cm, .05cm, .375cm, 
+%                10, nv};
+
+%% For testing.  Use in another figure.
+%spiral_pattern {true, false, true, false, 0.1875cm, .025cm, .375cm, 
+%                5, nv};
+
+
+
+%% *** (3)
+
+endfig with_projection parallel_x_z no_sort; 
+
+%% ** (2) Figure 2
+
+beginfig(2); 
+
+%% *** (3)
+
+
+draw frame;
+
+for i = 0 upto 5:
+   crosshair {h[i], .5};
+endfor;
+
+spiral_pattern {false, true, false, false, 0.1875cm, .05cm, .375cm, 
+                10, nv};
+
+endfig with_projection parallel_x_z no_sort; 
+
+
+%% ** (2) Figure 3
+
+beginfig(3); 
+
+%% *** (3)
+
+draw frame;
+
+for i = 0 upto 5:
+   crosshair {h[i], .5};
+endfor;
+
+spiral_pattern {false, true, false, true, 0.1875cm, .05cm, .375cm, 
+                10, nv};
+
+endfig with_projection parallel_x_z no_sort; 
+
+
+
+
+%% ** (2)
+
+verbatim_metapost "end";
+
+%% ** (2) End
+
+end;
+
+%% * (1) End of 3DLDF code
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%       GNU Emacs editor.  The local variable list is not evaluated when an 
+%%       indirect buffer is visited, so it's necessary to evaluate the       
+%%       following s-expression in order to use the facilities normally      
+%%       accessed via the local variables list.                              
+%%       \initials{LDF 2004.02.12}.                                          
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% abbrev-mode:t
+%% eval:(read-abbrev-file "~/.abbrev_defs")
+%% outline-regexp:"%% [*\f]+"
+%% End:
+
+

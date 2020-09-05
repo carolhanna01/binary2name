@@ -1,0 +1,96 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- test-param.sa: Test parametrized classes, bound routines
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class TEST_PARAM is
+   -- Test of parameters, bound routines and other foul stuff
+   
+   include TEST;
+   
+   main is
+      class_name("Test parametrized");
+      f1: ROUT{INT}:BOOL := bind(_.is_lt(4));
+      f2: ROUT{INT,INT}:INT := bind(_.plus(_));
+      pr ::= #PARAM{INT}(f1,f2) ;
+      test("lt",pr.foo.call(5),false);
+      test("plus",pr.bartoo.call(3,4),7);
+      -- ROUT{$STR}: BOOL  < ROUT{INT}:BOOL
+      -- Hence, we should be able to assign it to "foo"
+      -- But this is not yet implemented and may be taken out of the spec
+      -- f3 :ROUT{$STR}:BOOL := bind(my_foo(_));
+      -- pr.foo := f3;
+      -- test("br conformance",pr.foo.call(1),true);
+      -- test("br conformance",pr.foo.call(0),false);
+      g: TUP{INT,STR};
+      loop g := pr.elt! end;
+      test("elt!",g.t2,"true");
+      pr2 ::= #PARAM2{INT}(f1,f2);
+      g2: TUP{INT,STR};
+      loop g2 := pr2.elt! end;
+      test("elt!",g2.t2,"true");
+      pr3: $PARAM{INT} := pr2;
+      g3: TUP{INT,STR};
+      loop g3 := pr3.elt! end;
+      test("elt!",g2.t2,"true");
+      pr4: $PARAM{INT} := pr2;
+      -- dispatched elt! with an argument
+      g4: INT;
+      loop g4 := pr4.elt!(pr2) end;
+      test("void elt!(arg)",g4,0);
+      finish;
+   end;
+   
+   my_foo(a: $STR):BOOL is
+      return a.str="1";
+   end;
+   
+end; -- class TEST_PARAM
+-------------------------------------------------------------------
+class PARAM{T} < $PARAM{T} is
+   
+   attr foo:ROUT{T}:BOOL;
+   attr bartoo: ROUT{T,T}:T;
+   
+   elt!: TUP{T,STR} is
+      e: T;
+      typecase e
+      when $NIL then yield #TUP{T,STR}(e.nil,"true");
+      else yield #TUP{T,STR}(void,"false"); end;
+   end;
+   
+   elt!(once p: $PARAM{T}): T is
+      yield void
+   end;
+   
+   create(f1: ROUT{T}:BOOL,f3:ROUT{T,T}:T): SAME is
+      res ::= new;
+      res.foo := f1;
+      res.bartoo := f3;
+      return res;
+   end;
+   
+end;
+-------------------------------------------------------------------
+abstract class $PARAM{T} is
+   elt!: TUP{T,STR};
+   elt!(once p: $PARAM{T}):T;
+end;
+-------------------------------------------------------------------
+class PARAM2{T} < $PARAM{T} is
+   include PARAM{T};
+   
+end;   
+-------------------------------------------------------------------
+

@@ -1,0 +1,75 @@
+proc Description_Summary {prid ln} {
+    global Print
+
+    ##workingMsg
+    headingMsg "Doing $prid..."
+
+    set fout $Print(fout)
+    print_parsepr $prid flds
+    
+    if {$Print(first_time) == 1} {
+        # title section
+        set dat "[clock format [clock seconds] -format "%a %b %e %H:%M %Y"]"
+        putlines $fout { {.po 0.375i} {.ll 7.75i} }
+        putlines $fout { {.TS} {expand, tab(%);} }
+        putlines $fout [list {Cbp12w(7.75i).} "Problem Report Description Summary   --   $dat" {.TE}]
+        puts     $fout ".sp"
+        
+        # format section
+        putlines $fout {
+            {.\" format section}
+            {.ds CF "                \\n(yr / \\n(mo / \\n(dy}
+            {.TS H}
+            {box;}
+            {Lb|Lbw(7.0i)}
+            {Lb|^}
+            {Lb S}
+        }
+        
+        for {set n 0} {$n < [expr $Print(num_ids) - 1]} {incr n} {
+            putlines $fout {
+                {L|L}
+                {L|^}
+                {L S}
+            }
+        }
+
+        putlines $fout {
+            {L|L}
+            {L|^}
+            {L S.}
+            {.\" table heading}
+            {Id	Synopsis}
+            {_}
+            {State}
+            {_}
+            {Description}
+            {=}
+            {.TH}
+            {.sp .5}
+        }
+    }
+
+    ###################################
+
+    putfldvalbold $fout flds {>Number}
+    puts          $fout "\t" nonewline
+    putfldval2    $fout flds {>Synopsis}
+    puts          $fout "_"
+    putfldval1    $fout flds {>State}
+    puts          $fout "\n_"
+#    putfldval2    $fout flds {>Description}
+    freeform_text2 $fout flds {>Description}
+    puts          $fout "="
+
+    ###################################
+    
+    if {$Print(last_time) == 1} {
+        # trailer
+        puts $fout ".TE"
+    } {
+        puts $fout ".sp .5"
+    }
+
+    return 0
+}

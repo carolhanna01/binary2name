@@ -1,0 +1,12 @@
+(set-background "background.png")
+(set-skin "skin.png")
+(set-bonus-time 100000)
+(load "../utils.scm")
+(block-rect 64 72 12 1 "butter")
+(block-rect 64 90 12 1 "orange")
+(block-rect 64 108 12 1 "chocolate")
+(block-rect 64 126 12 1 "chameleon")
+(block-rect 64 144 12 1 "sky blue")
+(block-rect 64 162 12 1 "plum")
+(block-rect 64 180 12 1 "scarlet red")
+

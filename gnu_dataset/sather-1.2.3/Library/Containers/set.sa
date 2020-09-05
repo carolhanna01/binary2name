@@ -1,0 +1,402 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+abstract class $RO_SET{ETP} < $RO_BAG{ETP}
+-- An unordered container in which the elements are unique.
+-- 
+-- Definition: A set is a bag with the additional constraint that the 
+-- elements are unique
+-- 
+-- This is a read-only abstraction in which no modifying operations
+-- are available. However, subtypes may provide modifying operations
+-- For documentation see:
+--    The overall organization of container classes
+--    The organization and usage of sets and related classes
+is
+
+   insert(e:ETP):$RO_SET{ETP};
+   -- Result is a new set containing all the elements of self and 'e'
+
+   add(e:ETP):$VBAG{ETP};
+   -- Result is a new bag containing all the elements of self and 'e'
+
+   delete(e:ETP):$RO_SET{ETP};
+   -- Result is a new set containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+   
+   delete_all(e:ETP):$RO_SET{ETP};
+   -- Result is a new set containing all the elements of self except for
+   -- any elements equal to 'e'
+
+   count(e:ETP):INT;
+   -- Return the number of occurences of 'e' in self
+   
+   unique!:ETP;
+   -- Yield the elements of 'self'
+   
+   n_unique: INT;
+   -- Returns the number of elements in the set. Same as 'size'
+   
+   is_subset_of(arg: $RO_BAG{ETP}): BOOL;
+   -- Returns true if 'self' is a subset of 'arg'. For elements that occur
+   -- multiple times, the number of occurences of the element in 'arg'
+   -- must be greater than or equal to the number of occurences in self
+   -- 
+   -- result=true iff for all e in self: count(e) <= arg.count(e)
+
+   concat(arg:$ELT{ETP}): $VBAG{ETP};
+   -- Returns a bag containing all the elements of self and 'arg'.
+   -- For elements that occur multiple times, the result contains
+   -- the sum of the number of occurences in self and 'arg'
+   -- 
+   -- result=bag of all e s.t. result.count(e)=self.count(e)+arg.count(e) > 0 
+   
+   union(arg:$RO_BAG{ETP}): $VBAG{ETP};
+   -- Returns a bag containing the elements of 'self' and 'arg'. 
+   -- For elements that occur multiple times, the result contains
+   -- the maximum number of occurences in either self or 'arg'
+   -- This definition permits the union of sets to be consistent
+   -- with the union of bags.
+   -- 
+   -- result=bag of all e s.t. 
+   --             result.count(e)= max(self.count(e),arg.count(e)) > 0
+   
+   union(arg: $RO_SET{ETP}): $RO_SET{ETP};
+   -- Returns a set  containing all elements in 'self' or 'arg'. 
+   -- Overloads the function in $RO_BAG which has an argument and
+   -- return value of $RO_BAG
+   -- 
+   -- result=set of all e s.t. self.has(e) or arg.has(e)
+
+   intersection(arg:$RO_BAG{ETP}):$VBAG{ETP};
+   -- Returns a bag containing the elements common to self and 'arg'
+   -- For elements that occur multiple times, the result contains
+   -- the minimum number of occurrences in either self or 'arg'
+   -- 
+   -- result=bag of all e s.t. 
+   --              result.count(e)=min(self.count(e),arg.count(e)) > 0 
+
+   intersection(arg: $RO_SET{ETP}): $RO_SET{ETP};
+   -- Returns a set containing the elements of 'self' and in 'arg'
+   -- Overloads the function in $RO_BAG which has an argument and
+   -- return value of $RO_BAG
+   -- 
+   -- result=set of all e s.t. self.has(e) and arg.has(e)
+
+   diff(arg: $RO_SET{ETP}): $RO_SET{ETP};
+   -- Returns a set containing the elements of 'self' not in 'arg'
+   -- 
+   -- result=set of all e s.t. self.has(e) and ~arg.has(e)
+
+   sym_diff(arg: $RO_SET{ETP}): $RO_SET{ETP};
+   -- Returns a set containing the elements of 'self' and not in 'arg'
+   -- or  in 'arg' but not in self
+   -- 
+   -- result=set of all e s.t. self.has(e) xor arg.has(e)
+
+   is_empty:BOOL;
+   -- Returns true if the size of the container = 0
+
+   size: INT;
+   -- Number of elements contained
+   
+   copy: SAME;
+    -- Return a copy of the current container
+
+   has(e: ETP): BOOL;
+   -- True if the container contains the element "e"
+   
+   equals(c:$RO_BAG{ETP}):BOOL;
+   -- Return true if both containers contain the same elements with
+   -- the same number of repetitions, irrespective of the order of the
+   -- elements
+   
+   as_array:ARRAY{ETP};
+   -- Return the elements of the container in an array
+
+   elt!:ETP;
+   -- Yield all the elements of self. The order is not defined.
+   
+   str:STR;
+   -- Yield a string version of self
+
+end;
+--------------------------------------------------------------------------
+abstract class $VSET{ETP} < $RO_SET{ETP}, $VBAG{ETP} 
+-- An unordered container in which the elements are unique.
+-- Corresponds to a mathematical set.
+-- 
+-- IMPORTANT: This is a value abstraction and is stricter than the
+-- read-only abstraction. Subtypes must not support *any*
+-- operations that modify self. The language cannot enforce this
+-- restriction. 
+-- 
+-- For pointers to other documentation please see the class comment in
+-- the read-only abstraction $RO_SET{ETP}
+is
+   
+
+   insert(e:ETP):$VSET{ETP};
+   -- Result is a new set containing all the elements of self and 'e'
+
+   add(e:ETP):$VBAG{ETP};
+   -- Result is a new bag containing all the elements of self and 'e'
+
+   delete(e:ETP):$VSET{ETP};
+   -- Result is a new set containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+   
+   delete_all(e:ETP):$VSET{ETP};
+   -- Result is a new set containing all the elements of self except for
+   -- any elements equal to 'e'
+   
+   count(e:ETP):INT;
+   -- Return the number of occurences of 'e' in self
+   
+   unique!:ETP;
+   -- Yield the elements of 'self'
+   
+   n_unique: INT;
+   -- Returns the number of elements in the set. Same as size
+   
+   is_subset_of(arg: $RO_BAG{ETP}): BOOL;
+   -- Returns true if 'self' is a subset of 'arg'. For elements that occur
+   -- multiple times, the number of occurences of the element in 'arg'
+   -- must be greater than or equal to the number of occurences in self
+   -- 
+   -- result=true iff for all e in self: count(e) <= arg.count(e)
+
+   concat(arg:$ELT{ETP}): $VBAG{ETP};
+   -- Returns a bag containing all the elements of self and 'arg'.
+   -- For elements that occur multiple times, the result contains
+   -- the sum of the number of occurences in self and 'arg'
+   -- 
+   -- result=bag of all e s.t. result.count(e)=self.count(e)+arg.count(e) > 0 
+
+   union(arg:$RO_BAG{ETP}): $VBAG{ETP};
+   -- Returns a bag containing the elements of 'self' and 'arg'. 
+   -- For elements that occur multiple times, the result contains
+   -- the maximum number of occurences in either self or 'arg'
+   -- 
+   -- result=bag of all e s.t. 
+   --             result.count(e)= max(self.count(e),arg.count(e)) > 0
+   
+   union(arg: $RO_SET{ETP}): $VSET{ETP};
+   -- Returns a set  containing all elements in 'self' or 'arg'. 
+   -- 
+   -- result=set of all e s.t. self.has(e) or arg.has(e)
+
+   intersection(arg:$RO_BAG{ETP}):$VBAG{ETP};
+   -- Returns a bag containing the elements common to self and 'arg'
+   -- For elements that occur multiple times, the result contains
+   -- the minimum number of occurrences in either self or 'arg'
+   -- 
+   -- result=bag of all e s.t. 
+   --              result.count(e)=min(self.count(e),arg.count(e)) > 0 
+
+   intersection(arg: $RO_SET{ETP}): $VSET{ETP};
+   -- Returns a set containing the elements of 'self' and in 'arg'
+   -- 
+   -- result=set of all e s.t. self.has(e) and arg.has(e)
+
+   diff(arg: $RO_SET{ETP}): $VSET{ETP};
+   -- Returns a set containing the elements of 'self' not in 'arg'
+   -- 
+   -- result=set of all e s.t. self.has(e) and ~arg.has(e)
+   
+   sym_diff(arg: $RO_SET{ETP}): $VSET{ETP};
+   -- Returns a set containing the elements of 'self' and not in 'arg'
+   -- or  in 'arg' but not in self
+   -- 
+   -- result=set of all e s.t. self.has(e) xor arg.has(e)
+
+   is_empty:BOOL;
+   -- Returns true if the size of the container = 0
+
+   size: INT;
+   -- Number of elements contained
+   
+   copy: SAME;
+    -- Return a copy of the current container
+
+   has(e: ETP): BOOL;
+   -- True if the container contains the element "e"
+   
+   equals(c:$RO_BAG{ETP}):BOOL;
+   -- Return true if both containers contain the same elements with
+   -- the same number of repetitions, irrespective of the order of the
+   -- elements
+      
+   as_array:ARRAY{ETP};
+   -- Return the elements of the container in an array
+
+   elt!:ETP;
+   -- Yield all the elements of self. The order is not defined.
+   
+   str:STR;
+   -- Yield a string version of self
+
+end;
+--------------------------------------------------------------------------
+abstract class $SET{ETP} < $RO_SET{ETP}, $VAR
+-- An unordered container in which the elements are unique.
+-- 
+-- This is a reference abstraction and supports operations that modify
+-- self. Instances of subtypes may be viewed as variables with a value
+-- of $SET{ETP}
+-- 
+-- For pointers to other documentation please see the class comment in
+-- the read-only abstraction of $RO_SET{ETP}
+-- 
+is
+
+   as_value:$VSET{ETP};
+   -- Return the current value associated with self
+   
+   insert(e:ETP);
+   -- Inserts the element 'e' into the set. 
+   -- self <- initial(self).insert(e)
+
+   delete(e: ETP);
+   -- Deletes an element (if present) equal to 'e' from the set
+   -- self <- initial(self).delete(e)
+   
+   clear;
+   -- Delete all elements. post result.size = 0
+   
+   to_union(arg: $RO_SET{ETP});
+   -- Convert this set into the union of self and 'arg'
+   -- self <- initial(self).union(arg)
+   
+   to_intersection(arg: $RO_SET{ETP});
+   -- Convert this set into the union of self and 'arg'
+   -- self <- initial(self).intersection(arg)
+   
+   to_diff(arg: $RO_SET{ETP});
+   -- Convert this set into the union of self and 'arg'
+   -- self <- initial(self).diff(arg)
+   
+   to_sym_diff(arg: $RO_SET{ETP});
+   -- Convert this set into the union of self and 'arg'
+   -- self <- initial(self).sym_diff(arg)
+   
+   insert(e:ETP):$SET{ETP};
+   -- Result is a new set containing all the elements of self and 'e'
+
+   add(e:ETP):$VBAG{ETP};
+   -- Result is a new bag containing all the elements of self and 'e'
+   
+   delete(e:ETP):$SET{ETP};
+   -- Result is a new set containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+   
+   delete_all(e:ETP):$SET{ETP};
+   -- Result is a new set containing all the elements of self except for
+   -- an element equal to 'e', if one exists. 
+
+   count(e:ETP):INT;
+   -- Return the number of occurences of 'e' in self
+   
+   unique!:ETP;
+   -- Yield the unique elements of self. Equivalent to self.as_set.elt!
+   
+   n_unique: INT;
+   -- Returns the number of unique elements in the bag 
+   -- 
+   -- result = number of unique elements
+   
+   is_subset_of(arg: $RO_BAG{ETP}): BOOL;
+   -- Returns true if 'self' is a subset of 'arg'. For elements that occur
+   -- multiple times, the number of occurences of the element in 'arg'
+   -- must be greater than or equal to the number of occurences in self
+   -- 
+   -- result=true iff for all e in self: count(e) <= arg.count(e)
+
+   concat(arg:$ELT{ETP}): $VBAG{ETP};
+   -- Returns a bag containing all the elements of self and 'arg'.
+   -- For elements that occur multiple times, the result contains
+   -- the sum of the number of occurences in self and 'arg'
+   -- 
+   -- result=bag of all e s.t. result.count(e)=self.count(e)+arg.count(e)>0 
+   
+   union(arg: $RO_BAG{ETP}): $VBAG{ETP};
+   -- Returns a bag containing the elements of 'self' and 'arg'. 
+   -- For elements that occur multiple times, the result contains
+   -- the maximum number of occurences in either self or 'arg'
+   -- This definition permits the union of sets to be consistent
+   -- with the union of bags.
+   -- 
+   -- result=bag of all e s.t. 
+   --             result.count(e)= max(self.count(e),arg.count(e)) > 0
+
+   union(arg: $RO_SET{ETP}): $SET{ETP};
+   -- Returns a set  containing all elements in 'self' or 'arg'. 
+   -- 
+   -- result=set of all e s.t. self.has(e) or arg.has(e)
+
+   intersection(arg: $RO_BAG{ETP}): $VBAG{ETP};
+   -- Returns a bag containing the elements common to self and 'arg'
+   -- Since self is a set, the result must be a set as well.
+   -- For elements that occur multiple times, the result contains
+   -- the minimum number of occurrences in either self or 'arg'
+   -- 
+   -- The fact that self is a set guarantees that the result is a set
+   -- but we leave it as a bag for clarity
+   -- 
+   -- result=bag of all e s.t. 
+   --              result.count(e)=min(self.count(e),arg.count(e)) > 0
+   
+   intersection(arg: $RO_SET{ETP}): $SET{ETP};
+   -- Returns a set containing the elements of 'self' and in 'arg'
+   -- 
+   -- result=set of all e s.t. self.has(e) and arg.has(e)
+
+   diff(arg: $RO_SET{ETP}): $SET{ETP};
+   -- Returns a set containing the elements of 'self' not in 'arg'
+   -- 
+   -- result=set of all e s.t. self.has(e) and ~arg.has(e)
+   
+   sym_diff(arg: $RO_SET{ETP}): $SET{ETP};
+   -- Returns a set containing the elements of 'self' and not in 'arg'
+   -- or  in 'arg' but not in self
+   -- 
+   -- result=set of all e s.t. self.has(e) xor arg.has(e)
+   
+   is_empty:BOOL;
+   -- Returns true if the size of the container = 0
+
+   size: INT;
+   -- Number of elements contained
+   
+   copy: SAME;
+    -- Return a copy of the current container
+
+   has(e: ETP): BOOL;
+   -- True if the container contains the element "e"
+   
+   equals(c:$RO_BAG{ETP}):BOOL;
+   -- Return true if both containers contain the same elements with
+   -- the same number of repetitions, irrespective of the order of the
+   -- elements
+   
+   as_array:ARRAY{ETP};
+   -- Return the elements of the container in an array
+
+   elt!:ETP;
+   -- Yield all the elements of self. The order is not defined.
+   
+   str:STR;
+   -- Yield a string version of self
+
+end; -- $SET{ETP}
+--------------------------------------------------------------------------

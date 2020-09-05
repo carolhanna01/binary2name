@@ -1,0 +1,51 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+immutable class TIMING is
+   readonly attr sec,us:INT;
+   private time(out s,out ms:INT) is builtin TIMING_TIME; end;
+   now:SAME is 
+      s,m:INT;
+      time(out s,out m); 
+      return self.sec(s).us(m);
+   end;
+   str:STR is 
+      f:FSTR:=#;
+      v::=now;
+      f:=v.sec.str.fstr+".";
+      f:=v.us.str_in(f,6,10,'0');
+      return f.str;
+   end;
+
+   -- This suspends the calling *thread* for a specified number of
+   -- seconds
+	
+   sleep(t:INT) is
+      start_s, start_us:INT;
+      now_s, now_us:INT;
+      elapsed_s:FLT;
+      
+      time(out start_s, out start_us);
+      
+      loop
+	 SYS::inlined_C("BR_THREAD_YIELD();");
+	 time(out now_s, out now_us);
+	 elapsed_s := (now_s-start_s).flt + (now_us-start_us).flt/1000000.0;
+	 if (elapsed_s >= t.flt) then
+	    break!;
+	 end;
+      end;
+   end;
+end;
+
+

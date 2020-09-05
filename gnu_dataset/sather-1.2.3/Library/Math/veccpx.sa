@@ -1,0 +1,122 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Kennel <mbk@icsi.berkeley.edu>. Modified, integrated by gomes@icsi
+
+-------------------------------------------------------------------
+partial class VECCPX_LENGTH_MIXIN{
+      CT < $REAL_NUMBER{CT},
+      ET < $CPX_NUMBER{CT,ET},
+      VT < $VEC{ET,VT},
+      } is
+-- Here are standard implementations suitable for ET = CPX and 
+-- CT = FLT for standard vectors.  Combine this with
+-- the basic implementation to make complex vectors. 
+
+   include VEC{ET};
+   
+   length_zero:CT is return CT::zero; end;
+   length_one:CT is return CT::one; end;
+   private element_one:ET is return ET::one; end; 
+   private element_zero:ET is return ET::zero; end;    
+   
+
+   dot(arg:SAME):ET pre same_size(arg) is 
+      res::= element_zero; 
+      loop i ::= asize.times!; res := res + [i]*arg[i].conjugate; end; 
+      return res;
+   end;
+   
+   angle_with(arg:SAME):CT is 
+      return cosine_angle_with(arg).acos; 
+   end;
+   
+   cosine_angle_with(arg:SAME):CT pre same_size(arg) is
+      -- MBK:  We need to figure out something intelligent here.
+      -- I'm just going to use cos theta =  sum(i)
+      --  1/2(a[i]*b[i].conjugate + a[i].conjugate*b[i]) / |a||b|
+      -- = Re (a[i]*b[i].conj)
+      -- a.re*b.re - a.im*b.im;
+      -- 
+      -- I don't know if this makes sense.  Will somebody who cares about
+      -- complex vectors let the Sather group know what The Right Thing is?
+      res ::= length_zero; 
+      loop i ::= asize.times!; c ::= [i]; d::=arg[i];
+	 res := res + c.re*d.re - c.im*d.im;
+      end;
+      return res / (length*arg.length);
+   end;
+
+   length_squared:CT is
+      res ::= length_zero; 
+      loop i ::= asize.times!; c ::= [i];
+	 res := res + c.re*c.re + c.im*c.im; 
+      end;
+      return res;
+   end;
+   
+   length:CT is return length_squared.sqrt; end; 
+
+   distance_to(arg:SAME):CT is 
+      return distance_to_squared(arg).sqrt; 
+   end;
+
+   distance_to_squared(arg:SAME):CT pre same_size(arg) is
+      -- we could implement in terms of other functions but I will
+      -- hand-write for speed. 
+      res ::= length_zero;
+      loop i ::= asize.times!; t ::= [i]-arg[i];
+	 res := res + t.re*t.re + t.im*t.im;
+      end;
+      return res;
+   end;
+
+   bounded_distance_to_squared(arg:SAME,sbnd:CT):CT
+      pre same_size(arg) is
+      -- we could implement in terms of other functions but I will
+      -- hand-write for speed. 
+      res ::= length_zero;
+      loop i ::= asize.times!; t ::= [i]-arg[i];
+	 res := res + t.re*t.re + t.im+t.im;
+	 if res > sbnd then return length_one.negate; end;
+      end;
+      return res;
+   end;
+
+   inplace_normalized is 
+      inplace_scaled_by(ET::create_real(length_one / length)); 
+   end;
+
+end;
+
+-----------------------------------------------------------------
+class VECCPX < $VEC{CPX,VECCPX,FLT} is
+   include VECCPX_LENGTH_MIXIN{FLT,CPX,SAME}; 
+   
+   element_one:CPX is return #CPX(1.0,0.0); end; 
+   element_zero:CPX is return #CPX(0.0,0.0); end;    
+   const length_zero:FLT := 0.0;
+   const length_one:FLT := 1.0;   
+
+end;
+-----------------------------------------------------------------
+class VECCPXD  < $VEC{CPXD,VECCPXD,FLTD} is
+   include VECCPX_LENGTH_MIXIN{FLTD,CPXD,SAME}; 
+   
+   element_one:CPXD is return #CPXD(1.0d,0.0d); end; 
+   element_zero:CPXD is return #CPXD(0.0d,0.0d); end;    
+   const length_zero:FLTD := 0.0d;
+   const length_one:FLTD := 1.0d;   
+
+end;
+-----------------------------------------------------------------

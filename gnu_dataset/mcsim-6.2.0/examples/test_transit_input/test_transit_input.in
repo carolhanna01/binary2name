@@ -1,0 +1,84 @@
+#------------------------------------------------------------------------------
+# test_transit_input.in
+#
+# Simulation input file for the test_transit_input.model.
+# Both the full differential solution (flag parameter isOnTr = 0) and the 
+# analytic solution provided by the PerTransit input function 
+# (flag isOnTr = 1) are simulated in various scenarios.
+#
+# Note that dosing every 2 hours is too frequent (given the parameter values 
+# used) for the analytical solution to be correct because quantities left 
+# over in the transit chain are forgotten at the time of new dosing (while 
+# they should not be forgotten). 
+# The differential solution is still correct in that case.
+#
+# Copyright (c) 2016-2018 Free Software Foundation, Inc.
+#------------------------------------------------------------------------------
+
+OutputFile("test_transit_input.out");
+
+Dose = 10;
+
+Ka = 0.1;
+CL = 3.0;
+V  = 20;
+
+Ktr = 4.0;
+
+
+Simulation { # 1a, use PerTransit
+
+  isOnTr = 1;
+
+  Period = 24;
+  Ntr    = 5;
+  input  = PerTransit(1, Period, 0, Ktr, Ntr);
+
+  PrintStep(Q_tr, Q_a, C_central, 0, 120, 0.1);
+}
+
+
+Simulation { # 1b, use PerDose and multiple transit compartments
+
+  isOnTr = 0;
+
+  Period = 24;
+  input  = PerDose(1, Period, 0, Delta);
+  
+  PrintStep(Q_tr, Q_a, C_central, 0, 120, 0.1);
+}
+
+Simulation { # 2a, use PerTransit
+
+  isOnTr = 1;
+
+  Period = 2;
+  Ntr    = 5;
+  input  = PerTransit(1, Period, 0, Ktr, Ntr);
+
+  PrintStep(Q_tr, Q_a, C_central, 0, 120, 0.1);
+}
+
+
+Simulation { # 2b, use PerDose and multiple transit compartments
+
+  isOnTr = 0;
+
+  Period = 2;
+  input  = PerDose(1, Period, 0, Delta);
+
+  PrintStep(Q_tr, Q_a, C_central, 0, 120, 0.1);
+}
+
+Simulation { # 3, use PerTransit with a non-integer number of compartments
+
+  isOnTr = 1;
+
+  Period  = 24;
+  Ntr     = 17.375;
+  input   = PerTransit(1, Period, 0, Ktr, Ntr);
+
+  PrintStep(Q_tr, Q_a, C_central, 0, 120, 0.1);
+}
+
+End.

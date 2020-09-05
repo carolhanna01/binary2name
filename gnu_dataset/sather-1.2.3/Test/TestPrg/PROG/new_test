@@ -1,0 +1,306 @@
+#!/usr/bin/perl
+#----------------------------->  Perl - script  <-----------------------------#
+#- Copyright (C) 199x by International Computer Science Institute            -#
+#- This file is part of the GNU Sather package. It is free software; you may -#
+#- redistribute  and/or modify it under the terms of the  GNU General Public -#
+#- License (GPL)  as  published  by the  Free  Software  Foundation;  either -#
+#- version 3 of the license, or (at your option) any later version.          -#
+#- This  program  is distributed  in the  hope that it will  be  useful, but -#
+#- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY -#
+#- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        -#
+#- The license text is also available from:  Free Software Foundation, Inc., -#
+#- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     -#
+#------------->  Please email comments to <bug-sather@gnu.org>  <-------------#
+
+# This program adds a new test program to the Sather test
+# repository. It will ask you some questions, and you can
+# stop the program at any time by hitting ^C
+#
+
+$|=1;
+
+$PWD=`pwd`;chop $PWD;
+$TMPFILE="/tmp/$$.tmp";
+$NAME=$ARGV[0];
+$NAME =~ /\.sa$/ && $NAME=~s/\.sa$//;
+shift;
+$FILES="$NAME.sa @ARGV";
+$ENV{'CLUSTERS'}=4;
+
+sub cleanup_dir {
+	chdir($PWD);
+	$PROGDIR ne "" && do { system("/bin/rm -rf $PROGDIR");};
+}
+sub cleanup {
+	chdir($PWD);
+	unlink("$TMPFILE");
+	&cleanup_dir;
+}
+
+sub handler {
+	print "ABORTING....\n";
+	&cleanup;
+	print "DONE\n";
+	exit(1);
+}
+$PROGDIR="";
+$SIG{'INT'}='handler';
+$SIG{'QUIT'}='handler';
+
+open(TMP,">$TMPFILE") || die "$0: cannot open file /tmp/$$.tmp, $!\n";
+$TESTDIR="$ENV{'SATHER_HOME'}/Test/TestPrg";
+print TMP "# Thanks for adding a new Test program for the Sather Compiler\n\n".
+	  "# Please adjust the information below for your test program.\n".
+	  "# Note that if you need wierd test setup, you have\n".
+	  "# to write your own DESC file (see the Test/TestPrg/DESC for\n".
+	  "# a template).\n\n";
+
+print TMP "SATHER_HOME: $ENV{'SATHER_HOME'}\n";
+print TMP "CS         : $ENV{'SATHER_HOME'}/Bin/sacomp\n";
+print TMP "\n# The type must be either:\n".
+	    "# OUTPUT:    in this case the test program checks that the output\n".
+	    "#            of your program is still the same.\n".
+	    "# ERROR:     here it checks that the error message from the compiler\n".
+	    "#            did not change.\n".
+	    "TYPE       : OUTPUT\n";
+print TMP "\n# The test can be either\n".
+	    "# QUICK:     in this case the test is run in each case\n".
+	    "# STD:       the test is only run for during the standard\n".
+	    "#            and extensive test runs\n".
+	    "# EXT:       the test is only run during the extensive\n".
+	    "#            test suite.\n".
+	    "PRIO       : STD\n";
+print TMP "\n# Name of the executable (also used as name for the test directory)\n".
+	    "NAME       : $NAME\n";
+print TMP "\n# One line descrption or title\n".
+	    "TITLE       : $NAME\n";
+print TMP "\n# LANG must be either Sather or pSather.\n".
+	    "LANG       : Sather\n";
+print TMP "\n# List of the files that go with this test program\n".
+	    "FILES      : $FILES\n";
+print TMP "\n# Options used to compile the program (include the -o option)\n".
+	    "# Note that you can have more than one option line.\n".
+	    "OPTIONS    : -o $NAME.1 $FILES\n".
+	    "OPTIONS    : -O_fast -o $NAME.2 $FILES\n";
+close(TMP);
+
+$ed=$ENV{'VISUAL'};
+$ed eq "" && do { $ed=$ENV{'EDITOR'} };
+$ed eq "" && do { $ed="vi"; };
+
+edit: {
+	system("$ed $TMPFILE");
+	undef @OPTIONS;
+
+	open(TMP,"$TMPFILE");
+	nextl: while(<TMP>) {
+		/^#/ && do { next nextl; };
+		/^\s*$/ && do { next nextl; };
+		/^SATHER_HOME\s*:/ && do {
+			($SH) = /^SATHER_HOME\s*:\s*(\S*)/;
+			next nextl;
+		};
+		/^CS\s*:/ && do {
+			($CS) = /^CS\s*:\s*(\S*)/;
+			next nextl;
+		};
+		/^TYPE\s*:/ && do {
+			($TYPE) = /^TYPE\s*:\s*(\S*)/;
+			next nextl;
+		};
+		/^PRIO\s*:/ && do {
+			($PRIO) = /^PRIO\s*:\s*(\S*)/;
+			next nextl;
+		};
+		/^NAME\s*:/ && do {
+			($NAME) = /^NAME\s*:\s*(\S*)/;
+			next nextl;
+		};
+		/^TITLE\s*:/ && do {
+			($TITLE) = /^TITLE\s*:\s*(\S*)/;
+			next nextl;
+		};
+		/^LANG\s*:/ && do {
+			($LANG) = /^LANG\s*:\s*(\S*)/;
+			next nextl;
+		};
+		/^FILES\s*:/ && do {
+			($FILES) = /^FILES\s*:\s*(.*)$/;
+			next nextl;
+		};
+		/^OPTIONS\s*:/ && do {
+			($OPTIONS) = /^OPTIONS\s*:\s*(.*)$/;
+			push(@OPTIONS,$OPTIONS);
+			next nextl;
+		};
+		print;
+		close(TMP);
+		print "I don't understand above line, please correct it\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	}
+	close(TMP);
+	$TYPE !~ /^(OUTPUT)|(ERROR)$/ && do {
+		print "Sorry, but TYPE ought to be one of (OUTPUT ERROR),\nnot $TYPE.\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	$PRIO !~ /^(STD)|(QUICK)|(EXT)$/ && do {
+		print "Sorry, but PRIO ought to be one of (STD QUICK EXT),\nnot $PRIO.\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	$LANG !~ /^(Sather)|(pSather)$/ && do {
+		print "Sorry, but LANG ought to be one of (Sather pSather),\nnot $LANG.\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	! -x $CS && do {
+		print "Sorry, cannot execute $CS\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	! -d $SH && do {
+		print "Sorry, cannot find the directory $SH\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	! -d "$SH/Test/TestPrg" && do {
+		print "Sorry, cannot find the directory $SH/Test/TestPrg\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	@OPTIONS == 0 && do {
+		print "Sorry, I found no OPTIONS: line\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	$SH !~ /^\// && do {
+		print "Sorry, but SATHER_HOME must be an absoulte pathname.\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	$FILES =~ /comp_out/ && do {
+		print "Sorry, but no file may be named .*comp_out.*\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	@FILES=split(/\s+/,$FILES);
+	foreach $f (@FILES) {
+		! -e $f && do {
+			print "Sorry, the file `$f' does not exist\nin the current working directory\n".
+			      "Hit <RETURN> to reedit the file, ^C to abort\n";
+			$x=<STDIN>;
+			redo edit;
+		};
+	}
+
+	print "\nI will now create the directory for the test program.\n";
+	$PROGDIR="$SH/Test/TestPrg/$NAME";
+	-d $PROGDIR && do {
+		for($i=1;-d "$PROGDIR.$i";$i++) { };
+		$PROGDIR.=".$i";
+	};
+	mkdir($PROGDIR,0755) || do {
+		print "Error creating the directory `$PROGDIR' ($!)\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$x=<STDIN>;
+		redo edit;
+	};
+	print "cp @FILES $PROGDIR\n";
+	system "cp @FILES $PROGDIR";
+	chdir($PROGDIR);
+
+
+	print "\nThe compiler will now be executed for each option line\n";
+	$i=1;
+	$ENV{'SATHER_HOME'}=$SH;
+	undef @EXEC;
+	foreach $o (@OPTIONS) {
+		if($TYPE eq 'ERROR') {
+			print "$CS $o > comp_out.$i 2>&1\n";
+			#print "$CS $o 2>&1 | sed -e '/^--- [^ ]* ---/d' -e '/Call timed out/d' > comp_out.$i\n";
+			system("$CS $o 2>&1 | sed -e '/^--- [^ ]* ---/d' -e '/Call timed out/d' > comp_out.$i");
+			push(@EXEC,"diff - comp_out.$i");
+		} else {
+			print "$CS $o 2>&1\n";
+			open(COMP,"$CS $o 2>&1 |");
+			$e=0;
+			readm: while(<COMP>) {
+				/^\s+$/ && do { next readm; };
+				/Call timed out/ && do { next readm; }; # ignore some pMake stuff
+				/--- \S+ ---$/ && do { next readm; }; # ignore some pMake stuff
+				$e=1;
+				print;
+			}
+			if($e==1) {
+				print "The compiler is not supposed to have any output.\n".
+				      "Please use either other arguments or correct the \n".
+				      "program.\n".
+				      "Hit <RETURN> to reedit the file, ^C to abort\n";
+				$e=<STDIN>;
+				&cleanup_dir;
+				redo edit;
+			}
+			($n)= $o =~/-o (\S+)/;
+			print "./$n > comp_out.$i 2>&1\n";
+			system("./$n > comp_out.$i 2>&1\n");
+			push(@EXEC,"./$n 2>&1 | diff - comp_out.$i");
+		}
+		$FILES.=" comp_out.$i";
+		$i++;
+	}
+	open(DESC,">DESC");
+	print DESC "-- This description file has been generated by the new_test prg\n".
+	           "-- Please edit it if necessary.\n";
+	print DESC "name: $NAME\n";
+	print DESC "title: $TITLE\n";
+	print DESC "prio: $PRIO\n";
+	if($TYPE eq 'OUTPUT') { print DESC "type: STD\n"; }
+	else { print DESC "type: ERROR\n"; }
+	print DESC "files: $FILES\n";
+	print DESC "lang: $LANG\n";
+	foreach $o (@OPTIONS) { print DESC "options: $o\n"; }
+	foreach $o (@EXEC) { print DESC "exec: $o\n"; }
+	close(DESC);
+	system("$ed DESC");
+
+	require "../PROG/exectest.prl";
+	eval("&exec_test('.',\"$CS\",\"$PRIO\",1)");
+	if($@) {
+		print "There was an error during the execution of the test:\n$@\n".
+		      "Hit <RETURN> to reedit the file, ^C to abort\n";
+		$e=<STDIN>;
+		&cleanup_dir;
+		redo edit;
+	}
+	print "Thanks for your new Test program.\n";
+	while($e !~ /^[yn]/) { 
+		print "Shall I enter the program into the CVS tree? ";
+		$e=<STDIN>;
+	}
+	if($e =~ /^y/) {
+		($d)= $PROGDIR =~ /\/([^\/]*)$/;
+		system "cd .. ; cvs add $d\n";
+		system "cvs add *\n";
+		print "Note that you have to 'cvs commit' your changes\n".
+		      "to make them visible to others.\n";
+	} else {
+		print "I will NOT delete the test directory. To delete it,\n".
+		      "enter the command\n   rm -rf $PROGDIR\n";
+	}
+}
+unlink("$TMPFILE");
+exit 0;
+
+

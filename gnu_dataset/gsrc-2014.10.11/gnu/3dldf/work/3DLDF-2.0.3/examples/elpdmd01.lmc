@@ -1,0 +1,556 @@
+%%%% elpdmd01.lmc
+%%%% Created by Laurence D. Finston (LDF) Fri Nov 26 15:19:45 CET 2010
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2010, 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Created:  November 26, 2010
+
+%% *** (3) Macros
+
+%% **** (4) crosshair
+
+macro crosshair;
+
+def crosshair (vv, ctr) {point aa, numeric offset, point bb, point cc} =
+
+     pen thin_pen;
+     thin_pen := pencircle scaled (.25mm, .25mm, .25mm);
+
+     transform tt;
+
+     point A[];
+
+     A0 := aa shifted (0, 1);
+
+     A1 := (offset * unit_vector(cc - bb)) shifted by aa;
+
+     A2 := A1 rotated_around (aa, A0) 90;
+
+     A3 := A1 rotated_around (aa, A0) 180;
+
+     A4 := A1 rotated_around (aa, A0) 270;
+
+     if ctr < 0:
+        %message "ctr < 0:"; 
+        draw A1 -- A3 with_pen pencircle scaled (.25mm, .25mm, .25mm) on_picture vv with_pen thin_pen;
+        draw A2 -- A4 with_pen pencircle scaled (.25mm, .25mm, .25mm) on_picture vv with_pen thin_pen;
+     else:
+        %message "ctr >= 0:"; 
+        draw A1 -- A3 with_pen pencircle scaled (.25mm, .25mm, .25mm) on_picture vv[ctr] with_pen thin_pen;
+        draw A2 -- A4 with_pen pencircle scaled (.25mm, .25mm, .25mm) on_picture vv[ctr] with_pen thin_pen;
+     fi;
+enddef;
+
+%% **** (4) tab
+
+macro tab;
+
+numeric tab_x_offset;
+numeric tab_z_offset;
+
+numeric tab_ctr;
+
+tab_ctr := 0;
+
+tab_x_offset := 0;
+tab_z_offset := 0;
+
+
+% j, k:  	  Points on first triangle
+% b, c:  	  Points on second triangle
+% n:     	  amount of mediation used to get offset from the points on the first triangle
+% r:     	  amount of mediation used to get offset 
+%        	  from the points on the first triangle for the shorter edge.
+% u:     	  Height of the tab (multiplied by a unit_vector)
+% crosshair_ctr:  Number of crosshair.
+
+%% Example:
+%% picture dbl_tab_picture[];
+%% tab (dbl_tab_picture, 0) {w52,  0, 2, .875, .75, .4, w32, 0, 2, 5}; 
+
+def tab (double_tab_picture, dtp_ctr) {triangle t, numeric j, numeric k, numeric n, numeric r, numeric u, 
+         triangle a, numeric b, numeric c, numeric crosshair_ctr} :=
+
+%% ***** (5)
+
+   point P[];
+
+   pen thin_pen;
+   thin_pen := pencircle scaled (.25mm, .25mm, .25mm);
+
+   numeric m;
+
+   if j + k == 2:
+%      message "j + k == 2:"; 
+      m := 1;
+   elseif j + k == 1:
+%      message "j + k == 1:"; 
+      m := 2;
+   else:
+%      message "j + k == 3:"; 
+      m := 0;
+   fi;
+
+   P0 := mediate(get_point (j) t, get_point (k) t, n);
+   P1 := mediate(get_point (k) t, get_point (j) t, n);
+
+
+   P3 := mediate(P0, P1);
+
+   P12 := P3 shifted (0, 1);
+
+   P13 := (unit_vector(P1 - P0) shifted P3) rotated_around (P3, P12) -90;
+
+   P14 := (unit_vector(P1 - P0) shifted P3) rotated_around (P3, P12) 90;
+   
+   numeric mag[];
+
+   mag0 := magnitude(P13 - get_point(m) t);
+   mag1 := magnitude(P14 - get_point(m) t);
+
+    if mag0 < mag1:
+       P2 := P13;
+    else:
+       P2 := P14;
+    fi;
+
+   P4 := u * unit_vector(P2 - P3);
+
+   shift P4 by P3;
+
+   P5 := mediate(get_point (j) t, get_point (k) t, r) shifted by (P4 - P3);
+   P6 := mediate(get_point (k) t, get_point (j) t, r) shifted by (P4 - P3);
+
+   %draw P0 -- P1 with_pen pencircle scaled (.5mm, .5mm, .5mm) with_color red;
+
+   P7 := mediate(P3, P4);
+
+   P9 := (P7 - P3) shifted P0;
+
+   P10 := (P0 -- P5) intersection_point (P7 -- P9);
+
+   P11 := (P1 -- P6) intersection_point (P7 -- P9);
+
+   draw P0 -- P5 -- P6 -- P1 -- cycle with_color dark_gray with_pen thin_pen;
+
+   draw P10 -- P11 with_color dark_gray with_pen thin_pen;
+
+   draw P3 -- P4 with_color dark_gray with_pen thin_pen;
+
+% %% ****** (6) Double tab on double_tab_picture[dtp_ctr]
+
+
+   P15 := P0;
+
+   P16 := P1;
+
+   P17 := P5;
+
+   P18 := P6;
+
+   P19 := P3;
+        
+   P20 := P4;
+
+   P21 := P10;
+
+   P22 := P11;
+
+   transform tt[];
+
+   tt0 := identity shifted by (P0 * -1);
+
+   ang_1 := (P1 - P0) angle (1, 0, 0);
+
+   rotate tt0 (0, ang_1);
+
+   P15 *= P16 *= P17 *= P18 *= P19 *= P20 *= P21 *= P22 *= tt0;
+
+   if zpart(P16 - P15) <> 0:
+      tt3 := identity rotated (0, -2 * ang_1);
+      P15 *= P16 *= P17 *= P18 *= P19 *= P20 *= P21 *= P22 *= tt3;
+   fi;
+
+   if zpart(P17) < zpart(P15):
+      tt1 := identity rotated (180, 0);
+      P15 *= P16 *= P17 *= P18 *= P19 *= P20 *= P21 *= P22 *= tt0 *= tt1;
+   fi;
+
+   tt4 := identity shifted (tab_x_offset, 0, tab_z_offset);
+ 
+   P15 *= P16 *= P17 *= P18 *= P19 *= P20 *= P21 *= P22 *= tt4;
+
+   draw P15 -- P16 -- P18 -- P17 -- cycle on_picture double_tab_picture[dtp_ctr] with_pen thin_pen;
+
+   draw P19 -- P20 with_color dark_gray on_picture double_tab_picture[dtp_ctr] with_pen thin_pen;
+
+   draw P21 -- P22 with_color dark_gray on_picture double_tab_picture[dtp_ctr] with_pen thin_pen;
+
+   tt2 := identity rotated_around (P15, P16);
+
+   P23 := P17 * tt2;
+   P24 := P18 * tt2;
+   P25 := P19 * tt2;
+   P26 := P20 * tt2;
+   P27 := P21 * tt2;
+   P28 := P22 * tt2;
+
+   draw P15 -- P23 -- P24 -- P16 -- cycle on_picture double_tab_picture[dtp_ctr] with_pen thin_pen;
+
+   draw P19 -- P26 with_color dark_gray on_picture double_tab_picture[dtp_ctr] with_pen thin_pen;
+
+   draw P27 -- P28 with_color dark_gray on_picture double_tab_picture[dtp_ctr] with_pen thin_pen;
+
+  %  dotlabel.lft("$P_{15}$", P15) double_tab_picture;
+
+% %  dotlabel.rt("$P_{16}$", P16) double_tab_picture;
+
+% %  dotlabel.ulft("$P_{17}$", P17) double_tab_picture;
+% %  dotlabel.urt("$P_{18}$", P18) double_tab_picture;
+
+% %  dotlabel.top("$P_{19}$", P19) double_tab_picture;
+% %  dotlabel.top("$P_{20}$", P20) double_tab_picture;
+
+% %  dotlabel.lft("$P_{21}$", P21) double_tab_picture;
+% %  dotlabel.rt("$P_{22}$", P22) double_tab_picture;
+
+% %  dotlabel.llft("$P_{23}$", P23) double_tab_picture;
+% %  dotlabel.lrt("$P_{24}$", P24) double_tab_picture;
+% %  label("$P_{25}$", P25) double_tab_picture;
+
+% %  dotlabel.bot("$P_{26}$", P26) double_tab_picture;
+
+% %  dotlabel.lft("$P_{27}$", P27) double_tab_picture;
+% %  dotlabel.rt("$P_{28}$", P28) double_tab_picture;
+
+%    tab_x_offset += magnitude(P16 - P15) + .5cm;
+
+
+%% ****** (6)
+
+   numeric minus_one;
+   minus_one := -1;
+
+   for i = 1 upto crosshair_ctr:
+      crosshair (current_picture, minus_one) {mediate(P10, P11, i/(crosshair_ctr + 1)), .1cm, P10, P11};
+      crosshair (double_tab_picture, dtp_ctr) {mediate(P21, P22, i/(crosshair_ctr + 1)), .1cm, P21, P22};
+      crosshair (double_tab_picture, dtp_ctr) {mediate(P27, P28, i/(crosshair_ctr + 1)), .1cm, P27, P28};
+   endfor;
+
+
+%    message "unit_vector(P10 - P11):"; 
+%    show unit_vector(P10 - P11);
+
+%    message "unit_vector(P0 - P1):"; 
+%    show unit_vector(P0 - P1);
+   
+%         dotlabel.top("$P_0$", P0);
+%         dotlabel.rt("$P_1$", P1);
+%        dotlabel.top("$P_2$", P2);
+%        dotlabel.top("$P_3$", P3) with_text_color red with_dot_color red;
+%        dotlabel.llft("$P_4$", P4);
+%         dotlabel.ulft("$P_5$", P5);
+%         dotlabel.bot("$P_6$", P6);
+%        dotlabel.rt("$P_7$", P7);
+%        dotlabel.top("$P_9$", P9);
+%        dotlabel.ulft("$P_{10}$", P10);
+%        dotlabel.bot("$P_{11}$", P11);
+
+%% ***** (5) The matching tab on the second triangle
+
+   point Q[];
+
+   numeric d;
+
+   if b + c == 2:
+%      message "b + c == 2:"; 
+      d := 1;
+   elseif b + c == 1:
+%      message "b + c == 1:"; 
+      d := 2;
+   else:
+%      message "b + c == 3:"; 
+      d := 0;
+   fi;
+
+   Q0 := mediate(get_point (b) a, get_point (c) a);
+
+   Q1 := (magnitude(P0 - P3) * unit_vector(get_point (b) a - Q0)) shifted Q0;
+
+   Q2 := (magnitude(P0 - P3) * unit_vector(get_point (c) a - Q0)) shifted Q0;
+
+   Q10 := Q0 shifted (0, 1);
+
+   Q11 := ((unit_vector(Q1 - Q2) * magnitude (P4 - P3)) shifted Q0) rotated_around (Q0, Q10) 90;
+   Q12 := ((unit_vector(Q1 - Q2) * magnitude (P4 - P3)) shifted Q0) rotated_around (Q0, Q10) -90;
+
+   mag0 := magnitude(get_point (d) a - Q11);
+   mag1 := magnitude(get_point (d) a - Q12);
+
+   if mag0 < mag1:
+      Q3 := Q11;
+   else:
+      Q3 := Q12;
+   fi;
+
+   Q4 := (unit_vector(Q2 - Q0) * magnitude(P6 - P4)) shifted Q3;
+
+   Q5 := (unit_vector(Q1 - Q0) * magnitude(P6 - P4)) shifted Q3;
+
+   Q6 := mediate(Q0, Q3);
+
+   Q7 := (unit_vector(Q5 - Q1) * magnitude(P10 - P0)) shifted Q1;
+
+   Q8 := (unit_vector(Q4 - Q2) * magnitude(P10 - P0)) shifted Q2;
+
+   draw Q1 -- Q5 -- Q4 -- Q2 -- cycle with_color dark_gray with_pen thin_pen;
+
+   draw Q0 -- Q3 with_color dark_gray with_pen thin_pen;
+
+   draw Q7 -- Q8 with_color dark_gray with_pen thin_pen;
+
+
+
+   for i = 1 upto crosshair_ctr:
+      crosshair  (current_picture, minus_one) {mediate(Q7, Q8, i/(crosshair_ctr + 1)), .1cm, Q7, Q8};
+   endfor;
+
+
+%     message "unit_vector(Q8 - Q7):"; 
+%     show unit_vector(Q8 - Q7);
+
+%     message "unit_vector(Q4 - Q5):"; 
+%     show unit_vector(Q4 - Q5);
+
+
+
+%      dotlabel.lft("$Q_{0}$", Q0);
+%      dotlabel.bot("$Q_{1}$", Q1);
+%      dotlabel.lft("$Q_{2}$", Q2);
+%       dotlabel.rt("$Q_{3}$", Q3);
+%       dotlabel.top("$Q_{4}$", Q4) with_text_color red with_dot_color red;
+%      dotlabel.lrt("$Q_{5}$", Q5);
+%       dotlabel.top ("$Q_{6}$", Q6) with_text_color blue with_dot_color blue;
+%       dotlabel.bot("$Q_{7}$", Q7);
+%       dotlabel.top ("$Q_{8}$", Q8);
+
+
+%% ***** (5)
+
+enddef;
+
+%% **** (4) tab_single
+
+macro tab_single;
+
+def tab_single {triangle t, numeric j, numeric k, numeric n, numeric r, numeric u, 
+                numeric crosshair_ctr} :=
+
+%% ***** (5)
+
+   point P[];
+
+   numeric m;
+
+   if j + k == 2:
+%      message "j + k == 2:"; 
+      m := 1;
+   elseif j + k == 1:
+%      message "j + k == 1:"; 
+      m := 2;
+   else:
+%      message "j + k == 3:"; 
+      m := 0;
+   fi;
+
+   P0 := mediate(get_point (j) t, get_point (k) t, n);
+   P1 := mediate(get_point (k) t, get_point (j) t, n);
+
+
+   P3 := mediate(P0, P1);
+
+   P12 := P3 shifted (0, 1);
+
+   P13 := (unit_vector(P1 - P0) shifted P3) rotated_around (P3, P12) -90;
+
+   P14 := (unit_vector(P1 - P0) shifted P3) rotated_around (P3, P12) 90;
+   
+   numeric mag[];
+
+   mag0 := magnitude(P13 - get_point(m) t);
+   mag1 := magnitude(P14 - get_point(m) t);
+
+    if mag0 < mag1:
+       P2 := P13;
+    else:
+       P2 := P14;
+    fi;
+
+   P4 := u * unit_vector(P2 - P3);
+
+   shift P4 by P3;
+
+   P5 := mediate(get_point (j) t, get_point (k) t, r) shifted by (P4 - P3);
+   P6 := mediate(get_point (k) t, get_point (j) t, r) shifted by (P4 - P3);
+
+   %draw P0 -- P1 with_pen pencircle scaled (.5mm, .5mm, .5mm) with_color red;
+
+   P7 := mediate(P3, P4);
+
+   P9 := (P7 - P3) shifted P0;
+
+   P10 := (P0 -- P5) intersection_point (P7 -- P9);
+
+   P11 := (P1 -- P6) intersection_point (P7 -- P9);
+
+   draw P0 -- P5 -- P6 -- P1 -- cycle with_color dark_gray;
+
+   draw P10 -- P11 with_color dark_gray;
+
+   draw P3 -- P4 with_color dark_gray;
+
+%% ****** (6)
+
+   numeric ctr;
+
+   ctr := 4;
+
+   for i = 1 upto crosshair_ctr:
+      crosshair (current_picture, ctr) {mediate(P10, P11, i/(crosshair_ctr + 1)), .1cm, P10, P11};
+   endfor;
+
+%% ****** (6)
+
+enddef;
+
+
+%% ***** (5) handle_blob
+
+macro handle_blob;
+
+def handle_blob {point P, point Q, numeric A, numeric B} = 
+
+draw P -- mediate(P, Q, A) dashed evenly with_pen dashed_pen;
+
+draw mediate(P, Q, A) -- mediate(P, Q, B) dashed evenly 
+        with_pen dashed_pen with_color gray;
+
+enddef;
+
+%% ***** (5) cutout
+
+macro cutout;
+
+def cutout (OFFSET) {triangle W} =
+
+point P[];
+
+P0 := get_point 0 W;
+P1 := get_point 1 W;
+P2 := get_point 2 W;
+
+P3 := (OFFSET * unit_vector(P1 - P0)) shifted P1;
+
+draw P3 -- P1 dashed evenly;
+
+%dotlabel.top("$P_{3}$", P3);
+
+P4 := (OFFSET * unit_vector(P0 - P1)) shifted P0;
+%dotlabel.top("$P_{4}$", P4);
+
+draw P4 -- P0 dashed evenly;
+
+P5 := (OFFSET * unit_vector(P2 - P1)) shifted P2;
+%dotlabel.top("$P_{5}$", P5);
+
+draw P5 -- P2 dashed evenly;
+
+P6 := (OFFSET * unit_vector(P1 - P2)) shifted P1;
+%dotlabel.top("$P_{6}$", P6);
+
+draw P6 -- P1 dashed evenly;
+
+P7 := (OFFSET * unit_vector(P0 - P2)) shifted P0;
+%dotlabel.top("$P_{7}$", P7);
+
+draw P7 -- P0 dashed evenly;
+
+P8 := (OFFSET * unit_vector(P2 - P0)) shifted P2;
+%dotlabel.top("$P_{8}$", P8);
+
+draw P8 -- P2 dashed evenly;
+
+
+
+
+enddef;
+
+
+%% ***** (5) End of macro definitions
+
+%% ** (2) 
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%       GNU Emacs editor.  The local variable list is not evaluated when an 
+%%       indirect buffer is visited, so it's necessary to evaluate the       
+%%       following s-expression in order to use the facilities normally      
+%%       accessed via the local variables list.                              
+%%       LDF 2004.02.12.
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% End:

@@ -1,0 +1,47 @@
+This directory contains a Myrinet implementation of the Brahma interface.
+It could use either Active Threads or Soalris threads for 
+Threads/Synchronization.
+At the momet, this file is a chaotic collection of notes. It will need
+to be reorganized later.
+
+1. Polling.
+--------------
+Threads need to call BR_poll to drain the network of messages they are
+waiting for. Any thread can call BR_POLL, but there can be only one 
+poll outstanding at any goiven time. Other polls try to lock the global
+poll lock and if it is already locked (i.e. another poll is already in
+progress), they simply return. 
+
+In the future, the check should be moved outside the BR_POLL function to
+avoid a call overhead when a poll is already in progress. It is easy to
+debug though when the check is inside the function, so it will stay there
+for a while.
+
+2. Synchronization of replies
+-------------------------------
+Since there could be only a single outstanding poll, replies are implicitly
+syncronized and there is no need to protect any global state that can 
+be updated replies (such as lam_reply). Other pieces of global state
+that can be accessed and mutated by requests as well replies (outgping
+message buffers and associated datastructures) need to be protected.
+
+3. Request Synchronization (handling of outgoing buffers)
+----------------------------------------------------------
+Requests can overlap. However, the send thread that runs on the Lanai
+chip processes the outgoing queue in a strict order (the queue is 
+organized as a circular buffer and entries are processed in a strict
+order)
+
+
+
+BR_init()
+-------------
+It is important that clusters are initialized in the order corresponding
+to their numbers. This is because clusters are organized as a tree for
+sycnhronization purposes. If children start kicking before parents, they
+send messaged up the tree for the initial barrier, but since parents
+haven't been born yet, some of the messages directed up the tree may get
+lost. As a result, the first barrier that follows initialization fails.
+In short, the initial synchronization must be done by means other than
+Myrinet (i.e. temporary files or TCP/IP).
+

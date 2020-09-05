@@ -1,0 +1,565 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- ifc.sa: Type interfaces in the Sather compiler.
+-------------------------------------------------------------------
+-- IFC: The interface of a type.
+-- IFC_TBL: A table of interfaces indexed by type.
+-- IFC_ABS_CREATE: Create an interface for an abstract type. 
+-- SELECT_SIG: a partial class that contains suff for overloading
+--             resolution. Included by IFC and IMPL
+-------------------------------------------------------------------
+class IFC < $STR is
+   include SELECT_SIG; --resolves calls on overloaded functions
+   -- A type interface.
+   
+   attr tp:$TP;			-- The type whose interface this is. 
+   attr sigs:SIG_TBL;		-- The interface signatures.
+
+   str:STR is
+      s:STR:="public interface of class "+tp.str+" is\n";
+
+      a:ARRAY{STR}:=#(sigs.size);
+      i::=0;
+      loop
+	 sig::=sigs.elt!;
+	 st::=sig.str;
+	 if ~void(sig.srcsig) then
+            st:=st+"  ["+sig.srcsig.str+"]";
+	 end;
+         a.set!(st);
+      end;
+      a.sort;
+      loop
+         s:=s+"   "+a.elt!+"\n";
+      end;
+      s:=s+"end;\n";
+      return s; 
+   end;
+
+   create(sigs:SIG_TBL, tp:$TP):SAME is
+      -- An interface with the signatures `sigs' for the type `tp'.
+      -- Never gives void.
+
+      r::=new; r.sigs:=sigs; r.tp:=tp; return r end;      
+
+   prog:PROG is
+      -- The program this interface belongs to.
+      return tp.prog end;
+   
+   sig_conforming_to(s:SIG):SIG 
+      -- A signature from the interface which conforms to `s' or void
+      -- if none. This will be unique if the interface has no conflicts.
+      pre ~void(self) and ~void(s) is
+      sig_list:FLIST{SIG};
+      sig:SIG;
+      
+      loop ts::=sigs.get_query!(s.name);
+	 if ts.conforms_to(s) then 
+	    if void(sig) then
+	       -- common case: only one match
+	       sig := ts;
+	    else
+	       if sig_list.is_empty then
+		  sig_list := sig_list.push(sig);
+	       end;
+	       sig_list := sig_list.push(ts);
+	    end;
+	 end 
+      end;
+      if sig_list.is_empty then
+	 return sig;  -- only one match
+      else
+	 sig := select_sig(s,sig_list,false);
+      end;
+	 
+      return sig 
+   end;
+
+   sig_equal_to(s:SIG):SIG 
+      -- A signature from self which is equal to `s' if present, 
+      -- void if not.
+      pre ~void(self) and ~void(s) is      
+      loop ts::=sigs.get_query!(s.name);
+	 if ts.is_eq(s) then return ts end end;
+      return void end;
+   
+   nonconforming_sig(i:IFC):SIG 
+      -- If self conforms to `i' then return void, otherwise return
+      -- a signature in `i' for which there is no conforming signature
+      -- in self.
+      pre ~void(self) and ~void(i) is
+      loop s::=i.sigs.elt!; 
+	 if void(sig_conforming_to(s)) then return s end end;
+      return void end;
+
+   nonconforming_sig_list(i: IFC): FLIST{SIG} 
+   -- Version of nonconforming_sig that returns all the nonconforming
+   -- signatures for better error reporting
+   -- and so generates all the non-conforming messages at one go, rather
+   -- than one at a time
+      pre ~void(self) and ~void(i) 
+   is
+      res: FLIST{SIG};		-- Void to begin with
+      loop s::=i.sigs.elt!; 
+	 if void(sig_conforming_to(s)) then  res := res.push(s); end 
+      end;
+      return res;
+   end;
+
+   
+   conforms_to(i:IFC):BOOL is
+      -- True if self conforms to `i'. This means that for every
+      -- signature in `i' there is a signature in self which conforms
+      -- to it.
+      return void(nonconforming_sig(i)) end;      
+   
+   conflicting_sigs:TUP{SIG,SIG}
+      -- If self has a conflict, return two conflicting signatures.
+      -- Otherwise, return #(void,void).
+      pre ~void(self) is
+      loop s::=sigs.elt!;
+	 loop st::=sigs.get_query!(s.name);
+	    if ~SYS::ob_eq(st,s) and st.conflicts_with(s) then
+	       return #(s,st) end end end;
+      return #(void,void) end;
+      
+   is_conflict_free:BOOL is
+      -- True if self is free of conflicting signatures.
+      return void(conflicting_sigs) end;      
+   
+    sig_for_call(c:CALL_SIG):SIG 
+    -- A signature from the interface to which the call `c' conforms.
+    -- Void if none. Reports an error if the call is ambiguous 
+    -- or missing (assumes that "err_loc" has been set).
+    -- If it is unknown whether there is a return value, then
+    -- choose the signature without one in case of conflict.
+      pre ~void(self) and ~void(c)
+    is
+	r:SIG;
+	sig_list:FLIST{SIG} := #; -- a list of sigs conformed to by the call
+	
+	loop s::=sigs.get_query!(c.name);
+	    if c.conforms_to(s) then
+		if c.unknown_ret or (c.has_ret = ~void(s.ret)) then
+		    sig_list := sig_list.push(s);
+		end;
+	    end 
+	end;
+	
+	r := select_sig(c, sig_list, false);
+	
+	if void(r) then 
+	    found_one ::= false;
+	    res ::= "";
+	    loop s ::= sigs.get_query!(c.name);
+		found_one := true;
+		res := res+" or\n\t".separate!(s.str);
+	    end;
+	    -- #ERR+"Printing result:"+res+"\n";
+	    print_err: STR := c.str;
+	    if found_one then
+		print_err := print_err+"\n"+"\tSuggest:"+res;
+	    end;
+	    c.prog.err("No match for the call " + print_err);
+	end;
+	return r;
+   end;
+
+   ifc_for_rout(t:TP_ROUT):SAME 
+      -- The interface of a bound routine type.
+      pre ~void(t) is
+      r::=new; r.tp:=t;
+      r.sigs:=r.sigs.insert(SIG::bound_routine_call(t));
+      return r;
+   end;
+
+   ifc_for_iter(t:TP_ITER):SAME 
+      -- The interface of a bound iter type.
+      pre ~void(t) is
+      r::=new; r.tp:=t;
+      r.sigs:=r.sigs.insert(SIG::bound_iter_call(t));
+      return r
+   end;      
+  
+   ifc_for_class(t:TP_CLASS):SAME
+      pre ~void(t)
+   is
+      res: SAME := void;
+      if t.is_abstract then
+         cq::=#TUP{IDENT,INT}(t.name,t.params.size);
+         if abs_cur.test(cq) then
+            cycle_err; abs_cur:=abs_cur.clear; 
+         else
+            abs_cur:=abs_cur.insert(cq);
+            res := IFC_ABS_CREATE::ifc_of(t);
+            abs_cur:=abs_cur.delete(cq);
+         end
+      else
+         im:IMPL:=t.impl;
+         if ~void(im) then res := im.ifc end;
+      end;
+      return res
+   end;
+  
+   shared abs_cur:FSET{TUP{IDENT,INT}}; -- The set of abstract class
+   -- names and number of parameters which are currently having
+   -- their interfaces worked out. 
+
+   cycle_err is
+      -- Print an error message about a cycle of include type names.
+      s:STR := "Cycle detected in `subtyping' clauses involving the types: ";
+      loop
+          cur ::= abs_cur.elt!;
+          s := s + ", ".separate!(cur.t1.str(cur.t2))
+      end;
+      prog.err(s)
+   end;
+
+   show is
+      -- Print the interface on OUT.
+      if void(self) then #OUT + "Interface=void\n"; return end;
+      if void(tp) then #OUT +  "Interface tp=void\n"; return end;
+      #OUT + "Interface of " + tp.str + " = ";
+      if void(sigs) then #OUT + "void\n"; return end;
+      loop s::=sigs.elt!;
+	 if ~void(s) then #OUT + " ".separate!(s.str) end end;
+      #OUT + "\n" end;
+   
+end; -- class IFC
+-------------------------------------------------------------------
+class IFC_ABS_CREATE is
+   -- Create an interface for an abstract type. 
+   attr tp:TP_CLASS;		-- The abstract type it is for.
+   attr con:TP_CONTEXT;		-- The type context for tp.
+   attr tr:AS_CLASS_DEF;	-- The definition tree for tp.
+   attr class_sigs:SIG_TBL;	-- Table of signature explicitly
+      -- in the class.
+   attr supers:FLIST{IFC};	-- Interfaces of supertypes.   
+
+   ifc_of(t:TP_CLASS):IFC 
+      -- Compute the interface of the abstract type `t'.
+      pre ~void(t) is
+      if t.prog.show_ifc_abs_create then
+	 #OUT + "(Abstract ifc create " + t.str + ") " end;
+      ic::=new; ic.tp:=t;
+      ic.con:=t.tp_context_for;
+      if void(ic.con) then return void end;
+      ic.tr:=t.as_tree; --*H* ic.prog.parse.tree_for(t.name,t.params.size);
+      if void(ic.tr) then 
+	 t.prog.err("Compiler error: IFC_ABS_CREATE:ifc_of tr=void for " +
+	   t.str + "."); return void end;
+      ic.do_explicit_class_sigs;
+      ic.do_supers;
+      return IFC::create(ic.do_sigs,t) end;
+   
+   prog:PROG is
+      -- The program this belongs to.
+      return tp.prog end;
+
+   do_explicit_class_sigs is
+      -- Compute `class_sigs'.
+      be:$AS_CLASS_ELT:=tr.body;
+      loop until!(void(be)); prog.err_loc(be);
+	 typecase be
+	 when AS_CONST_DEF then
+	    prog.err("Abstract classes may not define constants.");
+	 when AS_SHARED_DEF then
+	    prog.err("Abstract classes may not define shareds.");
+	 when AS_ATTR_DEF then
+	    prog.err("Abstract classes may not define attributes.");
+	 when AS_ROUT_DEF then
+	    if ~be.is_abstract then prog.err(
+	       "Abstract classes may only have abstract routines.") end;
+	    ns:SIG:=SIG::rout_sig(be,be.name,con.ptypes,con);
+	    cs:SIG:=class_sigs.sig_conflicting_with(ns);
+	    if ~void(cs) then
+	       prog.err("The two explicitly defined signatures " +
+	          ns.str + " and " + cs.str + " conflict.") 
+	    else class_sigs:=class_sigs.insert(ns) end;
+	 when AS_INCLUDE_CLAUSE then
+	    prog.err("Abstract classes may not have include clauses.");
+	 end;
+	 be:=be.next end end;
+   
+   do_supers is
+      -- Compute `supers'.
+      ut:AS_TYPE_SPEC:=tr.under;
+      loop until!(void(ut)); 
+	 tp:$TP:=con.tp_of(ut); prog.err_loc(ut);
+	 typecase tp
+	 when TP_CLASS then
+	    if ~tp.is_abstract then
+	       prog.err("Abstract types must have abstract supertypes.") 
+	    else
+	       itp:IFC:= tp.ifc;
+	       supers:=supers.push(itp) end;
+	 else
+	    prog.err("Abstract types must have abstract supertypes.") end;
+	 ut:=ut.next end end;
+	 
+   do_sigs:SIG_TBL is
+      -- The final sig table assuming everything else has been computed.
+      r:SIG_TBL;
+      loop r:=r.insert(class_sigs.elt!) end;
+      loop 
+	 if supers.is_empty then break!
+	 else
+	    si:IFC:=supers.pop; 
+	    loop sig::=si.sigs.elt!;
+	       if ~void(r.sig_conflicting_with(sig)) then
+		  -- included signature is overridden by explicit one
+		  -- or we've already done this one.
+	       else
+		  i:INT:=0;
+		  loop while!(i<supers.size);
+		     cs:SIG:=supers[i].sigs.sig_conflicting_with(sig);
+		     if ~void(cs) then
+			if ~cs.is_eq_but_tp(sig) then
+			   prog.err_loc(tr);
+			   prog.err("The signatures " + sig.str +
+			   " and " + cs.str +
+			   " must be disambiguated by an explicit sig.") 
+			end end;
+		     i:=i+1 end;
+		  r:=r.insert(sig.with_new_type(tp)) 
+	       end;
+	    end;
+	 end;
+      end;
+      return r end;
+   
+end; -- class IFC_ABS_CREATE
+
+-------------------------------------------------------------------
+partial class SELECT_SIG is
+   -- This partial class is meant to be included by IFC and IMPL.
+   -- IFC will use this to select a signature for an external class
+   -- while IMPL needs this for internal calls. Basically, this is where
+   -- calls on overloaded functions get resolved
+
+   stub tp:$TP;
+   
+   select_sig(c:CALL_SIG, sig_list:FLIST{SIG}, internal_call:BOOL):SIG is
+      -- selects a signature corresponding to a call form the list of
+      -- overloaded sigs
+      
+      -- For each argument position, for the winning sig, we must have:
+      --   in, once arg: the type of arg must be a subtype of all the
+      --                 corresponding arg types in all other sigs
+      --   inout arg:    no contest here, all types are the same
+      
+      -- We use a simple algorithm here. We use the above rules to find
+      -- the winner signature for each argument. It MUST be the same for all.
+      -- If it is not, we have an error
+
+      winner_sig:SIG;
+      winners:FSET{SIG}; -- winner sigs up to current position
+      
+      if sig_list.size > 1 then
+	 loop
+	    i::=0.upto!(c.args.size-1); -- current arg position
+	    cba ::= sig_list.top.args[i];
+	    pos_winner_sigs:FSET{SIG};
+	    pos_winner_sigs := pos_winner_sigs.clear;
+	    loop
+	       s ::= sig_list.elt!;
+	       sa ::= s.args[i];             -- arg in a considered sig
+	       case sa.mode 
+	       when MODES::in_mode then
+		  if sa.tp.is_subtype(cba.tp) then
+		     -- found better match
+		     cba := sa;
+		  end;
+	       when MODES::out_mode then
+		  if cba.tp.is_subtype(sa.tp) then
+		     -- found better match
+		     cba := sa;
+		  end;
+	       when MODES::inout_mode then
+		  -- nothing to do, these are the same
+	       when MODES::once_mode then
+		  if sa.tp.is_subtype(cba.tp) then
+		     -- found better match
+		     cba := sa;
+		  end;		  
+	       end;
+	    end;
+	    
+	    -- we found a winning argument, however, there may be a few
+	    -- sigs that have it in the proper position. Collect them all.
+	    -- Note, if call tp for this argument is one of the special 
+	    -- types (CALL_TP_VOID, CALL_TP_CREATE, CALL_TP_BOUND_CREATE, 
+	    -- CALL_TP_ARRAY, 
+	    -- CALL_TP_UNDERSCORE) we add all sigs to the list.
+	    loop
+	       s ::= sig_list.elt!;
+	       if is_special_call_tp(c.args[i].tp) or  s.args[i].tp = cba.tp
+	       then
+		  pos_winner_sigs := pos_winner_sigs.insert(s);		  
+	       end;
+	    end;
+	    
+	    -- intersect with best up to (i-1)th arg signatures
+	    if void(winners) then
+	       winners := pos_winner_sigs.copy;
+	    else
+	       winners := winners.intersect(pos_winner_sigs);
+	    end;
+	    
+	 end;
+	 if winners.size > 1 then
+	    err_msg::="";
+	    loop
+	       s::=winners.elt!;
+	       err_msg := err_msg + "\n\t".separate!(s.str);
+	    end;
+	    c.tp.prog.err("Incorrect use of overloading: multiple matches for call\n\t" +
+		       err_msg);
+	    return void;
+	    
+	 elsif winners.size = 0 then
+	    if internal_call then
+	       c.tp.prog.err("No match for internal call " + c.str);	       
+	    else
+	       c.tp.prog.err("No match for the call " + c.str);
+	    end;
+	    return void;
+	 elsif winners.size = 1 then
+	    winner_sig := winners.first_elt;
+	 end;
+	    
+      elsif sig_list.size = 1 then
+	 -- there is only one candidate;
+	 winner_sig := sig_list.top;
+      end;
+      
+      return winner_sig;
+   end;
+
+   -- same as above but arg is a signature rather than call signature
+   -- Should be cleaned up at some point by parametrizing this class
+   -- by other SIG or CALL sig and changing the first argument
+   -- appropriately in both functions
+   select_sig(c:SIG, sig_list:FLIST{SIG}, internal_call:BOOL):SIG is
+      -- selects a signature corresponding to a call form the list of
+      -- overloaded sigs
+      
+      -- For each argument position, for the winning sig, we must have:
+      --   in, once arg: the type of arg must be a subtype of all the
+      --                 corresponding arg types in all other sigs
+      --   inout arg:    no contest here, all types are the same
+      
+      -- We use a simple algorithm here. We use the above rules to find
+      -- the winner signature for each argument. It MUST be the same for all.
+      -- If it is not, we have an error
+
+      winner_sig:SIG;
+      winners:FSET{SIG}; -- winner sigs up to current position
+      
+      if sig_list.size > 1 then
+	 loop
+	    i::=0.upto!(c.args.size-1); -- current arg position
+	    cba ::= sig_list.top.args[i];
+	    pos_winner_sigs:FSET{SIG};
+	    pos_winner_sigs := pos_winner_sigs.clear;
+	    loop
+	       s ::= sig_list.elt!;
+	       sa ::= s.args[i];             -- arg in a considered sig
+	       case sa.mode 
+	       when MODES::in_mode then
+		  if sa.tp.is_subtype(cba.tp) then
+		     -- found better match
+		     cba := sa;
+		  end;
+	       when MODES::out_mode then
+		  if cba.tp.is_subtype(sa.tp) then
+		     -- found better match
+		     cba := sa;
+		  end;
+	       when MODES::inout_mode then
+		  -- nothing to do, these are the same
+	       when MODES::once_mode then
+		  if sa.tp.is_subtype(cba.tp) then
+		     -- found better match
+		     cba := sa;
+		  end;		  
+	       end;
+	    end;
+	    
+	    -- we found a winning argument, however, there may be a few
+	    -- sigs that have it in the proper position. Collect them all.
+	    -- Note, if call tp for this argument is one of the special 
+	    -- types (CALL_TP_VOID, CALL_TP_CREATE, CALL_TP_BOUND_CREATE, 
+	    -- CALL_TP_ARRAY, 
+	    -- CALL_TP_UNDERSCORE) we add all sigs to the list.
+	    loop
+	       s ::= sig_list.elt!;
+	       if is_special_call_tp(c.args[i].tp) or  s.args[i].tp = cba.tp
+	       then
+		  pos_winner_sigs := pos_winner_sigs.insert(s);		  
+	       end;
+	    end;
+	    
+	    -- intersect with best up to (i-1)th arg signatures
+	    if void(winners) then
+	       winners := pos_winner_sigs.copy;
+	    else
+	       winners := winners.intersect(pos_winner_sigs);
+	    end;
+	    
+	 end;
+	 if winners.size > 1 then
+	    err_msg::="";
+	    loop
+	       s::=winners.elt!;
+	       err_msg := err_msg + "\n\t".separate!(s.str);
+	    end;
+	    c.tp.prog.err("Incorrect use of overloading: multiple matches for call\n\t" +
+		       err_msg);
+	    return void;
+	    
+	 elsif winners.size = 0 then
+	    if internal_call then
+	       c.tp.prog.err("No match for internal call " + c.str);	       
+	    else
+	       c.tp.prog.err("No match for the call " + c.str);
+	    end;
+	    return void;
+	 elsif winners.size = 1 then
+	    winner_sig := winners.first_elt;
+	 end;
+	    
+      elsif sig_list.size = 1 then
+	 -- there is only one candidate;
+	 winner_sig := sig_list.top;
+      end;
+      
+      return winner_sig;
+   end;
+   
+   is_special_call_tp(ctp:$CALL_TP):BOOL is
+      -- returns true if ctp is one of the special case "untyped" call types:
+      -- CALL_TP_VOID, CALL_TP_CREATE, CALL_TP_ARRAY, CALL_TP_UNDERSCORE
+      typecase ctp 
+      when CALL_TP_VOID then return true;
+      when CALL_TP_CREATE then return true;
+      when CALL_TP_BOUND_CREATE then return true;
+      when CALL_TP_ARRAY then return true;
+      when CALL_TP_UNDERSCORE then return true;
+      else
+	 return false;
+      end;
+   end
+end;  -- class SELECT_SIG
+-------------------------------------------------------------------

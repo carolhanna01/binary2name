@@ -1,0 +1,151 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- This partial class can be included by locks. If the lock and its manager
+-- are the same object, a faster access is possible, as the code below shows.
+-- This one is cutomized to manage a MUTEX. The specialization leads to more
+-- but faster code.
+-- This class does not count the number of waiting requests, the value of
+-- .waiting_requests_counter is always zero.
+partial class LM_SINGLE_MUTEX_MANAGER_INCLUDE < $LM_SINGLE_LOCK_MANAGER, $LOCK is
+   include MUTEX_INCLUDE get_manager->lm_get_manager;
+   include LM_SINGLE_LOCK_MANAGER create->;
+   private attr no_thread_waiting:BOOL;
+
+   -- Overriding the version of partial class LM_LOCK_MANAGER_ACCESS.
+   get_manager:$LM_LOCK_MANAGER is
+      if far(self) then return get_manager@where(self); end;
+      lck;
+      if SYS::ob_eq(my_manager,self) then return self; end;
+      release;
+      return lm_get_manager;
+   end;
+
+   number_of_threads_holding_locks:INT is return locked; end;
+
+   -- Overriding the "single" version.
+   access_acquire_single_lock is
+      if builtin_aasl then return; else rest_of_aasl; end;
+   end;
+
+   access_acquire_double_lock(lck2:QMUTEX) is
+      -- Get the thread ID.
+      tid ::= THREAD_ID::me;
+      -- Reservable?
+--      if (0 = lck2.locked) or (lck2.locked_by = tid) then
+--       if builtin_aasl then
+--          -- Reserve.
+--          lck2.locked := lck2.locked + 1;
+--          lck2.locked_by:=tid;
+--          return;
+--       end;
+--      end;
+   end;
+
+   builtin_aasl:BOOL is builtin LM_SINGLE_MUTEX_MANAGER_AASL; end;
+
+   rest_of_aasl is
+      if far(self) then rest_of_aasl@where(self); return; end;
+      --Does this manager/lock combination control itself?
+      not_self_controlled:BOOL;
+      SYS::inlined_C(
+            "#not_self_controlled=(void*)(ATTR(self,my_manager))!=(void*)#self;");
+      if not_self_controlled then
+         -- Another manager controls this lock.
+         -- Unlock self.
+         ll_mutex.unlck;
+         lm_get_manager.acquire_single_lock(self);
+         return;
+      end;
+      -- Get the thread ID.
+      tid ::= THREAD_ID::me;
+      -- The request has to be enqueued.
+      -- Create a low level lock and lock it.
+      sleeper ::= #LL_LOCK;     -- This call uses malloc.
+      sleeper.lck;
+      -- Enqueue the request.
+      my_queue.enq(#LM_THREAD_HANDLE(tid,sleeper,self));
+      no_thread_waiting := false;
+      -- Release the lock manager.
+      ll_mutex.unlck;
+      -- Wait until the low level lock becomes unlocked.
+      sleeper.lck;
+      -- Continue thread execution.
+   end; -- access_acquire_single_lock
+
+   -- Overriding the "single" version.
+   access_try_single_lock:C_INT is
+      return_val ::= builtin_atsl;
+      SYS::inlined_C("if ( #return_val >= 0 ) return (!#return_val);");
+      return rest_of_atsl;
+   end; -- access_try_single_lock:C_INT
+
+   builtin_atsl:C_INT is builtin LM_SINGLE_MUTEX_MANAGER_ATSL; end;
+
+   rest_of_atsl:C_INT is
+      if far(self) then return rest_of_atsl@where(self); end;
+      --Does this manager/lock combination control itself?
+      not_self_controlled:BOOL;
+      SYS::inlined_C(
+            "#not_self_controlled=(void*)(ATTR(self,my_manager))!=(void*)#self;");
+      if not_self_controlled then
+         -- Another manager controls this lock.
+         -- Unlock self.
+         ll_mutex.unlck;
+         return lm_get_manager.try_single_lock(self);
+      end;
+      -- Release the lock manager.
+      ll_mutex.unlck;
+      -- Choose the else clause.
+      return #C_INT(0);
+   end; -- rest_of_atsl:C_INT
+
+   -- Overriding the "single" version.
+   access_release_single_lock is
+      if builtin_arsl then return; else rest_of_arsl; end;
+   end;
+
+   access_release_double_lock(lck2:QMUTEX) is
+--      lck2.locked := lck2.locked - 1;
+      if builtin_arsl then return; else rest_of_aasl; end;
+   end;
+
+   builtin_arsl:BOOL is builtin LM_SINGLE_MUTEX_MANAGER_ARSL; end;
+
+   rest_of_arsl is
+      if far(self) then rest_of_arsl@where(self); return; end;
+      --Does this manager/lock combination control itself?
+      not_self_controlled:BOOL;
+      SYS::inlined_C(
+            "#not_self_controlled=(void*)(ATTR(self,my_manager))!=(void*)#self;");
+      if not_self_controlled then
+         -- Another manager controls this lock.
+         -- Unlock self.
+         ll_mutex.unlck;
+         lm_get_manager.release_single_lock(self);
+         return;
+      end;
+      if no_thread_waiting then ll_mutex.unlck; return; end;
+      thl ::= my_queue.remove;
+      -- Reserve.
+      locked := locked + 1;
+      locked_by:=thl.tid;
+      -- Unlock the corresponding low level lock.
+      thl.ll_lock.unlck;
+      no_thread_waiting := my_queue.is_empty;
+      -- Release the lock manager.
+      ll_mutex.unlck;
+   end; -- access_release_lock
+
+end; -- partial class LM_SINGLE_MUTEX_MANAGER_INCLUDE
+

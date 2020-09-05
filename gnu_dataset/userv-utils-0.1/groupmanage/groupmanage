@@ -1,0 +1,331 @@
+#!/usr/bin/perl
+#
+# Copyright (C)1995-9 Ian Jackson <ijackson@chiark.greenend.org.uk>
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# It is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# $Id: groupmanage,v 1.3 1999/11/09 21:45:57 ian Exp $
+
+sub usage {
+    &unlock;
+    &p_out;
+    print(<<END) || die "groupmanage: write usage: $!\n";
+groupmanage: $_[0]
+  usage:
+    groupmanage <groupname> [--info]
+    groupmanage <groupname> <action> [<action> ...]
+    groupmanage <groupname> --create [<action> <action> ...]
+  actions:
+       --clear
+       --add <username> <username> ...
+       --remove <username> <username> ...
+       --manager-clear
+       --manager-add <username> <username> ...
+       --manager-remove <username> <username> ...
+       --title <string>
+       --owner <username>  [root only]
+groupmanage is Copyright.  It is free software, released under the GNU
+GPL v2 or later.  There is NO WARRANTY.  See the GPL for details.
+END
+    exit(1);
+}
+
+@ARGV || &usage('too few arguments');
+
+if ($>) {
+    exec 'userv','root','groupmanage',@ARGV;
+    &quit("unable to execute userv to gain root privilege: $!");
+}
+
+chdir("/etc") || die "groupmanage: chdir /etc: $!\n";
+
+$groupname= shift(@ARGV);
+$groupname =~ y/\n//d;
+
+$groupname =~ m/^\w[-0-9A-Za-z]*$/ ||
+    &quit("first argument is invalid - must be group name");
+
+@ARGV || push(@ARGV,'--info');
+
+if ($ARGV[0] eq '--info') {
+    @ARGV == 1 || &usage('no arguments allowed after --info');
+    &p_out;
+    &load;
+    &checkexists;
+    &display;
+    &p_out;
+    exit(0);
+}
+
+$callinguser= exists $ENV{'USERV_UID'} ? $ENV{'USERV_UID'} : $<;
+
+%opt= ('user-create','0',
+       'user-create-minunameu','5',
+       'user-create-min','10000',
+       'user-create-max','19999',
+       'user-create-nameintitle','0',
+       'user-create-maxperu','5');
+%ovalid=  ('user-create','boolean',
+           'user-create-minunameu','number',
+           'user-create-min','number',
+           'user-create-max','number',
+           'user-create-nameintitle','boolean',
+           'user-create-maxperu','number');
+
+sub ov_boolean {
+    $cov= $_ eq 'yes' ? 1 :
+          $_ eq 'no' ? 0 :
+          &quit("groupmanage.conf:$.: bad boolean value");
+}
+
+sub ov_number {
+    m/^[0-9]{1,10}$/ || &quit("groupmanage.conf:$.: bad numerical value");
+}
+
+open(GMC,"groupmanage.conf") || &quit("read groupmanage.conf: $!");
+while (<GMC>) {
+    next if m/^\#/ || !m/\S/;
+    s/\s*\n$//;
+    s/^\s*([-0-9a-z]+)\s*// || &quit("groupmanage.conf:$.: bad option format");
+    $co= $1;
+    defined($opt{$co}) || &quit("groupmanage.conf:$.: unknown option $co");
+    $cov= $_;
+    $ovf= 'ov_'.$ovalid{$co};
+    &$ovf;
+    $opt{$co}= $cov;
+}
+close(GMC);
+
+sub naming {
+    $callinguser || return;
+    &p_out;
+    print(STDERR <<END) || &quit("write err re name: $!");
+groupmanage: groups you create must be named after you ...
+    <usernamepart>-<identifier>
+ You must quote at least $opt{'user-create-minunameu'} chars of your username $createby
+ (or all of it if it is shorter).
+END
+    exit(1);
+}
+
+if ($ARGV[0] eq '--create') {
+    $opt{'user-create'} || !$callinguser ||
+        &quit("group creation by users disabled by administrator");
+    length($groupname) <= 8 || &quit("group names must be 8 chars or fewer");
+    $groupname =~ m/^([-0-9A-Za-z]+)-([0-9a-z]+)$/ || &naming;
+    $upart= $1;
+    $idpart= $2;
+    $!=0; (@pw= getpwuid($callinguser))
+	|| &quit("cannot get your passwd entry: $!");
+    $createby= $pw[0];
+    $upart eq $createby ||
+        (length($upart) >= $opt{'user-create-minunameu'} &&
+         substr($createby,0,length($upart)) eq $upart)
+            || &naming;
+    $create= 1;
+    shift(@ARGV);
+}
+
+&lock;
+&load;
+
+if ($create) {
+    $bythisowner < $opt{'user-create-maxperu'} ||
+        &quit("you already have $bythisowner group(s)");
+    $groupfileix==-1 || &quit("group already exists, cannot create it");
+    $grouplistix==-1 || &quit("group is already in grouplist, cannot create it");
+    for ($gid= $opt{'user-create-min'};
+         $gid < $opt{'user-create-max'} && defined(getgrgid($gid));
+         $gid++) { }
+    $gid <= $opt{'user-create-max'} || &quit("out of gids to use, contact admin");
+    $password=''; @members=($createby);
+    $description= "${createby}'s -- user-defined, no title";
+    $owner= $createby; @managers=(); @members= ($createby);
+    $groupfileix=$#groupfile+1;
+    $grouplistix=$#grouplist+1;
+    &p("created group $groupname");
+} else {
+    &checkexists;
+    &p("modifying group $groupname");
+}
+
+&weare($owner) || grep(&weare($_),@managers) || !$callinguser ||
+    &quit("you may not manage $groupname");
+
+$action= 'none';
+while (@ARGV) {
+    $_= shift(@ARGV);
+    if (m/^--(add|remove)$/) {
+        $action= $1; $clist= 'members'; $what= 'member';
+    } elsif (m/^--owner$/) {
+	!$callinguser || &quit("only root may change owner");
+	@ARGV || &usage("no username owner after --owner");
+	$owner= shift(@ARGV);
+	&p("owner set to $owner");
+    } elsif (m/^--manager-(add|remove)$/) {
+        $action= $1; $clist= 'managers'; $what= 'manager';
+    } elsif (m/^--clear$/) {
+        &p('cleared list of members');
+        @members=(); $action='none'; $memc++;
+    } elsif (m/^--manager-clear$/) {
+        &p('cleared list of managers');
+        @managers=(); $action='none';
+    } elsif (m/^--title$/) {
+        &weare($owner) || !$callinguser ||
+	    &quit("only group's owner ($owner) may change title");
+        @ARGV || &usage("no title after --title");
+        $_= shift(@ARGV); y/\020-\176//cd; y/:\\//d;
+        if ($opt{'user-create-nameintitle'} &&
+            $gid >= $opt{'user-create-min'} && $gid <= $opt{'user-create-max'}) {
+            $_= "${owner}'s -- $_";
+        }
+        $description= $_;
+        &p("title set to $description");
+    } elsif (m/^-/) {
+        &usage("unknown option $_");
+    } elsif (m/^\w[-0-9A-Za-z]*$/) {
+        y/\n//d;
+        $chgu=$_;
+        getpwnam($chgu) || &quit("username $chgu does not exist");
+        eval "\@l = \@$clist; 1" || &quit("internal error: $@");
+        $already= grep($_ eq $chgu, @l);
+        if ($action eq 'add') {
+            if ($already) {
+                &p("$chgu already $what");
+            } else {
+                &p("added $what $chgu");
+                push(@l,$chgu);
+                $memc+= ($clist eq 'members');
+            }
+        } elsif ($action eq 'remove') {
+            if ($already) {
+                &p("removed $what $chgu");
+                @l= grep($_ ne $chgu, @l);
+                $memc+= ($clist eq 'members');
+            } else {
+                &p("$chgu is already not $what");
+            }
+        } else {
+            &usage("username found but no action to take for them");
+        }
+        eval "\@$clist = \@l; 1" || &quit("internal error: $@");
+    } else {
+        &usage("bad username or option $_");
+    }
+}
+&p("nb: a change to group membership only takes effect at the user's next login")
+    if $memc;
+$groupfile[$groupfileix]=
+    "$groupname:$password:$gid:".join(',',@members)."\n";
+$grouplist[$grouplistix]=
+    "$groupname:$description:$owner:".join(',',@managers).":$homedir\n";
+&save('group',@groupfile);
+&save('grouplist',@grouplist);
+unlink('gtmp') || &quit("unlock group (remove gtmp): $!");
+&p_out;
+exit(0);
+
+sub load {
+    open(GF,"< group") || &quit("read group: $!");
+    @groupfile=<GF>; close(GF);
+    $groupfileix=-1;
+    for ($i=0; $i<=$#groupfile; $i++) {
+        $_= $groupfile[$i]; s/\n$//;
+        next if m/^\#/;
+        m/^(\w[-0-9A-Za-z]*):([^:]*):(\d+):([-0-9A-Za-z,]*)$/ ||
+            &quit("bad entry in group: $_");
+        $gname2gid{$1}=$3;
+        next unless $1 eq $groupname;
+        $groupfileix<0 || &quit("duplicate entries in group");
+        $groupfileix= $i;
+        $password= $2;
+        $gid= $3;
+        @members= split(/,/,$4);
+    }
+    open(GL,"< grouplist") || &quit("read grouplist: $!");
+    @grouplist=<GL>; close(GL);
+    $grouplistix=-1;
+    for ($i=0; $i<=$#grouplist; $i++) {
+        $_= $grouplist[$i]; s/\n$//;
+        next if m/^\#/;
+        m/^(\w[-0-9A-Za-z]*):([^:]*):(\w[-0-9A-Za-z]*):([-0-9A-Za-z,]*):([^:]*)$/ ||
+            &quit("bad entry in grouplist: $_");
+        $bythisowner++ if ($create && $3 eq $createby &&
+                           $gname2gid{$1} >= $opt{'user-create-min'} &&
+                           $gname2gid{$1} <= $opt{'user-create-max'});
+        next unless $1 eq $groupname;
+        $grouplistix<0 || &quit("duplicate entries in grouplist");
+        $grouplistix= $i;
+        $description= $2;
+        $owner= $3;
+        $homedir= $5;
+        @managers= split(/,/,$4);
+    }
+}
+
+sub checkexists {
+    $grouplistix>=0 || &quit("no entry in grouplist for $groupname");
+    $groupfileix>=0 || &quit("no entry in group for $groupname");
+}
+
+sub weare {
+    return 0 if $_[0] eq '';
+    @pw= getpwnam($_[0]);
+    return @pw && $pw[2] == $callinguser ? 1 : 0;
+}
+
+sub save {
+    $filename= shift(@_);
+    unlink("$filename~");
+    open(DUMP,"> $filename.new") || &quit("create new $filename: $!");
+    print(DUMP @_) || &quit("write new $filename: $!");
+    close(DUMP) || &quit("close new $filename: $!");
+    link("$filename","$filename~") || &quit("create backup $filename: $!");
+    rename("$filename.new","$filename") || &quit("install new $filename: $!");
+}
+
+sub quit {
+    &unlock;
+    &p_out;
+    die "groupmanage: @_\n";
+}
+
+sub lock {
+    link('group','gtmp') || &quit("create gtmp: $!");
+    $locked++;
+}
+
+sub unlock {
+    return unless $locked;
+    $locked--;
+    unlink('gtmp') || warn("unlock group file (remove gtmp): $!\n");
+}
+
+sub display {
+    print(<<END) || &quit("write to stdout: $!\n");
+group       $groupname
+gid         $gid
+description $description
+owner       $owner
+managers    @managers
+members     @members
+homedir     $homedir
+END
+}
+
+sub p_out {
+    print(STDOUT "$stdout_string") || &quit("write to stdout: $!\n");
+    $stdout_string= '';
+}
+
+sub p {
+    $stdout_string.= $_[0]."\n";
+}

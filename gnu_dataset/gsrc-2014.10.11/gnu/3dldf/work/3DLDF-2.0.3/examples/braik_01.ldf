@@ -1,0 +1,345 @@
+%%%% braik_01.ldf
+%%%% Created by Laurence D. Finston (LDF) Tue Jun 26 18:54:02 CEST 2007
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing. 
+%%%% Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version. 
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details. 
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html. 
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for the maintainer of 
+%%%% GNU 3DLDF to send announcements to users. 
+%%%% To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o The Free Software Foundation, Inc.
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301 
+%%%% USA 
+
+%%%% Laurence.Finston@gmx.de 
+ 
+
+
+
+%% Run like this:
+%% 3dldf braik_01.ldf
+%% mpost braik_01.mp
+%% tex braik_01.txt
+%% dvips -o braik_01.ps braik_01.dvi 
+%% ps2pdf braik_01.ps %% Create PDF file.
+
+%% *** (3) The Braikenridge-Maclaurin Construction.
+%%         Constructing an ellipse from 5 points.  
+%%         LDF 2007.06.26.
+
+
+verbatim_metapost "verbatimtex  \magnification=\magstep2 \font\small=cmr8 etex ";
+
+
+
+%% **** (4) Frame
+
+pen_width := .5mm; 
+
+pickup pencircle scaled (pen_width, pen_width, pen_width);
+
+w := 16cm;
+h := 16cm;
+
+frame_w := w - .5pen_width;
+frame_h := h - .5pen_width;
+
+path frame;
+frame := origin -- (frame_w, 0) -- (frame_w, 0, frame_h) 
+                -- (0, 0, frame_h) -- cycle;
+
+shift frame (-.5frame_w, 0, -.5frame_h);
+
+
+%% **** (4) Declarations
+
+numeric i;
+numeric j;
+
+point A, B, C, D, E;  %% The given points.
+
+point F;              %% determined below.
+
+point p[];
+point_vector pv;
+
+
+point X;
+point Y;
+point Z;
+
+path q[];
+
+p0 := (5, 0);
+
+bool_point bp;
+
+pen dot_pen;
+dot_pen := pencircle scaled (1mm, 1mm);
+
+pen path_pen;
+path_pen := pencircle scaled (.7mm, .7mm);
+
+macro_vector mv;
+
+ellipse e;
+
+%% **** (4) Set ellipse and initial points.
+
+e := unit_ellipse scaled (4, 0, 3);
+
+A := get_point (15) e;
+B := get_point (11) e;
+C := get_point (8)  e;
+D := get_point (6)  e;
+E := get_point (4)  e;
+
+point axis[]; 
+
+%% **** (4) Macro definitions.
+
+%% ***** (5) Inner macro.
+
+%% If the `boolean bbool' argument is `true', there are two images 
+%% where `F' is at the same position as `B', `C', `D', and `E'.
+%% LDF 2007.06.26.
+
+def mv {numeric sstart, 
+       	numeric ccount,
+       	boolean bbool,
+       	point aa, point bb, point cc, point dd, point ee} +=
+
+numeric eend;
+
+if bbool:
+   eend := ccount;
+else:
+   eend := ccount - 1;
+fi;
+
+%% ****** (6)
+
+for i = 0 upto eend:
+beginfig(sstart + i);
+
+pickup path_pen;
+
+draw e;
+
+pickup dot_pen;
+
+dotlabel.rt("$A$", A) with_dot_color red;
+dotlabel.bot("$B$", B) with_dot_color red;
+dotlabel.lft("$C$", C) with_dot_color red;
+dotlabel.top("$D$", D) with_dot_color red;
+dotlabel.top("$E$", E) with_dot_color red;
+
+%% ****** (6)
+
+pickup path_pen;
+draw aa -- cc dashed evenly;
+draw bb -- dd dashed evenly;
+
+bp := (aa -- cc) intersection_point (bb -- dd);
+
+X := bp;
+
+pickup dot_pen;
+
+dotlabel.urt("$X$", X) with_dot_color red;
+
+%% ****** (6)
+
+pickup path_pen;
+
+draw aa -- ee dashed evenly;
+draw bb -- ee dashed evenly;
+
+Z := mediate(aa, ee, (i / ccount));
+
+pickup dot_pen;
+dotlabel.bot("$Z$", Z) with_dot_color red;
+
+bp := (X -- Z) intersection_point (bb -- ee);
+
+Y := bp;
+
+pickup dot_pen;
+
+dotlabel.urt("$Y$", Y) with_dot_color red;
+
+p1 := mediate(Z, X, 1.5);
+
+dotlabel.bot("$p_1$", p1) with_dot_color red;
+
+p2 := mediate(X, Z, 1.5);
+
+dotlabel.bot("$p_2$", p2) with_dot_color red;
+
+draw p1 -- p2 with_color green with_pen path_pen;
+
+
+%% ****** (6)
+
+bp := (cc -- Y) intersection_point (dd -- Z);
+
+F := bp;
+
+pickup dot_pen;
+dotlabel.llft("$F$", F) with_dot_color red;
+
+pickup path_pen;
+
+draw cc -- F with_color blue;
+draw dd -- F with_color blue;
+
+%% ****** (6)
+
+pickup path_pen;
+draw frame;
+
+pickup path_pen;
+draw frame;
+
+label("{\small Copyright {\copyright} 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation}", 
+      (0, 0, -.5frame_h) shifted (0, 0, -.5cm));  
+
+endfig with_projection parallel_x_z no_sort; 
+endfor;
+
+%% ****** (6)
+
+enddef;
+
+%% ***** (5) Outer macro.  It calls the `mv0' (the "inner" macro).
+
+def mv {numeric Sstart, 
+        numeric Ccount, 
+        boolean Bbool,
+        point AA, point BB, point CC, point DD, point EE} +=
+
+%% ****** (6)  First set of images.
+
+  mv0 {Sstart, Ccount, Bbool, AA, BB, CC, DD, EE};  %% 0 -- 20 or 0 -- 19
+
+%% ****** (6)  Second set of images.
+
+  Sstart += Ccount;
+
+  if Bbool:
+     Sstart += 1;
+     %% message "Incrementing `Sstart'.";
+  % else:
+  % message "Not incrementing `Sstart'.";
+  fi;
+
+
+  %message "`Sstart' before second set:";
+  %show Sstart;
+
+  mv0 {Sstart, Ccount, Bbool, EE, AA, BB, CC, DD}; %% 21 -- 41 or 20 -- 39
+
+%% ****** (6) Third set of images.
+
+  Sstart += Ccount;
+
+  if Bbool:
+     Sstart += 1;
+     %% message "Incrementing `Sstart'.";
+  % else:
+  % message "Not incrementing `Sstart'.";
+  fi;
+
+  %message "`Sstart' before third set:";
+  %show Sstart;
+
+  mv0 {Sstart, Ccount, Bbool, D, E, A, B, C}; %% 42 -- 62 or 40 -- 59
+
+%% ****** (6) Fourth set of images.
+
+  Sstart += Ccount;
+
+  if Bbool:
+     Sstart += 1;
+     %% message "Incrementing `Sstart'.";
+  % else:
+  % message "Not incrementing `Sstart'.";
+  fi;
+
+  %message "`Sstart' before fourth set:";
+  %show Sstart;
+
+  mv0 {Sstart, Ccount, Bbool, C, D, E, A, B}; %% 63 -- 83 or 60 -- 79
+
+%% ****** (6) Fifth set of images.
+
+  Sstart += Ccount;
+
+  if Bbool:
+     Sstart += 1;
+     %% message "Incrementing `Sstart'.";
+  % else:
+  % message "Not incrementing `Sstart'.";
+  fi;
+
+  %message "`Sstart' before fifth set:";
+  %show Sstart;
+
+  mv0 {Sstart, Ccount, Bbool, B, C, D, E, A}; %% 84 -- 104 or 80 -- 99
+
+  Sstart += Ccount;
+
+  %message "`Sstart' after fifth set:";
+  %show Sstart;
+
+%% ****** (6) End of `mv1' definition.
+
+enddef;
+
+%% **** (4) Call outer macro.
+
+%% If the third argument is `true', there are two images where `F' 
+%% is at the same position as `B', `C', `D', and `E'.
+%% LDF 2007.06.26.
+
+mv1 {0, 30, true, A, B, C, D, E};
+%mv1 {0, 20, false, A, B, C, D, E};
+
+%% **** (4) End.
+
+verbatim_metapost "end";
+end;

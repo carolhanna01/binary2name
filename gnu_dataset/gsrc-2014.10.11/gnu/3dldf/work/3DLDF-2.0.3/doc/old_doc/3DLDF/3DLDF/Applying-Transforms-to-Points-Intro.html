@@ -1,0 +1,122 @@
+<html lang="en">
+<head>
+<title>Applying Transforms to Points Intro - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Transforms.html#Transforms" title="Transforms">
+<link rel="prev" href="Transforms.html#Transforms" title="Transforms">
+<link rel="next" href="Inverting-Transforms.html#Inverting-Transforms" title="Inverting Transforms">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Applying-Transforms-to-Points-Intro"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Inverting-Transforms.html#Inverting-Transforms">Inverting Transforms</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Transforms.html#Transforms">Transforms</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Transforms.html#Transforms">Transforms</a>
+<hr>
+</div>
+
+<h3 class="section">4.1 Applying Transforms to Points</h3>
+
+<p>A <code>Transform</code> t is applied to a
+<code>Point</code> P using the binary <code>*=</code> operation
+(<code>Point::operator*=(const Transform&amp;)</code>)
+which performs matrix multiplication of <code>P.transform</code> by <code>t</code>. 
+See <a href="Point-Operators.html#Point-Operators">Point Reference; Operators</a>.
+
+<pre class="example">     Point P(0, 1);
+     Transform t;
+     t.rotate(90);
+     t.show("t:");
+     -| t:
+        1       0       0       0
+        0       0      -1       0
+        0       1       0       0
+        0       0       0       1
+     P *= t;
+     P.show_transform("P:");
+     -| P:
+     Transform:
+        1       0       0       0
+        0       0      -1       0
+        0       1       0       0
+        0       0       0       1
+     P.show("P:");
+     -| P: (0, 0, -1)
+</pre>
+   <p>In the example above, there is no real need to use a <code>Transform</code>,
+since <code>P.rotate(90)</code> could  have been called directly. 
+As constructions become more complex, the power of <code>Transforms</code>
+becomes clear:
+
+<!-- !! TO DO: Maybe make @code{Points} the same to begin with. -->
+<!-- LDF 2003.08.15. -->
+<pre class="example">     <span class="roman">1.</span> Point p0(0, 0, 0);
+     <span class="roman">2.</span> Point p1(10, 5, 10);
+     <span class="roman">3.</span> Point p2(16, 14, 32);
+     <span class="roman">4.</span> Point p3(25, 50, 99);
+     <span class="roman">5.</span> Point p4(12, 6, 88);
+     <span class="roman">6.</span> Transform a;
+     <span class="roman">7.</span> a.shift(2, 3, 4);
+     <span class="roman">8.</span> a.scale(1, 3, 1);
+     <span class="roman">9.</span> p2 *= p3 *= a;
+     <span class="roman">10.</span> a.rotate(p0, p1, 75);
+     <span class="roman">11.</span> p4 *= a;
+     <span class="roman">12.</span> p2.show("p2:");
+        -| p2: (18, 51, 36)
+     <span class="roman">13.</span> p3.show("p3:");
+        -| p3: (27, 159, 103)
+     <span class="roman">14.</span> p4.show("p4:");
+        -| p4: (24.4647, -46.2869, 81.5353)
+</pre>
+   <!-- !!  TO DO: If I change the example above, I may have to change this -->
+<!-- paragraph.  LDF 2003.08.15. -->
+   <p>In this example, a is shifted and scaled, and a is applied
+to both in line 9.  This works, because
+the binary operation
+<code>operator*=(const Transform&amp; t)</code> returns <var>t</var>,
+making it possible to chain invocations of <code>*=</code>. 
+Following this, a is rotated
+75 degrees
+
+   <p>about the line through p_0 and p_1. 
+Finally, all three transformations, which are stored in a, are
+applied to p_4.
+
+   </body></html>
+

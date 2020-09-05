@@ -1,0 +1,403 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- $AM_CALL_EXPR: Supertype for calls.
+-- AM_CALL_ARG: Argument to a call
+-- AM_CALL_EXPR: Implementation to be included by $AM_CALL_EXPR nodes.
+-- AM_ROUT_CALL_EXPR: Routine call expression.
+-- AM_ITER_CALL_EXPR: Iter call expression.
+-- AM_BND_ROUT_CALL_EXPR: Bound routine call expression.
+-- AM_BND_ITER_CALL_EXPR: Bound iter call expression.
+-- AM_EXT_CALL_EXPR: An external function call expression.
+
+-------------------------------------------------------------------
+   
+abstract class $AM_CALL_EXPR < $AM_EXPR is
+   -- Supertype for calls.
+   
+   create(nargs:INT, source:SFILE_ID):$AM_CALL_EXPR;
+      -- A new definition for a routine or iter with `nargs' arguments
+      -- (including self).
+
+   asize:INT;                    -- number of args
+   aget(i:INT):AM_CALL_ARG;      -- argument expressions
+   tp:$TP;                       -- the return type    
+
+end;
+-------------------------------------------------------------------  
+partial class AM_CALL_EXPR is
+   -- Supertype for calls.
+   include AM_EXPR create->;
+   include ARRAY{AM_CALL_ARG} append->,merge_with_by->;
+	 -- An array of argument expressions. These must be evaluated left
+	 -- to right.  This array includes `self'.
+      
+   create(nargs:INT, source:SFILE_ID):SAME is
+      -- A new definition for a routine or iter with `nargs' arguments
+      -- (including self).
+      r::=new(nargs); r.source:=source; return r end;      
+      
+end;
+-------------------------------------------------------------------      
+
+class AM_CALL_ARG < $AM is
+    include AM source->;
+
+    attr expr: $AM_EXPR;
+    attr mode: $MODE; 
+
+    source: SFILE_ID is
+	return expr.source;
+    end;
+   
+    source(set:SFILE_ID) is
+      expr.source := set;
+    end;
+
+   is_eq(ob: $OB): BOOL is
+      typecase ob
+      when AM_CALL_ARG then return is_eq(ob)
+      else return false; end;
+   end;
+	
+   is_eq(a: AM_CALL_ARG): BOOL is
+      return expr = a.expr and mode = a.mode;
+   end;
+    
+    -- Sets the mode to IN_MODE
+    create(e: $AM_EXPR): SAME is
+	res ::= new;
+	res.expr := e;
+	res.mode := #IN_MODE;
+	return res;
+    end;
+
+    create(e: $AM_EXPR, m: $MODE): SAME is
+	res ::= new;
+	res.expr := e;
+	res.mode := m;
+	return res;
+    end;
+
+    copy: SAME is
+	if void(self) then return void; end;
+	r ::= new;
+	r.expr := expr.copy;
+	r.mode := mode;
+	return r;
+    end;
+
+    is_near:BOOL is return expr.is_near; end;
+    near_depends_on:FLIST{AM_LOCAL_EXPR} is return expr.near_depends_on; end;
+
+end;
+-------------------------------------------------------------------      
+
+class AM_FORMAL_ARG < $AM is
+    include AM source->;
+
+    attr expr: AM_LOCAL_EXPR;
+    attr mode: $MODE; 
+
+    tp: $TP is  -- type of the argument expression
+	return expr.tp;
+    end;
+
+    source: SFILE_ID is
+	return expr.source;
+    end;
+
+    source(set:SFILE_ID) is
+      expr.source := set;
+    end;
+   
+    name: IDENT is
+	return expr.name;
+    end;
+
+    is_eq(ob: $OB): BOOL is
+      typecase ob
+      when AM_FORMAL_ARG then return is_eq(ob)
+      else return false; end;
+    end;
+	
+    is_eq(a: AM_FORMAL_ARG): BOOL is
+	return expr = a.expr and mode = a.mode;
+    end;
+    
+    -- Sets the mode to IN_MODE
+    create(e: AM_LOCAL_EXPR): SAME is
+	res ::= new;
+	res.expr := e;
+	res.mode := #IN_MODE;
+	return res;
+    end;
+
+    create(e: AM_LOCAL_EXPR, m: $MODE): SAME is
+	res ::= new;
+	res.expr := e;
+	res.mode := m;
+	return res;
+    end;
+
+    copy: SAME is
+	if void(self) then return void; end;
+	r ::= new;
+	r.expr := expr;
+	r.mode := mode;
+	return r;
+    end;
+
+end;
+-------------------------------------------------------------------      
+
+class AM_ROUT_CALL_EXPR < $AM_CALL_EXPR is
+   -- Routine call expression. 
+   include AM_CALL_EXPR;
+   
+   attr fun:SIG;              -- The signature to call.
+
+   tp:$TP is
+      -- The return type of this routine. Void if no return value.
+      return fun.ret end;
+
+   needs_import : BOOL is
+     return fun.needs_import;
+   end;
+
+   needs_export : BOOL is
+     return fun.needs_export;
+   end;
+
+   attr as_type : AS_TYPE_SPEC;
+
+   is_near:BOOL is return fun.is_near; end;
+   attr_access:ARRAY{INT} is return fun.attr_access; end;
+   near_depends_on:FLIST{AM_LOCAL_EXPR} is
+      na::=fun.near_depends_on_args;
+      nd:FLIST{AM_LOCAL_EXPR};
+      if void(na) or is_near then return void; end;
+      loop
+	 argd::=[na.elt!];
+	 if void(argd.near_depends_on) and ~argd.is_near then return void; end;
+         nd:=nd.append([na.elt!].near_depends_on);
+      end;		
+      return nd;
+   end;
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(size,source);
+      r.fun:=fun;
+      r.as_type:=as_type;
+      loop
+	 x::=elt!;
+	 if ~void(x) then x:=x.copy; end;
+         r.set!(x);
+      end;
+      return r;
+   end;
+
+-- two calls are equal if their sigs are equal, and all the args are equal
+   is_eq(a:$OB):BOOL is
+      typecase a
+      when AM_ROUT_CALL_EXPR then 
+	 if fun /= a.fun then return false end;
+	 if asize /= a.asize then return false end;
+	 -- if we have a call of the class OPT_DEBUG, we don't check
+	 -- integer constant. Actually, we should do that ONLY of
+	 -- -O_debug is used, but unfortunatly we don't have access
+	 -- to this flag, so we do it anyway.
+	 loop i::=asize.times!;
+	    x:$AM_EXPR:=void;
+	    if fun.tp.str="OPT_DEBUG" then 
+	       x:=[i].expr; 
+	    end;
+	    typecase x when AM_INT_CONST then
+	       y::=a[i].expr;
+	       typecase y when AM_INT_CONST then
+	       else return false; end;
+	    else -- is executed if x is void (fun.tp.str/="OPT_DEBUG")
+		 -- or x is no INT_CONST
+	       if [i] /= a[i] then return false end;
+            end;
+	 end;
+	 return true;
+      else return false;
+      end;
+   end;
+   hash:INT is 
+      htemp ::= fun.hash;
+      loop i::=asize.times!;
+	 htemp := htemp.hash;  -- add this in to mix things up a bit
+	 htemp := htemp.bxor([i].expr.hash);
+      end;
+      return htemp;
+   end; 
+
+-- a routine can be optimized if all it args can be optimized, and 
+-- the routine is not marked as 'unsafe'
+--#   can_invar_opt(prog:PROG):BOOL is
+--#      se_set::=fun.get_se_context(prog);
+--#      if void(se_set) then return false end;
+--#      if se_set.unsafe then return false end;
+--#      loop i::=asize.times!;
+--#	 if ~[i].expr.can_invar_opt(prog) then return false end;
+--#      end;
+--#      return true;
+--#   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_ITER_CALL_EXPR < $AM_CALL_EXPR is
+   -- Iter call expression.
+   include AM_CALL_EXPR;
+   
+   attr fun:SIG;		-- The signature to call.
+   attr init:$AM_STMT;		-- Code to execute the first time 
+      -- through (ie. to compute self and the once args).
+   attr lp:AM_LOOP_STMT;	-- The enclosing loop.
+   attr init_before_loop:BOOL;	-- true if the initialization of the
+                                -- iter can be executed before entering the
+				-- loop.
+   attr use_loop_index:BOOL;	-- true if the iter call should use the enclosing
+   				-- loop index variable.
+   attr uniq:STR;		-- Uniq string used in builtin iter calls
+   attr arg_list:ARRAY{STR};	-- List of arguments as C-Code
+   
+   is_near:BOOL is return fun.is_near; end;
+   attr_access:ARRAY{INT} is return fun.attr_access; end;
+   near_depends_on:FLIST{AM_LOCAL_EXPR} is
+      na::=fun.near_depends_on_args;
+      nd:FLIST{AM_LOCAL_EXPR};
+      if void(na) then return void; end;
+      loop
+         nd:=nd.append([na.elt!].near_depends_on);
+      end;		
+      return nd;
+   end;
+
+   tp:$TP is
+      -- The return type of this iter. Void if no return value.
+      return fun.ret end;
+
+   copy:SAME is
+      #OUT+"It is not possible to copy iter expressions\n";
+      assert(false);
+      return void; -- to keep the compiler happy
+   end;
+   
+end;
+
+-------------------------------------------------------------------      
+class AM_BND_ROUT_CALL_EXPR < $AM_CALL_EXPR is
+   -- Bound routine call expression.
+   include AM_CALL_EXPR;
+   
+   attr br:$AM_EXPR;		-- The bound routine to call.
+   attr br_tp:TP_ROUT;		-- The type of the bound routine.
+                                -- You can't just get this from br,
+                                -- because it might be in a typecase.
+
+   tp:$TP is
+      -- The return type of the bound routine. Void if none.
+	return br_tp.ret;
+    end;
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(size,source);
+      if ~void(br) then r.br:=br.copy; end;
+      r.br_tp:=br_tp;
+      loop
+	 x::=elt!;
+	 if ~void(x) then x:=x.copy; end;
+         r.set!(x);
+      end;
+      return r;
+   end;
+
+end;
+   
+-------------------------------------------------------------------      
+class AM_BND_ITER_CALL_EXPR < $AM_CALL_EXPR is
+   -- Bound iter call expression.
+   include AM_CALL_EXPR;
+   
+   attr bi:$AM_EXPR;	    	  -- The bound iter to call.
+   attr bi_tp : TP_ITER;          -- The type of the bound iter
+   -- You can't just get this from bi,
+   -- because it might be in a typecase.
+
+   -- could be incorporated at a later point cf. am_iter_call_expr
+   -- attr init_before_loop:BOOL; true if the initialization of the
+              
+   -- Only evaluated the first time through the loop. 
+   attr init:$AM_STMT;		-- Code to execute the first time 
+      -- through (ie. to compute self and the once args).
+   attr lp:AM_LOOP_STMT;	-- The enclosing loop.   
+   
+   tp:$TP is
+      -- The return type of the bound iter. Void if none.
+      return bi_tp.ret; 
+   end;
+   
+   copy:SAME is
+      #OUT+"It is not possible to copy bnd iter expressions\n";
+      assert(false);
+      return void; -- to keep the compiler happy
+   end;
+end;
+   
+-------------------------------------------------------------------   
+class AM_EXT_CALL_EXPR < $AM_CALL_EXPR is
+   -- A call on a function defined in an external language. These
+   -- are the signatures in an external class with no body.
+   -- Does assignment of the result to a local. Target is void
+   -- for calls with no return value. 
+   include AM_CALL_EXPR;
+
+   attr fun:SIG;		-- The signature to call.
+   attr nm:IDENT;		-- The name of the routine
+
+   create(nargs:INT, source:SFILE_ID, nm:IDENT):SAME is
+       r::=create(nargs,source);
+       r.nm:=nm;
+       return r;
+   end;
+
+   ext_tp:$TP is
+      -- The class containing this routine.
+      return fun.tp end;
+   
+   tp:$TP is
+      -- The return type of this routine. Void if no return value.
+      return fun.ret end;
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(size,source);
+      r.fun:=fun;
+      r.nm:=nm;
+      loop
+	 x::=elt!;
+	 if ~void(x) then x:=x.copy; end;
+         r.set!(x);
+      end;
+      return r;
+   end;
+
+end;
+
+-------------------------------------------------------------------   
+-- vim:sw=3:nosmartindent

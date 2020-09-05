@@ -1,0 +1,108 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class FIND_GENERICS is
+    -- This module checks all generic classes and tries to
+    -- create all instantiation, which use the some class parameters
+    -- as type parameters. These classnames are only locally visible.
+    -- So they are not stored in the tp_tbl but in a local loc_tbl
+    -- within the generic class.
+
+    -- For each of this classes only the interface is needed.
+    include FIND_TYPES find_types->;
+
+    private attr generic_class: TP_CLASS; -- Class currently being scanned.
+    
+    private attr tp_todo: FSET{TP_CLASS};
+
+    add( local_class: TP_CLASS )
+    -- Adding instantiations which consist partly of dummy classes to
+    -- the type tables.
+    is
+	assert prog.find_generics_stage and local_class.is_generic;
+        if local_class.params.size > 0 and
+		  ~prog.tp_tbl.test( local_class )
+	then
+	    tp_todo := tp_todo.insert( local_class );
+            if prog.trace_generics then
+                #ERR + "\nadding " + local_class.str + " to "
+                    + generic_class.str;
+            end;
+        end;
+    end;
+
+    find_generics
+        pre prog.check_generics
+    is
+	prog.find_generics_stage := true;
+        loop
+            generic_class := prog.tp_tbl.gen_tbl.elt!;
+	    tp_todo := void;
+	    tp_todo := tp_todo.insert(generic_class);
+	    loop
+		until!(void(tp_todo));
+		
+		-- Grab pending classes and flush list.
+		tp_doing ::= tp_todo;
+		tp_todo := void;
+		
+		loop
+		    current_class ::= tp_doing.elt!;
+		    assert current_class.is_generic;
+		    prog.tp_tbl.class_tbl :=
+			  prog.tp_tbl.class_tbl.insert(current_class);
+		    prog.tp_done := prog.tp_done.insert(current_class);
+		    -- The type graph gets the classes from there.
+		    
+		    if ~current_class.is_dummy_class then
+			con := current_class.tp_context_for;
+			as_tree ::= current_class.as_tree;
+			if ~void(as_tree) then
+			    do_tps(as_tree)
+			end;
+		    end;
+		end;
+	    end;
+	end;
+	prog.find_generics_stage := false;
+    end; -- find_generics
+
+    private process_tp(t:$TP) 
+    is
+	if void(t) then return end; -- A typespec error, ignore.
+	typecase t
+	when TP_CLASS then
+	    -- because this happens after finding the normal types
+	    -- there are no new types here.
+--	    nm:IDENT:=t.name; pnum:INT:=t.params.size;
+	    if t.is_generic then
+		add(t);
+		-- If instantiated classes are no longer checked, then
+		-- should be a check about existance of the class
+		-- (tree_for()) here.
+		loop process_tp(t.params.elt!) end;
+	    else
+		-- nothing to do, all types are already found during find_types scanning
+		-- instantiations. *H*
+	    end;
+	when TP_ROUT then
+	    -- follows later
+	when TP_ITER then 
+	    -- follows later
+	else
+	    #ERR + "what?\n";
+	end;  -- typecase
+	return;
+    end;
+   
+end; -- class FIND_GENERICS

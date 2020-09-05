@@ -1,0 +1,349 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+partial class RO_MAP_INCL{ITP,TTP} is
+   -- Partial class for MAPs
+   include COMPARE{TUP{ITP,TTP}};
+
+
+   -- Please consult the abstract class $RO_MAP for the
+   -- definitions of these stubs
+   stub aget(k:ITP):TTP;
+
+   stub insert(e:TUP{ITP,TTP}):SAME;
+      
+   stub target!:TTP;
+   
+   stub has_ind(e:ITP): BOOL;
+      
+   stub ind!:ITP;
+      
+   stub delete(e:TUP{ITP,TTP}):SAME;
+      
+   stub size:INT;
+   
+   stub copy: SAME;
+      
+   stub elt!:TUP{ITP,TTP};
+   
+   -- 
+   -- Methods required by the interface $RO_SET
+   -- 
+   insert(k:ITP,e:TTP):SAME is
+      -- Insert the element 'e' in the bag. If a tuple (e.t1,_) exists,
+      -- the replace it with (e.t1,e.t2)
+      return insert(#TUP{ITP,TTP}(k,e));
+   end;
+   
+   
+   add(k:ITP,e:TTP):VMULTIMAP{ITP,TTP} is
+      -- Result is a new multimap containing all the elements of self and 'k,e'
+      return add(#TUP{ITP,TTP}(k,e));
+   end;
+
+   delete(k:ITP,e:TTP):SAME is
+      -- Result is a new multimap containing all the elements of self 
+      -- except 'k,e'
+      return delete(#TUP{ITP,TTP}(k,e));
+   end;
+
+   delete_ind(k:ITP):SAME is
+      -- Returns a new map in which any occurences of the tuple (k,_)
+      -- has been deleted
+      if has_ind(k) then e ::= aget(k); return delete(k,e); 
+      else return self; end;
+   end;
+   
+   n_targets(k:ITP):INT post result = 0 or result = 1 is
+      -- Return the number of targets associated with the index 'k'
+      res ::= 0;
+      loop discard::=target!(k);res := res+1; end;
+      return res;
+   end;
+
+   n_ind:INT is
+      -- Return the number of indices in the map
+      return size;
+   end;
+   
+   target!(once k:ITP): TTP is
+      -- Yields all the targets associated with index 'k'
+      -- yield any t s.t. self.has((k,t))
+      if has_ind(k) then yield aget(k) end;
+   end;
+   
+   pair!:TUP{ITP,TTP} is
+      -- Yields all elements of self in an unspecified order. An alias for
+      -- "elt!"
+      loop yield elt!; end;
+   end;
+   
+   add(e:TUP{ITP,TTP}):VMULTIMAP{ITP,TTP} is
+      -- Result is a new multimap containing all the elements of self and 'e'
+      res ::= #VMULTIMAP{ITP,TTP}(self);
+      return res.add(e);
+   end;
+
+   delete_all(k:ITP,e:TTP):SAME is
+      -- Shortcut for for delete(e:TUP{ITP,TTP})
+      return delete(#TUP{ITP,TTP}(k,e))
+   end;
+
+   delete_all(e:TUP{ITP,TTP}):SAME is
+      -- Shortcut for for delete(e:TUP{ITP,TTP})
+      return delete(e.t1,e.t2);
+   end;
+
+   unique!:TUP{ITP,TTP} is
+      -- Yield the elements of self 
+      loop yield elt!; end;
+   end;
+   
+   count(arg:TUP{ITP,TTP}):INT is
+      -- Return the number of occurences of 'arg' in the container
+      if has(arg) then return 1 else return 0 end;
+   end;
+
+   n_unique:INT is
+      -- Return the number of unique pairs in 'self'
+      res:INT := 0;
+      loop discard ::= unique!; res := res+1; end;
+      return res;
+   end;
+
+   is_subset_of(arg:$RO_BAG{TUP{ITP,TTP}}):BOOL is
+      -- Returns true if 'self' is a subset of 'arg'. For elements that occur
+      -- multiple times, the number of occurences of the element in 'arg'
+      -- must be greater than or equal to the number of occurences in self
+      -- 
+      -- result=true iff for all e in self: count(e) <= arg.count(e)   
+      loop e ::= elt!;
+	 if ~arg.has(e) then return false; end;
+      end;
+      return true;
+   end;
+   
+   concat(arg:$ELT{TUP{ITP,TTP}}):VMULTIMAP{ITP,TTP} is
+      -- Returns a multimap containing all the elements of self and 'arg'.
+      -- For elements that occur multiple times, the result contains
+      -- the sum of the number of occurences in self and 'arg'
+      -- 
+      -- result=multimap of all e s.t. 
+      --                  result.count(e)=self.count(e)+arg.count(e)>0 
+      res ::= #VMULTIMAP{ITP,TTP}(self);
+      loop res := res.add(arg.elt!); end;
+      return res;
+   end;
+   
+   union(arg: $RO_BAG{TUP{ITP,TTP}}):VMULTIMAP{ITP,TTP} is
+      -- Returns a multimap containing the elements of 'self' and 'arg'. 
+      -- For elements that occur multiple times, the result contains
+      -- the maximum number of occurences in either self or 'arg'
+      -- This definition permits the union of sets to be consistent
+      -- with the union of bags.
+      -- 
+      -- result=bag of all e s.t. 
+      --             result.count(e)= max(self.count(e),arg.count(e)) > 0
+      res ::= #VMULTIMAP{ITP,TTP}(self);
+      loop arg_elt:TUP{ITP,TTP} := arg.elt!;
+	 if ~res.has(arg_elt) then res := res.add(arg_elt);
+	 else
+	    if arg.count(arg_elt) > res.count(arg_elt) then
+	       res := res.add(arg_elt);
+	    end;
+	 end;
+      end;
+      return res
+   end;
+   
+
+   union(arg: $RO_MAP{ITP,TTP}):SAME is
+      -- Returns a map containing the union of elements of 'self' and 'arg'. 
+      res ::= copy;
+      loop res := res.insert(arg.elt!) end;
+      return res
+   end;
+   
+   intersection(arg: $RO_BAG{TUP{ITP,TTP}}):VMULTIMAP{ITP,TTP} is
+      -- Returns a multimap containing the elements common to self and 'arg'
+      -- For elements that occur multiple times, the result contains
+      -- the minimum number of occurrences in either self or 'arg'
+      -- 
+      -- result=bag of all e s.t. 
+      --              result.count(e)=min(self.count(e),arg.count(e)) > 0 
+      res ::= #VMULTIMAP{ITP,TTP};
+      loop
+	 e ::= unique!;
+	 num_to_delete: INT := (count(e) - arg.count(e)).max(0);
+	 loop num_to_delete.times!;  res := res.delete(e); end;
+      end;
+      return res
+   end;
+
+   intersection(arg: $RO_MAP{ITP,TTP}):SAME is
+      -- Returns a map containing the elements common to self and 'arg'
+      res ::= copy;
+      loop e ::= elt!; 
+	 if ~arg.has(e) then res := res.delete(e) end;
+      end;
+      return res;
+   end;
+
+   diff(arg:$RO_BAG{TUP{ITP,TTP}}):SAME is
+      -- Returns a map containing the elements of 'self' not in 'arg'
+      -- 
+      -- result=set of all e s.t. self.has(e) and ~arg.has(e)
+      res ::= copy;
+      loop a ::= arg.elt!; 
+	 if has(a) then res := res.delete(a); end;
+      end;
+      return res;
+   end;
+   
+   sym_diff(arg:$RO_MAP{ITP,TTP}):SAME is
+      -- Returns a map containing all the elements of self that are not
+      -- in 'arg' and in 'arg' but not in self.  
+      union ::= union(arg);
+      intersect ::= intersection(arg);
+      return union.diff(intersect);
+   end;
+
+   is_empty:BOOL is 
+      -- Return true if the size = 0. 
+      return size=0
+   end;
+   
+   has(e:TUP{ITP,TTP}):BOOL pre ~void(self) is
+      -- True if the container contains the element "e"
+      -- Inefficient
+      res:BOOL := false;
+      loop elem ::= elt!;
+	 if elt_eq(e,elem) then return true; end;
+      end;
+      return false;
+   end;
+   
+   equals(c:$RO_BAG{TUP{ITP,TTP}}):BOOL is
+      -- Return true if self contains all the elements of 'c' and vice
+      -- versa. 
+      if size /= c.size then return false end;
+      loop if ~has(c.elt!) then return false end; end;
+      return true;
+   end;
+   
+   as_array:ARRAY{TUP{ITP,TTP}} is
+      -- Return the elements of the container as an array
+      res ::= #ARRAY{TUP{ITP,TTP}}(size);
+      loop res.set!(elt!) end;
+      return res;
+   end;
+
+   str: STR is return ELT_ALG{TUP{ITP,TTP}}::str(self); end;
+   -- Return a string representation of self 
+
+   -- 
+   -- Methods not required by the interface
+   -- 
+   create(arg:$ELT{TUP{ITP,TTP}}):SAME is
+      -- Create a new bag out of the elements of 'arg'
+      res: SAME := #;
+      loop res := res.insert(arg.elt!) end;
+      return res;
+   end;
+
+end;
+-------------------------------------------------------------------
+partial class MAP_INCL{ITP,TTP} is
+   -- Partial class that for the multimap abstraction, class $MAP{ITP,TTP}.
+   -- For more information on the relationship between the abstract
+   -- classes, partial classes and actual implementations please see
+   -- the class comment class in the abstraction.
+   -- 
+   -- This partial class implements some of the operations required by
+   -- the abstraction in terms of a set of core functions which are
+   -- stubs in this partial class. These stubs must be replaced by
+   -- real function in any descendant that actually implements the
+   -- abstraction. Particular implementations may replace also some of
+   -- the non-stub operations by substantially more efficient
+   -- versions, that make use of properties of the actual
+   -- implementation.
+   include RO_MAP_INCL{ITP,TTP};
+   
+   -- Please consult the abstract class $MAP for the
+   -- definitions of these stubs
+   stub aset(k:ITP,e:TTP);
+   
+   stub delete(k:ITP);
+
+   stub aget(k:ITP):TTP;
+
+   stub target!:TTP;
+
+   stub has_ind(e:ITP): BOOL;
+   
+   stub ind!:ITP;
+   
+   stub copy: SAME;
+   
+   stub elt!:TUP{ITP,TTP};
+
+   -- 
+   -- Methods required by the interface $RO_SET
+   -- 
+   as_value:VMAP{ITP,TTP} is
+      -- Return the value associated with this reference type
+      return #VMAP{ITP,TTP}(self);
+   end;
+
+   delete(e:TUP{ITP,TTP}):SAME is
+      -- Delete the tuple 'e' from this map, if it exists
+      res ::= copy; res.delete(e.t1); return res;
+   end;
+   
+   to_union(arg:$ELT{TUP{ITP,TTP}}) pre ~void(self) and ~void(arg) is
+      -- Convert this set into the union of self and 'arg'
+      -- 
+      -- self <- initial(self).union(arg)
+      loop e ::= arg.elt!; if ~has(e) then [e.t1] := e.t2 end; end;
+   end;
+
+   to_diff(arg: $ELT{TUP{ITP,TTP}}) pre ~void(self) and ~void(arg) is
+      -- Convert this set into the diff of self and 'arg' i.e. delete
+      -- from self any elements that occur in 'arg'
+      -- 
+      -- self <- initial(self).diff(arg)
+      loop e ::= arg.elt!; if has(e) then delete(e.t1) end; end;
+   end;
+
+   to_sym_diff(arg: $ELT{TUP{ITP,TTP}}) pre ~void(self) and ~void(arg) is
+      -- Convert this set into the diff of self and 'arg'
+      -- 
+      -- self <- initial(self).sym_diff(arg)
+      loop e ::= arg.elt!; 
+	 if has(e) then delete(e.t1) else [e.t1] := e.t2 end; 
+      end;
+   end;
+
+   to_intersection(arg:$RO_MAP{ITP,TTP}) pre ~void(self) and ~void(arg) is
+      -- Convert this set into the intersection of self and 'arg'
+      -- 
+      -- self <- initial(self).intersection(arg)
+      loop e ::= arg.elt!; if ~has(e) then delete(e.t1) end; end;
+   end;
+
+
+   
+end;
+-------------------------------------------------------------------

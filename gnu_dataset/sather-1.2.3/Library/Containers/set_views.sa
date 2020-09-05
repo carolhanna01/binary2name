@@ -1,0 +1,241 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class STD_SET_VIEWS{ETP} is
+   -- Standard views of sets, ususally as other sets 
+   
+   filter_view(s:$RO_SET{ETP},filter:ROUT{ETP}:BOOL):SET_VIEW{ETP} is
+      -- Return a set that is a filtered view of 's', showing only 
+      -- those elements that pass the predicate 'filter'
+      elt_gen:ITER:ETP := bind(filtered_elt!(s,filter));
+      has_rout:ROUT{ETP}:BOOL := bind(filtered_has(s,filter,_));
+      return #SET_VIEW{ETP}(elt_gen,has_rout);
+   end;
+   
+   union_view(s1,s2:$RO_SET{ETP}):SET_VIEW{ETP} is
+      -- Return a set view that represents the union of the elemetns
+      -- in s1 and s2
+      elt_gen:ITER:ETP := bind(union_elt!(s1,s2));
+      has_rout:ROUT{ETP}:BOOL := bind(union_has(s1,s2,_));
+      return #SET_VIEW{ETP}(elt_gen,has_rout);
+   end;
+   
+   intersection_view(s1,s2:$RO_SET{ETP}):SET_VIEW{ETP} is
+      -- Return a set view that represents the intersection of the elemetns
+      -- in s1 and s2
+      elt_gen:ITER:ETP := bind(intersection_elt!(s1,s2));
+      has_rout:ROUT{ETP}:BOOL := bind(intersection_has(s1,s2,_));
+      return #SET_VIEW{ETP}(elt_gen,has_rout);
+   end;
+
+   diff_view(s1,s2:$RO_SET{ETP}):SET_VIEW{ETP} is
+      -- Return a set view that represents the difference of the elemetns
+      -- in s1 and s2
+      elt_gen:ITER:ETP := bind(diff_elt!(s1,s2));
+      has_rout:ROUT{ETP}:BOOL := bind(diff_has(s1,s2,_));
+      return #SET_VIEW{ETP}(elt_gen,has_rout);
+   end;
+   
+   sym_diff_view(s1,s2:$RO_SET{ETP}):SET_VIEW{ETP} is
+      -- Return a set view that represents the symmetric diff of the elemetns
+      -- in s1 and s2
+      elt_gen:ITER:ETP := bind(sym_diff_elt!(s1,s2));
+      has_rout:ROUT{ETP}:BOOL := bind(sym_diff_has(s1,s2,_));
+      return #SET_VIEW{ETP}(elt_gen,has_rout);
+   end;
+   
+   private filtered_elt!(s:$RO_SET{ETP},filter:ROUT{ETP}:BOOL):ETP is
+      -- Create a higher order bound iterator that filters the
+      -- elements of a set
+      loop e ::= s.elt!;
+	 if filter.call(e) then yield e; end;
+      end;
+   end;
+   
+   private filtered_has(s:$RO_SET{ETP},filter:ROUT{ETP}:BOOL,e:ETP):BOOL is
+      -- Return true if the 'e' passes both the 'original_has' test
+      -- and the 'filter' test
+      if s.has(e) then return filter.call(e);
+      else return false end;
+   end;
+   
+   private union_elt!(s1,s2:$RO_SET{ETP}):ETP is
+      loop yield s1.elt!; end;
+      loop e2 ::= s2.elt!; if ~s1.has(e2) then yield e2 end; end;
+   end;
+   
+   private union_has(s1,s2:$RO_SET{ETP},e:ETP):BOOL is
+      return s1.has(e) or s2.has(e);
+   end;
+   
+   private intersection_elt!(s1,s2:$RO_SET{ETP}):ETP is
+      loop e2 ::= s2.elt!; if s1.has(e2) then yield e2 end; end;
+   end;
+   
+   private intersection_has(s1,s2:$RO_SET{ETP},e:ETP):BOOL is
+      return s1.has(e) and s2.has(e);
+   end;
+   
+   private diff_elt!(s1,s2:$RO_SET{ETP}):ETP is
+      loop e1 ::= s1.elt!; if ~s2.has(e1) then yield e1 end; end;
+   end;
+   
+   private diff_has(s1,s2:$RO_SET{ETP},e:ETP):BOOL is
+      return s1.has(e) and ~s2.has(e);
+   end;
+   
+   private sym_diff_elt!(s1,s2:$RO_SET{ETP}):ETP is
+      loop e1 ::= s1.elt!; if ~s2.has(e1) then yield e1 end; end;
+      loop e2 ::= s2.elt!; if ~s1.has(e2) then yield e2 end; end;
+   end;
+   
+   private sym_diff_has(s1,s2:$RO_SET{ETP},e:ETP):BOOL is
+      return ~(s1.has(e) and s2.has(e))
+   end;
+end;
+-------------------------------------------------------------------
+class SET_VIEW{ETP} <$RO_SET{ETP} is
+   -- A view of a set based on a closure abstraction
+
+   include COMPARE{ETP};
+
+   private attr elt_gen:ITER:ETP;
+   private attr has_rout:ROUT{ETP}:BOOL;
+   private attr size_rout:ROUT:INT;
+   
+   create(elt_gen:ITER:ETP,has_rout:ROUT{ETP}:BOOL,size_rout:ROUT:INT):SAME is
+      -- Create a view that behaves like a set based on the
+      -- element generating routine "elt_gen" and the container
+      -- routine "has_rout"
+      -- and the size closure "size_rout"
+      res ::= new;
+      res.elt_gen := elt_gen;
+      res.has_rout := has_rout;
+      res.size_rout := size_rout;
+      return res;
+   end;
+   
+   create(elt_gen:ITER:ETP,has_rout:ROUT{ETP}:BOOL):SAME is
+      -- Similar to other create, but size is computed by going
+      -- through the elements - highly inefficient timewise, but may
+      -- make sense spacewise, rather than creating a new set
+      res ::= new;
+      res.elt_gen := elt_gen;
+      res.has_rout := has_rout;
+      res.size_rout := void;
+      return res;
+   end;
+
+   size:INT is
+      -- Return the size of the set. If the set size routine is void, 
+      -- then just iterate through the elements to determine the size
+      if ~void(size_rout) then return size_rout.call;
+      else 
+	 res ::= 0; loop discard ::= elt!;res := res+1; end; return res;
+      end;
+   end;
+   
+   elt!:ETP is loop yield elt_gen.call!; end; end;
+   
+   has(e:ETP):BOOL is return has_rout.call(e) end;
+   
+   copy:SAME is
+      res ::= new;
+      res.elt_gen := elt_gen; 
+      res.has_rout := has_rout;
+      res.size_rout := size_rout;
+      return res;
+   end;
+
+   -- 
+   -- The remaining routines are merely wrappers around the core routines
+   -- 
+   as_value:VSET{ETP} is return #VSET{ETP}(self); end;   
+   
+   insert(e:ETP):VSET{ETP} is return as_value.insert(e) end;
+
+   delete(e:ETP):VSET{ETP} is return as_value.delete(e) end;
+
+   add(e:ETP):VBAG{ETP} is  res ::= #VBAG{ETP}(self); return res.add(e); end;
+      -- Result is a new bag containing all the elements of self and 'e'
+   
+   delete_all(e:ETP):VSET{ETP} is  return as_value.delete_all(e); end;
+   -- Result is a new set containing all the elements of self except for
+   -- any elements equal to 'e'
+   
+   count(e:ETP):INT is if has(e) then return 1 else return 0 end; end;
+   
+   unique!:ETP is  loop yield elt!; end; end;
+      -- Yield the elements of 'self'
+   
+   n_unique:INT is return size; end;
+   -- Return teh number of elements in self
+   
+   is_subset_of(arg:$RO_BAG{ETP}):BOOL is
+      -- Returns true if 'self' is a subset of 'arg'. 
+      loop e ::= elt!; if ~arg.has(e) then return false; end;  end;
+      return true;
+   end;
+   
+   concat(arg:$ELT{ETP}):VBAG{ETP} is   return as_value.concat(arg); end;
+   -- Returns a bag containing all the elements of self and 'arg'.
+   -- the sum of the number of occurences in self and 'arg'
+   
+   union(arg: $RO_BAG{ETP}):VBAG{ETP} is       return as_value.union(arg); end;
+   -- Returns a bag containing the union 'self' and 'arg'. 
+   
+   union(arg: $RO_SET{ETP}):VSET{ETP} is return as_value.union(arg) end;
+   -- Returns a set  containing the union of 'self' and 'arg'. 
+
+   intersection(arg: $RO_BAG{ETP}):VBAG{ETP} is 
+      -- Returns a bag containing the elements common to self and 'arg'
+      return as_value.intersection(arg);
+   end;
+
+   intersection(arg: $RO_SET{ETP}):VSET{ETP} is
+      -- Returns a set containing the elements of 'self' and in 'arg'
+      return as_value.intersection(arg) 
+   end;
+   
+   diff(arg: $RO_SET{ETP}):VSET{ETP} is   return as_value.diff(arg); end;
+   -- Returns a set containing the elements of 'self' not in 'arg'
+
+   sym_diff(arg: $RO_SET{ETP}):VSET{ETP} is return as_value.sym_diff(arg); end;
+   -- Returns a set containing the elements of 'self' and not in
+   -- 'arg' or in 'arg' but not in self
+
+   is_empty:BOOL is return size=0 end;
+   -- Return true if the size = 0. 
+   
+   equals(c:$RO_BAG{ETP}):BOOL is
+      -- Return true if self contains all the elements of 'c' and vice
+      -- versa.
+      if size /= c.size then return false end;
+      loop ce ::= c.elt!; 
+	 if ~has(ce) then return false end; 
+      end;
+      return true;
+   end;
+   
+   as_array:ARRAY{ETP} is
+      -- Return the elements of the container as an array
+      res ::= #ARRAY{ETP}(size);  loop res.set!(elt!) end;  return res;
+   end;
+   
+   str: STR is return ELT_ALG{ETP}::str(self); end;
+   -- Return a string representation of self 
+
+end;
+-------------------------------------------------------------------

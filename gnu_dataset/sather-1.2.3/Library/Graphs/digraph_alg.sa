@@ -1,0 +1,193 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class DIGRAPH_ALG{NTP,GTP<$RO_DIGRAPH{NTP}} is
+   -- NTP is the node index type and GTP is the graph type
+   --  
+   -- A collection of some very simple graph traversal algorithms
+   -- 
+   -- All the following routines assume that the graph is acyclic.
+   -- They may go into an infinite loop or fail in some other way if
+   -- the graph contains cycles. 
+   -- Usage:
+   --     g: DIGRAPH{INT} := #;
+   --     n1 ::= g.add_node(1);
+   --     n2 ::= g.add_node(2);
+   --     n3 ::= g.add_node(3)
+   --     g.connect(n1,n2); g.connect(n1,n3);
+   --     Constructs:
+   --      1
+   --      /\
+   --     2  3
+   --
+   --     Getting the layers of the graph:
+   --        l: LIST{SET{INT}} := #;
+   --        loop s: SET{INT} := DIGRAPH_ALG::layer!(g);
+   --             l := l.append(s);
+   --         end;
+
+   source!(once g: GTP): NTP is
+      -- Yield all source nodes in the graph "g"
+      loop n ::= g.node!;  if g.n_incoming(n) = 0 then yield n end; end;
+   end;
+      
+   sink!(once g: GTP): NTP is
+      -- Yield all sink nodes in the graph "g"
+      loop n ::= g.node!;  if g.n_outgoing(n) = 0 then yield n end; end;
+   end;
+   
+   bf!(once g: GTP,once n: NTP): NTP is
+      -- Return all nodes reachable from "n" in breadth first order
+      -- With inout arguments, also return the depth of the node
+      depths: FMAP{NTP,INT} := #;
+      q: A_QUEUE{NTP} := #;
+      q.enq(n);
+      depths := depths.insert(n,0);
+      loop until!(q.is_empty);
+	 current ::= q.remove;
+	 node_depth: INT := depths.get(current);
+	 yield current;
+	 child_node_depth: INT := node_depth + 1;
+	 loop out_node ::= g.outgoing!(current);
+	    if ~depths.has_ind(out_node) then 
+	       q.enq(out_node); 
+	       depths:=depths.insert(out_node,child_node_depth); 
+	    end;
+	 end;
+      end;
+   end;
+
+   df!(once g: GTP,once n: NTP): NTP is
+      -- Return all nodes reachable from "n" in depth first order
+      stack ::= #FLIST{NTP};  stack := stack.push(n);
+      depths  ::= #FMAP{NTP,INT};   depths := depths.insert(n,0);       
+      loop until!(stack.is_empty);
+	 cur ::= stack.pop;     
+	 cur_depth: INT := depths.get(cur);
+	 yield cur;		-- Actual visit
+	 child_depth: INT := cur_depth+1;
+	 loop neigh ::= g.outgoing!(cur);
+	    if ~depths.has_ind(neigh) then 
+	       stack:=stack.push(neigh);
+	       depths:=depths.insert(neigh,child_depth);
+	    end; -- else ( Neighbor has been seen before => backedge.) 
+	 end;
+      end; -- Until stack is empty
+   end;
+
+   topo_order!(once g: GTP): NTP is
+      -- Yield nodes in topological order
+      if g.is_empty then quit end; 
+      -- Current indegree holds the current number of incoming per node
+      -- When the number of incoming goes to zero, the node is
+      -- visited and the current indegree values of all its outgoing  are
+      -- decremented.
+      current_indeg ::= #FMAP{NTP,INT}; 
+      -- Mapping from nodes to living incoming
+      roots ::= #FLIST{NTP};	-- Root nodes
+      loop n: NTP := g.node!;
+	 deg ::= g.n_incoming(n);
+	 current_indeg := current_indeg.insert(n,deg);
+	 if (deg = 0) then roots := roots.push(n); end;
+      end;
+      loop while!(roots.size > 0);
+	 ni ::= roots.pop;
+	 -- Yield the next node in topological order
+	 yield(ni);
+	 loop out_node ::= g.outgoing!(ni);
+	    outgoing_indegree ::= current_indeg.get(out_node);
+	    new_out_indeg ::= outgoing_indegree - 1;
+	    current_indeg:=current_indeg.insert(out_node,new_out_indeg);
+	    if (new_out_indeg=0) then roots := roots.push(out_node);  end;
+	 end;
+      end;
+   end;
+
+   is_topo_order(g: GTP,nodes: $ARR{NTP}): BOOL is
+      -- Verify that the nodes in "node_order" are in topological order,
+      -- that each node's order is greater than the order of any
+      -- of its parents. Better methods probably exist...
+      node_order ::= #FMAP{NTP,INT};
+      loop node_order:=node_order.insert(nodes.elt!, nodes.size.times!) end;
+      loop
+	 node_depth_tup: TUP{NTP,INT} := node_order.pair!;
+	 child: NTP:=node_depth_tup.t1; child_order: INT := node_depth_tup.t2;
+	 if g.has_node(child) then
+	    loop parent: NTP := g.incoming!(child);
+	       if node_order.has_ind(parent) then
+		  parent_order: INT := node_order.get(parent);
+		  if parent_order >= child_order then
+		     return false;
+		  end;
+	       end; -- Ignore the parent if it is not in the order
+	    end; -- End of loop on parents
+	 end; -- End of if has_node(child).
+	 -- If the child is not in the current graph, also ignore it
+      end;
+      return true;
+   end;
+
+   layer!(once g: GTP): SET{NTP} is
+      -- Return the "layers" of the graph, i.e. peel off successive root
+      -- sets
+      -- 
+
+      -- Current indegree holds the current number of incoming per node
+      -- When the number of incoming goes to zero, the node is
+      -- visited and the current indegree values of all its outgoing  are
+      -- decremented.
+      -- All nodes/edges start out live. 
+      -- Loop, at each iteration:
+      --    Find the nodes that have no live incoming edges and  yield them
+      --    Mark the nodes and all edges going out of them as dead
+      -- Until no more nodes are left alive
+      li::= #FMAP{NTP,INT}; -- Maps nodes to the number of live incoming edges
+      dead ::= #SET{NTP};	  -- Root nodes, current dead set
+      nodes_left: INT := g.n_nodes; -- Number of live nodes left
+      loop n: NTP := g.node!;
+	 deg ::= g.n_incoming(n);
+	 li := li.insert(n,deg);
+	 if (deg = 0) then dead.insert(n); end;
+      end;
+      yield dead;
+      nodes_left := nodes_left - dead.size;
+      new_dead: SET{NTP};
+      loop while!(nodes_left > 0);
+	 new_dead := #SET{NTP};
+	 loop r ::= dead.elt!;
+	    -- Indicate that the outgoing edges from the old root set 
+	    -- are now dead
+	    loop out_node ::= g.outgoing!(r);
+	       -- Get the current live indegree of the node "out_node"
+	       indeg_of_out_node: INT := li.get(out_node);
+	       -- Reduce the number of "live"  edges into "out_node"
+	       -- by 1 since "r", a parent root,  has been yielded and is dead
+	       new_live_indegree_of_out_node ::= indeg_of_out_node - 1;
+	       li := li.insert(out_node,new_live_indegree_of_out_node);
+	       -- If there are no more "live" incoming edges to "out_node",
+	       -- yield it. Out_node is now dead
+	       if new_live_indegree_of_out_node = 0 then
+		  new_dead.insert(out_node);
+	       end;
+	    end; -- End of loop around outgoing nodes of a root
+	 end; -- End of loop through old dead
+	 yield new_dead;
+	 nodes_left := nodes_left - new_dead.size;
+	 dead := new_dead;
+	 -- Note: We cannot re-use the old dead's space since it might
+	 -- be in use outside this routine
+      end;
+   end;
+
+end;
+-------------------------------------------------------------------

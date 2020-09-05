@@ -1,0 +1,363 @@
+Getting Started with GNU/EDMA Tutorial Series
+GNU/EDMA for the C/C++ Developer
+David Martínez Olivera
+=============================================================
+Abstract
+--------
+This paper provides a brief description of the GNU/EDMA development system suitable for C/C++ developers. The paper will provide examples of the advantages and drawbacks of using GNU/EDMA and will show how to mix GNU/EDMA in C/C++ developments
+
+* A Simple Library Manager
+***************************
+GNU/EDMA provides a rich set of features to build software system, but at the lowest level, the system can be seen as a simple library/module manager, which allows to load and link modules dynamically on a given application.
+
+In next section examples about how to use this facilities are shown and some comments about this approach are provided at the end of the text
+
+** How do you deal with Modules in C/C++ Applications?
+******************************************************
+A C/C++ developer will see GNU/EDMA as a simple interface to the dlXXX family function in a typical UNIX system. Programmers can load shared libraries using dlopen, link function using dlsym, and unload the libraries through dlclose.
+
+A simple example about how to do this follows. The example was extracted from the dlopen man page.
+
+---------------------------8<---------------------------------------------------------------------
+#include <stdio.h>
+#include <dlfcn.h>
+
+int main(int argc, char **argv) {
+void   *handle;
+double (*the_func)(double);
+char   *error;
+
+handle = dlopen ("/library_path/libNAME.so", RTLD_LAZY);
+if (!handle) {
+   fputs (dlerror(), stderr);
+   exit(1);
+}
+
+the_function = dlsym(handle, "my_func");
+if ((error = dlerror()) != NULL)  {
+   fprintf (stderr, "%s\n", error);
+   exit(1);
+}
+
+printf ("%f\n", (*the_function)(2.0));
+dlclose(handle);
+}
+
+=================================================================================================
+Figure: Use of dlopen from C/C++
+------------------------8<------------------------------------------------------------------------
+
+The above example can be rewrite using GNU/EDMA. The result is shown bellow
+
+------------------------8<-------------------------------------------------------------------------
+#include <stdio.h>
+#include <edma.h>
+
+int
+main (int argc, char *argv[])
+{
+EDMAInit();
+printf ("%f\n", (double) edma_smet3s ("LIB_NAME", "my_func", "R64rR64", 2.0));
+EDMAEnd();
+}
+================================================================================================
+Figure: Equivalent dlopen example using GNU/EDMA
+----------------------------8<-------------------------------------------------------------------
+
+As you can imagine, this example just runs a static method defined in the class/component/library 'LIB_NAME'. Basically a static method is the same that a function in the OOP jargon.
+
+In order to execute a static method the 'edma_smet3s' primitive must be used. This primitive receives as first parameter the name of the module that contains the static method, followed by, the name of the method you want to invoke, its signature and finally the required parameters.
+
+The signature is a string which define the types of the parameters and the return value of a given function. In the above example, "R64" represents a real value of 64bits (that, is, a double), and the "r" modifier, means that what follows is the function return type.
+
+Signatures are used to provide support for parametric polimorphism when OO features are used, to help on data serialization (for persistence and distributed computing) and for building type-safe wrappers for the GNU/EDMA modules.
+
+Obviously, the use of edma_smet3 is less efficient that the function call in our previous C/C++ example. Developers can choose to use this primitive of directly work in the same way than in the first example by using the lower-level GNU/EDMA API.
+
+Bellow you can see our example rewritten using the GNU/EDMA low-level API
+
+----------8<--------------------------------------------------------------------------------
+#include <stdio.h>
+#include <edma.h>
+
+int
+main (int argc, char *argv[])
+{
+double  (*the_function) (CLASSID, double);
+CLASSIS cid;
+
+EDMAInit ();
+if ((cid = edma_get_classid ("LIB_NAME")) == -1)
+   {
+     EDMAEnd();
+     return -1;
+   }
+
+the_function = edma_get_mets_func (cid, "my_func", "R64rR64");
+
+if (the_function == 0) 
+  {
+    fputs ("Can't resolve static method 'my_func'", stderr);
+    EDMAEnd();
+    exit (1);
+  }
+
+printf ("%f\n", the_function (cid, 2.0));
+
+EDMAEnd();
+}
+=====================================================================
+Figure: Using GNU/EDMA low-level API
+--------------------------------8<--------------------------------------------------
+
+This example uses the 'edma_get_mets_func' function which returns the function pointer to the specified method within the module indicated as first parameter. GNU/EDMA automatically loads the library LIB_NAME, if it is not already in memory, and resolves the symbol.
+
+This is the lowest level API provided by GNU/EDMA. This means that you are accessing to the functions as they are defined in the module. This is the reason for the first parameter in the function pointer (the class identifier parameter is automatically attached when using 'edma_smet3s' primitive, but must be manually provided when working at this level).
+
+Static methods in GNU/EDMA receives as first parameter the identifier of the class/module they belongs to, in order to allow the method to access their class if required.
+
+In the example above the  first parameter in the function call can be set to any value if the method do not require any access to class information. In those cases the first parameter can be substituted by anything because it will be never used, however, this practice is not recommended from the point of view of updating the application in the future.
+
+GNU/EDMA provides an intermediate solution, based on the IDF wizard tool. This tool provides a graphical interface to generate skeletons for all the required files to build a GNU/EDMA module. Additionally, this tool can incorporate plug-ins to generate special files.
+
+One of this plug-ins, named EDMAIDF_C_INTERFACE_BUILDER, generates a header file with prototype declaration and helper functions that will allow the compiler to detect type errors in the code. This solution add safety to the code at cost of some flexibility lost.
+
+Here is our example again, using the generated wrapper for our example component
+----------------8<---------------------------------------------------------------------------------------
+#include <stdio.h>
+#include <edma.h>
+
+#include <lib_namespace/lib_name.h>
+
+int
+main (int argc, char *argv[])
+{
+EDMAInit();
+
+if ((lib_name_open_class ()) == 0) {
+  fputs ("Can't open LIBNAME class", stderr);
+  EDMAEnd();
+  exit (1);
+}
+
+printf ("%lf", lib_name_my_func (lib_name_cid, 2.0));
+EDMAEnd();
+}
+--------------------8<------------------------------------------------------------------------------
+
+And here is the generated wrapper for the libname (libname_space/lib_name.h), which was included in the code above.
+
+------------------------8<---------------------------------------------------------------------
+#ifndef LIB_NAME_WARPPER_H
+#define LIB_NAME_WARPPER_H
+
+CLASSID lib_name_cid;
+
+double (*lib_name_my_func) (CLASSID, double);
+
+void lib_name_open_class () 
+{
+	cid = edma_get_class_id ("LIB_NAME");
+	_lib_name_my_func = edma_get_mets_func (cid, "my_func", "R64sR64");
+	/* Resolve the rest of required applications*/
+	...
+}
+
+#endif
+-------------------------------8<----------------------------------------------------------
+
+The code above is the simplest straightforward way to wrap a GNU/EDMA class into a C/C++ application. More complex wrappers can be built as we will show in next sections.
+
+** Comments for the C/C++ Developer
+***********************************
+In previous section the lowest-level programming model provided by GNU/EDMA was described. 
+
+As showed, code becomes shorter and more clear using GNU/EDMA to manage shared libraries, at the same time, that a generic API to access modules and a generic process to generate this modules is provided, without lost of flexibility or efficiency (when lowest level API are used).
+
+In addition to this simplicity, the use of GNU/EDMA to manage modules has some interesting advantages which will be commented in the following paragraphs.
+
+In first place, GNU/EDMA provides a subsystem comparable to generic Java Class Loaders, that is, developers can write its own modules to get code loaded in memory from different places, as for example, a central module server. A general network installation system (EDNA EDMA Deployment Network Architecture) is been developed to provide this feature by default.
+
+So, for a development team, each time a new version of a component is available it will get installed in the class server. When other members of the team requires the use of the library, they only need to use it in the way described in previous section. The module will get local installed the first time it is used in each system.
+
+Note also, that GNU/EDMA provides a versioning system which allows developers to work with different versions of each component. By default, the system always provides the latest version of the required component, but developers can force the application to use an older version if they want. All the versions of a given component can live in a given system without interfering one each other.
+
+Second, GNU/EDMA allows to write modules using different languages. At the moment only some partial implementations for Perl, Python, C# and and the TCC C interpreter are available. When this interfaces get finished, multilanguage modules will be used in applications in a transparent way, and substituted at any time for other implementation in any other language.
+
+This feature allows developers to write each component in its preferer programming language or the language best suited for a given action, and then, they can use those components the same way they use their C/C++ libraries. Note that in this case, a proxy is required in order to interface the main applications with the target environment (a JVM or a Perl interpreter, for example), so when using the low-level API you get a pointer to those proxy functions. 
+
+What this means is that in this case the system will be less efficient that an ad-hoc implementation. Developers win in simplicity and lost flexibility. Anyway, this depends on the target system and you always can change, in future, your interpreted code for native code without changing your main application.
+
+Third, GNU/EDMA provides a set of hot-swapping features which are being heavily developed. This facilities will allow applications to be updated at run-time. Of course this feature cannot work directly with the lowest level API, due to the use of static pointers. In such a case, programmers must define safe points in the code where updating will be performed, and obtain again the pointers to the methods they are using.
+
+Finally, developers can use OOP in an easy way from a non-OO programming language as for example C, but this topic is not covered here.
+
+* GNU/EDMA and ADT
+**********************
+In previous section we show how to use GNU/EDMA as a basic module manager. No big differences with using any library in the system, nut GNU/EDMA can be used as a general Abstract Data Type system.
+
+To work this way, developer just need to add properties and methods to its modules. Such a module is defined with an Interface Definition File (IDF) which will look like this.
+
+---------------8<----------------------------------------------------
+[General]
+Name=HELLO_WORLD
+[SYS_DEF]
+ModuleName=libHELLO_WORLD.so
+NameSpace=examples
+[Definition]
+PropertiesNum=2
+MethodsNum=1
+[Prop0]
+Name=num
+Type=EUINT32
+Access=READ/WRITE
+ArrayElems=
+[Prop1]
+Name=str
+Type=EZSTRING
+Access=READ/WRITE
+ArrayElems=
+[Met0]
+Name=say
+Signature=
+Virtual=0
+[]
+----------------------8<------------------------------------------------------
+
+The IDF shown above, defines a new module named "HELLO_WORLD". Each instance of this module has two properties (or two variables if you prefer). First one is named 'num' and is of type 'EUint32' (unsigned integer 32 bits long), and the second one is named 'str' and is of type 'EZSTRING' (zero terminated string).
+
+Additionally the module defines a method named 'say' which has no parameter and do not return any value (empty signature).
+
+This IDL allows you to write a piece of code like this:
+
+------------8<---------------------------------------------------------
+main ()
+{
+   OBJID   hello;
+   EUint32 val;
+
+   EDMAInit();
+
+   hello = edma_new_obj ("HELLO_WORLD");
+
+   edma_set_prop_sint32 (hello, "num", 100);
+   edma_set_prop_strz (hello, "str", "John");
+
+   val = edma_get_prop_sint32 (hello, "num");
+   
+   /* Or using the type-unsafe primitives */
+
+   edma_wprop3 (hello, "num", 100);
+   edma_wprop3 (hello, "str", "John");
+
+   edma_rprop3 (hello, "stre", &val);
+   
+   EDMAEnd();
+}
+---------------8<-------------------------------------------------------------
+
+That is, the system is in charge to allocate memory to place the properties defined by the developer in the IDF file for each instance of the component 'HELLO_WORLD', and automatically provides basic assessor method to write/read these properties. Of course you can provide your own special assessor methods, but the simpler case is automatically covered by the system. 
+
+Using plain C we must write something like this.
+
+-------------------8<----------------------------------------------------
+hello.h
+-------
+#ifndef HELLO_H
+#define HELLO_H
+
+#ifndef HELLO_C
+typedef void *HELLO_INSTANCE;
+#endif
+
+HELLO_INSTANCE hello_new ();
+int            hello_free (HELLO_INSTANCE);
+void           hello_set_num (HELLO_INSTANCE obj, unsigned int value);
+unsigned int   hello_get_num (HELLO_INSTANCE obj);
+
+void           hello_set_str (HELLO_INSTANCE obj, char *);
+char *         hello_get_str (HELLO_INSTANCE obj);
+
+#endif
+---------------8<---------------------------------------------------------------
+hello.c
+----------------8<------------------------------------------------------------
+#define HELLO_C
+#include "hello.h"
+
+typedef struct hello_instace_t
+{
+	unsigned int num;
+	char         *str;
+} *HELLO_INSTANCE;
+
+HELLO_INSTANCE
+hello_new ()
+{
+  HELLO_INSTANCE aux;
+
+  if ((aux = (HELLO_INSTANCE) malloc (sizeof (struct hello_instance_t))) == NULL)
+     {
+	fprintf (stderr, "Can't alloc memory");
+	return NULL;
+     }
+  memset (aux, 0, sizeof (struct hello_instance_t));
+  return aux;
+}
+
+void
+hello_free (HELLO_INSTANCE obj)
+{
+  free (obj);
+}
+
+void
+hello_set_num (HELLO_INSTANCE obj, unsigned long value)
+{
+  obj->num = value;
+}
+/* Rest of accesor follows */
+.....
+---------------8<---------------------------------------------------------
+
+Writing the code showed above is a mechanical task, easy but tedious. When using GNU/EDMA you get all that code automatically, you just need to write the behavior of your ADT.
+
+There is an additional advantage of using GNU/EDMA instead of write your ADT directly. If you changes your ADT in a way do not affecting its interface, you don't need to re link the whole application. Of course, you can make a shared library with your ADT and write a piece of code as the one shown in first section of this doc, but you will finish writing something like GNU/EDMA.
+
+If C++ is used the developer needs to write less code, but the solution also lacks recompiling artifacts. Sometimes it is not a problem other times it is a not desired feature. Note that you can use GNU/EDMA with C++, so you can write part of your application in the classical way, and move the updateable parts to GNU/EDMA components.
+
+Other choice is use glib based solutions (GObject + GModule). You get a similar functionality to the one describe up to here, but you cannot enjoy the rest of facilities GNU/EDMA provides.
+
+More complex solutions exists XPCOM/UNO, Bonobo, CORBA, etc... But they are full object-oriented component-based system that are beyond the scope of this tutorial. They are covered in the "GNU/EDMA for the Component Developer".
+
+* Why should you use GNU/EDMA?
+******************************
+This is a key question when a new system appears and, in this case, the answer is: Why not? there is no penalty on using it.
+
+GNU/EDMA is a wide open system which doesn't impose special requirements to your applications. You can substitute some feature in your application to use GNU/EDMA, and let the other unchanged without further complexity, but, anyway, What do you win using GNU/EDMA?
+
+When compared to dlXXX family functions you get:
+
+- A more simple interface to access the code in the shared library
+- A portable way to deal with modules in your applications
+- An uniform way to write modules for your application in a neutral programming language way
+- A versionning system for the modules your application uses
+- A simple way to dynamically update your modules without loading/unloading/remapping the new library version
+- A generic mechanism for loading code, (Class loaders ala Java)
+
+When compared with other component system, for simple stand-alone applications (other applications fall out the scope of this tutorial) you get:
+
+- A very simple interface. No big-slope learning curves, no complex APIs and interfaces to learn.
+  Complex API's are required for complex applications, but the bad thing is that you must use such
+  complex API's even when your application is simple.
+- A very lightweight system, just a shared library and no special infrastructure required. No never used features bloating your application
+- An open door to integrate your system with any other.
+
+Additionally
+
+- You can use GNU/EDMA in a way that you do not lose performance at all
+- You get default ADT common code automatically for your C/C++ applications
+- You get a mostly automagic plug-in system for your application
+
+So, you can or you cannot use GNU/EDMA but using it has no drawback and a lot of advantages. Now, you can read the rest of tutorials on the "Getting Started with GNU/EDMA" series to learn more about the advantages of using this system.
+

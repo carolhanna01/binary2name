@@ -1,0 +1,204 @@
+* indicates 0.7 release requirement
+
+Features:
+
+* provide means to reposition (push left/right, shove left/right) the 
+  selected audio. (done)
+* docs. (fair enough for now)
+- move tool. (done)
+- bounce/mixdown to clipboard? (perhaps this can only be done effectively
+  until after disk store for clipboard is implemented)
+- better resampling algorithm. (done, SRC is great, needs testing)
+- pencil tool for sample drawing. (done)
+- multiple clipboards. (maybe) (no)
+- (simple) soundfile browser.
+- scriptability (bindings for guile, python, ...).
+- cuepoint repeater. (as a script perhaps)
+- show absolute average of waveform (RMS is probably too slow) (done, 
+  showing RMS)
+- mixer output channel peak/rms, output channel solo/mute
+- input channel assign
+- bit width dithering
+- grid really should have a variable start offset and some functions
+  to manipulate it (e.g. set selection as beat start)
+- more labelling facilities, e.g. colored tracks (maybe even regions),
+  track names, ...
+- a "horizontal move" tool on the basis of shove.
+- shove should (optionally) put the deleted audio from one end at the 
+  other end (shove a block "through" some other block).
+
+Cosmetic/UI:
+
+* cuepoints near top are drawn as sensitive on vertical scroll while marker 
+  tool is inactive.  (done)
+* loop demarcation obscures cursor. (done)
+* make size of infocanvas depend on font size (done)
+* massage module GUIs to look good in gtk2 (done)
+* timeline drawing is poor and slow (GTK2 done, GTK1 needs backport) (done)
+* sometimes "show zero" toggles just by clicking in the wavecanvas 
+  (probably triggered by view_sync_display() and values of bitfield flag)
+  (may have been caused by some other problem, can't reproduce)
+- track divider color and grid color must be more distinguished.
+- check that dragging markers does scroll (done)
+- browse button in dialog_save doesn't work (done)
+- make dialogs more beautiful (done)
+- in playback during loop mode, waveform display no longer tracks 
+  audio accurately after first loop, this happens only for tiny
+  playback buffers (audio chunk size) (done)
+- buttons in player toolbar not connected yet (done)
+- scrollbar/thumb sizing and playback scrolling logic should be 
+  examined/improved
+- cancelling an operation doesn't restore it to the previous state
+  (so that work is not wasted), so it should really be called "abort" 
+  rather than cancel. the previous state can always be restored using 
+  undo.
+- a sharp selection of a beat appears to be sloppy at high (> 1:512) zoom 
+  levels.
+- yellow loop demarcation looks stupid.
+- too many rendering artifacts, peaks pop up out of nowhere after doing 
+  "copy", ghost peaks remain after "cut", etc.
+- move "show RMS" to View menu.
+- need snap indicators.
+
+Functional bugs:
+
+* push sometimes does something weird, inserts huge number of frames
+  (overflow somewhere). (done, overflow still possible though)
+* push left deletes beginning of selection in some cases (related to
+  grid snap). (done)
+* track insert doesn't take mute/solo toggles into acccount. (done)
+* gladspa plugins crashes when applied to a section outside of the
+  actual sample data. (done)
+* shove right shoves left. (done)
+* there's a problem with (undoing) track insert. (unable to reproduce)
+* insert envelope/marker does not work if the first track is not 
+  selected. (done)
+* drag in select tool mode while control key pressed should do nothing 
+  (done)
+* bind envelope to parameter in GLADSPA Plugins, apply, select different
+  plugin, apply, the second plugin seems to inherit the "bind envelope" 
+  from the first invocation. (done)
+* cue play doesn't work. (done)
+* mixer levels don't respond anymore when vertically scrolled. (done)
+* insert tracks does not set the "changed" flag. (done)
+* insert tracks starts complaining that there are too many tracks 
+  before "max_tracks" pref is reached. (done)
+* push/shove shoves tracks not in map. (done)
+* undo after record does not restore previous selection. (done)
+* there is a race condition when recording which leads to blocklist 
+  count mismatch and subsequent abort(). (done)
+* edit->clear from 0 to M, then record from 0 to N, then delete 
+  from 0 to N = crash (think done) 
+* zoom below 1:1 doesn't work for 32 bit int (done)
+* "Transfer Left/Right" need to be called "Nudge Left/Right" (done)
+* Select All needs to select the maximum of the selected tracks,
+  not the maximum of all tracks. (done)
+* can't move point or selection beyond audio length. (done)
+* a clipboard containing tracks of unequal lengths causes a number of 
+  problems wrt to pasting. (done)
+* need way to disable envelopes (done)
+* check that view_redraw()/view_sync_display() are used properly
+* weird garbage in peak cache (i think) after doing amplitude treshold 
+  (was fixed, problem with block_update_peaks, not sure if works now)
+  (pretty sure)
+* paste mix behaves weird sometimes? (not implemented)
+* paste fit broken: pasted clipboard must *exactly* match selection
+  length. (fixed, still needs better resampler) (use libsamplerate) 
+  (done, needs testing) (not implemented)
+* tonegen frequency envelope inverts below -.5.
+* ladspa plugins buffers discontiguous (chebysev pops?) (maybe fixed)
+  (severe problems with chebysev but works *fine* under valgrind)
+  (chebysev seems to dislike power-of-two buffer sizes, using differently
+  sized buffer fixes problem, sent mail to Steve Harris)
+* when pencil goes out of the scope of the wavecanvas, the buffer
+  contains garbage. (going out of scope on the right is ok, on the left
+  has a wrap-around problem) (done)
+* moving pencil tool from right to left gives odd results. (done)
+* marker clipboard operations (done)
+* cuepoint operations (done)
+* invert envelopes doesn't work (done)
+* hook up grid again (done)
+* either disable undo's for marker ops or fix it so it works (done, disabled)
+* save-on-crash doesn't work. (done)
+* Module OK buttons don't work (they queue an execute command, but by
+  the time the execute command actually gets dispatched the module 
+  state has been torn down) (done)
+- when inserting new tracks mixer levels don't have convenient defaults.
+- resample module gui needs capability to guarantee new frame count.
+- save during playback stalls until playback is stopped (but not
+  always?) (maybe it was just slow/scheduler starved)
+- add position & multiplier to marker edit dialog
+- pencil tool has what looks like an off-by-one issue drawing 
+  on the far left side.
+- resampling (via Properties) is broken (only ZOH is broken)
+- selecting beyond snd_frame_count() then playing back tries to 
+  playback beyond snd_frame_count() (done)
+- crash when changing playback buffer size while playing (probably done) (done)
+- verify that float samples work (probably done)
+- mixdown saves the mixer settings of the document, it should 
+  generate new mixer settings suitable for the mixdown.
+- make sure that mixer_delete_source_tracks & mixer_delete_output_channels
+  and friends also account for solo and mute toggles. (done)
+- changing window size while pencilling = probably crash.
+- track_delete() returns failure when trying to delete outside
+  of the data, this makes track_replace_samples() fail when it
+  should succeed (since it does a delete() following by an insert()).
+- if ALSA device is busy, doing rec breaks the main event loop?
+- copying/pasting markers between shells not possible. (done)
+- record_discard should not discard before record start point.
+  (record_discard has disappeared, need new solution)
+- cue play doesn't restart playback at right position but a few frames 
+  later. 
+
+Technical/Other:
+
+* use constraints in all modules. (mostly done)
+- examine marker api, see if it can be improved.
+- should be possible to specify a limit for the history in bytes
+- add pref_get_sync_value() to make values in preference dialogs
+  reflect the values that will be written to disk.
+- obtain proper tool path for icons/glade UI. (done)
+- prepare mixer to track clipping/levels.
+- remove struct player parameters from player driver API where 
+  unnecessary (done)
+- introduce a proper "array of marker lists" abstraction and 
+  corresponding functions. (in progress, almost done)
+- maybe division by zero is possible somewhere in resample code 
+- check + sanitize envelope behaviour across modules.
+- correctly "blend" graph data on element boundaries.
+- more efficient replace operation (currently delete/insert, maybe
+  hard to make more efficient).
+- disk store for clipboard and undo buffers at least.
+- sample format conversion on output. (will be driver-dependant) (done)
+- start play while loading yields incorrect (too low) frame_count
+  so that playing stops prematurely. (not a bug, just inconvenient)
+  (done)
+- reentrancy issues when nesting actions. (mostly done) (now a
+  constraints problem)
+- disable certain functions on save, clipboard, etcetera.
+  (i.e. reentrancy above) (mostly done)
+- show clipboard. (sort of done, still problems, i.e. markers/selection
+  are lost when opening/closing clipboard) (better now, maybe 
+  needs more)
+- remove dependency on AFframecount
+- struct track now includes draw_hooks, this pulls in too much
+  rubbish and is very ugly, invent proper solution (solved through
+  event style mechanism, maybe solution is worse than problem though)
+- build system is poor, especially wrt to modules, need to support 
+  pkg-config for out-of-tree module building.
+- strictly separate private/public struct member boundaries and 
+  clean up .h files so they can be installed.
+- check that the file format supports the amount of data we want to stuff 
+  into it
+- need a kind of producer/consumer abstraction and ability to push data
+  through a filter chain
+- create lightweight object wrapper around GObject providing properties,
+  error handling, refcounting, and messaging. see NOTES, 11 mar 2005 
+- allow dynamic, programmatic manipulation of menubar and menus.
+- unit tests.
+- use C99 macros to print int64_t's.
+- work towards widgetification of the draw.c routines.
+- player->state->playback_pos and record_pos need a lock to protect them.
+- implement some kind of copy-on-write semantics. to be useful a gnusound
+  native file format is also necessary.
+- need to beat this file into shape.

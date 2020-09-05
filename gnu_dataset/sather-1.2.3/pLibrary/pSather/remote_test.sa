@@ -1,0 +1,96 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class VRER is
+   attr c:CHAR;
+   attr i:INT;
+   attr f:FLT;
+   attr d:FLTD;
+   attr v:VRE;
+   attr s:STR;
+   create:SAME is return new; end;
+   str:STR is
+      return c.str+":"+i+":"+f+":"+d+":"+v.str;
+   end;
+end;
+
+immutable class VRE < $STR, $IS_LT{VRE} is
+   -- Small class used to remotely test stuff.
+   include COMPARABLE;
+   attr i:INT;
+   attr o:$STR;
+   attr f:STR;
+   str:STR is
+      return i.str+":"+o+":"+f;
+   end;
+   is_lt(t:SAME):BOOL is return i<t.i; end;
+   is_eq(t:SAME):BOOL is return i=t.i; end;
+end;
+
+class TEST_REMOTE is
+   include R_TEST;
+
+   testit(i:INT,out j:INT,inout k:INT,inout s:STR,inout v:VRE):INT is
+      vx:VRE;
+      vx:=vx.i(here).o("CL"+here).f("cl"+here);
+      test("cluster_id",s+" "+v.str+" "+i+" "+k,"cluster "+here+" "+vx.str+" "+here.str+" "+here);
+      j:=here*2;
+      k:=here*3;
+      v:=vx.i(here*10).o("C_L"+here*10).f("c_l"+here*10);
+      s:="CLUSTER "+here;
+      return here*4;
+   end;
+
+   main is
+--      class_name("REMOTE_EXEC");
+--      loop i::=0.upto!(3);
+--         if(i<clusters) then
+--	    k,l:INT;
+--	    k:=i;
+--	    s:STR:="cluster "+i;
+--	    v:VRE;
+--	    v:=v.i(i).o("CL"+i).f("cl"+i);
+--            j::=testit(i,out l,inout k,inout s,inout v)@i;
+--	    test("inout values A",l.str+" "+k+" "+j,(i*2).str+" "+(i*3)+" "+i*4);
+--	    vx:VRE;
+--	    vx:=v.i(i*10).o("C_L"+i*10).f("c_l"+i*10);
+--	    test("inout values B",s+" - "+v.str,"CLUSTER "+i+" - "+vx.str);
+--	 end;
+--      end; 
+--      finish;
+--
+      class_name("REMOTE_VAL");
+      if clusters=1 then
+         #ERR+"\nfor this test you need at least 2 clusters\n";
+      else 
+	 ar::=#VRER@1;
+	 al::=#VRER;
+	 vx:VRE;
+	 ar.c:='C';al.c:='C';
+	 ar.i:=124;al.i:=124;
+	 ar.f:=1.55;al.f:=1.55;
+	 ar.d:=1.39989d;al.d:=1.39989d;
+	 ar.s:="HUHU";al.s:="HUHU";
+         ar.v:=vx.i(1).o("KlK").f("ooo");
+         al.v:=vx.i(1).o("KlK").f("ooo");
+	 sl::=al.str; 
+	 sr1::=ar.str;sr2::=ar.str;-- twice, to check caching
+	 test("read local 1",sl,sr1);
+	 test("read local 1",sl,sr2);
+	 test("read remote",al.str@1,ar.str@1)@1;
+      end;
+      finish;
+   end;
+end;
+
+-- vim:sw=3:nosmartindent

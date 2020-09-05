@@ -1,0 +1,82 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- collects various integer statistics
+-- Statistics are collected with counters. Each counter is 
+-- assoziated with a string. This string is used as a label
+-- to print out the statistics.
+-- Example: To count the functions compiled, you could
+-- add
+--          stat.incr("functions compiled");
+-- at the beginning of the code that compiles a function.
+
+abstract class $STAT < $STR is
+   incr(K:STR);
+   incr(k:STR,by:INT);
+   str:STR;
+   print;
+end; 
+
+-- collect no statistics
+class NULL_STAT < $STAT is
+   incr(K:STR) is end;
+   incr(k:STR,by:INT) is end;
+   str:STR is return ""; end;
+   print is end;
+   create:NULL_STAT is return new; end;
+end; 
+   
+-- collect normal statistics
+class STAT < $STAT is
+   attr map:FMAP{STR,INT};
+   -- include MAP{STR,INT};
+
+   create:SAME is
+      res ::= new;
+      res.map := #;
+      return res;
+   end;
+   
+   incr(k:STR) is
+      incr(k,1);
+   end;
+
+   incr(k:STR,by:INT) is
+      if map.test(k) then
+	 v ::= map.get(k);
+	 map := map.insert(k,v+by);
+      else map := map.insert(k,by) end;
+      -- v::=[k];    if v=INT::nil then v:=0; end;  [k]:=v+by;
+   end;
+
+   str:STR is
+      a:ARRAY{STR}:=#(map.size);
+      loop
+         a.set!(map.ind!+":\t"+map.elt!);
+      end;
+      a.sort;
+      s::="";
+      if map.size>0 then
+	 s:="Statistics:\n";
+	 loop
+	    s:=s+a.elt!+"\n"
+	 end;
+      end;
+      return s;
+   end;
+
+   print is
+      #OUT+str;
+   end;
+end
+

@@ -1,0 +1,67 @@
+#! /bin/sh
+#  -*- Mode: Shell-script -*-
+# extract.test --- test extract functionality
+#
+# Time-stamp:        "2005-03-07 13:05:41 bkorb"
+# Author:            Bruce Korb <bkorb@gnu.org>
+# Maintainer:        Bruce Korb <bkorb@gnu.org>
+# Created:           Fri Oct 1 10:27:31 PDT 1999
+# Last Modified:     $Date: 2006/09/24 02:11:15 $
+#            by: bkorb
+#
+# $Id: extract.test,v 4.4 2006/09/24 02:11:15 bkorb Exp $
+# ----------------------------------------------------------------------
+
+. ./defs
+
+# # # # # # # # # # TEMPLATE FILE # # # # # # # # #
+
+mkdir ${testname}.dir
+echo creating ${testname}.dir/${testname}.tpl
+cat > ${testname}.dir/${testname}.tpl <<_EOF_
+[= AutoGen5 template out =]
+This is the start of generated text[=\` echo ' working' \` =]
+We will be extracting from [=(find-file "${testname}" "sample")=]:
+[=(extract (find-file "${testname}" "sample")
+           "/* =-= %s =-= MARKER =-= %s =-= */")=]
+[=(extract (find-file "${testname}" "sample")
+           "/* =-= %s =-= SECOND =-= %s =-= */"
+           "DNC Test" "DEFAULT-ed text.")=]
+And this is the end.[= \` echo ' done' \` =]
+_EOF_
+
+# # # # # # # # # # EXPECTED OUTPUT FILE # # # # # # #
+
+echo creating ${testname}.dir/${testname}.sample
+# this is the output we should expect to see
+cat > ${testname}.dir/${testname}.sample <<_EOF_
+This is the start of generated text working
+We will be extracting from ${testname}.dir/${testname}.sample:
+_EOF_
+cat >> ${testname}.dir/${testname}.sample <<\_EOF_
+/* =-= START =-= MARKER =-= DO NOT CHANGE THIS COMMENT =-= */
+This is inserted text
+/* =-= END   =-= MARKER =-= DO NOT CHANGE THIS COMMENT =-= */
+/* =-= START =-= SECOND =-= DNC Test =-= */
+This is an insertion
+test.
+/* =-= END   =-= SECOND =-= DNC Test =-= */
+And this is the end. done
+_EOF_
+
+AGCMD="${AGexe} --no-def -L${testname}.dir -b${testname} -T${testname}.tpl"
+echo "${AGexe}"
+${AGCMD} || failure ${AGCMD} failed
+
+cmp -s ${testname}.out ${testname}.dir/${testname}.sample || \
+  failure "`diff -c ${testname}.out ${testname}.dir/${testname}.sample`"
+
+cleanup
+
+## Local Variables:
+## Mode: shell-script
+## indent-tabs-mode: nil
+## sh-indentation: 2
+## End:
+
+# end of extract.test

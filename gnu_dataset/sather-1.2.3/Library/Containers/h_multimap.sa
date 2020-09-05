@@ -1,0 +1,246 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- h_multimap.sa: Hash table based multimap
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class MULTIMAP{ITP,TTP} < $MULTIMAP{ITP,TTP} is
+
+   include H_MULTIMAP_IMPL{ITP,TTP}
+	 aset->aset,
+	 delete->delete;
+   include MULTIMAP_INCL{ITP,TTP};
+   
+end;
+-------------------------------------------------------------------
+class VMULTIMAP{ITP,TTP} < $VMULTIMAP{ITP,TTP} is
+
+   include H_MULTIMAP_IMPL{ITP,TTP}
+	 aset->aset,
+	 delete->delete;
+   include RO_MULTIMAP_INCL{ITP,TTP};
+
+   add(e:TUP{ITP,TTP}):SAME is
+      res ::=  copy;  res[e.t1] := e.t2;  return res;
+   end;
+   
+   delete(e:TUP{ITP,TTP}):SAME is 
+      res ::= copy; res.delete(e.t1,e.t2); return res; 
+   end;
+   
+   delete_all(e:TUP{ITP,TTP}):SAME is 
+      res ::= copy; res.delete_all(e.t1,e.t2); return res; 
+   end;
+   
+   is_eq(a:$OB):BOOL is
+      -- Return true if 'self' and 'v' have the same value
+      typecase a
+      when $RO_BAG{TUP{ITP,TTP}} then 
+	 if size /= a.size then return false; end;
+	 loop e:TUP{ITP,TTP} := a.unique!;
+	    if count(e)/=a.count(e) then return false; end;
+	 end;
+	 return true;
+      else return false end;
+   end;
+
+   hash:INT is
+      res:INT := 0; loop e ::= elt!; res := res.bxor(elt_hash(e)); end;
+      return res;
+   end;
+   
+end;
+-------------------------------------------------------------------
+class H_MULTIMAP_IMPL{ITP,TTP} is
+   -- Core of a multimap implementation based on the
+   -- DYNAMIC_DATABUCKET_TABLE. A multimap is a hash table from
+   -- indices to bags of targets
+   
+   private include DYNAMIC_DATABUCKET_TABLE{ITP,BAG{TTP}} 
+	 create->create,
+	 map_key!->ind!;		
+   
+   readonly attr total_size: INT;
+
+   size: INT is return total_size end;
+   
+   copy: SAME pre ~void(self) is
+      -- The copy routine is not the same as that for a generic
+      -- DDT, since each of the "items" i.e. the bags has to
+      -- be copied as well
+      res ::= new;
+      res.store := store.create(store.asize);
+      res.asize := asize;
+      res.n_inds := n_inds;
+      res.minsize := minsize;
+      res.bound := bound;
+      res.doubles := doubles;
+      res.split_pos := split_pos;
+      loop
+	 i ::= 0.upto!(asize-1);
+	 res.store[i] := store[i].copy_list;
+	 l ::= res.store[i];
+	 loop li ::= l.list!; li.data := li.data.copy end;
+      end;
+      res.total_size := total_size;
+      return res
+   end;
+
+   n_targets(k:ITP): INT
+      pre ~void(self)
+   is 
+      loop
+	 b ::= bucket(hash(k)).list!;
+	 if elt_key_eq(k,b.item) then
+	    return b.data.size
+	 end
+      end;
+      return 0
+   end;
+
+   has(e:TUP{ITP,TTP}):BOOL is return has(e.t1,e.t2) end;
+   
+   has(k:ITP,e:TTP): BOOL
+      pre ~void(self)
+   is
+      loop
+	 b ::= bucket(hash(k)).list!;
+	 if elt_key_eq(k,b.item) then
+	    return b.data.has(e)
+	 end
+      end;
+      return false
+   end;
+
+   target!(once k:ITP): TTP
+   -- Return the values associated with "k"
+      pre ~void(self)
+   is
+      loop
+	 b ::= bucket(hash(k)).list!;
+	 if elt_key_eq(k,b.item) then
+	    loop yield b.data.elt! end;
+	    quit
+	 end
+      end
+   end;
+
+   target!: TTP
+      pre ~void(self)
+   is
+      loop
+	 b ::= bucket( 0.upto!(asize-1) );
+	 loop
+	    bk ::= b.list!;
+	    loop yield bk.data.elt! end;
+	 end
+      end
+   end;
+
+   elt!: TUP{ITP,TTP}
+      pre ~void(self)
+   is
+      loop
+	 b ::= bucket( 0.upto!(asize-1) );
+	 loop
+	    bk ::= b.list!;
+	    loop yield #(b.item,bk.data.elt!) end;
+	 end;
+      end;
+   end;
+
+   aset(k:ITP,e:TTP)
+   -- Add the pair '(k,e)', even if it already exists
+      pre ~void(self)
+   is
+      h ::= hash(k);
+      loop
+	 b ::= bucket(h).list!;
+	 if elt_key_eq(b.item,k) then
+	    ssize ::= b.data.size;
+	    b.data.add(e);	-- (ben) Changed from insert to add
+	    if ssize < b.data.size then
+	       total_size := total_size + 1
+	    end;
+	    return
+	 end
+      end;
+      newset ::= #BAG{TTP};
+      newset.add(e);		-- Changed from insert to add
+      set_bucket(h,#DATABUCKET{ITP,BAG{TTP}}(k,newset,bucket(h)));
+      total_size := total_size + 1;
+      n_inds := n_inds + 1;
+      update_insert
+   end;
+
+   delete(k:ITP,e:TTP)
+   -- Delete a single occurence of the key value pair(k,e)
+      pre ~void(self)
+   is
+      h: INT;
+      b,prev: DATABUCKET{ITP,BAG{TTP}};
+
+      h := hash(k);
+      b := bucket(h);
+      loop until!( void(b) );
+	 if elt_key_eq(b.item,k) then
+	    if b.data.has(e) then
+	       total_size := total_size - 1;
+	       if b.data.size > 1 then
+		  b.data.delete(e)
+	       else
+		  if void(prev) then   set_bucket(h,b.next)
+		  else  prev.next(b.next) end;
+		  n_inds := n_inds - 1;
+		  update_delete
+	       end
+	    end;
+	    return
+	 end;
+	 prev := b;
+	 b := b.next
+      end
+   end;
+
+   delete(k:ITP)
+   -- Delete all elements associated with element "k"
+      pre ~void(self)
+   is
+      dummy ::= map_delete(k);
+      total_size := total_size - dummy.size
+   end;
+
+   delete_all(k:ITP,e:TTP)
+   -- Delete all occurences of the key value pair(k,e) Not very
+   -- efficient version that just iterates through 'delete' until
+   -- convergence.
+      pre ~void(self)
+   is
+      old_n_targs:INT := n_targets(k);
+      loop delete(k,e);
+	 new_n_targs:INT := n_targets(k);
+	 until!(new_n_targs = old_n_targs);
+	 old_n_targs := new_n_targs;
+      end;
+   end;
+
+   unique!:TUP{ITP,TTP} is
+      -- Yield the unique tuples in self. Currently converts into a
+      -- set and then yields the elements. Should be rewritten more
+      -- efficiently
+      s ::= #VSET{TUP{ITP,TTP}}(self);
+      loop yield s.elt!; end;
+   end;
+   
+end; 
+-------------------------------------------------------------------

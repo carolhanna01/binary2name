@@ -1,0 +1,254 @@
+#! @BASH@
+
+# Copyright (C) 2008, 2009, 2010, 2011, 2012,
+#   2013, 2014, 2016 Free Software Foundation, Inc.
+
+# This file is part of GNUnited Nations.
+
+# GNUnited Nations is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# GNUnited Nations is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with GNUnited Nations.  If not, see <https://www.gnu.org/licenses/>.
+
+function version () {
+cat <<EOF
+gnun-validate-html (@PACKAGE_NAME@) @PACKAGE_VERSION@
+Copyright (C) 2016 Free Software Foundation, Inc.
+You may redistribute copies of @PACKAGE_NAME@
+under the terms of the GNU General Public License.
+For more information about these matters, see the file named COPYING.
+EOF
+}
+
+function usage () {
+cat <<EOF
+Usage: gnun-validate-html OPTION... FILE
+
+Options:
+      --expand-to=FILE       Specify file to output expanded HTML
+      --root=DIRECTORY       Specify top directory for working copy
+      --apache-vars="VAR1=VAL1;VAR2=VAL2..."
+                             Specify predefined Apache variables
+  -V, --verbose              Produce more verbose output intended
+                               for email reports
+  -v, --version              Display version info and exit
+  -h, --help                 Display this help and exit
+
+Report bugs to @PACKAGE_BUGREPORT@
+@PACKAGE_NAME@ home page: <@PACKAGE_URL@>
+General help using GNU software: <https://www.gnu.org/gethelp/>
+EOF
+}
+
+function single_file_needed () {
+  echo 1>&2 "$0:" Single FILE argument is required.
+  exit 1
+}
+
+set -e
+
+ROOT=../..
+OUTPUT=
+MORE_VARS=
+verbose=no
+FILE=
+
+function parse_option () {
+  skip_option=
+  trimmed_option=
+  end_of_options=
+  case "$1" in
+      --help | -h* )
+	  usage
+	  exit 0
+	  ;;
+      --version | -v* )
+	  version
+	  exit 0
+	  ;;
+      -V | --verbose )
+	  verbose=yes
+	  ;;
+      -V* )
+	  verbose=yes
+	  trimmed_option="${1#-V}"
+	  ;;
+      --root )
+	  skip_option=yes
+	  ROOT="$2"
+	  ;;
+      --root=* )
+	  ROOT="${1#--root=}"
+	  ;;
+      --expand-to )
+	  skip_option=yes
+	  OUTPUT="$2"
+	  ;;
+      --expand-to=* )
+	  OUTPUT="${1#--expand-to=}"
+	  ;;
+      --apache-vars )
+	  skip_option=yes
+	  MORE_VARS=";$2"
+	  ;;
+      --apache-vars=* )
+	  MORE_VARS=";${1#--apache-vars=}"
+	  ;;
+      -- )
+          end_of_options=yes
+	  ;;
+      -* )
+          echo 1>&2 "$0:" Invalid option -- \`$1\'.
+          exit 1
+          ;;
+      * )
+          if test "x$FILE" = x; then
+            FILE="$1"
+          else
+            single_file_needed
+          fi
+	  ;;
+  esac
+}
+
+while [ $# -ge 1 ]; do
+  current_option="$1"
+  while test -n "$current_option";do
+    parse_option "$current_option" "$2"
+    if test -n "$skip_option"; then
+      shift
+    fi
+    if test -n "$trimmed_option"; then
+      current_option=-"$trimmed_option"
+    else
+      current_option=
+    fi
+  done
+  shift
+  if test -n "$end_of_options"; then
+    break
+  fi
+done
+
+if test "x$FILE" = x; then
+  if test $# -ne 1; then
+    single_file_needed
+  else
+    FILE="$1"
+  fi
+else
+  if test $# -gt 0; then
+    single_file_needed
+  fi
+fi
+
+if test ! -d "$ROOT"; then
+    echo 1>&2 "$0:" Root directory \`"$ROOT"\' doesn\'t exist.
+    exit 1
+fi
+
+DTD=@datadir@
+
+# Create two tempfiles and mark them for deletion on exit.
+TMP1=`@MKTEMP@ gnun.1.XXXXXX`
+TMP2=`@MKTEMP@ gnun.2.XXXXXX`
+trap "rm -f $TMP1 $TMP2" EXIT
+
+# Use $TMP1 if no $OUTPUT is specified.
+OUTPUT="${OUTPUT:-${TMP1}}"
+case "x$OUTPUT" in
+  x-* ) OUTPUT="./$OUTPUT" ;;
+  * ) ;;
+esac
+
+root="$ROOT"
+case "x$root" in
+  x-* ) root="./$root" ;;
+  * ) ;;
+esac
+file="$FILE"
+case "x$file" in
+  x-* ) file="./$file" ;;
+  * ) ;;
+esac
+
+root_dir=`cd "$root"; pwd`
+document_name="${FILE##*/}"
+case "$file" in
+  */* ) document_dir=`cd "${file%/*}"; pwd` ;;
+  * ) document_dir=`pwd` ;;
+esac
+dir_from_root=${document_dir#${root_dir}}
+
+if ! LANG=C @AWK@ -f @pkglibexecdir@/expand-ssi.awk -v root="$ROOT" \
+       -v passed_vars="DOCUMENT_NAME=${document_name};\
+DOCUMENT_URI=${dir_from_root}/${document_name};\
+REQUEST_URI=${dir_from_root}/${document_name}$MORE_VARS"\
+      < "$FILE" > "${OUTPUT}" 2> $TMP2; then
+  echo Failed to expand SSIs:
+  cat $TMP2
+  exit 1
+fi
+
+if @AWK@ '
+  # Check whether we are validating HTML5 or some other flavor of HTML
+  /<!DOCTYPE/ {
+     exit $0 ~ /<!DOCTYPE[ \t\f\n\r\v]+html[ \t\f\n\r\v]*>/;
+  }' "${OUTPUT}";
+then
+  # Use our old procedure
+  VALIDATE=--valid
+else
+  # We are "validating" HTML5
+  @AWK@ '
+    # Replace the DOCTYPE clause to make it work with xmllint
+    /<!DOCTYPE/ {
+      if (!vex)
+        {
+          head = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"\n"
+          head = head " \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">"
+          sub (/<!DOCTYPE[^>]*>/, head);
+          vex = 1;
+        }
+    }
+    { print; }' "${OUTPUT}" > $TMP2
+  mv $TMP2 "${OUTPUT}"
+  VALIDATE="--dtdvalid $DTD/html5.dtd"
+fi
+
+# Execute xmllint on $OUTPUT and save its output to $TMP2.
+set +e
+@XMLLINT@ --path "$DTD" $VALIDATE --nonet --noout "${OUTPUT}" 2> $TMP2
+LINTSTATUS=$?
+set -e
+
+# Parse xmllint's error output (if any) and print it by inserting
+# additional context line after every occurrence of "line X" where X
+# is a decimal number.  It is helpful to show the contents of those
+# mentioned lines, since xmllint runs on intermediate input file (with
+# expanded #include directives) and the translator can not easily look
+# up for references in it.
+@SED@ '
+  /line [[:digit:]]\+/ {
+     p
+     s=^.*line \([[:digit:]]\+\).*$=head -n \1 '"${OUTPUT}"' | tail -n 1=
+     e
+  }' $TMP2
+
+case $LINTSTATUS-$verbose in
+  0-* ) ;;
+  *-yes )
+    echo Expanded HTML file as it was validated is:
+    cat "${OUTPUT}"
+esac
+
+# Exit with xmlint's original exit status.
+exit $LINTSTATUS

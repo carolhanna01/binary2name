@@ -1,0 +1,90 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- TkToplevel.sa: Top-level windows
+-- Author: Matthias Ernst <mernst@desy.de>
+
+abstract class $TK_TOPLEVEL < $TK_WINDOW is
+   
+end; -- type $TK_TOPLEVEL
+
+-------------------------------------------------------------------
+
+class TK_TOPLEVEL < $TK_TOPLEVEL is
+   include TK_WINDOW
+	 init -> private TKWinit;
+   
+   
+   readonly shared typus: STR := "toplevel";
+   
+   visible: BOOL is
+      return mapped		-- toplevels don't care about their parents
+   end;
+
+   show is
+      app.tcl_tk.eval("wm deiconify "+pathname); -- there must be another way !?
+   end;
+
+   hide is
+      app.tcl_tk.eval("wm withdraw "+pathname);
+   end;
+
+   private init(name: STR, parent: $TK_WINDOW) is
+      TKWinit(name, parent);
+      nt.app.tcl_tk.eval("wm withdraw "+pathname);
+   end;
+end; -- class TK_TOPLEVEL < $TK_TOPLEVEL
+
+-------------------------------------------------------------------
+class TK_ROOT < $TK_TOPLEVEL is		-- the root-window "."
+   -- the only reason I support a separate class is the fiddling with root's pathname
+   include TK_TOPLEVEL;
+
+   create(app: TK_APP): SAME is
+      root ::= new;
+
+      root.app := app;
+      
+      root.name := "";
+      root.pathname := "";
+      root.mapped := false;
+      root.parent := void;
+      root.children := #;
+
+      return root;
+   end;
+
+   configure(option, val: STR) is
+      app.tcl_tk.eval("configure . -"+option+" "+val.pretty);
+   end;
+
+   configure(option, val: STR): SAME is
+      configure(option, val);
+      return self;
+   end;
+
+   configuration(option: STR): STR is
+      return app.tcl_tk.eval("lindex [. configure -"+option+"] 4");
+   end;
+
+   show is
+      app.tcl_tk.eval("wm deiconify .");
+   end;
+
+   hide is
+      app.tcl_tk.eval("wm withdraw .");
+   end;
+end; -- class TK_ROOT
+
+-------------------------------------------------------------------
+

@@ -1,0 +1,980 @@
+@c polyhed.texi
+  
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+
+@node Polyhedron Reference, Utility Functions, Cuboid Reference, Top
+@chapter Polyhedron Reference
+
+@tindex Polyhedron
+Class @code{Polyhedron} is defined in @file{polyhed.web}.
+It is derived from @code{Solid_Faced} using public derivation.  It is
+intended for use as a base class for specific types of polyhedra.
+Currently, the classes @code{Tetrahedron}, @code{Dodecahedron},
+@code{Icosahedron}, and @code{Trunc_Octahedron} (truncated octahedron)
+are derived from @code{Polyhedron}. 
+
+There is a great deal of work left to do on the polyhedra.
+
+@menu
+* Polyhedron Data Members::     
+* Regular Platonic Polyhedra::  
+* Semi-Regular Archimedean Polyhedra::  
+@end menu
+
+@node Polyhedron Data Members, Regular Platonic Polyhedra, Polyhedron Reference, Polyhedron Reference
+@section Data Members
+
+@deftypevr {Protected variable} {unsigned short} number_of_polygon_types
+The number of different types of polygon making up the faces of a
+@code{Polyhedron}.  The Platonic polyhedra have only one type of face,
+while the Archimedean can have more.
+@end deftypevr
+
+@deftypevr {Protected variable}  real face_radius
+The radius of the sphere that touches the centers of the polygonal faces
+of the polyhedron (@emph{Inkugel}, in German).
+@end deftypevr
+
+@deftypevr {Protected variable}  real edge_radius
+The radius of the sphere that touches the centers of the edges of the
+polyhedron.
+@c ?? GERMAN TERM?? IS IT ALWAYS THE CENTERS?? 
+@end deftypevr
+
+@deftypevr {Protected variable}  real vertex_radius
+The radius of the sphere touching the vertices of the polyhedron
+(@emph{Umkugel}, in German). 
+@end deftypevr
+
+@node Regular Platonic Polyhedra, Semi-Regular Archimedean Polyhedra, Polyhedron Data Members, Polyhedron Reference
+@section Regular Platonic Polyhedra
+
+3DLDF currently has classes for three of the five regular Platonic
+polyhedra: @code{Tetrahedron}, @code{Dodecahedron}, and
+@code{Icosahedron}.  There is no need for a special @code{Cube} class,
+because cubes can be created using @code{Cuboid} with equal width,
+height, and depth arguments (@pxref{Cuboid Reference}).  @code{Octahedron} is
+missing at the moment, but I plan to add it soon.
+
+@menu
+* Tetrahedron::                 
+* Dodecahedron::                
+* Icosahedron::                 
+@end menu
+
+@node Tetrahedron, Dodecahedron, Regular Platonic Polyhedra, Regular Platonic Polyhedra
+@subsection Tetrahedron 
+
+@tindex Tetrahedron
+Class @code{Tetrahedron} is defined in @file{polyhed.web}.
+It is derived from @code{Polyhedron} using public derivation.
+
+@menu
+* Tetrahedron Data Members::    
+* Tetrahedron Constructors and Setting Functions::  
+* Tetrahedron Net::             
+@end menu
+
+@node Tetrahedron Data Members, Tetrahedron Constructors and Setting Functions, Tetrahedron, Tetrahedron
+@subsubsection Data Members
+
+@deftypevr {Protected static @code{const} variable} real dihedral_angle
+The angle in radians between the faces of the @code{Tetrahedron}, namely
+@DEG{70} @PRM{32}.
+Only
+the Platonic polyhedra have a single dihedral angle, so
+@code{dihedral_angle} is not a member of 
+@code{Polyhedron}.  This means that it must be a member of all of the  
+classes representing Platonic polyhedra.
+@c
+@c !! TO DO:  Make illustration.
+@end deftypevr 
+
+@deftypevr {Protected variable} real triangle_radius
+The radius of the circle enclosing a triangular face of the
+@code{Tetrahedron}.
+@c
+@c !! TO DO:  Make illustration.
+@end deftypevr
+
+ 
+@node Tetrahedron Constructors and Setting Functions, Tetrahedron Net, Tetrahedron Data Members, Tetrahedron
+@subsubsection Constructors and Setting Functions
+
+@deftypefn {Default constructor} void Tetrahedron (@code{void})
+Creates an empty @code{Tetrahedron}.
+@end deftypefn 
+
+@deftypefn {Constructor} void Tetrahedron ({const Point&} @var{p}, {const real} @var{diameter_of_triangle}, [real @var{angle_x} = 0, [real @var{angle_y} = 0, [real @var{angle_z} = 0]]])
+@c
+Creates a @code{Tetrahedron} with its center at the origin.
+The faces have enclosing circles of diameter
+@var{diameter_of_triangle}.  If any of @var{angle_x}, @var{angle_y}, or
+@var{angle_z} is non-zero, the @code{Tetrahedron} is rotated by the
+amounts specified around the corresponding axes.  Finally, if @var{p} is
+not the origin, the @code{Tetrahedron} is shifted such that
+@code{center} comes to lie at @var{p}. 
+
+The center of a @code{Tetrahedron} is the intersection of the line
+segments connecting the vertices with the centers of the opposite
+faces.  
+
+@example
+Tetrahedron t(origin, 3);
+t.draw();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 3, -10, 3, 3, 10, 20);}
+\immediate\write\examples{Tetrahedron t(origin, 3);}
+\immediate\write\examples{t.draw();}
+\immediate\write\examples{draw_axes(gray);} 
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF187.png"
+alt="[Figure 187. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 187.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 187 not displayed.]
+@end ifinfo
+
+@c
+
+@example
+Point P(1, 0, 1);
+Tetrahedron t(P, 2.75, 30, 32.5, 20);
+t.draw();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 3, -10, 3, 3, 10, 20);}
+\immediate\write\examples{Point P(1, 0, 1);}
+\immediate\write\examples{P.dotlabel("$P$", "bot"); } 
+\immediate\write\examples{Tetrahedron t(P, 2.75, 30, 32.5, 20);}
+\immediate\write\examples{t.draw();}
+\immediate\write\examples{draw_axes(gray);} 
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF188.png"
+alt="[Figure 188. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 188.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 188 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+@deftypefn {Setting function} void set ({const Point&} @var{p}, {const real} @var{diameter_of_triangle}, [real @var{angle_x} = 0, [real @var{angle_y} = 0, [real @var{angle_z} = 0]]])
+Corresponds to the constructor above.
+@end deftypefn 
+
+@node Tetrahedron Net,  , Tetrahedron Constructors and Setting Functions, Tetrahedron
+@subsubsection Net
+
+@deftypefn {Static function} {vector<Reg_Polygon*>} get_net ({const real} @var{triangle_diameter})
+@c
+Returns the @dfn{net} of the @code{Tetrahedron}, i.e., the
+two-dimensional pattern of triangles that can be folded into 
+a model of a tetrahedron.@c
+@footnote{@c
+Albrecht D@"{u}rer invented this method of constructing polyhedra.
+@c !! TO DO:  Find citation!
+} 
+The net lies in the x-z plane.  The triangles 
+have enclosing circles of diameter @var{triangle_diameter}.  The center
+of the middle triangle is at the origin.
+
+@example
+vector<Reg_Polygon*> vrp = Tetrahedron::get_net(2);
+for (vector<Reg_Polygon*>::iterator iter = vrp.begin();
+     iter != vrp.end();
+     ++iter)
+  @OCB
+    (**iter).draw();
+  @CCB
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{vector<Reg_Polygon*> vrp = Tetrahedron::get_net(2);}
+\immediate\write\examples{for (vector<Reg_Polygon*>::iterator iter = vrp.begin();}
+\immediate\write\examples{     iter != vrp.end();}
+\immediate\write\examples{     ++iter)}
+\immediate\write\examples{  @OCB}
+\immediate\write\examples{    (**iter).draw();}
+\immediate\write\examples{  @CCB}
+\immediate\write\examples{draw_axes(gray, 0, "d", "", "rt"); }
+\immediate\write\examples{current_picture.output(Projections::PARALLEL_X_Z);}
+\OEX{Projections::PARALLEL_X_Z }
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF189.png"
+alt="[Figure 189. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 189.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 189 not displayed.]
+@end ifinfo
+
+@c
+
+This function is used in the non-default constructor.
+@xref{Tetrahedron Constructors and Setting Functions,,
+Polyhedron Reference; Regular Platonic Polyhedra; Tetrahedron;
+Constructors and Setting Functions}. 
+The constructor starts with the net and rotates three of the triangles
+about the adjacent vertices of the middle triangle.  Currently, all of
+the @code{Polyhedron} constructors work this way.  
+However, this is not ideal, because rotation uses the sine and cosine
+functions, which cause inaccuracies to creep in.  
+I think there must be a better way of constructing @code{Polyhedra}, but
+I haven't found one yet.  
+
+The @code{Polyhedron} constructors are also especially
+sensitive to changes made to @code{Transform::align_with_axis()}.  
+I have already had to rewrite them twice, and since
+@code{Transform::align_with_axis()} may need to be changed or rewritten
+again, it's possible that the @code{Polyhedron} constructors will have
+to be, too.  It has also occurred in the past, that the @code{Polyhedra}
+were constructed correctly on one platform, using a particular compiler,
+but not on another platform, using a different compiler.
+@end deftypefn 
+
+@deftypefn {Static function} void draw_net ({const real} @var{triangle_diameter}, [bool @var{make_tabs} = @code{true}])
+Draws the net for a @code{Tetrahedron} in the x-y plane.  
+The triangles
+have enclosing circles of diameter @var{triangle_diameter}.  The
+origin is used as the center of the middle triangle.  
+The centers of the triangles are numbered.
+If the argument @var{make_tabs} is used, tabs for gluing and/or sewing a
+cardboard model of the @code{Tetrahedron} together will be drawn, too. 
+The dots on the tabs mark where to stick the needle through, when sewing
+the model together (I've had good results with sewing).
+
+@example
+Tetrahedron::draw_net(3, true);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Tetrahedron::draw_net(3, true);} 
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF190.png"
+alt="[Figure 190. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 190.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 190 not displayed.]
+@end ifinfo
+
+@c
+
+The net is drawn in the x-y plane, because it currently doesn't work to
+draw it in the x-z plane.  I haven't gotten around to fixing this
+problem yet.
+@end deftypefn 
+
+@node Dodecahedron, Icosahedron, Tetrahedron, Regular Platonic Polyhedra
+@subsection Dodecahedron 
+
+@tindex Dodecahedron
+Class @code{Dodecahedron} is defined in @file{polyhed.web}.
+It is derived from @code{Polyhedron} using public derivation.
+
+Dodecahedra have 12 regular pentagonal faces.
+
+@menu
+* Dodecahedron Data Members::   
+* Dodecahedron Constructors and Setting Functions::  
+* Dodecahedron Net::            
+@end menu
+
+@node Dodecahedron Data Members, Dodecahedron Constructors and Setting Functions, Dodecahedron, Dodecahedron
+@subsubsection Data Members
+
+@deftypevr {Protected static @code{const} variable} real dihedral_angle
+The angle between the faces of the @code{Dodecahedron},
+namely 
+@DEG{116} @PRM{34} @math{= \pi - \arctan(2)}.
+@c
+@c !! TO DO:  Make illustration.
+@end deftypevr 
+
+@deftypevr {Protected variable} real pentagon_radius
+The radius of the circle enclosing a pentagonal face of the
+@code{Dodecahedron}. 
+@c
+@c !! TO DO:  Make illustration.
+@end deftypevr  
+
+@node Dodecahedron Constructors and Setting Functions, Dodecahedron Net, Dodecahedron Data Members, Dodecahedron
+@subsubsection Constructors and Setting Functions
+
+@deftypefn {Default constructor} void Dodecahedron (@code{void})
+Creates an empty @code{Dodecahedron}.
+@end deftypefn 
+
+@deftypefn {Constructor} void Dodecahedron ({const Point&} @var{p}, {const real} @var{pentagon_diameter}, [real @var{angle_x} = 0, [real @var{angle_y} = 0, [real @var{angle_z} = 0]]])
+@c
+Creates a @code{Dodecahedron} with its center at the origin, where the
+pentagonal faces have enclosing circles of diameter
+@var{pentagon_diameter}.  If any of @var{angle_x}, @var{angle_y}, or
+@var{angle_z} is non-zero, the @code{Dodecahedron} is rotated by the
+amounts specified around the corresponding axes.  Finally, if @var{p} is
+not the origin, the @code{Dodecahedron} is shifted such that 
+@code{center} comes to lie at @var{p}.
+
+
+@example
+Point P(-1, -2, 4);
+Dodecahedron d(P, 3, 12.5, 16, 2);
+d.draw();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(2, 5, -10, 2, 5, 10, 10);} 
+\immediate\write\examples{Point P(-1, -2, 4);}
+\immediate\write\examples{P.dotlabel("$P$"); } 
+\immediate\write\examples{Dodecahedron d(P, 3, 12.5, 16, 2);}
+\immediate\write\examples{d.draw();}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "top"); } 
+\OEX{}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF191.png"
+alt="[Figure 191. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 191.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 191 not displayed.]
+@end ifinfo
+
+@c
+
+@example
+d.filldraw();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{d.filldraw();}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "top"); } 
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF192.png"
+alt="[Figure 192. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 192.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 192 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+@node Dodecahedron Net,  , Dodecahedron Constructors and Setting Functions, Dodecahedron
+@subsubsection Net
+
+@deftypefn {Static function} {vector<Reg_Polygon*>} get_net ({const real} @var{pentagon_diameter}, [bool @var{do_half} = false])
+@c
+Returns the @dfn{net}, i.e., the two-dimensional pattern of pentagons
+that can be folded into a model of a dodecahedron.  The net lies
+in the x-z plane.  The pentagons have enclosing circles of diameter
+@var{pentagon_diameter}.  The center of the center pentagon of the first
+half of the net is at the origin.  If the argument 
+@var{do_half} is @code{true}, only the first half of the 
+net is created.  This is used in the non-default constructor.
+@xref{Dodecahedron Constructors and Setting Functions,,
+Polyhedron Reference; Regular Platonic Polyhedra; Dodecahedron;
+Constructors and Setting Functions}. 
+
+@example
+vector<Reg_Polygon*> vrp = Dodecahedron::get_net(1);
+for(vector<Reg_Polygon*>::iterator iter = vrp.begin();
+    iter != vrp.end(); ++iter)
+       (**iter).draw();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{vector<Reg_Polygon*> vrp = Dodecahedron::get_net(1);}
+\immediate\write\examples{for(vector<Reg_Polygon*>::iterator iter = vrp.begin();}
+\immediate\write\examples{    iter != vrp.end(); ++iter)}
+\immediate\write\examples{       (**iter).draw();}
+\OEX{Projections::PARALLEL_X_Z}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF193.png"
+alt="[Figure 193. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 193.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 193 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+@deftypefn {Static function} void draw_net ({const real} @var{pentagon_diameter}, [bool @var{portrait} = @code{true}, [bool @var{make_tabs} = @code{true}]])
+@c
+Draws the net for a @code{Dodecahedron} in the x-z plane.  The pentagons
+have enclosing circles of diameter @var{pentagon_diameter}.  The
+origin is used as the center of the middle pentagon of the first half of
+the net.  The centers of the pentagons are numbered.
+
+If the argument @var{portrait} is @code{true} (the default), the net
+is arranged for printing in portrait format.  If it's @code{false},
+it's arranged for printing in landscape format.
+
+The argument @var{make_tabs} currently has no effect.  
+When I get around to programming this, it will be used for specifying
+whether tabs for gluing and/or sewing a cardboard model should be drawn,
+too. 
+
+@example
+Dodecahedron::draw_net(1, false); 
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Dodecahedron::draw_net(1, false);} 
+\OEX{Projections::PARALLEL_X_Z}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF194.png"
+alt="[Figure 194. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 194.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 194 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+@node Icosahedron,  , Dodecahedron, Regular Platonic Polyhedra
+@subsection Icosahedron 
+
+@tindex Icosahedron
+Class @code{Icosahedron} is defined in @file{polyhed.web}.
+It is derived from @code{Polyhedron} using public derivation.
+
+Icosahedra have 20 regular triangular faces.
+
+@menu
+* Icosahedron Data Members::    
+* Icosahedron Constructors and Setting Functions::  
+* Icosahedron Net::             
+@end menu
+
+@node Icosahedron Data Members, Icosahedron Constructors and Setting Functions, Icosahedron, Icosahedron
+@subsubsection Data Members
+
+@deftypevr {Protected static @code{const} variable}  real dihedral_angle
+The angle between the faces of the @code{Icosahedron}, namely
+@DEG{138} @PRM{11} @math{= \pi - \arcsin(2/3)}. 
+@c
+@c !! TO DO:  Add illustration.
+@end deftypevr 
+
+@deftypevr {Protected variable} real triangle_radius
+The radius of the circle enclosing a triangular face of 
+the @code{Icosahedron}.
+@c
+@c !! TO DO:  Add illustration.
+@end deftypevr 
+
+
+@node Icosahedron Constructors and Setting Functions, Icosahedron Net, Icosahedron Data Members, Icosahedron
+@subsubsection Constructors and Setting Functions
+
+@deftypefn {Default constructor} void Icosahedron (@code{void})
+Creates an empty @code{Icosahedron}. 
+@end deftypefn 
+
+@deftypefn {Constructor} void Icosahedron ({const Point&} @var{p}, {const real} @var{diameter_of_triangle}, [real @var{angle_x} = 0, [real @var{angle_y} = 0, [real @var{angle_z} = 0]]])
+@c
+Creates an @code{Icosahedron} with its center at the origin, where the
+triangular faces have enclosing circles of diameter
+@var{diameter_of_triangle}.  If any of @var{angle_x}, @var{angle_y}, or
+@var{angle_z} is non-zero, the @code{Icosahedron} is rotated by the
+amounts specified around the corresponding axes.  Finally, if @var{p} is
+not the origin, the @code{Icosahedron} is shifted such that
+@code{center} comes to lie at @var{p}.
+
+@example
+Icosahedron i(origin, 3, 0, 10);
+i.draw();
+@end example
+
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 5, -10, 3, 5, 10, 10);  }
+\immediate\write\examples{Icosahedron i(origin, 3, 0, 10);}
+\immediate\write\examples{i.draw();} 
+\OEX{}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF195.png"
+alt="[Figure 195. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 195.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 195 not displayed.]
+@end ifinfo
+
+@c
+
+@example
+i.filldraw();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{i.filldraw();} 
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF196.png"
+alt="[Figure 196. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 196.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 196 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+
+@node Icosahedron Net,  , Icosahedron Constructors and Setting Functions, Icosahedron
+@subsubsection Net
+
+@deftypefn {Static function} {vector<Reg_Polygon*>} get_net ({const real} @var{triangle_diameter}, [bool @var{do_half} = @code{false}])
+@c
+Returns the @dfn{net}, i.e., the two-dimensional pattern of triangles
+that can be folded into a model of an icosahedron.  The net lies
+in the x-z plane.  The triangles have enclosing circles of diameter
+@var{triangle_diameter}.  
+If the argument @var{do_half} = @code{true}, only the first half of the
+net is created.  This is used in the non-default constructor.
+@xref{Icosahedron Constructors and Setting Functions,,
+Polyhedron Reference; Regular Platonic Polyhedra; Icosahedron;
+Constructors and Setting Functions}. 
+
+@example
+vector<Reg_Polygon*> vrp = Icosahedron::get_net(1.5);
+for (vector<Reg_Polygon*>::iterator iter = vrp.begin();
+     iter != vrp.end(); ++iter)
+   (**iter).draw();      
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{vector<Reg_Polygon*> vrp = Icosahedron::get_net(1.5);}
+\immediate\write\examples{for (vector<Reg_Polygon*>::iterator iter = vrp.begin();}
+\immediate\write\examples{     iter != vrp.end(); ++iter)}
+\immediate\write\examples{   (**iter).draw();      }
+\OEX{Projections::PARALLEL_X_Z}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF197.png"
+alt="[Figure 197. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 197.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 197 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+@deftypefn {Static function} void draw_net ({const real} @var{triangle_diameter}, [bool @var{portrait} = @var{true}, [bool @var{make_tabs} = @code{true}]])
+@c
+Draws the net for an @code{Icosahedron} in the x-z plane.  The triangles
+have enclosing circles of diameter @var{triangle_diameter}.  
+If the argument @var{portrait} is @code{true} (the default), the net
+will be arranged for printing in portrait format.  If it's @code{false},
+it will be arranged for printing in landscape format.
+In portrait format, the center of the bottom right triangle is at the
+origin.  In landscape format, the center of the bottom left
+triangle is at the origin.  The triangles are numbered.
+
+The argument @var{make_tabs} currently has no effect.  
+When I get around to programming this, it will be used for specifying
+whether tabs for gluing and/or sewing a cardboard model should be drawn,
+too. 
+
+@example
+Icosahedron::draw_net(2, false);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Icosahedron::draw_net(2, false);}
+\OEX{Projections::PARALLEL_X_Z}
+\EGRP
+\EEX 1
+\fi
+\PEX 
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF198.png"
+alt="[Figure 198. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 198.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 198 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+@comment  node-name,  next,  previous,  up
+@node Semi-Regular Archimedean Polyhedra,  , Regular Platonic Polyhedra, Polyhedron Reference
+@section Semi-Regular Archimedean Polyhedra
+
+Once I've added @code{class Octahedron}, the only Platonic polyhedron I
+haven't programmed yet, I plan to start adding classes
+for the semi-regular Archimedean polyhedra.  
+
+@menu
+* Truncated Octahedron::        
+@end menu
+
+
+@comment  node-name,  next,  previous,  up
+@node Truncated Octahedron,  , Semi-Regular Archimedean Polyhedra, Semi-Regular Archimedean Polyhedra
+@subsection Truncated Octahedron 
+  
+@tindex Trunc_Octahedron
+@tindex Truncated Octahedron
+Class @code{Trunc_Octahedron} is defined in @file{polyhed.web}.
+It is derived from @code{Polyhedron} using public derivation.
+
+@code{Trunc_Octahedron} does not yet have a functioning constructor, so
+it cannot be used as yet.
+
+@menu
+* Truncated Octahedron Data Members::  
+* Truncated Octahedron Constructors and Setting Functions::  
+* Truncated Octahedron Net::    
+@end menu
+ 
+
+@comment  node-name,  next,  previous,  up
+@node Truncated Octahedron Data Members, Truncated Octahedron Constructors and Setting Functions, Truncated Octahedron, Truncated Octahedron
+@subsubsection Data Members
+ 
+@deftypevr {Protected static @code{const} variable} real angle_hex_square
+The angle between the hexagonal and the square faces of the truncated
+octahedron, namely 
+@DEG{125} @PRM{16}.
+@c
+@c !! TO DO:  Add illustration.
+@end deftypevr
+
+@deftypevr {Protected static @code{const} variable} real angle_hex_hex
+The angle between the hexagonal faces of the truncated
+octahedron, namely 
+@DEG{109} @PRM{28}.
+@c
+@c !! TO DO:  Add illustration.
+@end deftypevr 
+
+@deftypevr {Protected variable} real hexagon_radius
+The radius of the circle enclosing a hexagonal or square face of the
+@code{Trunc_Octahedron}. 
+@end deftypevr 
+
+
+@node Truncated Octahedron Constructors and Setting Functions, Truncated Octahedron Net, Truncated Octahedron Data Members, Truncated Octahedron
+@subsubsection Constructors and Setting Functions
+
+@deftypefn {Default constructor} void Trunc_Octahedron (@code{void})
+Creates an empty @code{Trunc_Octahedron}.
+@end deftypefn 
+
+@deftypefn {Constructor} void Trunc_Octahedron ({const Point&} @var{p}, {const real} @var{diameter_of_hexagon}, [real @var{angle_x} = 0, [real @var{angle_y} = 0, [real @var{angle_z} = 0]]])
+@c
+This function does not yet exist!
+When it does, it will create a @code{Trunc_Octahedron} with its center
+at the origin, where the 
+hexagonal and square faces have enclosing circles of diameter
+@var{diameter_of_hexagon}.  If any of @var{angle_x}, @var{angle_y}, or
+@var{angle_z} is non-zero, the @code{Trunc_Octahedron} will be rotated
+by the amounts specified around the corresponding axes.  Finally,
+if @var{p} is not the origin, the @code{Trunc_Octahedron} will be
+shifted such that @code{center} comes to lie at @var{p}.
+@end deftypefn 
+
+
+@comment  node-name,  next,  previous,  up
+@node Truncated Octahedron Net,  , Truncated Octahedron Constructors and Setting Functions, Truncated Octahedron
+@subsubsection Net
+
+@deftypefn {Static function} {vector<Reg_Polygon*>} get_net ({const real} @var{hexagon_diameter}, [bool @var{do_half} = @code{false}])
+@c
+This function does not yet exist!
+When it does, it will return the @dfn{net}, i.e., the two-dimensional
+pattern of hexagons and squares that can be folded into 
+a model of a truncated octahedron.  The net will lie in the x-z plane.
+The hexagons and squares will
+have enclosing circles of diameter @var{hexagon_diameter}.   
+If the argument @var{do_half} is @code{true}, only the first half of the
+net will be created.  This will be used in the non-default constructor.
+@xref{Truncated Octahedron Constructors and Setting Functions,,
+Polyhedron Reference; Regular Platonic Polyhedra; 
+Truncated Octahedron Constructors and Setting Functions}. 
+@end deftypefn 
+

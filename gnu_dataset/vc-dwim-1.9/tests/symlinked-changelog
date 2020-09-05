@@ -1,0 +1,61 @@
+#!/bin/sh
+# Test the symlinked ChangeLog feature.
+
+. "${srcdir=.}/init.sh"; path_prepend_ ..
+print_ver_ vc-dwim
+
+require_bzr_
+require_git_
+
+mkdir d m || framework_failure_
+touch m/f || framework_failure_
+cat <<EOF > d/ChangeLog || framework_failure_
+2006-09-04  Jim Meyering  <jim@meyering.net>
+
+EOF
+
+# Do not require any bzr set-up in home-dir of someone running this test.
+HOME=`pwd`
+export HOME
+bzr whoami 'U. Ser <user@example.com>'
+git config --global user.email "user@example.com"
+git config --global user.name "U.Ser"
+
+(cd m && bzr init && bzr add . && bzr ci -m m . ) || framework_failure_
+ln -s ../d/ChangeLog m
+echo a >> m/f
+
+(cd d && git init && git add . && git commit -m m . ) || framework_failure_
+cat <<EOF >> d/ChangeLog || framework_failure_
+	* f: X.
+EOF
+
+fail=0
+
+(cd m && vc-dwim ChangeLog) > out || fail=1
+
+cut -b1-7 out > k; mv k out
+
+cat <<\EOF > exp || fail=1
+* f: X.
+=== mod
+--- f	2
++++ f	2
+@@ -0,0
++a
+
+EOF
+
+compare exp out || fail=1
+
+(cd m && vc-dwim --commit ChangeLog) > out || fail=1
+
+# Remove everything beyond column 7 to avoid spurious differences.
+# Also remove the file name, "f", since not all versions of cogito print that.
+cut -b1-7 out |sed '/^f$/d' > k; mv k out
+sed 's/^diff -r/diff --/' out > k; mv k out
+
+cmp out exp || fail=1
+test $fail = 1 && diff out exp 2> /dev/null
+
+Exit $fail

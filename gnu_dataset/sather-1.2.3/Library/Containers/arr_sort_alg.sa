@@ -1,0 +1,361 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class ARR_SORT_ALG{ETP, ATP< $ARR{ETP}}  is
+   -- Algorithm class with various sorting routines. 
+   -- This class is a stateless collection of functions and may be used 
+   -- without instantiation. 
+   -- Sather has no way of distinguishing such modules currently
+   -- 
+   -- Usage:
+   --  a_sorter: ARR_SORT_ALG{FLT,ARRAY{FLT}};
+   --  a: ARRAY{FLT} := |1.0,2.0,3.0,1.0|;
+   --  a_sorter.sort(a);
+   --  is_sorted: BOOL := ARR_SORT_ALG{FLT,ARRAY{FLT}}::is_sorted(a);
+   -- 
+   --  Define your own comparison function using a bound routine:
+   --     comp(f1,f2: FLT): BOOL is
+   --       if f1 < f2 then return true else return false end;
+   --     end;
+   --  b: ARRAY{FLT} := |1.0,3.0,2.0|;
+   --  comp_fn: ROUT{FLT,FLT}:BOOL := bind(comp(_,_));
+   --  a_sorter.quicksort_by(b,comp_fn,0,b.size-1);
+   -- 
+   include COMPARE{ETP};
+   
+   is_sorted(a: ATP):BOOL is 
+      -- True if the elements of self are in sorted order according
+      -- to `elt_lt'. Self may be void.
+      return is_sorted(a,0,a.size-1);
+   end;
+   
+   is_sorted(a: ATP,l,u: INT):BOOL 
+      -- True if the elements of self are in sorted order according
+      -- to `elt_lt'. Self may be void.
+      pre check_range(a,l,u)
+   is
+      loop 
+	 i::=(l+1).upto!(u);
+	 if elt_lt(a[i],a[i-1]) then return false end 
+      end;
+      return true 
+   end;
+
+   is_sorted_by(a: ATP,lt: ROUT{ETP,ETP}:BOOL): BOOL is
+      return is_sorted_by(a,lt,0,a.size-1);
+   end;
+   
+   is_sorted_by(a: ATP,lt: ROUT{ETP,ETP}:BOOL,l,u: INT): BOOL 
+      -- Returns true if self is sorted using the comparison criterion "lt"
+      pre check_range(a,l,u)
+   is
+      loop i::=(l+1).upto!(u);
+	 if lt.call(a[i],a[i-1]) then return false end 
+      end;
+      return true 
+   end;
+   
+   is_sorted(a: ATP,order: ARRAY{INT},l,u: INT): BOOL 
+      -- Returns true if self is sorted using the indirect array "order"
+      -- between indices "l" and "u"
+      pre check_range(a,l,u)
+   is
+      loop i::=(l+1).upto!(u);
+	 if elt_lt(a[order[i]],a[order[i-1]]) then return false end 
+      end; 
+      return true 
+   end;
+   
+   is_sorted_by(a: ATP,lt: ROUT{ETP,ETP}:BOOL,order: ARRAY{INT},l,u:INT): BOOL 
+      -- Returns true if self is sorted using the indirect array "order"
+      -- between indices "l" and "u", by comparison criterion "lt"
+      pre check_range(a,l,u)
+   is
+      loop i::=(l+1).upto!(u);
+	 if lt.call(a[order[i]],a[order[i-1]]) then return false end 
+      end; 
+      return true 
+   end;
+
+   count_unique(a: ATP): INT pre is_sorted(a) is
+      -- Return the number of unique elements.
+      -- Assume that self is sorted
+      res: INT := 1;
+      i: INT := 1;
+      prev ::= a[0];
+      loop until!(i >= a.size);
+	 curr::= a[i];
+	 if ~elt_eq(prev,curr) then res := res+1; end;
+	 prev := curr;
+	 i := i + 1;
+      end;
+      return res;
+   end;
+
+   sort(a: ATP) is 
+      -- Default sorting uses quicksort and sorts the whole array
+      quicksort(a,0,a.size-1) 
+   end;
+   
+   sort_by(a: ATP,lt: ROUT{ETP,ETP}:BOOL) is 
+      -- Sort the whole array "a" using the comparison function "lt"
+      quicksort_by(a,lt,0,a.size-1) 
+   end;
+   
+   sort_range(a: ATP,l,u: INT) is
+      -- Sort the range of array elements in the index range from "l" to "u"
+      quicksort(a,l,u);
+   end;
+   -- ------------------ Insertion sort --------------------------
+   insertion_sort(a: ATP) is insertion_sort(a,0,a.size-1) end;
+   
+   insertion_sort(a:ATP, l,u:INT) 
+      -- Stably sort the elements of self between `l' and `u'
+      -- inclusive by insertion sort. `elt_lt' defines the ordering.
+      pre check_range(a,l,u)  post is_sorted(a,l,u) 
+   is
+      i ::= l+1;
+      loop until!(i>u);		-- All indices < i are sorted so far
+	 -- Percolate a "hole" down, starting at elt [i] until preced < e
+	 e::=a[i];		-- Store the element at [i] in "e"
+	 j ::= i - 1;		-- Location below the "hole"
+	 loop 
+	    -- If the hole hits the bottom end - store e there
+	    if (j < l) then a[l]:=e; break!; 
+	       -- If the location below the hole < e, then store e in hole
+	    elsif (elt_lt(a[j], e)) then a[j+1]:=e; break!;
+	       -- Otherwise keep moving hole downward
+	    else a[j+1]:=a[j]; end;
+	    j := j - 1;
+	 end;
+	 i := i + 1;
+      end;
+   end;
+
+   insertion_sort_by(a:ATP, lt:ROUT{ETP,ETP}:BOOL,l,u: INT) 
+      -- Stably sort the elements of self using `t' to define "less than". 
+      -- Self may be void.
+      pre check_range(a,l,u)
+      post is_sorted_by(a,lt,l,u) 
+   is
+      i ::= l+1; loop until!(i>u);	-- All indices < i are sorted so far
+	 e::=a[i];		-- Store the element at [i] in "e"
+	 j ::= i - 1;		-- Location below the "hole"
+	 loop 
+	    if (j < l) then a[l]:=e; break!; 
+	    elsif (lt.call(a[j], e)) then a[j+1]:=e; break!;
+	    else a[j+1]:=a[j]; end;
+	    j := j - 1;
+	 end;
+	 i := i + 1;
+      end;
+   end;
+
+   insertion_sort_by(a:ATP, lt: ROUT{ETP,ETP}:BOOL, order:ARRAY{INT},l,u: INT) 
+   -- Indirect insertion sort.
+   -- As a result of sorting "l" to "u", "order" will be rearranged
+   -- to contain the indicies of the elements of self in sorted order
+      pre order.size=a.size and check_range(a,l,u)
+      post is_sorted_by(a,lt,order,l,u)  
+   is
+      i ::= l+1; loop until!(i>u);
+	 order_i ::= order[i];
+	 e::=a[order_i];	        -- Store the element at [i] in "e"
+	 j ::= i - 1;		        -- Location below the "hole"
+	 loop 
+	    if (j < l) then order[l] := order_i; break!;
+	    elsif (lt.call(a[order[j]], e)) then order[j+1]:=order_i; break!;
+	    else order[j+1] := order[j];   end;
+	    j := j - 1;
+	 end;
+	 i := i + 1;
+      end;
+   end;
+   
+   insertion_sort(a:ATP, order: ARRAY{INT},l,u: INT) 
+   -- Indirect insertion sort.
+   -- As a result of sorting "l" to "u", "order" will be rearranged
+   -- to contain the indicies of the elements of self in sorted order
+      pre order.size=a.size and check_range(a,l,u)
+      post is_sorted(a,order,l,u)  
+   is
+      i ::= l+1; loop until!(i>u);
+	 order_i ::= order[i];
+	 e::=a[order_i];	        -- Store the element at [i] in "e"
+	 j ::= i - 1;		        -- Location below the "hole"
+	 loop 
+	    if (j < l) then order[l] := order_i; break!;
+	    elsif (elt_lt(a[order[j]], e)) then order[j+1]:=order_i; break!;
+	    else order[j+1] := order[j];   end;
+	    j := j - 1;
+	 end;
+	 i := i + 1;
+      end;
+   end;
+
+   
+   -- ------------------ Quick sort --------------------------
+   private const quicksort_limit:INT:=10; -- When to stop the
+   -- quicksort recursion and switch to insertion sort.
+
+   quicksort(a: ATP,l,u:INT)
+      -- Use quicksort to sort the elements of self from `l' to `u'
+      -- inclusive according to `elt_lt'.
+      pre check_range(a,l,u)
+      post is_sorted(a,l,u)
+   is
+      t: ETP;
+      if u-l>quicksort_limit then
+	 r::=RND::int(l,u);
+	 t := a[r];
+	 swap(a,l,r);
+	 m::=l;			-- Previous location that was "cleaned"
+	 i ::= l+1;
+	 -- Move through the list(i), gradually "cleaning" lower locs (m)
+	 -- by swapping them with values < partition value (t)
+	 loop until!(i>u); 
+	    if elt_lt(a[i],t) then 
+	       m:=m+1;		-- The element that will now be cleaned
+	       swap(a,m,i);
+	    end; 
+	    i := i + 1;
+	 end; 
+	 -- Reuse t to swap the last "clean" location with the first 
+	 -- (partition) element, so partition is at boundary between
+	 -- clean (< elements) and >= elements since we tested for <
+	 t := a[l];
+	 swap(a,l,m);
+	 -- If last clean element is on or next to lowest elt,ignore bottom
+	 if l < m-1 then quicksort(a,l,m-1); end;
+	 -- If last clean element is adjacent to or at top, ignore top
+	 if m+1 < u then quicksort(a,m+1,u); end;
+      else 
+	 insertion_sort(a,l,u);
+      end;
+   end;   
+
+   quicksort_by(a: ATP, lt: ROUT{ETP,ETP}:BOOL, l,u:INT)
+   -- Quick
+      pre check_range(a,l,u)
+      post is_sorted_by(a,lt,l,u)
+   is
+      t: ETP;
+      if u-l>quicksort_limit then
+	 r::=RND::int(l,u);
+	 t := a[r];
+	 swap(a,l,r);
+	 m::=l;			-- Previous location that was "cleaned"
+	 i ::= l+1;
+	 loop until!(i>u); 
+	    if lt.call(a[i],t) then  m:=m+1; swap(a,m,i);  end; 
+	    i := i + 1;
+	 end; 
+	 t := a[l];
+	 swap(a,l,m);
+	 if l < m-1 then quicksort_by(a,lt,l,m-1); end;
+	 if m+1 < u then quicksort_by(a,lt,m+1,u); end;
+      else 
+	 insertion_sort_by(a,lt,l,u);
+      end;
+   end;   
+
+   -- ------------------ Merge sort --------------------------
+   merge_sort(into: ATP, a1,a2: ATP) 
+      -- Merge a1 and a2 into the destination array "into"
+      pre is_sorted(a1) and is_sorted(a2)
+	 and into.size = a1.size+a2.size
+      post is_sorted(into)
+   is
+      if a1.size=0 then  	 -- self <- a2 
+	 sz: INT := into.size.min(a2.size);
+	 m: INT:=0; loop until!(m >= sz); into[m] := a2[m]; m := m + 1; end;
+	 return; 
+      end;
+      if a2.size=0 then -- self <- a1
+	 sz: INT := into.size.min(a1.size);
+	 n: INT:=0; loop until!(n >= sz); into[n] := a1[n]; n := n + 1; end;
+	 return; 
+      end;
+      i,j:INT; 
+      w:ETP;
+      into_index: INT := 0;
+      loop 
+	 until!(into_index = into.size);
+	 if i=a1.size then     w:=a2[j];  j:=j+1
+	 elsif j=a2.size then   w:= a1[i]; i:=i+1
+	 elsif elt_lt(a1[i],a2[j]) then  w:=a1[i];  i:=i+1
+	 else   w:=a2[j];  j:=j+1 end;
+	 into[into_index] := w;
+	 into_index := into_index+1;
+      end;
+   end;
+   
+   merge_sort_by(into: ATP, a1,a2: ATP,lt: ROUT{ETP,ETP}:BOOL) 
+      pre is_sorted_by(a1,lt) and is_sorted_by(a2,lt)
+	 and into.size = a1.size+a2.size
+      post is_sorted_by(into,lt)
+   is
+      if a1.size=0 then  	 -- self <- a2 
+	 sz: INT := into.size.min(a2.size);
+	 m: INT:=0; loop until!(m >= sz); into[m] := a2[m]; m := m + 1; end;
+	 return; 
+      end;
+      if a2.size=0 then -- self <- a1
+	 sz: INT := into.size.min(a1.size);
+	 n: INT:=0; loop until!(n >= sz); into[n] := a1[n]; n := n + 1; end;
+	 return; 
+      end;
+      i,j:INT; 
+      w:ETP;
+      into_index: INT := 0;
+      loop 
+	 until!(into_index = into.size);
+	 if i=a1.size then     w:=a2[j];  j:=j+1
+	 elsif j=a2.size then   w:= a1[i]; i:=i+1
+	 elsif lt.call(a1[i],a2[j]) then  w:=a1[i];  i:=i+1
+	 else   w:=a2[j];  j:=j+1 end;
+	 into[into_index] := w;
+	 into_index := into_index+1;
+      end;
+   end;
+
+   
+   private swap(a: ATP,i,j: INT) is 
+      tmp ::= a[i];
+      a[i] := a[j];
+      a[j] := tmp;
+   end;
+
+   private swap(a: ATP,order: ARRAY{INT},i,j: INT) is 
+      tmp ::= order[i]; 
+      order[i] := order[j];
+      order[j] := tmp;
+   end;
+
+   private check_range(a: ATP,l,u: INT): BOOL is
+      if void(a) then
+	 #ERR+"The sort array is void!\n"; return false;
+      end;
+      if l.is_bet(0,a.size-1) and u.is_bet(l,a.size-1) then
+	 return true;
+      else 
+	 #ERR+"Can't sort the specified range:["+l+","+u+"]\n";
+	 #ERR+"The array is of size:"+a.size;
+	 return false;
+      end;
+   end;
+
+end;
+-------------------------------------------------------------------   

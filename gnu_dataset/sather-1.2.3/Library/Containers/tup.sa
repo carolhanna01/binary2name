@@ -1,0 +1,196 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- tup.sa: Tuples
+-------------------------------------------------------------------
+immutable class TUP{T1} < $HASH, $STR is
+   include COMPARABLE;
+   include COMPARE{T1};
+   attr t1:T1;
+   
+   create(at1:T1):SAME is return t1(at1) end;
+    
+   is_eq(e:SAME):BOOL is
+      -- True if the component of self and `e' are equal.
+      return elt_eq(t1,e.t1);
+   end;	 
+
+   hash:INT is
+      -- A simple hash value computed from the hash values of the 
+      -- component. For this to work, this must either be a value
+      -- type which defines a hash value or a reference type.
+      return elt_hash(t1);
+   end;
+    
+   str: STR is 
+      res: FSTR := #FSTR("{");
+      lt1 ::= t1;
+      typecase lt1  when $STR then res := res+lt1.str; else res := res+"_" end;
+      res := res+"}";
+      return res.str;
+   end;
+
+end; -- class TUP{T1}
+
+-------------------------------------------------------------------
+immutable class TUP{T1,T2} < $HASH, $STR is
+   include COMPARABLE;
+   include COMPARE{T1};
+   include COMPARE{T2} elt_eq->elt_eq2,elt_lt->elt_lt2,elt_hash->elt_hash2,
+	 elt_nil->elt_nil2, is_elt_nil->is_elt_nil2;
+   
+   attr t1:T1;
+   attr t2:T2;
+    
+   create(at1:T1, at2:T2):SAME is
+      return t1(at1).t2(at2) 
+   end;      
+
+   is_eq(e:SAME):BOOL is
+      -- True if the components of self and `e' are equal.
+      if ~elt_eq(t1,e.t1) then return false
+      elsif ~elt_eq2(t2,e.t2) then return false;
+      else return true; end;
+   end;	 
+    
+   hash:INT is
+      -- A simple hash value computed from the hash values of the 
+      -- components. For this to work, these must either be value
+      -- types which define hash values or reference types.
+      return elt_hash(t1).bxor(elt_hash2(t2).lshift(2)) 
+   end;
+   
+   str: STR is 
+      res: FSTR := #FSTR("{");
+      lt1 ::= t1;
+      typecase lt1  when $STR then res := res+lt1.str; else res := res+"_" end;
+      res := res+",";
+      lt2 ::= t2;
+      typecase lt2  when $STR then res := res+lt2.str; else res := res+"_" end;
+      res := res+"}";
+      return res.str;
+   end;
+
+    
+end; -- class TUP{T1,T2}
+-------------------------------------------------------------------
+immutable class TUP{T1,T2,T3} < $HASH, $STR is
+   include COMPARABLE;
+   private include COMPARE{T1};
+   private include COMPARE{T2} elt_eq->elt_eq2,elt_lt->elt_lt2,
+	 elt_hash->elt_hash2, elt_nil->elt_nil2, is_elt_nil->is_elt_nil2;
+   private include COMPARE{T3} elt_eq->elt_eq3,elt_lt->elt_lt3,
+	 elt_hash->elt_hash3, elt_nil->elt_nil3, is_elt_nil->is_elt_nil3;
+   
+   attr t1:T1;
+   attr t2:T2;
+   attr t3:T3;
+
+   create(at1:T1, at2:T2, at3:T3):SAME is
+      return t1(at1).t2(at2).t3(at3) end;
+
+   is_eq(e:SAME):BOOL is
+      -- True if the components of self and `e' are equal.
+      if ~elt_eq(t1,e.t1) then return false
+      elsif ~elt_eq2(t2,e.t2) then return false
+      elsif ~elt_eq3(t3,e.t3) then return false
+      else return  true end;
+   end;
+    
+   hash:INT is
+      -- A simple hash value computed from the hash values of the 
+      -- components. For this to work, these must either be value
+      -- types which define hash values or reference types.
+      
+      h1,h2,h3:INT; 
+      h1 := elt_hash(t1);
+      h2 := elt_hash2(t2);
+      h3 := elt_hash3(t3);
+      return h1.bxor(h2.lshift(2)).bxor(h3.lshift(4)) 
+   end;
+    
+   str: STR is 
+      res: FSTR := #FSTR("{");
+      lt1 ::= t1;
+      typecase lt1  when $STR then res := res+lt1.str; else res := res+"_" end;
+      res := res+",";
+      lt2 ::= t2;
+      typecase lt2  when $STR then res := res+lt2.str; else res := res+"_" end;
+      res := res+",";
+      lt3 ::= t3;
+      typecase lt3  when $STR then res := res+lt3.str; else res := res+"_" end;
+      res := res+"}";
+      return res.str;
+   end;
+   
+end; -- class TUP{T1,T2,T3}
+
+-------------------------------------------------------------------
+immutable class TUP{T1,T2,T3,T4} < $HASH, $STR is
+   include COMPARABLE;
+   private include COMPARE{T1};
+   private include COMPARE{T2} elt_eq->elt_eq2,elt_lt->elt_lt2,
+	 elt_hash->elt_hash2, elt_nil->elt_nil2, is_elt_nil->is_elt_nil2;
+   private include COMPARE{T3} elt_eq->elt_eq3,elt_lt->elt_lt3,
+	 elt_hash->elt_hash3, elt_nil->elt_nil3, is_elt_nil->is_elt_nil3;
+   private include COMPARE{T4} elt_eq->elt_eq4,elt_lt->elt_lt4,
+	 elt_hash->elt_hash4, elt_nil->elt_nil4, is_elt_nil->is_elt_nil4;
+   
+   attr t1:T1;
+   attr t2:T2;
+   attr t3:T3;
+   attr t4:T4;
+
+   create(at1:T1, at2:T2, at3:T3, at4:T4):SAME is
+      return t1(at1).t2(at2).t3(at3).t4(at4) end;
+
+   is_eq(e:SAME):BOOL is
+      -- True if the components of self and `e' are equal.
+      if ~elt_eq(t1,e.t1) then return false
+      elsif ~elt_eq2(t2,e.t2) then return false
+      elsif ~elt_eq3(t3,e.t3) then return false
+      elsif ~elt_eq4(t4,e.t4) then return false
+      else return  true end;
+   end;
+    
+   hash:INT is
+      -- A simple hash value computed from the hash values of the 
+      -- components. For this to work, these must either be value
+      -- types which define hash values or reference types.
+      h1,h2,h3,h4:INT; 
+      h1 := elt_hash(t1);
+      h2 := elt_hash2(t2);
+      h3 := elt_hash3(t3);
+      h4 := elt_hash4(t4);
+      return h1.bxor(h2.lshift(2)).bxor(h3.lshift(4)).bxor(h4.lshift(6)) 
+   end;
+    
+   str: STR is 
+      res: FSTR := #FSTR("{");
+      lt1 ::= t1;
+      typecase lt1  when $STR then res := res+lt1.str; else res := res+"_" end;
+      res := res+",";
+      lt2 ::= t2;
+      typecase lt2  when $STR then res := res+lt2.str; else res := res+"_" end;
+      res := res+",";
+      lt3 ::= t3;
+      typecase lt3  when $STR then res := res+lt3.str; else res := res+"_" end;
+      res := res+",";
+      lt4 ::= t4;
+      typecase lt4  when $STR then res := res+lt4.str; else res := res+"_" end;
+      res := res+"}";
+      return res.str;
+   end;
+   
+end; -- class TUP{T1,T2,T3,T4}
+-------------------------------------------------------------------

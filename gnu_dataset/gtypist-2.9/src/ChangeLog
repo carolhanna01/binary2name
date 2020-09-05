@@ -1,0 +1,106 @@
+2011-10-30 Tim Marston <edam@waxworlds.org>
+
+	* gtypist.c, utf8.c/h, cursmenu.c: get_widech() uses ints to avoid
+	  using wint_t, which is broken on Windows. Also, simplified reading
+	  characters so that get_widech() is always used. It also now
+	  handles windows newline characters for us.
+
+2011-10-26 Felix Natter <fnatter@gmx.net>
+
+	* gtypist.c, utf8.c/h: add get_widech() wrapper which
+	  calls getch() or get_wch() depending on whether it's a UTF8
+          console or not => fixes input problems with KOI8-R terminals
+	* script.c, gtypist.c: try to read (convertFromUTF8()) the whole
+	  lesson at the very beginning, in order to terminate at the very
+          beginning in the case of conversion errors (and not in the middle
+	  of typing)
+
+2011-10-24 Felix Natter <fnatter@gmx.net>
+
+	* gtypist.c, utf8.c/h: use convertFromUTF8() instead of widen()
+	  for Y/N and R/N/E. add towideupper() and iswideupper() helper
+	  functions that do they right thing depending on whether it's
+	  a UTF8 terminal or an 8bit-terminal
+
+2011-10-22 Felix Natter <fnatter@gmx.net>
+
+	* *.c, *.h: make gtypist run on non-utf8 locales with
+	  international lessons
+	* gtypist.c: add RETURN_CHARACTER (unicode symbol to designate
+	  newlines that must be typed)
+
+2011-10-14 Tim Marston <edam@waxworlds.org>
+
+	* gtypist.c, cursmenu.c, script.h: minor fixes to get gtypist to
+	  build under MinGW
+	* gtypist.c: removed call to MessageBeep() on windows, since it just
+	  corrupts the stack! Currently we don't beep on error on windows, as
+	  sending ASCII_BELL to the terminal just pauses and does no "bell".
+
+2011-08-07 Felix Natter <fnatter@gmx.net>
+
+	* utf8.c: new wchar_t* widen(char*) helper function
+	* gtypist.c: widen the YN and RNE strings, but their usage isn't yet
+	  fixed
+
+2011-07-08 Felix Natter <fnatter@gmx.net>
+
+	* utf8.c, utf8.h: use proper #define before #include for cchar_t
+	  (needed for wide character output)
+
+2011-02-28  Tim Marston <edam@waxworlds.org>
+
+	* gtypist.c: rewrote the code to open a script file and check for the
+	  presence of HOME environment variable (required for the bestlog) so
+	  that it should work on Windows platforms when HOME is not present.
+
+2011-02-26  Tim Marston <edam@waxworlds.org>
+
+	* gtypist.c: added best-score tracking feature and re-wrote some of the
+	  speed calculation/display code to always work with CPM (which are
+	  saved in the bestlog) and convert to WPM only at display-time.
+
+2011-01-03  Tim Marston <edam@waxworlds.org>
+
+	* gtypist.c: fixed a bug where pressing escape during wait_user()
+	  caused seek_label() to be called, but get_script_line() was never re-
+	  called. This meant that the previously buffered next script line
+	  (from before the seek) would still get executed. wait_user() now
+	  treats escape as a "continue" character for all but tutorial prompts,
+	  which now handle the seek properly by calling get_script_line().
+
+2009-02-19  Paul Goins  <general@vultaire.net>
+
+	* gtypist.c: Re-fixed the rounding bug by adding a function which
+	  compares floats using sprintf-based rounding.  (Bug re-reported by
+	  Jakub Gedeon.)
+
+2009-02-04  Paul Goins  <general@vultaire.net>
+
+	* gtypist.c: (display_speed): Fixed long-standing bug where gtypist
+	  would display that an error rate of =< 3.0% is needed, but the
+	  displayed error rate would sometimes be 3.0% due to rounding.  (Now
+	  we use floor() to always round down and avoid this.)
+	  (Error reported by Ali Gundaz)
+
+2008-05-17  Paul Goins  <general@vultaire.net>
+
+	* gtypist.c (display_speed): Changed maximum speed to 9999.99.  CPM
+	  mode could go into 4 digits for really, really fast typists.
+
+2008-05-12  Paul Goins  <general@vultaire.net>
+
+	* cursmenu.c, gtypist.c, script.h: Updated copyright notices.
+	* gtypist.c: Bug fix: --banner-colour, the alternate option for
+	  --banner-colours, changed to --banner-colors.
+
+2008-05-07  Paul Goins  <general@vultaire.net>
+
+	* gtypist.c: Bug fix: added "break;" for "--scoring" case
+
+2008-05-06  Paul Goins  <general@vultaire.net>
+
+	* gtypist.c: Added switch for "characters-per-minute" mode.  This
+	  is pretty much cosmetic since "words" are standardized to 5
+	  characters, but some countries tend to use CPM instead of WPM.
+	  However, speeds will top out at 999.99 CPM (200 WPM).

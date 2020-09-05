@@ -1,0 +1,281 @@
+autogen definitions options;
+
+/*
+ *   $Id: opts.def,v 4.9 2007/02/04 17:44:12 bkorb Exp $
+ *  Time-stamp:        "2007-01-02 14:54:56 bkorb"
+ *
+ *  AutoGen copyright 1992-2007 Bruce Korb
+ *
+ *  AutoGen is free software.
+ *  You may redistribute it and/or modify it under the terms of the
+ *  GNU General Public License, as published by the Free Software
+ *  Foundation; either version 2, or (at your option) any later version.
+ *
+ *  AutoGen is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with AutoGen.  See the file "COPYING".  If not,
+ *  write to:  The Free Software Foundation, Inc.,
+ *             51 Franklin Street, Fifth Floor,
+ *             Boston, MA  02110-1301, USA.
+ */
+
+copyright = {
+    date   = "1999-2006";
+    type   = gpl;
+    owner  = "Bruce Korb";
+    eaddr  = 'autogen-users@lists.sourceforge.net';
+};
+
+prog-name      = "columns";
+prog-title     = "Columnize Input Text";
+package        = 'GNU AutoGen';
+long-opts;
+
+export = <<- EOExport
+	#include "config.h"
+	#include <ctype.h>
+	#include <stdio.h>
+	#include <stdlib.h>
+	#include <string.h>
+	EOExport;
+
+version = "1.1";
+
+flag = {
+    name        = width;
+    value       = W;
+    arg-type    = number;
+    arg-default = 79;
+    arg-name    = num;
+    descrip     = "Maximum Line Width";
+    doc         =
+    "This option specifies the full width of the output line,\n"
+    "including any start-of-line indentation.  The output will fill\n"
+    "each line as completely as possible, unless the column width has\n"
+    "been explicitly specified.  If the maximum width is less than\n"
+    "the length of the widest input, you will get a single column\n"
+    "of output.";
+};
+
+flag = {
+    name        = columns;
+    value       = c;
+    arg-type    = number;
+    arg-default = 0;
+    arg-name    = count;
+    descrip     = "Desired number of columns";
+    doc =
+    "Use this option to specify exactly how many columns to produce.\n"
+    "If that many columns will not fit within @var{line_width}, then\n"
+    "the count will be reduced to the number that fit.";
+};
+
+flag = {
+    name        = col_width;
+    value       = w;
+    arg-type    = number;
+    arg-default = 0;
+    arg-name    = num;
+    descrip     = "Set width of each column";
+    doc =
+    "Use this option to specify exactly how many characters are to be\n"
+    "allocated for each column.  If it is narrower than the widest entry,\n"
+    "it will be over-ridden with the required width.";
+};
+
+flag = {
+    name        = spread;
+    arg-type    = number;
+    arg-default = 0;
+    arg-name    = num;
+    descrip     = "maximum spread added to column width";
+    doc =
+    "Use this option to specify exactly how many characters may be\n"
+    "added to each column.  It allows you to prevent columns from\n"
+    "becoming too far apart.";
+};
+
+flag = {
+    name        = indent;
+    value       = I;
+    arg-type    = string;
+    arg-name    = l-pfx;
+    descrip     = "Line prefix or indentation";
+    doc =
+    "If a number, then this many spaces will be inserted at the start of\n"
+    "every line.  Otherwise, it is a line prefix that will be inserted\n"
+    "at the start of every line.";
+};
+
+flag = {
+    name        = first_indent;
+    arg-type    = string;
+    flags_must  = indent;
+    arg-name    = l-pfx;
+    descrip     = "First line prefix";
+    doc =
+    "If a number, then this many spaces will be inserted at the start of\n"
+    "the first line.  Otherwise, it is a line prefix that will be inserted\n"
+    "at the start of that line.";
+};
+
+flag = {
+    name        = tab_width;
+    arg-type    = number;
+    arg-default = 8;
+    arg-name    = num;
+    descrip     = "tab width";
+    doc =
+    "If an indentation string contains tabs, then this value is used to\n"
+    "compute the ending column of the prefix string.";
+};
+
+flag = {
+    name        = sort;
+    value       = s;
+    arg-type    = string;
+    arg-optional;
+    arg-name    = key-pat;
+    descrip     = "Sort input text";
+    doc =
+    "Causes the input text to be sorted.  If an argument is supplied,\n"
+    "it is presumed to be a pattern and the sort is based upon the\n"
+    "matched text.  If the pattern starts with or consists of\n"
+    "an asterisk (@code{*}), then the sort is case insensitive.";
+};
+
+flag = {
+    name        = format;
+    value       = f;
+    arg-type    = string;
+    arg-name    = fmt-str;
+    descrip     = "Formatting string for each input";
+    doc =
+    "If you need to reformat each input text, the argument to this\n"
+    "option is interpreted as an @code{sprintf(3)} format that is used\n"
+    "to produce each output entry.";
+};
+
+flag = {
+    name        = separation;
+    value       = S;
+    arg-type    = string;
+    arg-name    = sep-str;
+    descrip     = "Separation string - follows all but last";
+    doc =
+    "Use this option if, for example, you wish a comma to appear after\n"
+    "each entry except the last.";
+};
+
+flag = {
+    name        = line_separation;
+    arg-type    = string;
+    arg-name    = sep-str;
+    descrip     = "string at end of all lines but last";
+    doc =
+    "Use this option if, for example, you wish a backslash to appear at\n"
+    "the end of every line, except the last.";
+};
+
+flag = {
+    name        = by_columns;
+    descrip     = "Print entries in column order";
+    doc =
+"Normally, the entries are printed out in order by rows and then columns.
+This option will cause the entries to be ordered within columns.  The final
+column, instead of the final row, may be shorter than the others.";
+};
+
+#ifdef LATER
+flag = {
+    name        = page_len;
+    arg-type    = number;
+    arg-name    = num;
+    descrip     = "Page Length";
+    doc =
+    "This many lines will be printed before a form feed is emitted.\n"
+    "The 'by_columns' ordering will wrap columns within a page.";
+};
+#endif
+
+flag = {
+    name        = input;
+    value       = i;
+    arg-type    = string;
+    arg-name    = file;
+    descrip     = "Input file (if not stdin)";
+    flag_code   =
+'    FILE* fp = freopen( pOptDesc->pzLastArg, "r" FOPEN_BINARY_FLAG, stdin );
+    if (fp == (FILE*)NULL) {
+        fprintf( stderr, "Error %d (%s) opening %s\n",
+                 errno, strerror( errno ), pOptDesc->pzLastArg );
+        USAGE( EXIT_FAILURE );
+    }';
+    doc =
+    "This program normally runs as a @code{filter}, reading from standard\n"
+    "input, columnizing and writing to standard out.  This option redirects\n"
+    "input to a file.";
+};
+
+include = "#include <stdio.h>\n"
+          "#include <errno.h>\n"
+          "#include <string.h>\n"
+          "#ifdef HAVE_CONFIG_H\n"
+          '#  include "config.h"'  "\n"
+          "#endif\n";
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *
+ *  Program Documentation
+ */
+
+detail =
+
+'This program was designed for the purpose of generating compact,
+columnized tables.  It will read a list of text items from standard
+in or a specified input file and produce a columnized listing of
+all the non-blank lines.  Leading white space on each line is
+preserved, but trailing white space is stripped.  Methods of
+applying per-entry and per-line embellishments are provided.
+See the formatting and separation arguments below.
+
+This program is used by AutoGen to help clean up and organize
+its output.';
+
+/* prog_man_descrip = -- unchanged; */
+
+man_doc = '.SH "SEE ALSO"
+This program is documented more fully in the Columns section
+of the Add-On chapter in the
+.IR AutoGen
+Info system documentation.';
+
+
+prog_info_descrip =
+
+'This program was designed for the purpose of generating compact,
+columnized tables.  It will read a list of text items from standard
+in or a specified input file and produce a columnized listing of
+all the non-blank lines.  Leading white space on each line is
+preserved, but trailing white space is stripped.  Methods of
+applying per-entry and per-line embellishments are provided.
+See the formatting and separation arguments below.
+
+This program is used by AutoGen to help clean up and organize
+its output.
+
+See @file{autogen/agen5/fsm.tpl} and the generated output
+@file{pseudo-fsm.h}.
+
+This function was not implemented as an expression function because
+either it would have to be many expression functions, or a provision
+would have to be added to provide options to expression functions.
+Maybe not a bad idea, but it is not being implemented at the moment.
+
+A side benefit is that you can use it outside of AutoGen to columnize
+input, a la the @code{ls} command.';

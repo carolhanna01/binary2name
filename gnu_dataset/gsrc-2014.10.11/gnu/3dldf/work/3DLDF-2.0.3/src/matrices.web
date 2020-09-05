@@ -1,0 +1,4423 @@
+@q matrices.web  @>
+@q Created by Laurence Finston Wed Nov 28 15:53:54 CET 2007 @>
+
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Matrix.@>
+@** Matrix\quad ({\tt matrices\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2007.11.28.}
+Created this file.
+\ENDLOG 
+
+@q * (1) Include files.@>
+@ Include files.
+
+@<Include files@>=
+
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+
+@q * (1) Matrix class definition.@>
+@* {\bf Matrix} class definition.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this |class| definition.
+
+\initials{LDF 2007.12.23.}
+Added |friend| declaration for |Scan_Parse::matrix_secondary_rule_func_0|.
+\ENDLOG
+
+@q ** (2) Code.@> 
+
+@<Declare |class Matrix|@>=
+
+class Matrix
+{
+
+   friend
+   void*
+   Scan_Parse::matrix_secondary_rule_func_0(void* v, void* w, void* parameter);
+
+   protected:
+
+      unsigned short type;
+
+      size_t rows;
+      size_t columns;
+
+      real tolerance;
+
+      void* matrix;
+  
+   public:
+
+      @<Declare |static| |class Matrix| data members@>@;
+
+      @<Declare |Matrix| constructors@>@;
+      @<Declare |Matrix| functions@>@;
+};
+
+@q ** (2) Static member variable declarations and initializations.@>
+@*1 Static member variable declarations and initializations.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+
+\initials{LDF 2007.12.18.}
+Added |MATRIX_REAL_TYPE|.
+
+\initials{LDF 2007.12.21.}
+Added |MATRIX_INVALID_TYPE|.
+\ENDLOG
+
+@<Declare |static| |class Matrix| data members@>=
+
+   static const unsigned short MATRIX_NULL_TYPE;
+   static const unsigned short MATRIX_INVALID_TYPE;
+   static const unsigned short MATRIX_DOUBLE_TYPE;
+   static const unsigned short MATRIX_FLOAT_TYPE;
+   static const unsigned short MATRIX_REAL_TYPE;
+   static const unsigned short MATRIX_LONG_DOUBLE_TYPE;
+   static const unsigned short MATRIX_INT_TYPE;                   
+   static const unsigned short MATRIX_UINT_TYPE;                  
+   static const unsigned short MATRIX_LONG_TYPE;                  
+   static const unsigned short MATRIX_ULONG_TYPE;                 
+   static const unsigned short MATRIX_SHORT_TYPE;                 
+   static const unsigned short MATRIX_USHORT_TYPE;                
+   static const unsigned short MATRIX_CHAR_TYPE;                  
+   static const unsigned short MATRIX_UCHAR_TYPE;                 
+   static const unsigned short MATRIX_COMPLEX_TYPE;               
+   static const unsigned short MATRIX_COMPLEX_FLOAT_TYPE;         
+   static const unsigned short MATRIX_COMPLEX_LONG_DOUBLE_TYPE;   
+
+@q *** (3) Code.@> 
+@
+@<Initialize |static| |class Matrix| data members@>=
+
+   const unsigned short Matrix::MATRIX_NULL_TYPE                  =  0;
+   const unsigned short Matrix::MATRIX_INVALID_TYPE               =  1;
+   const unsigned short Matrix::MATRIX_DOUBLE_TYPE                =  2;
+   const unsigned short Matrix::MATRIX_FLOAT_TYPE                 =  3;
+
+#if LDF_REAL_FLOAT
+   const unsigned short Matrix::MATRIX_REAL_TYPE = MATRIX_FLOAT_TYPE;
+#elif LDF_REAL_DOUBLE
+   const unsigned short Matrix::MATRIX_REAL_TYPE = MATRIX_DOUBLE_TYPE;
+#else /* Default.  \initials{LDF 2007.12.18.}   */
+   const unsigned short Matrix::MATRIX_REAL_TYPE = MATRIX_DOUBLE_TYPE;
+#endif 
+
+   const unsigned short Matrix::MATRIX_LONG_DOUBLE_TYPE           =   4;
+   const unsigned short Matrix::MATRIX_INT_TYPE                   =   5;
+   const unsigned short Matrix::MATRIX_UINT_TYPE                  =   6; 
+   const unsigned short Matrix::MATRIX_LONG_TYPE                  =   7; 
+   const unsigned short Matrix::MATRIX_ULONG_TYPE                 =   8; 
+   const unsigned short Matrix::MATRIX_SHORT_TYPE                 =   9; 
+   const unsigned short Matrix::MATRIX_USHORT_TYPE                =  10; 
+   const unsigned short Matrix::MATRIX_CHAR_TYPE                  =  11;
+   const unsigned short Matrix::MATRIX_UCHAR_TYPE                 =  12; 
+   const unsigned short Matrix::MATRIX_COMPLEX_TYPE               =  13; 
+   const unsigned short Matrix::MATRIX_COMPLEX_FLOAT_TYPE         =  14; 
+   const unsigned short Matrix::MATRIX_COMPLEX_LONG_DOUBLE_TYPE   =  15; 
+
+@q ** (2) Global variables.@>
+@*1 Global variables.
+\initials{LDF 2007.12.21.}
+
+\LOG
+\initials{LDF 2007.12.21.}
+Added this section with the declaration of |INVALID_MATRIX|.
+\ENDLOG
+
+@<Declare global |Matrix| variables@>=
+
+Matrix INVALID_MATRIX(Matrix::MATRIX_INVALID_TYPE, 0, 0, -1, 0);
+
+@
+@<|extern| declarations for the header file@>=
+
+extern Matrix INVALID_MATRIX;
+
+@q ** (2) |Matrix| functions.@> 
+@*1 {\bf Matrix} functions.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Constructors and Setting Functions.@>
+@*2 Constructors and Setting Functions.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Default Constructor.@> 
+@*3 Default Constructor.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Matrix| constructors@>=
+Matrix(void);
+
+@q ***** (5) Definition.  @>
+
+@
+@<Define |Matrix| constructors@>= 
+Matrix::Matrix(void)
+{
+   type = MATRIX_NULL_TYPE;
+   rows = 0;
+   columns = 0;
+   matrix = 0;
+   tolerance = -1;
+   return;
+}
+
+@q **** (4) Constructor with arguments.@> 
+@*2 Constructor with arguments.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Matrix| constructors@>=
+Matrix(const unsigned short ttype, 
+       size_t rrows, 
+       size_t ccolumns, 
+       real ttolerance = -1,
+       Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Matrix| constructors@>= 
+Matrix::Matrix(const unsigned short ttype, 
+               size_t rrows, 
+               size_t ccolumns,
+               real ttolerance,
+               Scanner_Node scanner_node)
+{
+
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In non-default `Matrix' constructor:"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not allocating `matrix'.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    type = MATRIX_NULL_TYPE;
+    tolerance = ttolerance;
+    matrix = 0;
+
+    return;
+
+#else
+
+@q ***** (5)@>
+
+   type    = ttype;
+   rows    = rrows;
+   columns = ccolumns;
+   tolerance = ttolerance;
+
+@q ***** (5) Error handling:                                           @>
+@q ***** (5) |type != MATRIX_INVALID_TYPE && (row < 1 || columns < 1|) @>   
+@ Error handling:  
+|type != MATRIX_INVALID_TYPE && (row < 1 || columns < 1)|.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.12.21.}
+Added |type != MATRIX_INVALID_TYPE| to conditional.
+\ENDLOG
+
+@<Define |Matrix| constructors@>= 
+
+   if (type != MATRIX_INVALID_TYPE && (rows < 1 || columns < 1))
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix' constructor:"
+                 << endl
+                 << "`rows' and/or `columns' < 1:"
+                 << endl  
+                 << "`rows' == " << rows
+                 << endl 
+                 << "`columns' == " << columns 
+                 << endl 
+                 << ".  Not allocating `matrix'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type      = MATRIX_NULL_TYPE;
+       rows      = 0;
+       columns   = 0;
+
+       matrix = 0;
+
+   }  /* |if (type != MATRIX_INVALID_TYPE && (rows < 1 || columns < 1))|  */
+
+@q ***** (5) Check type and allocate memory for |matrix|.@>   
+@ Check type and allocate memory for |matrix|.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.12.21.}
+Added conditional for the case |type == MATRIX_INVALID_TYPE|.
+\ENDLOG
+
+@<Define |Matrix| constructors@>= 
+
+   if (type == MATRIX_INVALID_TYPE)
+   {
+       matrix    = static_cast<void*>(0);
+       rows      = 0;
+       columns   = 0;
+ 
+   }
+
+   else if (type == MATRIX_DOUBLE_TYPE)
+   {
+
+        gsl_matrix* g = gsl_matrix_alloc(rows, columns);
+        gsl_matrix_set_zero(g);
+        matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = gsl_matrix_float_alloc(rows, columns);
+       gsl_matrix_float_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+
+       gsl_matrix_long_double* g = gsl_matrix_long_double_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = gsl_matrix_int_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = gsl_matrix_uint_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = gsl_matrix_long_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = gsl_matrix_ulong_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = gsl_matrix_short_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = gsl_matrix_ushort_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = gsl_matrix_char_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = gsl_matrix_uchar_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = gsl_matrix_complex_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = gsl_matrix_complex_float_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = gsl_matrix_complex_long_double_alloc(rows, columns);
+       matrix = static_cast<void*>(g);
+   }
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix' constructor:"
+                 << endl
+                 << "Invalid `type':  " << type 
+                  << ".  Not allocating `matrix'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+              
+   }
+
+   return;
+
+#endif 
+
+}  /* End of non-default |Matrix| constructor definition.  */
+
+@q **** (4) Setting function.@> 
+@*2 Setting function.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+set(const unsigned short ttype, 
+    size_t rrows, 
+    size_t ccolumns, 
+    real ttolerance, 
+    Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Matrix| functions@>= 
+int
+Matrix::set(const unsigned short ttype, 
+            size_t rrows, 
+            size_t ccolumns,
+            real ttolerance,
+            Scanner_Node scanner_node)
+{
+
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5)@>
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Matrix::set'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ***** (5)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::set':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Setting `matrix' to 0.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    type = MATRIX_NULL_TYPE;
+
+    matrix = 0;
+
+    return 1;
+
+#else
+
+@q ***** (5)@>
+
+   clear();
+
+@q ***** (5) Error handling:  |rows < 1 || columns < 1|@>   
+@ Error handling:  |row < 1 || columns < 1|.
+\initials{LDF 2007.11.28.}
+
+@<Define |Matrix| functions@>= 
+
+   if (rrows < 1 || ccolumns < 1)
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set':"
+                 << endl
+                 << "`rrows' and/or `ccolumns' < 1:"
+                 << endl  
+                 << "`rrows' == " << rrows
+                 << endl 
+                 << "`ccolumns' == " << ccolumns 
+                 << endl 
+                 << ".  Not allocating `matrix'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       return 1;
+
+   }  /* |if (rrows < 1 || ccolumns < 1)|  */
+
+
+@q ***** (5) Set |type| to default value.@>   
+@ Set |type| to default value.
+\initials{LDF 2007.11.28.}
+
+@<Define |Matrix| functions@>= 
+
+#if LDF_REAL_FLOAT
+   type = MATRIX_FLOAT_TYPE;
+#elif LDF_REAL_DOUBLE
+   type = MATRIX_DOUBLE_TYPE;
+#else /* Default.  \initials{LDF 2007.11.28.}   */
+   type = MATRIX_DOUBLE_TYPE;
+#endif
+
+
+@q ***** (5) Set |rows| and |columns|.@>   
+@ Set |rows| and |columns|.
+\initials{LDF 2007.11.28.}
+
+@<Define |Matrix| functions@>= 
+
+
+   rows    = rrows;
+   columns = ccolumns;
+
+
+@q ***** (5) Check |scanner_node->matrix_options| and set parameters, @>   
+@q ***** (5) if appropriate.                                          @>   
+
+@ Check |scanner_node->matrix_options| and set parameters, if appropriate.
+\initials{LDF 2007.11.28.}
+
+@<Define |Matrix| functions@>= 
+
+   Matrix_Options* options = 0;
+
+   if (scanner_node && scanner_node->matrix_options)
+   {
+ 
+      options = scanner_node->matrix_options;
+
+      scanner_node->matrix_options = 0;
+
+      if (options->type != MATRIX_NULL_TYPE)
+         type = options->type;
+
+      delete options;
+      options = 0;
+
+   }  /* |if (scanner_node && scanner_node->matrix_options)|  */
+
+@q ***** (5) Check type and allocate memory for |matrix|.@>   
+@ Check type and allocate memory for |matrix|.
+\initials{LDF 2007.11.28.}
+
+@<Define |Matrix| functions@>= 
+
+   if (type == MATRIX_DOUBLE_TYPE)
+   {
+
+       gsl_matrix* g = gsl_matrix_alloc(rows, columns);
+       gsl_matrix_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = gsl_matrix_float_alloc(rows, columns);
+       gsl_matrix_float_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = gsl_matrix_long_double_alloc(rows, columns);
+       gsl_matrix_long_double_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = gsl_matrix_int_alloc(rows, columns);
+       gsl_matrix_int_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = gsl_matrix_uint_alloc(rows, columns);
+       gsl_matrix_uint_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = gsl_matrix_long_alloc(rows, columns);
+       gsl_matrix_long_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = gsl_matrix_ulong_alloc(rows, columns);
+       gsl_matrix_ulong_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = gsl_matrix_short_alloc(rows, columns);
+       gsl_matrix_short_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = gsl_matrix_ushort_alloc(rows, columns);
+       gsl_matrix_ushort_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = gsl_matrix_char_alloc(rows, columns);
+       gsl_matrix_char_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = gsl_matrix_uchar_alloc(rows, columns);
+       gsl_matrix_uchar_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+
+       gsl_matrix_complex* g = gsl_matrix_complex_alloc(rows, columns);
+       gsl_matrix_complex_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = gsl_matrix_complex_float_alloc(rows, columns);
+       gsl_matrix_complex_float_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = gsl_matrix_complex_long_double_alloc(rows, columns);
+       gsl_matrix_complex_long_double_set_zero(g);
+       matrix = static_cast<void*>(g);
+   }
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set':"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                << "Not allocating `matrix'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+   }
+
+@q ***** (5)@>
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name 
+                 << "Exiting `Matrix::set' successfully with return value 0.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ***** (5)@>
+
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::set| definition.  */
+
+@q *** (3) Destructor.@> 
+@*2 Destructor.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+virtual
+~Matrix(void);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Matrix| functions@>= 
+Matrix::~Matrix(void)
+{
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = 0;
+
+#ifdef HAVE_PTHREAD_H
+
+   Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+
+   if (thread_info != static_cast<Thread_Info_Type*>(0))
+      scanner_node = thread_info->scanner_node;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+
+   using namespace Scan_Parse;
+
+
+@q ***** (5)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix' destructor:"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not deallocating `matrix'.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return;
+
+#else
+
+@q ***** (5)@>
+
+   if (type == MATRIX_NULL_TYPE)
+   ;
+   else if (type == MATRIX_INVALID_TYPE)
+   ;
+   else if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_free(g);
+   }
+
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_free(g);
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_free(g);
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_free(g);
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_free(g);
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_free(g);
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_free(g);
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_free(g);
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_free(g);
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_free(g);
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_free(g);
+   }
+
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_free(g);
+   }
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_free(g);
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_free(g);
+   }
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `~Matrix':"
+                 << endl
+                 << "Invalid `type':  " << type << ".  Not deleting.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+              
+   }
+
+   matrix = 0;
+
+   return;
+
+#endif 
+
+}  /* End of |~Matrix| definition.  */
+
+@q *** (3) Assignment.@> 
+@*2 Assignment.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Assignment from a |Matrix|.@> 
+@*3 Assignment from a |Matrix|.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+virtual
+const Matrix&
+operator=(const Matrix& m);
+
+@q ***** (5) Definition.@> 
+@
+@<Define |Matrix| functions@>=
+
+const Matrix&
+Matrix::operator=(const Matrix& m)
+{
+
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = 0;
+
+   int status;
+
+#ifdef HAVE_PTHREAD_H
+
+   Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+
+   if (thread_info != static_cast<Thread_Info_Type*>(0))
+      scanner_node = thread_info->scanner_node;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+      cerr_strm << thread_name << "Entering `Matrix::operator=' with "
+                << "`Matrix' argument.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::operator=':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not assigning.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    type = MATRIX_NULL_TYPE;
+
+    matrix = 0;
+
+    return *this;
+
+#else
+
+@q ****** (6)@>
+
+    if (this == &m) /* Make sure it's not self-assignment. */
+       return *this;
+
+@q ****** (6)@>
+
+    clear();
+
+    type = m.type;
+
+    rows = m.rows;
+    columns = m.columns;
+
+    tolerance = m.tolerance;
+ 
+@q ****** (6)@>
+
+@q ******* (7)@>
+
+   if (type == MATRIX_NULL_TYPE || type == MATRIX_INVALID_TYPE)
+   {
+       matrix = 0;
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_DOUBLE_TYPE)
+   {
+
+       gsl_matrix* g = gsl_matrix_alloc(rows, columns);
+
+       gsl_matrix* h = static_cast<gsl_matrix*>(m.matrix);
+
+
+       /* Testing.  Use |gsl_matrix_memcpy| instead.  
+          \initials{LDF 2007.12.23.}  */
+    
+       status = gsl_matrix_memcpy(g, h);
+
+       matrix = static_cast<void*>(g);
+
+   }  /* |else if (type == MATRIX_DOUBLE_TYPE)|  */
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+
+       gsl_matrix_float* g = gsl_matrix_float_alloc(rows, columns);
+       gsl_matrix_float_memcpy(g, static_cast<gsl_matrix_float*>(m.matrix)); 
+       matrix = static_cast<void*>(g);
+
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+
+
+       gsl_matrix_long_double* g = gsl_matrix_long_double_alloc(rows, columns);
+       gsl_matrix_long_double_memcpy(g, static_cast<gsl_matrix_long_double*>(m.matrix));
+       matrix = static_cast<void*>(g);
+
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+
+       gsl_matrix_int* g = gsl_matrix_int_alloc(rows, columns);
+       gsl_matrix_int_memcpy(g, static_cast<gsl_matrix_int*>(m.matrix));
+       matrix = static_cast<void*>(g);
+
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = gsl_matrix_uint_alloc(rows, columns);
+       gsl_matrix_uint_memcpy(g, static_cast<gsl_matrix_uint*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = gsl_matrix_long_alloc(rows, columns);
+       gsl_matrix_long_memcpy(g, static_cast<gsl_matrix_long*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = gsl_matrix_ulong_alloc(rows, columns);
+       gsl_matrix_ulong_memcpy(g, static_cast<gsl_matrix_ulong*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = gsl_matrix_short_alloc(rows, columns);
+       gsl_matrix_short_memcpy(g, static_cast<gsl_matrix_short*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = gsl_matrix_ushort_alloc(rows, columns);
+       gsl_matrix_ushort_memcpy(g, static_cast<gsl_matrix_ushort*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = gsl_matrix_char_alloc(rows, columns);
+       gsl_matrix_char_memcpy(g, static_cast<gsl_matrix_char*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = gsl_matrix_uchar_alloc(rows, columns);
+       gsl_matrix_uchar_memcpy(g, static_cast<gsl_matrix_uchar*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = gsl_matrix_complex_alloc(rows, columns);
+       gsl_matrix_complex_memcpy(g, static_cast<gsl_matrix_complex*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = gsl_matrix_complex_float_alloc(rows, columns);
+       gsl_matrix_complex_float_memcpy(g, static_cast<gsl_matrix_complex_float*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = gsl_matrix_complex_long_double_alloc(rows, columns);
+       gsl_matrix_complex_long_double_memcpy(g, 
+                                              static_cast<gsl_matrix_complex_long_double*>(
+                                                 m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******* (7)@>
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix' assignment operator:"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << " Not assigning to `matrix'."
+                 << endl 
+                 << "Exiting function unsuccessfully with return value `*this'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       return *this;
+              
+   }
+
+@q ******* (7)@>
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+      cerr_strm << thread_name << "Exiting `Matrix::operator=' successfully "
+                << "with return value `m'.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+    return m;
+
+#endif 
+
+}  /* End of 
+      |Matrix::operator=(const Matrix& m)| definition.  */
+
+@q *** (3) Setting elements.@>
+@*2 Setting elements.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Set single element.@> 
+@*2 Set single element.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+set_element(real r, 
+            real c, 
+            void* v, 
+            const unsigned short value_type,
+            void* parameter = 0);
+
+@q ***** (5) Definition.  @>
+
+@
+@<Define |Matrix| functions@>= 
+int
+Matrix::set_element(real r, 
+                    real c,
+                    void* v,
+                    const unsigned short value_type,
+                    void* parameter)
+{
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Matrix::set_element'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::set_element':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not setting element."
+              << endl 
+              << "Exiting function unsuccessfully with return value 1.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return 1;
+
+#else
+
+@q ****** (6) Error handling:  |r < 0 || c < 0|.@>   
+@ Error handling:  |r < 0 || c < 0|.
+\initials{LDF 2007.11.28.}
+
+@<Define |Matrix| functions@>= 
+
+   if (r < 0 || c < 0)
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_element':"
+                 << endl
+                 << "`r' < 0 and/or `c' < 0:"
+                 << endl  
+                 << "`r' == " << r
+                 << endl 
+                 << "`c' == " << c
+                 << endl 
+                 << "Not setting element.  Exiting function unsuccessfully "
+                 << endl
+                 << "With return value 1.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       return 1;
+
+   }  /* |if (r < 0 || c < 0)|  */
+
+@q ****** (6) Error handling:  |type != value_type|.@>   
+@ Error handling:  |type != value_type|.
+\initials{LDF 2007.12.18.}
+
+@<Define |Matrix| functions@>= 
+
+   if (type != value_type)
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_element':"
+                 << endl
+                 << "`type' != `value_type':"
+                 << endl  
+                 << "`type' == " << type
+                 << endl 
+                 << "`value_type' == " << value_type
+                 << endl 
+                 << "Not setting element.  Exiting function unsuccessfully "
+                 << endl
+                 << "With return value 1.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       return 1;
+
+   }  /* |if (type != value_type)|  */
+
+@q ****** (6)@>
+@
+@<Define |Matrix| functions@>= 
+
+   size_t rrow    = static_cast<size_t>(floor(r) + .5); 
+   size_t ccolumn = static_cast<size_t>(floor(c) + .5); 
+
+@q ****** (6) Error handling:  |rrow >= rows || ccolumn >= columns|@>   
+@ Error handling:  |rrow >= rows || ccolumn >= columns|.
+\initials{LDF 2007.11.28.}
+
+@<Define |Matrix| functions@>= 
+
+   if (rrow >= rows || ccolumn > columns)
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_element':"
+                 << endl
+                 << "`rrow' >= `rows' and/or `ccolumn' >= `columns':"
+                 << endl  
+                 << "`rrow' == " << rrow
+                 << endl 
+                 << "`rows' == " << rows
+                 << endl 
+                 << "`ccolumn' == " << ccolumn 
+                 << endl 
+                 << "`columns' == " << columns 
+                 << endl 
+                 << "Not setting element.  Exiting function unsuccessfully "
+                 << endl
+                 << "With return value 1.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       return 1;
+
+   }  /* |if (rrow >= rows || ccolumn >= columns)|  */
+
+@q ****** (6) Check type and set element in |matrix|.@>   
+@ Check type and set element in |matrix|.
+\initials{LDF 2007.11.29.}
+@<Define |Matrix| functions@>= 
+
+   if (type == MATRIX_REAL_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_set(g, rrow, ccolumn, *static_cast<real*>(v));
+   }
+
+   else if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_set(g, rrow, ccolumn, *static_cast<double*>(v));
+   }
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+
+       gsl_complex* gc = static_cast<gsl_complex*>(v);    
+
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_set(g, rrow, ccolumn, *gc);
+
+       /* Do not delete |gc|!  \initials{LDF 2007.12.18.}  */
+         
+   }
+
+#if 0 
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_set(g, rrow, ccolumn,  *static_cast<float*>(v));
+
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_set(g, rrow, ccolumn, value);
+
+   }
+
+
+   /* |MATRIX_COMPLEX_TYPE|.  See above.  \initials{LDF 2007.12.18.}  */
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_set(g, rrow, ccolumn, value);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_set(g, rrow, ccolumn, value);
+
+   }
+
+#endif 
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_element':"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << "Not setting element.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+   }
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name 
+                 << "Exiting `Matrix::set_element' successfully with return value 0.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::set_element| definition.  */
+
+@q **** (4) Set identity.@> 
+@*2 Set identity.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+set_identity(void* parameter = 0);
+
+@q ***** (5) Definition.  @>
+
+@
+@<Define |Matrix| functions@>= 
+int
+Matrix::set_identity(void* parameter)
+{
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Matrix::set_identity'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::set_identity':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not setting identity."
+              << endl 
+              << "Exiting function unsuccessfully with return value 1.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return 1;
+
+#else
+
+@q ****** (6) Check type and set |matrix| to identity matrix.@>   
+@ Check type and set |matrix| to identity matrix.
+\initials{LDF 2007.11.29.}
+@<Define |Matrix| functions@>= 
+
+   if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_set_identity(g);
+   }
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_set_identity(g);
+
+   }
+
+#if 0 
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_set_identity(g);
+
+   }
+
+   /* |MATRIX_COMPLEX_TYPE|.  See above.  \initials{LDF 2007.12.18.}  */
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_set_identity(g);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_set_identity(g);
+
+   }
+
+#endif 
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_identity':"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << "Not setting `matrix' to identity matrix.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+   }
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name 
+                 << "Exiting `Matrix::set_identity' successfully with return value 0.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::set_identity| definition.  */
+
+@q **** (4) Set zero.@> 
+@*2 Set zero.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+set_zero(void* parameter = 0);
+
+@q ***** (5) Definition.  @>
+
+@
+@<Define |Matrix| functions@>= 
+int
+Matrix::set_zero(void* parameter)
+{
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Matrix::set_zero'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::set_zero':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not setting matrix to zero matrix."
+              << endl 
+              << "Exiting function unsuccessfully with return value 1.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return 1;
+
+#else
+
+@q ****** (6) Check type and set |matrix| to zero matrix.@>   
+@ Check type and set |matrix| to zero matrix.
+\initials{LDF 2007.11.29.}
+@<Define |Matrix| functions@>= 
+
+   if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_set_zero(g);
+   }
+
+#if 0 
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_set_zero(g);
+
+   }
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_set_zero(g);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_set_zero(g);
+
+   }
+
+#endif 
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_zero':"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << "Not setting `matrix' to zero matrix.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+   }
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name 
+                 << "Exiting `Matrix::set_zero' successfully with return value 0.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::set_zero| definition.  */
+
+@q **** (4) Set all elements of |matrix| to 1.@> 
+@*2 Set all elements of {\bf matrix} to 1.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+set_one(void* parameter = 0);
+
+@q ***** (5) Definition.  @>
+@
+@<Define |Matrix| functions@>= 
+int
+Matrix::set_one(void* parameter)
+{
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Matrix::set_one'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::set_one':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not setting matrix to one matrix."
+              << endl 
+              << "Exiting function unsuccessfully with return value 1.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return 1;
+
+#else
+
+@q ****** (6) Check type and set all elements of |matrix| to 1.@>   
+@ Check type and set all elements of |matrix| to 1.
+\initials{LDF 2007.11.29.}
+@<Define |Matrix| functions@>= 
+
+   if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_set_all(g, 1);
+   }
+
+#if 0 
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_set_all(g, 1);
+
+   }
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_set_all(g, 1);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_set_all(g, 1);
+
+   }
+
+#endif 
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_one':"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << "Not setting `matrix' to one matrix.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+   }
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name 
+                 << "Exiting `Matrix::set_one' successfully with return value 0.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::set_one| definition.  */
+
+@q **** (4) Set all elements of |matrix| to a value.@> 
+@*2 Set all elements of {\bf matrix} to a value.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+set_all(const real r, void* parameter = 0);
+
+@q ***** (5) Definition.  @>
+@
+@<Define |Matrix| functions@>= 
+int
+Matrix::set_all(const real r, void* parameter)
+{
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Matrix::set_all'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::set_all':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not setting matrix to one matrix."
+              << endl 
+              << "Exiting function unsuccessfully with return value 1.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return 1;
+
+#else
+
+@q ****** (6) Check type and set all elements of |matrix| to 1.@>   
+@ Check type and set all elements of |matrix| to 1.
+\initials{LDF 2007.11.29.}
+@<Define |Matrix| functions@>= 
+
+   if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_set_all(g, r);
+   }
+
+#if 0 
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_set_all(g, r);
+
+   }
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_set_all(g, r);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_set_all(g, r);
+
+   }
+
+#endif 
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::set_all':"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << "Not setting `matrix' to one matrix.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+   }
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name 
+                 << "Exiting `Matrix::set_all' successfully with return value 0.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::set_all| definition.  */
+
+@q *** (3) Getting elements.@>
+@*2 Getting elements.
+\initials{LDF 2007.12.18.}
+
+\LOG
+\initials{LDF 2007.12.18.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Get single element.@> 
+@*2 Get single element.
+\initials{LDF 2007.12.18.}
+
+\LOG
+\initials{LDF 2007.12.18.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+get_element(real r, real c, void* value, void* parameter = 0);
+
+@q ***** (5) Definition.  @>
+
+@
+@<Define |Matrix| functions@>= 
+int
+Matrix::get_element(real r, 
+                    real c,
+                    void* object,
+                    void* parameter)
+{
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Matrix::get_element'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::get_element':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not getting element."
+              << endl 
+              << "Exiting function unsuccessfully with return value 1.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return 1;
+
+#else
+
+@q ****** (6) Error handling:  |r < 0 || c < 0|.@>   
+@ Error handling:  |r < 0 || c < 0|.
+\initials{LDF 2007.12.18.}
+
+@<Define |Matrix| functions@>= 
+
+   if (r < 0 || c < 0)
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::get_element':"
+                 << endl
+                 << "`r' < 0 and/or `c' < 0:"
+                 << endl  
+                 << "`r' == " << r
+                 << endl 
+                 << "`c' == " << c
+                 << endl 
+                 << "Not getting element.  Exiting function unsuccessfully "
+                 << endl
+                 << "With return value 1.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       return 1;
+
+   }  /* |if (r < 0 || c < 0)|  */
+
+@q ****** (6)@>
+@
+@<Define |Matrix| functions@>= 
+
+   size_t rrow    = static_cast<size_t>(floor(r) + .5); 
+   size_t ccolumn = static_cast<size_t>(floor(c) + .5); 
+
+@q ****** (6) Error handling:  |rrow >= rows || ccolumn >= columns|@>   
+@ Error handling:  |rrow >= rows || ccolumn >= columns|.
+\initials{LDF 2007.12.18.}
+
+@<Define |Matrix| functions@>= 
+
+   if (rrow >= rows || ccolumn > columns)
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::get_element':"
+                 << endl
+                 << "`rrow' >= `rows' and/or `ccolumn' >= `columns':"
+                 << endl  
+                 << "`rrow' == " << rrow
+                 << endl 
+                 << "`rows' == " << rows
+                 << endl 
+                 << "`ccolumn' == " << ccolumn 
+                 << endl 
+                 << "`columns' == " << columns 
+                 << endl 
+                 << "Not getting element.  Exiting function unsuccessfully "
+                 << endl
+                 << "With return value 1.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       return 1;
+
+   }  /* |if (rrow >= rows || ccolumn >= columns)|  */
+
+
+@q ****** (6) Check type and get element in |matrix|.@>   
+@ Check type and get element in |matrix|.
+\initials{LDF 2007.12.18.}
+@<Define |Matrix| functions@>= 
+
+   if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       
+       double* d = static_cast<double*>(object); 
+
+       if (!d)
+        d = new double;
+
+       *d = gsl_matrix_get(g, rrow, ccolumn); 
+
+       object = static_cast<void*>(d);  
+       
+   }
+
+#if 0 
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_get(g, rrow, ccolumn);
+
+   }
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_get(g, rrow, ccolumn);
+
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_get(g, rrow, ccolumn);
+
+   }
+
+#endif 
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::get_element':"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << "Not getting element.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+
+       delete scanner_node->matrix_options; 
+       scanner_node->matrix_options = 0;
+   }
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name 
+                 << "Exiting `Matrix::get_element' successfully with return value 0.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::get_element| definition.  */
+
+
+
+@q *** (3) Predicates.@>
+@*2 Predicates.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Is identity.@>
+@*3 Is identity.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+bool
+is_identity(const Matrix& m, real tolerance = -1, Scanner_Node scanner_node = 0);
+
+@q ***** (5) Definition.@> 
+@
+@<Define |Matrix| functions@>=
+bool
+Matrix::is_identity(const Matrix& m, real tolerance, Scanner_Node scanner_node)
+{
+
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::is_identity':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Exiting function unsuccessfully with return value `false'.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return false;
+
+#endif 
+    
+}  /* End of |Matrix::is_identity| definition.  */
+
+@q **** (4) Is zero.@>
+@*3 Is zero.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+bool
+is_zero(const Matrix& m, real tolerance = -1);
+
+@q ***** (5) Definition.@> 
+@
+@<Define |Matrix| functions@>=
+bool
+Matrix::is_zero(const Matrix& m, real tolerance)
+{
+
+    return false;
+    
+}  /* End of |Matrix::is_zero| definition.  */
+
+@q **** (4) Is one.@>
+@*3 Is one.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+bool
+is_one(const Matrix& m, real tolerance = -1);
+
+@q ***** (5) Definition.@> 
+@
+@<Define |Matrix| functions@>=
+bool
+Matrix::is_one(const Matrix& m, real tolerance)
+{
+
+    return false;
+    
+}  /* End of |Matrix::is_one| definition.  */
+
+
+@q **** (4) Is multipliable.@>
+@*3 Is multipliable.
+\initials{LDF 2007.11.29.}
+
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+bool
+is_multipliable(const Matrix& m, Scanner_Node scanner_node = 0) const;
+
+@q ***** (5) Definition.@> 
+@
+@<Define |Matrix| functions@>=
+bool
+Matrix::is_multipliable(const Matrix& m, Scanner_Node scanner_node) const
+{
+    if (columns != 0 && columns == m.rows)
+       return true;
+    else 
+       return false;
+    
+}  /* End of |Matrix::is_multipliable| definition.  */
+
+
+@q **** (4) Is singular.@>
+@*3 Is singular.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+bool
+is_singular(const Matrix& m, real tolerance = -1);
+
+@q ***** (5) Definition.@> 
+@
+@<Define |Matrix| functions@>=
+bool
+Matrix::is_singular(const Matrix& m, real tolerance)
+{
+
+    return false;
+    
+}  /* End of |Matrix::is_singular| definition.  */
+
+@q **** (4)@>
+
+@q *** (3) Multiplication.@> 
+@*2 Multiplication.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Matrix Multiplication.@> 
+@*3 Matrix Multiplication.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Matrix multiplication without assignment.@>
+@*4 Matrix multiplication without assignment.
+\initials{LDF 2007.12.21.}
+
+@q ****** (6) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+const Matrix&
+operator*(const Matrix& m) const;
+
+@q ****** (6) Definition.@> 
+@
+@<Define |Matrix| functions@>=
+const Matrix&
+Matrix::operator*(const Matrix& m) const
+{
+
+@q ******* (7) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = 0;
+
+#ifdef HAVE_PTHREAD_H
+
+   Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info();
+
+   if (thread_info != static_cast<Thread_Info_Type*>(0))
+      scanner_node = thread_info->scanner_node;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ******* (7)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+      cerr_strm << thread_name << "Entering `Matrix::operator*'.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ******* (7)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::operator*':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not multiplying."
+              << endl 
+              << "Exiting function unsuccessfully with return value "
+              << "`INVALID_MATRIX'.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return INVALID_MATRIX;
+
+#else
+
+@q ******* (7)@>
+@
+@<Define |Matrix| functions@>=
+
+   if (!is_multipliable(m))
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::operator*(const Matrix&)':"
+                 << endl 
+                 << "Matrices are not multipliable."
+                 << endl 
+                 << "Exiting function unsuccessfully with return value "
+                 << "`INVALID_MATRIX'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       return INVALID_MATRIX;
+
+   }  /* |if (!is_multipliable(m))|  */
+
+@q ******* (7)@>
+
+@q ******** (8)@>
+@
+@<Define |Matrix| functions@>=
+
+   /* START HERE!!  Implement matrix multiplication.  LDF 2007.12.20.  */ 
+
+   if (type == MATRIX_DOUBLE_TYPE && m.type == MATRIX_DOUBLE_TYPE)
+   {
+
+@q ********* (9)@>
+       
+#if DEBUG_COMPILE
+      if (DEBUG)
+      {
+          cerr_strm << thread_name << "In `Matrix::operator*(const Matrix& m)':"
+                    << endl 
+                    << "`type' == `MATRIX_DOUBLE_TYPE' && "
+                    << "`m.type' == `MATRIX_DOUBLE_TYPE'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ********* (9)@>
+
+      Matrix q(MATRIX_DOUBLE_TYPE, rows, m.columns, -1, scanner_node);
+
+      gsl_matrix* A = static_cast<gsl_matrix*>(matrix);
+      gsl_matrix* B = static_cast<gsl_matrix*>(m.matrix);
+      gsl_matrix* C = static_cast<gsl_matrix*>(q.matrix);
+
+@q ***** (5)@>
+
+      double sum = 0;
+
+#if 0 /* 1 */
+   cerr_mutex.lock(); 
+   cerr << "rows == " << rows << endl;
+   cerr << "columns == " << columns << endl;
+   cerr << "m.rows == " << m.rows << endl;
+   cerr << "m.columns == " << m.columns << endl;
+   cerr_mutex.unlock(); 
+#endif
+
+   for (int i = 0; i < rows; ++i)
+   {
+       for (int j = 0; j < m.columns; ++j)
+       {
+           sum = 0;
+           for (int k = 0; k < columns; ++k)
+           {
+               sum = sum + gsl_matrix_get(A, i, k) * gsl_matrix_get(B, k, j);
+                
+           }  /* |k| loop  */
+
+         gsl_matrix_set(C, i, j, sum);
+
+       }  /* |j| loop  */  
+
+   }  /* |i| loop  */
+
+@q ***** (5)@>
+
+@q ******* (7)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+      cerr_strm << thread_name << "Exiting `Matrix::operator*'.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#if 1 
+      cerr_mutex.lock(); 
+      q.show("q:");
+      cerr_mutex.unlock(); 
+#endif 
+
+/* TESTING  */
+#if 0 
+      return q;
+#endif 
+
+      return m;
+
+
+   }  /* |if (type == MATRIX_DOUBLE_TYPE && m.type == MATRIX_DOUBLE_TYPE)|  */
+
+@q ******** (8)@>
+
+#if 0 
+
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = gsl_matrix_float_alloc(rows, columns);
+       gsl_matrix_float_memcpy(g, static_cast<gsl_matrix_float*>(m.matrix)); 
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = gsl_matrix_long_double_alloc(rows, columns);
+       gsl_matrix_long_double_memcpy(g, static_cast<gsl_matrix_long_double*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = gsl_matrix_int_alloc(rows, columns);
+       gsl_matrix_int_memcpy(g, static_cast<gsl_matrix_int*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = gsl_matrix_uint_alloc(rows, columns);
+       gsl_matrix_uint_memcpy(g, static_cast<gsl_matrix_uint*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = gsl_matrix_long_alloc(rows, columns);
+       gsl_matrix_long_memcpy(g, static_cast<gsl_matrix_long*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = gsl_matrix_ulong_alloc(rows, columns);
+       gsl_matrix_ulong_memcpy(g, static_cast<gsl_matrix_ulong*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = gsl_matrix_short_alloc(rows, columns);
+       gsl_matrix_short_memcpy(g, static_cast<gsl_matrix_short*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = gsl_matrix_ushort_alloc(rows, columns);
+       gsl_matrix_ushort_memcpy(g, static_cast<gsl_matrix_ushort*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = gsl_matrix_char_alloc(rows, columns);
+       gsl_matrix_char_memcpy(g, static_cast<gsl_matrix_char*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = gsl_matrix_uchar_alloc(rows, columns);
+       gsl_matrix_uchar_memcpy(g, static_cast<gsl_matrix_uchar*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = gsl_matrix_complex_alloc(rows, columns);
+       gsl_matrix_complex_memcpy(g, static_cast<gsl_matrix_complex*>(m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = gsl_matrix_complex_float_alloc(rows, columns);
+       gsl_matrix_complex_float_memcpy(g, 
+                                       static_cast<gsl_matrix_complex_float*>(
+                                          m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = gsl_matrix_complex_long_double_alloc(rows, columns);
+       gsl_matrix_complex_long_double_memcpy(g, 
+                                  static_cast<gsl_matrix_complex_long_double*>(
+                                     m.matrix));
+       matrix = static_cast<void*>(g);
+   }
+
+@q ******** (8)@>
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix' assignment operator:"
+                 << endl
+                 << "Invalid `type':  " << type 
+                 << endl 
+                 << " Not assigning to `matrix'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+ 
+       type = MATRIX_NULL_TYPE;
+
+       matrix = 0;
+              
+   }
+
+#endif 
+
+#endif 
+
+@q ******** (8)@>
+
+@q ******* (7)@>
+
+}  /* End of |Matrix::operator*(const Matrix& m)| definition.  */
+
+@q *** (3) Clear.@> 
+@*2 Clear.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+int
+clear(Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Matrix| functions@>= 
+int 
+Matrix::clear(Scanner_Node scanner_node)
+{
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::clear':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not clearing.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    type = MATRIX_NULL_TYPE;
+
+    matrix = 0;
+
+    return 1;
+
+#else
+
+@q ***** (5)@>
+
+   if (type == MATRIX_NULL_TYPE || type == MATRIX_INVALID_TYPE)
+   ;
+   else if (type == MATRIX_DOUBLE_TYPE)
+   {
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+       gsl_matrix_free(g);
+   }
+
+   else if (type == MATRIX_FLOAT_TYPE)
+   {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+       gsl_matrix_float_free(g);
+   }
+
+   else if (type == MATRIX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+       gsl_matrix_long_double_free(g);
+   }
+
+   else if (type == MATRIX_INT_TYPE)
+   {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+       gsl_matrix_int_free(g);
+   }
+
+   else if (type == MATRIX_UINT_TYPE)
+   {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+       gsl_matrix_uint_free(g);
+   }
+
+   else if (type == MATRIX_LONG_TYPE)
+   {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+       gsl_matrix_long_free(g);
+   }
+
+   else if (type == MATRIX_ULONG_TYPE)
+   {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+       gsl_matrix_ulong_free(g);
+   }
+
+   else if (type == MATRIX_SHORT_TYPE)
+   {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+       gsl_matrix_short_free(g);
+   }
+
+   else if (type == MATRIX_USHORT_TYPE)
+   {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+       gsl_matrix_ushort_free(g);
+   }
+
+   else if (type == MATRIX_CHAR_TYPE)
+   {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+       gsl_matrix_char_free(g);
+   }
+
+   else if (type == MATRIX_UCHAR_TYPE)
+   {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+       gsl_matrix_uchar_free(g);
+   }
+
+
+   else if (type == MATRIX_COMPLEX_TYPE)
+   {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+       gsl_matrix_complex_free(g);
+   }
+
+
+   else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+   {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+       gsl_matrix_complex_float_free(g);
+   }
+
+   else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+   {
+       gsl_matrix_complex_long_double* g 
+          = static_cast<gsl_matrix_complex_long_double*>(matrix);
+       gsl_matrix_complex_long_double_free(g);
+   }
+
+   else
+   {
+       cerr_strm << thread_name << "ERROR!  In `Matrix::clear':"
+                 << endl
+                 << "Invalid `type':  " << type << ".  Not deleting.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+              
+   }
+
+   type = MATRIX_NULL_TYPE;
+   rows = 0;
+   columns = 0;
+   tolerance = -1;
+
+   matrix = 0;
+
+   return 0;
+
+#endif 
+
+}  /* End of |Matrix::clear| definition.  */
+
+@q *** (3) Show.@> 
+@*2 Show.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Matrix| functions@>=
+
+void 
+show(string text = "", Scanner_Node scanner_node = 0) const;
+
+
+@q **** (4) Definition.@> 
+
+@
+@<Define |Matrix| functions@>=
+void 
+Matrix::show(string text, Scanner_Node scanner_node) const
+{
+
+@q ***** (5)@>
+
+@q ****** (6) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5)@>
+
+#if ! (HAVE_LIBGSL & HAVE_GSL_GSL_MATRIX_H)
+
+    cerr_strm << thread_name << "ERROR!  In `Matrix::show':"
+              << endl 
+              << "The GNU Scientific Library or its matrix facilities,"
+              << endl 
+              << "which are required for this function, are unavailable."
+              << endl 
+              << "Not showing.";
+
+    log_message(cerr_strm);
+    cerr_message(cerr_strm, error_stop_value);
+    cerr_strm.str("");
+    
+    return;
+
+#else
+
+@q ***** (5)@>
+
+    if (text == "")
+       text = "Matrix:";
+
+    cerr << text 
+         << endl;
+
+@q ****** (6) Output |type|.@>
+@ Output |type|.
+\initials{LDF 2007.12.18.}
+
+@<Define |Matrix| functions@>=
+ 
+    if (type == MATRIX_NULL_TYPE)
+       cerr << "`type' == MATRIX_NULL_TYPE" << endl;
+
+    else if (type == MATRIX_INVALID_TYPE)
+       cerr << "`type' == MATRIX_INVALID_TYPE" << endl;
+
+    else if (type == MATRIX_DOUBLE_TYPE)
+       cerr << "`type' == MATRIX_DOUBLE_TYPE" << endl;
+
+    else if (type == MATRIX_FLOAT_TYPE)
+       cerr << "`type' == MATRIX_FLOAT_TYPE" << endl;
+
+    else if (type == MATRIX_LONG_DOUBLE_TYPE)
+       cerr << "`type' == MATRIX_LONG_DOUBLE_TYPE" << endl;
+
+    else if (type == MATRIX_INT_TYPE)
+       cerr << "`type' == MATRIX_INT_TYPE" << endl;                   
+
+    else if (type == MATRIX_UINT_TYPE)
+       cerr << "`type' == MATRIX_UINT_TYPE" << endl;                  
+
+    else if (type == MATRIX_LONG_TYPE)
+       cerr << "`type' == MATRIX_LONG_TYPE" << endl;                  
+
+    else if (type == MATRIX_ULONG_TYPE)
+       cerr << "`type' == MATRIX_ULONG_TYPE" << endl;                 
+
+    else if (type == MATRIX_SHORT_TYPE)
+       cerr << "`type' == MATRIX_SHORT_TYPE" << endl;                 
+
+    else if (type == MATRIX_USHORT_TYPE)
+       cerr << "`type' == MATRIX_USHORT_TYPE" << endl;                
+
+    else if (type == MATRIX_CHAR_TYPE)
+       cerr << "`type' == MATRIX_CHAR_TYPE" << endl;                  
+
+    else if (type == MATRIX_UCHAR_TYPE)
+       cerr << "`type' == MATRIX_UCHAR_TYPE" << endl;                 
+
+    else if (type == MATRIX_COMPLEX_TYPE)
+       cerr << "`type' == MATRIX_COMPLEX_TYPE" << endl;               
+
+    else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+       cerr << "`type' == MATRIX_COMPLEX_FLOAT_TYPE" << endl;         
+
+    else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+       cerr << "`type' == MATRIX_COMPLEX_LONG_DOUBLE_TYPE" << endl;   
+
+    else 
+       cerr << "Invalid value for `type':  " << type << endl;
+
+@q ****** (6)@>
+@
+@<Define |Matrix| functions@>=
+
+    cerr << "`rows' == " << rows
+         << endl 
+         << "`columns' == " << columns
+         << endl
+         << "`tolerance' == " << tolerance
+         << endl
+         << "`matrix':" 
+         << endl;
+
+@q ***** (5)@>
+
+@q ****** (6)@>
+
+    if (type == MATRIX_NULL_TYPE || type == MATRIX_INVALID_TYPE)
+    {
+       cerr << "(None)" << endl;;
+    }
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_DOUBLE_TYPE)
+    {
+
+       gsl_matrix* g = static_cast<gsl_matrix*>(matrix);
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+    }
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_FLOAT_TYPE)
+    {
+       gsl_matrix_float* g = static_cast<gsl_matrix_float*>(matrix);
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_float_get(g , i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_LONG_DOUBLE_TYPE)
+    {
+       gsl_matrix_long_double* g = static_cast<gsl_matrix_long_double*>(matrix);
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_long_double_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_INT_TYPE)
+    {
+       gsl_matrix_int* g = static_cast<gsl_matrix_int*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_int_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                   
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_UINT_TYPE)
+    {
+       gsl_matrix_uint* g = static_cast<gsl_matrix_uint*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_uint_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                  
+@q ****** (6)@>
+
+    else if (type == MATRIX_LONG_TYPE)
+    {
+       gsl_matrix_long* g = static_cast<gsl_matrix_long*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_long_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                  
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_ULONG_TYPE)
+    {
+       gsl_matrix_ulong* g = static_cast<gsl_matrix_ulong*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_ulong_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                 
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_SHORT_TYPE)
+    {
+       gsl_matrix_short* g = static_cast<gsl_matrix_short*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_short_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                 
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_USHORT_TYPE)
+    {
+       gsl_matrix_ushort* g = static_cast<gsl_matrix_ushort*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_ushort_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_CHAR_TYPE)
+    {
+       gsl_matrix_char* g = static_cast<gsl_matrix_char*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_char_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                  
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_UCHAR_TYPE)
+    {
+       gsl_matrix_uchar* g = static_cast<gsl_matrix_uchar*>(matrix);
+
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_uchar_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }                 
+
+@q ****** (6)@>
+
+@ @:??@> ??  It is necessary to declare |gsl_complex gc| and pass it to
+|operator<<|, but I don't see why it should be.  I think I should be able
+to call |gsl_matrix_complex_get| and use its return value instead.
+\initials{LDF 2007.12.18.}
+
+@<Define |Matrix| functions@>=
+
+    else if (type == MATRIX_COMPLEX_TYPE)
+    {
+       gsl_matrix_complex* g = static_cast<gsl_matrix_complex*>(matrix);
+
+       gsl_complex gc;
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+
+               gc = gsl_matrix_complex_get(g, i, j);
+
+               cerr << gc << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+
+    }               
+
+@q ****** (6)@>
+@
+@<Define |Matrix| functions@>=
+
+    else if (type == MATRIX_COMPLEX_FLOAT_TYPE)
+    {
+       gsl_matrix_complex_float* g = static_cast<gsl_matrix_complex_float*>(matrix);
+
+
+#if 0 
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_complex_float_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+#endif 
+
+    } /* |else if (type == MATRIX_COMPLEX_FLOAT_TYPE)|  */
+
+@q ****** (6)@>
+
+    else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+    {
+       gsl_matrix_complex_long_double* g = static_cast<gsl_matrix_complex_long_double*>(matrix);
+
+#if 0
+
+       for (size_t i = 0; i < rows; ++i)
+       {
+           for (size_t j = 0; j < columns; ++j)
+           {
+               cerr << gsl_matrix_complex_long_double_get(g, i, j) << " ";
+           }
+
+           cerr << endl;
+
+       }  /* outer |for|  */
+#endif 
+
+    }  /* |else if (type == MATRIX_COMPLEX_LONG_DOUBLE_TYPE)|  */
+
+@q ****** (6)@>
+
+@q ***** (5)@>
+
+    return;
+
+#endif 
+   
+} /* End of |Matrix::show| definition.  */
+
+@q * (1) |Matrix_Options|.@> 
+@* {\bf Matrix\_Options}.
+\initials{LDF 2007.11.28.}
+
+@q ** (2) Matrix_Options struct definition.@>
+@*1 {\bf Matrix\_Options} struct definition.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this |struct| definition.
+\ENDLOG
+
+@q *** (3) Definition@> 
+
+@<Declare |struct Matrix_Options|@>=
+
+struct Matrix_Options
+{
+    unsigned short type;
+    size_t rows;
+    size_t columns;
+    real tolerance;
+
+    @<Declare |Matrix_Options| functions@>@;
+
+};
+
+@q ** (2) |Matrix_Options| functions.@> 
+@*1 {\bf Matrix\_Options} functions.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Default Constructor.@> 
+@*2 Default Constructor.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Matrix_Options| functions@>=
+Matrix_Options(void);
+
+@q **** (4) Definition.@>
+@
+@<Define |Matrix_Options| functions@>=
+Matrix_Options::Matrix_Options(void)
+{
+
+@q ***** (5)@>
+
+    type    = Matrix::MATRIX_NULL_TYPE;
+    rows    = 0;
+    columns = 0;
+
+    tolerance = -1;
+
+    return;
+
+}  /* End of |Matrix_Options| default constructor
+      definition  */
+
+@q *** (3) Destructor.@> 
+@*2 Destructor.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Matrix_Options| functions@>=
+~Matrix_Options(void);
+
+@q **** (4) Definition.@>
+@
+@<Define |Matrix_Options| functions@>=
+Matrix_Options::~Matrix_Options(void)
+{
+
+    return;
+
+}  /* End of |Matrix_Options| destructor
+      definition.   */
+
+@q *** (3) Clear.@> 
+@*2 Clear.
+\initials{LDF 2007.11.29.}
+
+\LOG
+\initials{LDF 2007.11.29.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Matrix_Options| functions@>=
+int
+clear(void);
+
+@q **** (4) Definition.@>
+@
+@<Define |Matrix_Options| functions@>=
+int
+Matrix_Options::clear(void)
+{
+    type = Matrix::MATRIX_NULL_TYPE;
+    rows       = 0;
+    columns    = 0;
+
+    tolerance = -1;
+
+    return 0;
+
+}  /* End of |Matrix_Options::clear|  definition  */
+
+@q *** (3) Show.@> 
+@*2 Show.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Matrix_Options| functions@>=
+void
+show(string text = "", Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.@>
+@
+@<Define |Matrix_Options| functions@>=
+void
+Matrix_Options::show(string text, Scanner_Node scanner_node)
+{
+
+@q ***** (5)@>
+
+    if (text == "")
+       text = "Matrix_Options:";
+
+    cerr << text 
+         << endl;
+
+@q ****** (6) Output |type|.@>
+@ Output |type|.
+\initials{LDF 2007.12.18.}
+
+@<Define |Matrix_Options| functions@>=
+ 
+    if (type == Matrix::MATRIX_NULL_TYPE)
+       cerr << "`type' == MATRIX_NULL_TYPE" << endl;
+
+    else if (type == Matrix::MATRIX_DOUBLE_TYPE)
+       cerr << "`type' == MATRIX_DOUBLE_TYPE" << endl;
+
+    else if (type == Matrix::MATRIX_FLOAT_TYPE)
+       cerr << "`type' == MATRIX_FLOAT_TYPE" << endl;
+
+    else if (type == Matrix::MATRIX_LONG_DOUBLE_TYPE)
+       cerr << "`type' == MATRIX_LONG_DOUBLE_TYPE" << endl;
+
+    else if (type == Matrix::MATRIX_INT_TYPE)
+       cerr << "`type' == MATRIX_INT_TYPE" << endl;                   
+
+    else if (type == Matrix::MATRIX_UINT_TYPE)
+       cerr << "`type' == MATRIX_UINT_TYPE" << endl;                  
+
+    else if (type == Matrix::MATRIX_LONG_TYPE)
+       cerr << "`type' == MATRIX_LONG_TYPE" << endl;                  
+
+    else if (type == Matrix::MATRIX_ULONG_TYPE)
+       cerr << "`type' == MATRIX_ULONG_TYPE" << endl;                 
+
+    else if (type == Matrix::MATRIX_SHORT_TYPE)
+       cerr << "`type' == MATRIX_SHORT_TYPE" << endl;                 
+
+    else if (type == Matrix::MATRIX_USHORT_TYPE)
+       cerr << "`type' == MATRIX_USHORT_TYPE" << endl;                
+
+    else if (type == Matrix::MATRIX_CHAR_TYPE)
+       cerr << "`type' == MATRIX_CHAR_TYPE" << endl;                  
+
+    else if (type == Matrix::MATRIX_UCHAR_TYPE)
+       cerr << "`type' == MATRIX_UCHAR_TYPE" << endl;                 
+
+    else if (type == Matrix::MATRIX_COMPLEX_TYPE)
+       cerr << "`type' == MATRIX_COMPLEX_TYPE" << endl;               
+
+    else if (type == Matrix::MATRIX_COMPLEX_FLOAT_TYPE)
+       cerr << "`type' == MATRIX_COMPLEX_FLOAT_TYPE" << endl;         
+
+    else if (type == Matrix::MATRIX_COMPLEX_LONG_DOUBLE_TYPE)
+       cerr << "`type' == MATRIX_COMPLEX_LONG_DOUBLE_TYPE" << endl;   
+
+    else 
+       cerr << "Invalid value for `type':  " << type << endl;
+
+@q ****** (6)@>
+@
+@<Define |Matrix_Options| functions@>=
+
+@q ***** (5)@>
+ 
+    cerr << "`rows' == " << rows
+         << endl 
+         << "`columns' == " << columns
+         << endl
+         << "`tolerance' == " << tolerance
+         << endl;
+
+    return;
+
+}  /* End of |Matrix_Options::show| definition.   */
+
+@q ** (2)@>
+
+@q * (1) Putting Matrix and Matrix_Options together.@>
+@* Putting {\bf Matrix} and {\bf Matrix\_Options} together.
+
+@q ** (2) This is what's compiled.@> 
+
+This is what's compiled.
+
+@c
+@<Include files@>@;
+@<Declare |class Matrix|@>@;
+@<Declare |struct Matrix_Options|@>@;
+@<Initialize |static| |class Matrix| data members@>@;
+@<Define |Matrix| constructors@>@;
+@<Declare global |Matrix| variables@>@;
+@<Define |Matrix| functions@>@;
+@<Define |Matrix_Options| functions@>@;
+
+@q ** (2) This is what's written to "matrices.h".@> 
+
+@ This is what's written to \filename{matrices.h}.
+
+@(matrices.h@>=
+#ifndef LDF_MATRICES_KNOWN
+#define LDF_MATRICES_KNOWN 1
+@<Declare |class Matrix|@>@;
+@<Declare |struct Matrix_Options|@>@;
+@<|extern| declarations for the header file@>@;
+#endif 
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 80))    @>
+
+
+
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q run-mp-on-file:"persp.mp" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q font-lock-mode:nil @>
+@q End: @>

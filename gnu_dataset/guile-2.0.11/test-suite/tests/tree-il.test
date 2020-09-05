@@ -1,0 +1,1901 @@
+;;;; tree-il.test --- test suite for compiling tree-il   -*- scheme -*-
+;;;; Andy Wingo <wingo@pobox.com> --- May 2009
+;;;;
+;;;; Copyright (C) 2009, 2010, 2011, 2012, 2013,
+;;;;   2014 Free Software Foundation, Inc.
+;;;;
+;;;; This library is free software; you can redistribute it and/or
+;;;; modify it under the terms of the GNU Lesser General Public
+;;;; License as published by the Free Software Foundation; either
+;;;; version 3 of the License, or (at your option) any later version.
+;;;;
+;;;; This library is distributed in the hope that it will be useful,
+;;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;;; Lesser General Public License for more details.
+;;;;
+;;;; You should have received a copy of the GNU Lesser General Public
+;;;; License along with this library; if not, write to the Free Software
+;;;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+
+(define-module (test-suite tree-il)
+  #:use-module (test-suite lib)
+  #:use-module (system base compile)
+  #:use-module (system base pmatch)
+  #:use-module (system base message)
+  #:use-module (language tree-il)
+  #:use-module (language tree-il primitives)
+  #:use-module (language glil)
+  #:use-module (srfi srfi-13))
+
+;; Of course, the GLIL that is emitted depends on the source info of the
+;; input. Here we're not concerned about that, so we strip source
+;; information from the incoming tree-il.
+
+(define (strip-source x)
+  (post-order! (lambda (x) (set! (tree-il-src x) #f))
+               x))
+
+(define-syntax assert-tree-il->glil
+  (syntax-rules (with-partial-evaluation without-partial-evaluation
+                 with-options)
+    ((_ with-partial-evaluation in pat test ...)
+     (assert-tree-il->glil with-options (#:partial-eval? #t)
+                           in pat test ...))
+    ((_ without-partial-evaluation in pat test ...)
+     (assert-tree-il->glil with-options (#:partial-eval? #f)
+                           in pat test ...))
+    ((_ with-options opts in pat test ...)
+     (let ((exp 'in))
+       (pass-if 'in
+         (let ((glil (unparse-glil
+                      (compile (strip-source (parse-tree-il exp))
+                               #:from 'tree-il #:to 'glil
+                               #:opts 'opts))))
+           (pmatch glil
+             (pat (guard test ...) #t)
+             (else #f))))))
+    ((_ in pat test ...)
+     (assert-tree-il->glil with-partial-evaluation
+                           in pat test ...))))
+
+(define-syntax-rule (pass-if-primitives-resolved in expected)
+  (pass-if (format #f "primitives-resolved in ~s" 'in)
+    (let* ((module   (let ((m (make-module)))
+                       (beautify-user-module! m)
+                       m))
+           (orig     (parse-tree-il 'in))
+           (resolved (expand-primitives! (resolve-primitives! orig module))))
+      (or (equal? (unparse-tree-il resolved) 'expected)
+          (begin
+            (format (current-error-port)
+                    "primitive test failed: got ~s, expected ~s"
+                    resolved 'expected)
+            #f)))))
+
+(define-syntax pass-if-tree-il->scheme
+  (syntax-rules ()
+    ((_ in pat)
+     (assert-scheme->tree-il->scheme in pat #t))
+    ((_ in pat guard-exp)
+     (pass-if 'in
+       (pmatch (tree-il->scheme
+                (compile 'in #:from 'scheme #:to 'tree-il))
+         (pat (guard guard-exp) #t)
+         (_ #f))))))
+
+
+(with-test-prefix "primitives"
+
+  (with-test-prefix "eqv?"
+
+    (pass-if-primitives-resolved
+        (apply (primitive eqv?) (const #f) (toplevel x))
+      (apply (primitive eq?) (const #f) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive eqv?) (const ()) (toplevel x))
+      (apply (primitive eq?) (const ()) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive eqv?) (const #t) (lexical x y))
+      (apply (primitive eq?) (const #t) (lexical x y)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive eqv?) (const this-is-a-symbol) (toplevel x))
+      (apply (primitive eq?) (const this-is-a-symbol) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive eqv?) (const 42) (toplevel x))
+      (apply (primitive eq?) (const 42) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive eqv?) (const 42.0) (toplevel x))
+      (apply (primitive eqv?) (const 42.0) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive eqv?) (const #nil) (toplevel x))
+      (apply (primitive eq?) (const #nil) (toplevel x))))
+
+  (with-test-prefix "equal?"
+
+    (pass-if-primitives-resolved
+        (apply (primitive equal?) (const #f) (toplevel x))
+      (apply (primitive eq?) (const #f) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive equal?) (const ()) (toplevel x))
+      (apply (primitive eq?) (const ()) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive equal?) (const #t) (lexical x y))
+      (apply (primitive eq?) (const #t) (lexical x y)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive equal?) (const this-is-a-symbol) (toplevel x))
+      (apply (primitive eq?) (const this-is-a-symbol) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive equal?) (const 42) (toplevel x))
+      (apply (primitive eq?) (const 42) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive equal?) (const 42.0) (toplevel x))
+      (apply (primitive equal?) (const 42.0) (toplevel x)))
+
+    (pass-if-primitives-resolved
+        (apply (primitive equal?) (const #nil) (toplevel x))
+      (apply (primitive eq?) (const #nil) (toplevel x)))))
+
+
+(with-test-prefix "tree-il->scheme"
+  (pass-if-tree-il->scheme
+   (case-lambda ((a) a) ((b c) (list b c)))
+   (case-lambda ((,a) ,a1) ((,b ,c) (list ,b1 ,c1)))
+   (and (eq? a a1) (eq? b b1) (eq? c c1))))
+
+(with-test-prefix "void"
+  (assert-tree-il->glil
+   (void)
+   (program () (std-prelude 0 0 #f) (label _) (void) (call return 1)))
+  (assert-tree-il->glil
+   (begin (void) (const 1))
+   (program () (std-prelude 0 0 #f) (label _) (const 1) (call return 1)))
+  (assert-tree-il->glil
+   (apply (primitive +) (void) (const 1))
+   (program () (std-prelude 0 0 #f) (label _) (void) (call add1 1) (call return 1))))
+
+(with-test-prefix "application"
+  (assert-tree-il->glil
+   (apply (toplevel foo) (const 1))
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref foo) (const 1) (call tail-call 1)))
+  (assert-tree-il->glil
+   (begin (apply (toplevel foo) (const 1)) (void))
+   (program () (std-prelude 0 0 #f) (label _) (call new-frame 0) (toplevel ref foo) (const 1) (mv-call 1 ,l1)
+            (call drop 1) (branch br ,l2)
+            (label ,l3) (mv-bind 0 #f)
+            (label ,l4)
+            (void) (call return 1))
+   (and (eq? l1 l3) (eq? l2 l4)))
+  (assert-tree-il->glil
+   (apply (toplevel foo) (apply (toplevel bar)))
+   (program ()  (std-prelude 0 0 #f) (label _) (toplevel ref foo) (call new-frame 0) (toplevel ref bar) (call call 0)
+            (call tail-call 1))))
+
+(with-test-prefix "conditional"
+  (assert-tree-il->glil
+   (if (toplevel foo) (const 1) (const 2))
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref foo) (branch br-if-not ,l1)
+            (const 1) (call return 1)
+            (label ,l2) (const 2) (call return 1))
+   (eq? l1 l2))
+
+  (assert-tree-il->glil without-partial-evaluation
+   (begin (if (toplevel foo) (const 1) (const 2)) (const #f))
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref foo) (branch br-if-not ,l1) (branch br ,l2)
+            (label ,l3) (label ,l4) (const #f) (call return 1))
+   (eq? l1 l3) (eq? l2 l4))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (if (toplevel foo) (const 1) (const 2)))
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref foo) (branch br-if-not ,l1)
+            (const 1) (branch br ,l2)
+                    (label ,l3) (const 2) (label ,l4)
+                    (call null? 1) (call return 1))
+   (eq? l1 l3) (eq? l2 l4)))
+
+(with-test-prefix "primitive-ref"
+  (assert-tree-il->glil
+   (primitive +)
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref +) (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (primitive +) (const #f))
+   (program () (std-prelude 0 0 #f) (label _) (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (primitive +))
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref +) (call null? 1)
+            (call return 1))))
+
+(with-test-prefix "lexical refs"
+  (assert-tree-il->glil without-partial-evaluation
+   (let (x) (y) ((const 1)) (lexical x y))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #f 0)) (lexical #t #f set 0)
+            (lexical #t #f ref 0) (call return 1)
+            (unbind)))
+
+  (assert-tree-il->glil with-options (#:partial-eval? #f #:cse? #f)
+   (let (x) (y) ((const 1)) (begin (lexical x y) (const #f)))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #f 0)) (lexical #t #f set 0)
+            (const #f) (call return 1)
+            (unbind)))
+
+  (assert-tree-il->glil without-partial-evaluation
+   (let (x) (y) ((const 1)) (apply (primitive null?) (lexical x y)))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #f 0)) (lexical #t #f set 0)
+            (lexical #t #f ref 0) (call null? 1) (call return 1)
+            (unbind))))
+
+(with-test-prefix "lexical sets"
+  (assert-tree-il->glil
+   ;; unreferenced sets may be optimized away -- make sure they are ref'd
+   (let (x) (y) ((const 1))
+        (set! (lexical x y) (apply (primitive 1+) (lexical x y))))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #t 0)) (lexical #t #t box 0)
+            (lexical #t #t ref 0) (call add1 1) (lexical #t #t set 0)
+            (void) (call return 1)
+            (unbind)))
+
+  (assert-tree-il->glil
+   (let (x) (y) ((const 1))
+        (begin (set! (lexical x y) (apply (primitive 1+) (lexical x y)))
+               (lexical x y)))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #t 0)) (lexical #t #t box 0)
+            (lexical #t #t ref 0) (call add1 1) (lexical #t #t set 0)
+            (lexical #t #t ref 0) (call return 1)
+            (unbind)))
+
+  (assert-tree-il->glil
+   (let (x) (y) ((const 1))
+     (apply (primitive null?)
+            (set! (lexical x y) (apply (primitive 1+) (lexical x y)))))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #t 0)) (lexical #t #t box 0)
+            (lexical #t #t ref 0) (call add1 1) (lexical #t #t set 0) (void)
+            (call null? 1) (call return 1)
+            (unbind))))
+
+(with-test-prefix "module refs"
+  (assert-tree-il->glil
+   (@ (foo) bar)
+   (program () (std-prelude 0 0 #f) (label _)
+            (module public ref (foo) bar)
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (@ (foo) bar) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (module public ref (foo) bar) (call drop 1)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (@ (foo) bar))
+   (program () (std-prelude 0 0 #f) (label _)
+            (module public ref (foo) bar)
+            (call null? 1) (call return 1)))
+
+  (assert-tree-il->glil
+   (@@ (foo) bar)
+   (program () (std-prelude 0 0 #f) (label _)
+            (module private ref (foo) bar)
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (@@ (foo) bar) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (module private ref (foo) bar) (call drop 1)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (@@ (foo) bar))
+   (program () (std-prelude 0 0 #f) (label _)
+            (module private ref (foo) bar)
+            (call null? 1) (call return 1))))
+
+(with-test-prefix "module sets"
+  (assert-tree-il->glil
+   (set! (@ (foo) bar) (const 2))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (module public set (foo) bar)
+            (void) (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (set! (@ (foo) bar) (const 2)) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (module public set (foo) bar)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (set! (@ (foo) bar) (const 2)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (module public set (foo) bar)
+            (void) (call null? 1) (call return 1)))
+
+  (assert-tree-il->glil
+   (set! (@@ (foo) bar) (const 2))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (module private set (foo) bar)
+            (void) (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (set! (@@ (foo) bar) (const 2)) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (module private set (foo) bar)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (set! (@@ (foo) bar) (const 2)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (module private set (foo) bar)
+            (void) (call null? 1) (call return 1))))
+
+(with-test-prefix "toplevel refs"
+  (assert-tree-il->glil
+   (toplevel bar)
+   (program () (std-prelude 0 0 #f) (label _)
+            (toplevel ref bar)
+            (call return 1)))
+
+  (assert-tree-il->glil without-partial-evaluation
+   (begin (toplevel bar) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (toplevel ref bar) (call drop 1)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (toplevel bar))
+   (program () (std-prelude 0 0 #f) (label _)
+            (toplevel ref bar)
+            (call null? 1) (call return 1))))
+
+(with-test-prefix "toplevel sets"
+  (assert-tree-il->glil
+   (set! (toplevel bar) (const 2))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (toplevel set bar)
+            (void) (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (set! (toplevel bar) (const 2)) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (toplevel set bar)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (set! (toplevel bar) (const 2)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (toplevel set bar)
+            (void) (call null? 1) (call return 1))))
+
+(with-test-prefix "toplevel defines"
+  (assert-tree-il->glil
+   (define bar (const 2))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (toplevel define bar)
+            (void) (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (define bar (const 2)) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (toplevel define bar)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive null?) (define bar (const 2)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (toplevel define bar)
+            (void) (call null? 1) (call return 1))))
+
+(with-test-prefix "constants"
+  (assert-tree-il->glil
+   (const 2)
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 2) (call return 1)))
+
+  (assert-tree-il->glil
+   (begin (const 2) (const #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const #f) (call return 1)))
+
+  (assert-tree-il->glil
+   ;; This gets simplified by `peval'.
+   (apply (primitive null?) (const 2))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const #f) (call return 1))))
+
+(with-test-prefix "letrec"
+  ;; simple bindings -> let
+  (assert-tree-il->glil without-partial-evaluation
+   (letrec (x y) (x1 y1) ((const 10) (const 20))
+           (apply (toplevel foo) (lexical x x1) (lexical y y1)))
+   (program () (std-prelude 0 2 #f) (label _)
+            (const 10) (const 20)
+            (bind (x #f 0) (y #f 1))
+            (lexical #t #f set 1) (lexical #t #f set 0)
+            (toplevel ref foo)
+            (lexical #t #f ref 0) (lexical #t #f ref 1)
+            (call tail-call 2)
+            (unbind)))
+
+  ;; complex bindings -> box and set! within let
+  (assert-tree-il->glil without-partial-evaluation
+   (letrec (x y) (x1 y1) ((apply (toplevel foo)) (apply (toplevel bar)))
+           (apply (primitive +) (lexical x x1) (lexical y y1)))
+   (program () (std-prelude 0 4 #f) (label _)
+            (void) (void) ;; what are these?
+            (bind (x #t 0) (y #t 1))
+            (lexical #t #t box 1) (lexical #t #t box 0)
+            (call new-frame 0) (toplevel ref foo) (call call 0)
+            (call new-frame 0) (toplevel ref bar) (call call 0)
+            (bind (x #f 2) (y #f 3)) (lexical #t #f set 3) (lexical #t #f set 2)
+            (lexical #t #f ref 2) (lexical #t #t set 0)
+            (lexical #t #f ref 3) (lexical #t #t set 1)
+            (void) (lexical #t #f set 2) (void) (lexical #t #f set 3) ;; clear bindings
+            (unbind)
+            (lexical #t #t ref 0) (lexical #t #t ref 1)
+            (call add 2) (call return 1) (unbind)))
+  
+  ;; complex bindings in letrec* -> box and set! in order
+  (assert-tree-il->glil without-partial-evaluation
+   (letrec* (x y) (x1 y1) ((apply (toplevel foo)) (apply (toplevel bar)))
+            (apply (primitive +) (lexical x x1) (lexical y y1)))
+   (program () (std-prelude 0 2 #f) (label _)
+            (void) (void) ;; what are these?
+            (bind (x #t 0) (y #t 1))
+            (lexical #t #t box 1) (lexical #t #t box 0)
+            (call new-frame 0) (toplevel ref foo) (call call 0)
+            (lexical #t #t set 0)
+            (call new-frame 0) (toplevel ref bar) (call call 0)
+            (lexical #t #t set 1)
+            (lexical #t #t ref 0)
+            (lexical #t #t ref 1)
+            (call add 2) (call return 1) (unbind)))
+
+  ;; simple bindings in letrec* -> equivalent to letrec
+  (assert-tree-il->glil without-partial-evaluation
+   (letrec* (x y) (xx yy) ((const 1) (const 2))
+            (lexical y yy))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 2)
+            (bind (y #f 0)) ;; X is removed, and Y is unboxed
+            (lexical #t #f set 0)
+            (lexical #t #f ref 0)
+            (call return 1) (unbind))))
+
+(with-test-prefix "lambda"
+  (assert-tree-il->glil
+   (lambda ()
+     (lambda-case (((x) #f #f #f () (y)) (const 2)) #f))
+   (program ()  (std-prelude 0 0 #f) (label _)
+            (program () (std-prelude 1 1 #f)
+                     (bind (x #f 0)) (label _)
+                     (const 2) (call return 1) (unbind))
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (lambda ()
+     (lambda-case (((x y) #f #f #f () (x1 y1))
+                   (const 2))
+                  #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (program () (std-prelude 2 2 #f)
+                     (bind (x #f 0) (y #f 1)) (label _)
+                     (const 2) (call return 1)
+                     (unbind))
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (lambda ()
+     (lambda-case ((() #f x #f () (y)) (const 2))
+                  #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (program () (opt-prelude 0 0 0 1 #f) 
+                     (bind (x #f 0)) (label _)
+                     (const 2) (call return 1)
+                     (unbind))
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (lambda ()
+     (lambda-case (((x) #f x1 #f () (y y1)) (const 2))
+                  #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (program () (opt-prelude 1 0 1 2 #f)
+                     (bind (x #f 0) (x1 #f 1)) (label _)
+                     (const 2) (call return 1)
+                     (unbind))
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (lambda ()
+     (lambda-case (((x) #f x1 #f () (y y1)) (lexical x y))
+                  #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (program () (opt-prelude 1 0 1 2 #f)
+                     (bind (x #f 0) (x1 #f 1)) (label _)
+                     (lexical #t #f ref 0) (call return 1)
+                     (unbind))
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (lambda ()
+     (lambda-case (((x) #f x1 #f () (y y1)) (lexical x1 y1))
+                  #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (program () (opt-prelude 1 0 1 2 #f)
+                     (bind (x #f 0) (x1 #f 1)) (label _)
+                     (lexical #t #f ref 1) (call return 1)
+                     (unbind))
+            (call return 1)))
+
+  (assert-tree-il->glil
+   (lambda ()
+     (lambda-case (((x) #f #f #f () (x1))
+                   (lambda ()
+                     (lambda-case (((y) #f #f #f () (y1))
+                                   (lexical x x1))
+                                  #f)))
+                  #f))
+   (program () (std-prelude 0 0 #f) (label _)
+            (program () (std-prelude 1 1 #f) 
+                     (bind (x #f 0)) (label _)
+                     (program () (std-prelude 1 1 #f)
+                              (bind (y #f 0)) (label _)
+                              (lexical #f #f ref 0) (call return 1)
+                              (unbind))
+                     (lexical #t #f ref 0)
+                     (call make-closure 1)
+                     (call return 1)
+                     (unbind))
+            (call return 1))))
+
+(with-test-prefix "sequence"
+  (assert-tree-il->glil
+   (begin (begin (const 2) (const #f)) (const #t))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const #t) (call return 1)))
+
+  (assert-tree-il->glil
+   ;; This gets simplified by `peval'.
+   (apply (primitive null?) (begin (const #f) (const 2)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const #f) (call return 1))))
+
+(with-test-prefix "values"
+  (assert-tree-il->glil
+   (apply (primitive values)
+          (apply (primitive values) (const 1) (const 2)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 1) (call return 1)))
+
+  (assert-tree-il->glil
+   (apply (primitive values)
+          (apply (primitive values) (const 1) (const 2))
+          (const 3))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 1) (const 3) (call return/values 2)))
+
+  (assert-tree-il->glil
+   (apply (primitive +)
+          (apply (primitive values) (const 1) (const 2)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (const 1) (call return 1)))
+
+  ;; Testing `(values foo)' in push context with RA.
+  (assert-tree-il->glil without-partial-evaluation
+   (apply (primitive cdr)
+          (letrec (lp) (#{lp ~V9KrhVD4PFEL6oCTrLg3A}#)
+                  ((lambda ((name . lp))
+                     (lambda-case ((() #f #f #f () ())
+                                   (apply (toplevel values) (const (one two)))))))
+                  (apply (lexical lp #{lp ~V9KrhVD4PFEL6oCTrLg3A}#))))
+   (program () (std-prelude 0 0 #f) (label _)
+            (branch br _) ;; entering the fix, jump to :2
+            ;; :1 body of lp, jump to :3
+            (label _) (bind) (const (one two)) (branch br _) (unbind)
+            ;; :2 initial call of lp, jump to :1
+            (label _) (bind) (branch br _) (label _) (unbind)
+            ;; :3 the push continuation
+            (call cdr 1) (call return 1))))
+
+;; FIXME: binding info for or-hacked locals might bork the disassembler,
+;; and could be tightened in any case
+(with-test-prefix "the or hack"
+  (assert-tree-il->glil without-partial-evaluation
+   (let (x) (y) ((const 1))
+        (if (lexical x y)
+            (lexical x y)
+            (let (a) (b) ((const 2))
+                 (lexical a b))))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #f 0)) (lexical #t #f set 0)
+            (lexical #t #f ref 0) (branch br-if-not ,l1)
+            (lexical #t #f ref 0) (call return 1)
+            (label ,l2)
+            (const 2) (bind (a #f 0)) (lexical #t #f set 0)
+            (lexical #t #f ref 0) (call return 1)
+            (unbind)
+            (unbind))
+   (eq? l1 l2))
+
+  ;; second bound var is unreferenced
+  (assert-tree-il->glil without-partial-evaluation
+   (let (x) (y) ((const 1))
+        (if (lexical x y)
+            (lexical x y)
+            (let (a) (b) ((const 2))
+                 (lexical x y))))
+   (program () (std-prelude 0 1 #f) (label _)
+            (const 1) (bind (x #f 0)) (lexical #t #f set 0)
+            (lexical #t #f ref 0) (branch br-if-not ,l1)
+            (lexical #t #f ref 0) (call return 1)
+            (label ,l2)
+            (lexical #t #f ref 0) (call return 1)
+            (unbind))
+   (eq? l1 l2)))
+
+(with-test-prefix "apply"
+  (assert-tree-il->glil
+   (apply (primitive @apply) (toplevel foo) (toplevel bar))
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref foo) (toplevel ref bar) (call tail-apply 2)))
+  (assert-tree-il->glil
+   (begin (apply (primitive @apply) (toplevel foo) (toplevel bar)) (void))
+   (program () (std-prelude 0 0 #f) (label _)
+            (call new-frame 0) (toplevel ref apply) (toplevel ref foo) (toplevel ref bar) (mv-call 2 ,l1)
+            (call drop 1) (branch br ,l2) (label ,l3) (mv-bind 0 #f)
+            (label ,l4)
+            (void) (call return 1))
+   (and (eq? l1 l3) (eq? l2 l4)))
+  (assert-tree-il->glil
+   (apply (toplevel foo) (apply (toplevel @apply) (toplevel bar) (toplevel baz)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (toplevel ref foo)
+            (call new-frame 0) (toplevel ref bar) (toplevel ref baz) (call apply 2)
+            (call tail-call 1))))
+
+(with-test-prefix "call/cc"
+  (assert-tree-il->glil
+   (apply (primitive @call-with-current-continuation) (toplevel foo))
+   (program () (std-prelude 0 0 #f) (label _) (toplevel ref foo) (call tail-call/cc 1)))
+  (assert-tree-il->glil
+   (begin (apply (primitive @call-with-current-continuation) (toplevel foo)) (void))
+   (program () (std-prelude 0 0 #f) (label _)
+            (call new-frame 0) (toplevel ref call-with-current-continuation) (toplevel ref foo) (mv-call 1 ,l1)
+            (call drop 1) (branch br ,l2) (label ,l3) (mv-bind 0 #f)
+            (label ,l4)
+            (void) (call return 1))
+   (and (eq? l1 l3) (eq? l2 l4)))
+  (assert-tree-il->glil
+   (apply (toplevel foo)
+          (apply (toplevel @call-with-current-continuation) (toplevel bar)))
+   (program () (std-prelude 0 0 #f) (label _)
+            (toplevel ref foo)
+            (toplevel ref bar) (call call/cc 1)
+            (call tail-call 1))))
+
+
+(with-test-prefix "labels allocation"
+  (pass-if "http://debbugs.gnu.org/9769"
+    ((compile '(lambda ()
+                 (let ((fail (lambda () #f)))
+                   (let ((test (lambda () (fail))))
+                     (test))
+                   #t))
+              ;; Prevent inlining.  We're testing analyze.scm's
+              ;; labels allocator here, and inlining it will
+              ;; reduce the entire thing to #t.
+              #:opts '(#:partial-eval? #f)))))
+
+
+(define (sum . args)
+  (apply + args))
+
+(with-test-prefix "many args"
+  (pass-if "call with > 256 args"
+    (equal? (compile `(1+ (sum ,@(iota 1000)))
+                     #:env (current-module))
+            (1+ (apply sum (iota 1000)))))
+
+  (pass-if "tail call with > 256 args"
+    (equal? (compile `(sum ,@(iota 1000))
+                     #:env (current-module))
+            (apply sum (iota 1000)))))
+
+
+
+(with-test-prefix "tree-il-fold"
+
+  (pass-if "empty tree"
+    (let ((leaf? #f) (up? #f) (down? #f) (mark (list 'mark)))
+      (and (eq? mark
+                (tree-il-fold (lambda (x y) (set! leaf? #t) y)
+                              (lambda (x y) (set! down? #t) y)
+                              (lambda (x y) (set! up? #t) y)
+                              mark
+                              '()))
+           (not leaf?)
+           (not up?)
+           (not down?))))
+
+  (pass-if "lambda and application"
+    (let* ((leaves '()) (ups '()) (downs '())
+           (result (tree-il-fold (lambda (x y)
+                                   (set! leaves (cons x leaves))
+                                   (1+ y))
+                                 (lambda (x y)
+                                   (set! downs (cons x downs))
+                                   (1+ y))
+                                 (lambda (x y)
+                                   (set! ups (cons x ups))
+                                   (1+ y))
+                                 0
+                                 (parse-tree-il
+                                  '(lambda ()
+                                     (lambda-case
+                                      (((x y) #f #f #f () (x1 y1))
+                                       (apply (toplevel +)
+                                              (lexical x x1)
+                                              (lexical y y1)))
+                                      #f))))))
+      (and (equal? (map strip-source leaves)
+                   (list (make-lexical-ref #f 'y 'y1)
+                         (make-lexical-ref #f 'x 'x1)
+                         (make-toplevel-ref #f '+)))
+           (= (length downs) 3)
+           (equal? (reverse (map strip-source ups))
+                   (map strip-source downs))))))
+
+
+;;;
+;;; Warnings.
+;;;
+
+;; Make sure we get English messages.
+(when (defined? 'setlocale)
+  (setlocale LC_ALL "C"))
+
+(define (call-with-warnings thunk)
+  (let ((port (open-output-string)))
+    (with-fluids ((*current-warning-port*   port)
+                  (*current-warning-prefix* ""))
+      (thunk))
+    (let ((warnings (get-output-string port)))
+      (string-tokenize warnings
+                       (char-set-complement (char-set #\newline))))))
+
+(define %opts-w-unused
+  '(#:warnings (unused-variable)))
+
+(define %opts-w-unused-toplevel
+  '(#:warnings (unused-toplevel)))
+
+(define %opts-w-unbound
+  '(#:warnings (unbound-variable)))
+
+(define %opts-w-arity
+  '(#:warnings (arity-mismatch)))
+
+(define %opts-w-format
+  '(#:warnings (format)))
+
+(define %opts-w-duplicate-case-datum
+  '(#:warnings (duplicate-case-datum)))
+
+(define %opts-w-bad-case-datum
+  '(#:warnings (bad-case-datum)))
+
+
+(with-test-prefix "warnings"
+
+   (pass-if "unknown warning type"
+     (let ((w (call-with-warnings
+                (lambda ()
+                  (compile #t #:opts '(#:warnings (does-not-exist)))))))
+       (and (= (length w) 1)
+            (number? (string-contains (car w) "unknown warning")))))
+
+   (with-test-prefix "unused-variable"
+
+     (pass-if "quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(lambda (x y) (+ x y))
+                           #:opts %opts-w-unused)))))
+
+     (pass-if "let/unused"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(lambda (x)
+                                (let ((y (+ x 2)))
+                                  x))
+                             #:opts %opts-w-unused)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w) "unused variable `y'")))))
+
+     (pass-if "shadowed variable"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(lambda (x)
+                                (let ((y x))
+                                  (let ((y (+ x 2)))
+                                    (+ x y))))
+                             #:opts %opts-w-unused)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w) "unused variable `y'")))))
+
+     (pass-if "letrec"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(lambda ()
+                              (letrec ((x (lambda () (y)))
+                                       (y (lambda () (x))))
+                                y))
+                           #:opts %opts-w-unused)))))
+
+     (pass-if "unused argument"
+       ;; Unused arguments should not be reported.
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(lambda (x y z) #t)
+                           #:opts %opts-w-unused)))))
+
+     (pass-if "special variable names"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(lambda ()
+                              (let ((_ 'underscore)
+                                    (#{gensym name}# 'ignore-me))
+                                #t))
+                           #:to 'assembly
+                           #:opts %opts-w-unused))))))
+
+   (with-test-prefix "unused-toplevel"
+
+     (pass-if "used after definition"
+       (null? (call-with-warnings
+                (lambda ()
+                  (let ((in (open-input-string
+                             "(define foo 2) foo")))
+                    (read-and-compile in
+                                      #:to 'assembly
+                                      #:opts %opts-w-unused-toplevel))))))
+
+     (pass-if "used before definition"
+       (null? (call-with-warnings
+                (lambda ()
+                  (let ((in (open-input-string
+                             "(define (bar) foo) (define foo 2) (bar)")))
+                    (read-and-compile in
+                                      #:to 'assembly
+                                      #:opts %opts-w-unused-toplevel))))))
+
+     (pass-if "unused but public"
+       (let ((in (open-input-string
+                  "(define-module (test-suite tree-il x) #:export (bar))
+                   (define (bar) #t)")))
+         (null? (call-with-warnings
+                  (lambda ()
+                    (read-and-compile in
+                                      #:to 'assembly
+                                      #:opts %opts-w-unused-toplevel))))))
+
+     (pass-if "unused but public (more)"
+       (let ((in (open-input-string
+                  "(define-module (test-suite tree-il x) #:export (bar))
+                   (define (bar) (baz))
+                   (define (baz) (foo))
+                   (define (foo) #t)")))
+         (null? (call-with-warnings
+                  (lambda ()
+                    (read-and-compile in
+                                      #:to 'assembly
+                                      #:opts %opts-w-unused-toplevel))))))
+
+     (pass-if "unused but define-public"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(define-public foo 2)
+                           #:to 'assembly
+                           #:opts %opts-w-unused-toplevel)))))
+
+     (pass-if "used by macro"
+       ;; FIXME: See comment about macros at `unused-toplevel-analysis'.
+       (throw 'unresolved)
+
+       (null? (call-with-warnings
+                (lambda ()
+                  (let ((in (open-input-string
+                             "(define (bar) 'foo)
+                              (define-syntax baz
+                                (syntax-rules () ((_) (bar))))")))
+                    (read-and-compile in
+                                      #:to 'assembly
+                                      #:opts %opts-w-unused-toplevel))))))
+
+     (pass-if "unused"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(define foo 2)
+                             #:to 'assembly
+                             #:opts %opts-w-unused-toplevel)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        (format #f "top-level variable `~A'"
+                                                'foo))))))
+
+     (pass-if "unused recursive"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(define (foo) (foo))
+                             #:to 'assembly
+                             #:opts %opts-w-unused-toplevel)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        (format #f "top-level variable `~A'"
+                                                'foo))))))
+
+     (pass-if "unused mutually recursive"
+       (let* ((in (open-input-string
+                   "(define (foo) (bar)) (define (bar) (foo))"))
+              (w  (call-with-warnings
+                    (lambda ()
+                      (read-and-compile in
+                                        #:to 'assembly
+                                        #:opts %opts-w-unused-toplevel)))))
+         (and (= (length w) 2)
+              (number? (string-contains (car w)
+                                        (format #f "top-level variable `~A'"
+                                                'foo)))
+              (number? (string-contains (cadr w)
+                                        (format #f "top-level variable `~A'"
+                                                'bar))))))
+
+     (pass-if "special variable names"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(define #{gensym name}# 'ignore-me)
+                           #:to 'assembly
+                           #:opts %opts-w-unused-toplevel))))))
+
+   (with-test-prefix "unbound variable"
+
+     (pass-if "quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '+ #:opts %opts-w-unbound)))))
+
+     (pass-if "ref"
+       (let* ((v (gensym))
+              (w (call-with-warnings
+                   (lambda ()
+                     (compile v
+                              #:to 'assembly
+                              #:opts %opts-w-unbound)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        (format #f "unbound variable `~A'"
+                                                v))))))
+
+     (pass-if "set!"
+       (let* ((v (gensym))
+              (w (call-with-warnings
+                   (lambda ()
+                     (compile `(set! ,v 7)
+                              #:to 'assembly
+                              #:opts %opts-w-unbound)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        (format #f "unbound variable `~A'"
+                                                v))))))
+
+     (pass-if "module-local top-level is visible"
+       (let ((m (make-module))
+             (v (gensym)))
+         (beautify-user-module! m)
+         (compile `(define ,v 123)
+                  #:env m #:opts %opts-w-unbound)
+         (null? (call-with-warnings
+                  (lambda ()
+                    (compile v
+                             #:env m
+                             #:to 'assembly
+                             #:opts %opts-w-unbound))))))
+
+     (pass-if "module-local top-level is visible after"
+       (let ((m (make-module))
+             (v (gensym)))
+         (beautify-user-module! m)
+         (null? (call-with-warnings
+                  (lambda ()
+                    (let ((in (open-input-string
+                               "(define (f)
+                                  (set! chbouib 3))
+                                (define chbouib 5)")))
+                      (read-and-compile in
+                                        #:env m
+                                        #:opts %opts-w-unbound)))))))
+
+     (pass-if "optional arguments are visible"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(lambda* (x #:optional y z) (list x y z))
+                           #:opts %opts-w-unbound
+                           #:to 'assembly)))))
+
+     (pass-if "keyword arguments are visible"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(lambda* (x #:key y z) (list x y z))
+                           #:opts %opts-w-unbound
+                           #:to 'assembly)))))
+
+     (pass-if "GOOPS definitions are visible"
+       (let ((m (make-module))
+             (v (gensym)))
+         (beautify-user-module! m)
+         (module-use! m (resolve-interface '(oop goops)))
+         (null? (call-with-warnings
+                  (lambda ()
+                    (let ((in (open-input-string
+                               "(define-class <foo> ()
+                                  (bar #:getter foo-bar))
+                                (define z (foo-bar (make <foo>)))")))
+                      (read-and-compile in
+                                        #:env m
+                                        #:opts %opts-w-unbound))))))))
+
+   (with-test-prefix "arity mismatch"
+
+     (pass-if "quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(cons 'a 'b) #:opts %opts-w-arity)))))
+
+     (pass-if "direct application"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '((lambda (x y) (or x y)) 1 2 3 4 5)
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+     (pass-if "local"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(let ((f (lambda (x y) (+ x y))))
+                                (f 2))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "global"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(cons 1 2 3 4)
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "alias to global"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(let ((f cons)) (f 1 2 3 4))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "alias to lexical to global"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(let ((f number?))
+                                (let ((g f))
+                                  (f 1 2 3 4)))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "alias to lexical"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(let ((f (lambda (x y z) (+ x y z))))
+                                (let ((g f))
+                                  (g 1)))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "letrec"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(letrec ((odd?  (lambda (x) (even? (1- x))))
+                                       (even? (lambda (x)
+                                                (or (= 0 x)
+                                                    (odd?)))))
+                                (odd? 1))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "case-lambda"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(let ((f (case-lambda
+                                       ((x)     1)
+                                       ((x y)   2)
+                                       ((x y z) 3))))
+                              (list (f 1)
+                                    (f 1 2)
+                                    (f 1 2 3)))
+                           #:opts %opts-w-arity
+                           #:to 'assembly)))))
+
+     (pass-if "case-lambda with wrong number of arguments"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(let ((f (case-lambda
+                                         ((x)     1)
+                                         ((x y)   2))))
+                                (f 1 2 3))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "case-lambda*"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(let ((f (case-lambda*
+                                       ((x #:optional y) 1)
+                                       ((x #:key y)      2)
+                                       ((x y #:key z)    3))))
+                              (list (f 1)
+                                    (f 1 2)
+                                    (f #:y 2)
+                                    (f 1 2 #:z 3)))
+                           #:opts %opts-w-arity
+                           #:to 'assembly)))))
+
+     (pass-if "case-lambda* with wrong arguments"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(let ((f (case-lambda*
+                                         ((x #:optional y) 1)
+                                         ((x #:key y)      2)
+                                         ((x y #:key z)    3))))
+                                (list (f)
+                                      (f 1 #:z 3)))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 2)
+              (null? (filter (lambda (w)
+                               (not
+                                (number?
+                                 (string-contains
+                                  w "wrong number of arguments to"))))
+                             w)))))
+
+     (pass-if "top-level applicable struct"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(let ((p current-warning-port))
+                             (p (+ (p) 1))
+                             (p))
+                          #:opts %opts-w-arity
+                          #:to 'assembly)))))
+
+     (pass-if "top-level applicable struct with wrong arguments"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(let ((p current-warning-port))
+                               (p 1 2 3))
+                            #:opts %opts-w-arity
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "local toplevel-defines"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (let ((in (open-input-string "
+                                (define (g x) (f x))
+                                (define (f) 1)")))
+                      (read-and-compile in
+                                        #:opts %opts-w-arity
+                                        #:to 'assembly))))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "global toplevel alias"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (let ((in (open-input-string "
+                                (define f cons)
+                                (define (g) (f))")))
+                      (read-and-compile in
+                                        #:opts %opts-w-arity
+                                        #:to 'assembly))))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "local toplevel overrides global"
+       (null? (call-with-warnings
+                (lambda ()
+                  (let ((in (open-input-string "
+                              (define (cons) 0)
+                              (define (foo x) (cons))")))
+                    (read-and-compile in
+                                      #:opts %opts-w-arity
+                                      #:to 'assembly))))))
+
+     (pass-if "keyword not passed and quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(let ((f (lambda* (x #:key y) y)))
+                              (f 2))
+                           #:opts %opts-w-arity
+                           #:to 'assembly)))))
+
+     (pass-if "keyword passed and quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(let ((f (lambda* (x #:key y) y)))
+                              (f 2 #:y 3))
+                           #:opts %opts-w-arity
+                           #:to 'assembly)))))
+
+     (pass-if "keyword passed to global and quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (let ((in (open-input-string "
+                              (use-modules (system base compile))
+                              (compile '(+ 2 3) #:env (current-module))")))
+                    (read-and-compile in
+                                      #:opts %opts-w-arity
+                                      #:to 'assembly))))))
+
+     (pass-if "extra keyword"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(let ((f (lambda* (x #:key y) y)))
+                                (f 2 #:Z 3))
+                             #:opts %opts-w-arity
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments to")))))
+
+     (pass-if "extra keywords allowed"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(let ((f (lambda* (x #:key y #:allow-other-keys)
+                                       y)))
+                              (f 2 #:Z 3))
+                           #:opts %opts-w-arity
+                           #:to 'assembly))))))
+
+   (with-test-prefix "format"
+
+     (pass-if "quiet (no args)"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t "hey!")
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "quiet (1 arg)"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t "hey ~A!" "you")
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "quiet (2 args)"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t "~A ~A!" "hello" "world")
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "wrong port arg"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format 10 "foo")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong port argument")))))
+
+     (pass-if "non-literal format string"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format #f fmt)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "non-literal format string")))))
+
+     (pass-if "non-literal format string using gettext"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t (gettext "~A ~A!") "hello" "world")
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "non-literal format string using gettext as _"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t (_ "~A ~A!") "hello" "world")
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "non-literal format string using gettext as top-level _"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(begin
+                             (define (_ s) (gettext s "my-domain"))
+                             (format #t (_ "~A ~A!") "hello" "world"))
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "non-literal format string using gettext as module-ref _"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t ((@@ (foo) _) "~A ~A!") "hello" "world")
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "non-literal format string using gettext as lexical _"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(let ((_ (lambda (s)
+                                      (gettext s "my-domain"))))
+                             (format #t (_ "~A ~A!") "hello" "world"))
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "non-literal format string using ngettext"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t
+                                   (ngettext "~a thing" "~a things" n "dom") n)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "non-literal format string using ngettext as N_"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(format #t (N_ "~a thing" "~a things" n) n)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "non-literal format string with (define _ gettext)"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(begin
+                             (define _ gettext)
+                             (define (foo)
+                               (format #t (_ "~A ~A!") "hello" "world")))
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "wrong format string"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format #f 'not-a-string)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong format string")))))
+
+     (pass-if "wrong number of args"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format "shbweeb")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "wrong number of arguments")))))
+
+     (pass-if "~%, ~~, ~&, ~t, ~_, ~!, ~|, ~/, ~q and ~\\n"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) some-port
+                            "~&~3_~~ ~\n~12they~% ~!~|~/~q")
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "one missing argument"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format some-port "foo ~A~%")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 1, got 0")))))
+
+     (pass-if "one missing argument, gettext"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format some-port (gettext "foo ~A~%"))
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 1, got 0")))))
+
+     (pass-if "two missing arguments"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f
+                              "foo ~10,2f and bar ~S~%")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 2, got 0")))))
+
+     (pass-if "one given, one missing argument"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format #t "foo ~A and ~S~%" hey)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 2, got 1")))))
+
+     (pass-if "too many arguments"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '(format #t "foo ~A~%" 1 2)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 1, got 2")))))
+
+     (pass-if "~h"
+       (null? (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #t
+                              "foo ~h ~a~%" 123.4 'bar)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+
+     (pass-if "~:h with locale object"
+       (null? (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #t
+                              "foo ~:h~%" 123.4 %global-locale)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+
+     (pass-if "~:h without locale object"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #t "foo ~,2:h" 123.4)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 2, got 1")))))
+
+     (with-test-prefix "conditionals"
+       (pass-if "literals"
+        (null? (call-with-warnings
+                (lambda ()
+                  (compile '((@ (ice-9 format) format) #f "~A ~[foo~;bar~;baz~;~] ~10,2f"
+                                    'a 1 3.14)
+                           #:opts %opts-w-format
+                           #:to 'assembly)))))
+
+       (pass-if "literals with selector"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "~2[foo~;bar~;baz~;~] ~A"
+                                       1 'dont-ignore-me)
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "expected 1, got 2")))))
+
+       (pass-if "escapes (exact count)"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "~[~a~;~a~]")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "expected 2, got 0")))))
+
+       (pass-if "escapes with selector"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "~1[chbouib~;~a~]")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "expected 1, got 0")))))
+
+       (pass-if "escapes, range"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "~[chbouib~;~a~;~2*~a~]")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "expected 1 to 4, got 0")))))
+
+       (pass-if "@"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "~@[temperature=~d~]")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "expected 1, got 0")))))
+
+       (pass-if "nested"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "~:[~[hey~;~a~;~va~]~;~3*~]")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "expected 2 to 4, got 0")))))
+
+       (pass-if "unterminated"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "~[unterminated")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "unterminated conditional")))))
+
+       (pass-if "unexpected ~;"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "foo~;bar")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "unexpected")))))
+
+       (pass-if "unexpected ~]"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '((@ (ice-9 format) format) #f "foo~]")
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w)
+                                          "unexpected"))))))
+
+     (pass-if "~{...~}"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) #f "~A ~{~S~} ~A"
+                                   'hello '("ladies" "and")
+                                   'gentlemen)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "~{...~}, too many args"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f "~{~S~}" 1 2 3)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 1, got 3")))))
+
+     (pass-if "~@{...~}"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) #f "~@{~S~}" 1 2 3)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "~@{...~}, too few args"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f "~A ~@{~S~}")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected at least 1, got 0")))))
+
+     (pass-if "unterminated ~{...~}"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f "~{")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "unterminated")))))
+
+     (pass-if "~(...~)"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) #f "~:@(~A ~A~)" 'foo 'bar)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "~v"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f "~v_foo")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 1, got 0")))))
+     (pass-if "~v:@y"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) #f "~v:@y" 1 123)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+
+     (pass-if "~*"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f "~2*~a" 'a 'b)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 3, got 2")))))
+
+     (pass-if "~?"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) #f "~?" "~d ~d" '(1 2))
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "~^"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) #f "~a ~^ ~a" 0 1)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "~^, too few args"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f "~a ~^ ~a")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected at least 1, got 0")))))
+
+     (pass-if "parameters: +,-,#, and '"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '((@ (ice-9 format) format) some-port
+                            "~#~ ~,,-2f ~,,+2f ~'A~" 1234 1234)
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (pass-if "complex 1"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f
+                                     "~4@S    ~32S~@[;; ~1{~@?~}~]~@[~61t at ~a~]\n"
+                                     1 2 3 4 5 6)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 4, got 6")))))
+
+     (pass-if "complex 2"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f
+                                     "~:(~A~) Commands~:[~; [abbrev]~]:~2%"
+                                     1 2 3 4)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 2, got 4")))))
+
+     (pass-if "complex 3"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (compile '((@ (ice-9 format) format) #f "~9@a~:[~*~3_~;~3d~] ~v:@y~%")
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 5, got 0")))))
+
+     (pass-if "ice-9 format"
+       (let ((w (call-with-warnings
+                 (lambda ()
+                   (let ((in (open-input-string
+                              "(use-modules ((ice-9 format)
+                                 #:renamer (symbol-prefix-proc 'i9-)))
+                               (i9-format #t \"yo! ~A\" 1 2)")))
+                     (read-and-compile in
+                                       #:opts %opts-w-format
+                                       #:to 'assembly))))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "expected 1, got 2")))))
+
+     (pass-if "not format"
+       (null? (call-with-warnings
+               (lambda ()
+                 (compile '(let ((format chbouib))
+                             (format #t "not ~A a format string"))
+                          #:opts %opts-w-format
+                          #:to 'assembly)))))
+
+     (with-test-prefix "simple-format"
+
+       (pass-if "good"
+         (null? (call-with-warnings
+                 (lambda ()
+                   (compile '(simple-format #t "foo ~a bar ~s ~%~~" 1 2)
+                            #:opts %opts-w-format
+                            #:to 'assembly)))))
+
+       (pass-if "wrong number of args"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '(simple-format #t "foo ~a ~s~%" 'one-missing)
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w) "wrong number")))))
+
+       (pass-if "unsupported"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '(simple-format #t "foo ~x~%" 16)
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w) "unsupported format option")))))
+
+       (pass-if "unsupported, gettext"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '(simple-format #t (gettext "foo ~2f~%") 3.14)
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w) "unsupported format option")))))
+
+       (pass-if "unsupported, ngettext"
+         (let ((w (call-with-warnings
+                   (lambda ()
+                     (compile '(simple-format #t (ngettext "s ~x" "p ~x" x) x)
+                              #:opts %opts-w-format
+                              #:to 'assembly)))))
+           (and (= (length w) 1)
+                (number? (string-contains (car w) "unsupported format option")))))))
+
+   (with-test-prefix "duplicate-case-datum"
+
+     (pass-if "quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(case x ((1) 'one) ((2) 'two))
+                           #:opts %opts-w-duplicate-case-datum
+                           #:to 'assembly)))))
+
+     (pass-if "one duplicate"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(case x
+                                ((1) 'one)
+                                ((2) 'two)
+                                ((1) 'one-again))
+                             #:opts %opts-w-duplicate-case-datum
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w) "duplicate")))))
+
+     (pass-if "one duplicate"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(case x
+                                ((1 2 3) 'a)
+                                ((1)     'one))
+                             #:opts %opts-w-duplicate-case-datum
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w) "duplicate"))))))
+
+   (with-test-prefix "bad-case-datum"
+
+     (pass-if "quiet"
+       (null? (call-with-warnings
+                (lambda ()
+                  (compile '(case x ((1) 'one) ((2) 'two))
+                           #:opts %opts-w-bad-case-datum
+                           #:to 'assembly)))))
+
+     (pass-if "not eqv?"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(case x
+                                ((1)     'one)
+                                (("bad") 'bad))
+                             #:opts %opts-w-bad-case-datum
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "cannot be meaningfully compared")))))
+
+     (pass-if "one clause element not eqv?"
+       (let ((w (call-with-warnings
+                  (lambda ()
+                    (compile '(case x
+                                ((1 (2) 3) 'a))
+                             #:opts %opts-w-duplicate-case-datum
+                             #:to 'assembly)))))
+         (and (= (length w) 1)
+              (number? (string-contains (car w)
+                                        "cannot be meaningfully compared")))))))
+
+;; Local Variables:
+;; eval: (put 'pass-if-primitives-resolved 'scheme-indent-function 1)
+;; eval: (put 'pass-if-tree-il->scheme 'scheme-indent-function 1)
+;; End:

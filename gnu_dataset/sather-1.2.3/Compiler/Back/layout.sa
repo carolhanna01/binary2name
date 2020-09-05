@@ -1,0 +1,1213 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+abstract class $LAYOUT < $STR is
+   -- A layout for which a C typedef will have to be emitted.  We
+   -- abstract these out because C requires that attribute
+   -- dependencies be respected; we have to build a table and then
+   -- generate the typedefs in topological order.
+
+   dependencies:FLIST{$LAYOUT}; -- Everything that this layout depends on.
+   -- This can be made into an iterator once dispatched iters work.
+
+   typedef(c:CGEN):STR;	-- A C typedef for this layout
+   
+   str:STR;			-- To print out the layout
+end;
+
+class LAYOUT_TBL is
+   -- Registry between $TPs and $LAYOUTs.  Just a place for a global.
+   
+   shared layout_tbl:FMAP{$TP,$LAYOUT};
+   shared prog:PROG;
+   shared cgen:CGEN;
+
+   add(t:$TP,l:$LAYOUT) is
+      layout_tbl:=layout_tbl.insert(t,l);
+   end;
+
+   layout(t:$TP):$LAYOUT pre ~void(t) is
+      -- the $LAYOUT object corresponding to a type.  If it doesn't
+      -- exist already, it will be made.
+      l:$LAYOUT;
+      if t.is_builtin then l:=#BUILTIN_LAYOUT(t);
+      elsif t.is_external then l:=#EXTERNAL_LAYOUT(t,prog);
+      elsif t.is_abstract then l:=#ABSTRACT_LAYOUT(t,prog);
+      elsif t.is_bound then 
+	 if t.kind = TP_KIND::rout_tp then 
+	    l:=#BOUND_TYPE_LAYOUT(t);
+	    --#OUT+"layout called for : "+t.str+"\n";
+	    --#OUT+"Nr of bnd rout types defined: "+ prog.tp_tbl.rout_tbl.size +"\n";
+	    --loop
+	    -- #OUT+prog.tp_tbl.rout_tbl.elt!.str +"\n";
+	    --end;
+	 elsif t.kind = TP_KIND::iter_tp then
+	    l:=#BOUND_ITER_TYPE_LAYOUT(t);
+	    --#OUT+"layout called for: "+t.str+"\n";
+	    --#OUT+"Nr of bnd iter types defined: "+ prog.tp_tbl.iter_tbl.size +"\n";
+	    --loop
+	    -- #OUT+prog.tp_tbl.iter_tbl.elt!.str +"\n";
+	    --end;
+	 else
+	    #OUT+t.str+" unrecognized type \n";
+	 end;
+      elsif t.is_immutable then l:=#IMMUTABLE_CLASS_LAYOUT(t,prog);
+      else l:=#CLASS_LAYOUT(t,prog);
+      end;
+      return l;
+   end;
+end;
+
+class TP_LAYOUT < $LAYOUT is
+   -- Some default code for layout classes.
+
+   private attr tp:$TP;	-- The type this layout is for
+   readonly attr str:STR;
+
+   shared layouts:FSET{SAME};  -- Registry of all layouts of this type
+
+   create(tp:$TP):SAME pre ~void(tp) is
+      r::=LAYOUT_TBL::layout_tbl.get(tp);
+      res:SAME;
+      if ~void(r) then
+	 typecase r when SAME then
+	    res:=r;
+	 end;
+      else 
+	 res:=new;
+	 res.tp:=tp;
+	 res.str:=res.makestr;
+	 layouts:=layouts.insert(res);
+	 LAYOUT_TBL::layout_tbl:=LAYOUT_TBL::layout_tbl.insert(tp,res);
+      end;
+      return res;
+   end;
+
+   dependencies:FLIST{$LAYOUT} is return #; end;
+   -- By default, there are no dependencies
+
+   typedef(c:CGEN):STR is return ""; end;
+   -- By default, no typedef needs to be emitted
+   
+   makestr:STR is raise "TP_LAYOUT::makestr undefined"; end;
+   
+   sorted_fields(map:FMAP{IDENT,$TP}):LAYOUT_ARR is
+      res:LAYOUT_ARR:=#(map.size);
+      loop res.set!(map.pairs!); end;
+      res.sort;
+      return res;
+   end;
+
+end;
+
+class LAYOUT_ARR is
+
+-- Convenience class for sorting fields by alignment
+-- to try to get better space usage.  C guarantees that
+-- the order we use in typedefs will be obeyed so we have
+-- to worry about it here.
+   
+   include ARRAY{TUP{IDENT,$TP}};
+   
+   elt_lt(e1,e2:TUP{IDENT,$TP}):BOOL is
+      tp1::=e1.t2;
+      tp2::=e2.t2;
+      a1::=alignment(tp1);
+      a2::=alignment(tp2);
+      if a1/=a2 then return a1>a2;
+	 -- Keep types together even if the alignment appears the
+	 -- same; we might be wrong about the alignment.
+      elsif tp1/=tp2 then return tp1.str<tp2.str;
+	 -- Finally, sort by field name, just to keep deterministic.
+      else return e1.t1.str<e2.t1.str;
+      end;
+   end;
+   
+   private alignment(t:$TP):INT is
+      case t
+      when TP_BUILTIN::fltd then return 64;
+      when TP_BUILTIN::char then return 8;
+      when TP_BUILTIN::bool then return 1;
+      else
+	 -- It's okay to get it wrong, just a heuristic.
+	 return 32;
+      end;
+   end;
+
+end;
+   
+class BUILTIN_LAYOUT < $LAYOUT is
+   -- A layout for a Sather class object which is predefined.
+   -- Built-in layouts are all predefined in the system headers, so
+   -- nothing needs to be done here.
+
+   include TP_LAYOUT;
+
+   makestr:STR is return tp.str+" - Builtin"; end;
+
+end;
+
+class EXTERNAL_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather external class object.
+   -- The typedef here is actually replaced by the value of
+   -- C_header attribute of the type (if any)
+
+   include TP_LAYOUT; 
+   
+   attr l:AM_OB_DEF;             -- The layout form the AM form
+   attr prog:PROG;
+   makestr:STR is return tp.str+" - External"; end;
+
+   create(tp:$TP,prog:PROG):SAME is
+      r:SAME := #(tp);
+      r.l := LAYOUT_TBL::cgen.am_ob_def_for_tp(tp);
+      r.prog := prog;
+      return r;
+   end;
+   
+   typedef(c:CGEN):STR is
+      res:STR:="";
+      if tp.is_c then
+	 header_list:STR := tp.impl.C_header_val;
+	 if ~void(header_list) then
+	    -- the typdefs are provided by the included
+	    -- header files
+	    loop
+	       header:STR := header_list.split!(' ');
+	       -- chop the trailing ' ' if necessary
+	       if header[header.size-1] = ' ' then
+		  header := header.head(header.size-1);
+	       end;
+	       if header[0] /= '<' then
+		  header := #STR('"').append(header,#STR('"'));
+	       end;
+	       res := res.append("#include ",header,"\n");
+	    end;
+	 else
+	    -- need to generate the typedef ourselves
+	    m::=c.mangler;
+	    cname:STR:=m.mangle(tp,void);
+	    res:="typedef struct "+cname+"_struct {";
+	    res:=res+"/* layout for "+tp.str+" */\n";
+	    m.forbid(m.mangle(tp,void)+"_struct");
+	    if ~void(l.at) then
+	       loop 
+		  p::=l.at.pairs!;
+		  res:=res+' '+m.mangle(p.t2,void)
+			+' '+m.mangle(p.t1,l.tp)+";\n";
+	       end;
+	    end;
+	    if void(l.at) then
+	       -- C doesn't like empty structs
+	       res:=res+" CHAR field_so_not_empty;\n";
+	    end;
+	    res:=res+" } *"+cname+";\n\n";
+	 end;
+      end;
+      return res;
+   end;
+end;
+
+class ABSTRACT_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather abstract type.  
+   -- Note that the layout of the abstract iter dispatch
+   -- tables depends on the iter yield value layout (if any)
+   --
+   -- For all abstract iters in it is also
+   -- necessary to generate typedefs for iter dispatch table entries
+   -- as they are different from the function dispatch table
+   
+   include TP_LAYOUT;
+   attr prog:PROG;
+   attr dependencies:FLIST{$LAYOUT};
+   
+   create(tp:$TP,p:PROG):SAME pre ~void(tp) is
+      r::=LAYOUT_TBL::layout_tbl.get(tp);
+      res:SAME;
+      if ~void(r) then
+	 typecase r when SAME then
+	    res:=r;
+	 end;
+      else 
+	 res:=new;
+	 res.tp:=tp;
+	 res.prog:=p;
+	 res.str:=res.makestr;
+	 layouts:=layouts.insert(res);
+	 LAYOUT_TBL::layout_tbl:=LAYOUT_TBL::layout_tbl.insert(tp,res);
+	 res.make_dependencies;
+      end;
+      return res;
+   end;
+
+   private make_dependencies is
+      dependencies:=#FLIST{$LAYOUT};
+      --
+      -- abstract frame knows only about arguments!
+      -- it also depends on the layout of the return type
+      loop
+	 sig::=tp.ifc.sigs.elt!;	    
+	 if sig.is_iter then
+	    -- DPS: This was in 1.0.7, and looks totally confused.  I changed
+	    -- it to this:
+	    --dependencies:=
+	    --  dependencies.push(#ABSTRACT_FRAME_LAYOUT(sig, prog));
+	    
+	    -- make sure an abstract frame gets created - this should be
+	    -- moved into CGEN where other dispatching is handled.
+	    --dummy::=#ABSTRACT_FRAME_LAYOUT(sig, prog);
+	    
+	    --loop
+	    --   dependencies:=
+	    --       dependencies.push(LAYOUT_TBL::layout(sig.args.elt!));
+	    --end;
+	    --
+	    --if ~void(sig.ret) then
+	    --   dependencies:=
+	    --	     dependencies.push(LAYOUT_TBL::layout(sig.ret));
+	    --end;
+	 end;
+      end;
+   end;
+
+   typedef(c:CGEN):STR is 
+      m::=c.mangler;
+      m.forbid(m.mangle(tp,void)+"_struct");
+      decl_str ::= 
+	    "typedef struct "+m.mangle(tp,void)+"_struct {\n"
+	    +" OB_HEADER header;\n"
+      +" } *"+m.mangle(tp,void)+";\n\n";
+      
+      return decl_str;
+   end;
+
+
+   makestr:STR is return tp.str+" - Abstract"; end;
+
+end;
+
+class ABSTRACT_FRAME_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather abstract iterator frame.
+   -- The layout defines iter arguments only. Concrete iter frames
+   -- take care of all other stuff (i.e. locals, nested frames, etc)
+
+   include FIX_TYPE;
+   
+   attr sig:SIG;
+   attr prog:PROG;
+   shared layouts:FMAP{SIG,ABSTRACT_FRAME_LAYOUT};
+   readonly attr str:STR;
+
+   create(sig:SIG,p:PROG):SAME is
+      res::=layouts.get(sig);
+
+      if void(res) then
+	 res:=new;
+	 res.sig:=sig;
+	 res.prog:=p;
+	 res.str:=res.sig.str+" - abstract frame";
+	 layouts:=layouts.insert(sig,res);
+	 
+	 -- DPS: Somebody added this after 1.0.7, I believe it is
+	 -- incorrect; the layout_tbl is only for types.
+	 
+	 --LAYOUT_TBL::layout_tbl:=LAYOUT_TBL::layout_tbl.insert(sig.tp,res);
+	 
+      end;
+      return res;
+   end;
+
+   dependencies:FLIST{$LAYOUT} is
+      res::=#FLIST{$LAYOUT};
+      -- abstract frame knows only about arguments!
+      -- it also depends on the layout of the return type
+      loop
+	 res:=res.push(LAYOUT_TBL::layout(sig.args.elt!.tp));
+      end;
+
+      if ~void(sig.ret) then
+	 res:=res.push(LAYOUT_TBL::layout(sig.ret));
+      end;
+
+      return res;
+   end;
+
+   typedef(c:CGEN):STR is
+      -- generate the typedef for an "abstract" frame.  The frame
+      -- knows only about arguments.  The space for the entire
+      -- concrete frame is generated by the dispatched allocator
+      -- function at the time of the dispatched iter call.
+
+      m ::= c.mangler;
+
+      the_tp ::=sig.tp;
+      m.forbid(m.mangle(sig,void)+"_entry");
+      res:STR;
+
+      res := "typedef struct "+m.mangle(sig,void)+"_frame_struct {\n";
+      m.forbid(m.mangle(sig,void)+"_frame_struct");
+      -- slot for state
+      -- Attention this was at the end of the layout
+      -- due to bound iters (casting) this had to be placed at 
+      -- the beginning !! aj
+      res:=res+" INT state;\n";
+      -- make slot for each argument
+      res := res +' '+m.mangle(sig.tp,void)+" self;\n";
+      loop
+	 fi::=sig.args.elt!;
+	 res:=res+' '+fix_out_type(fi, m.mangle(fi.tp,void)+' ')+"arg"+1.up!+';';
+	 res:=res+"/* Formal argument: "+fi.str+" */\n";
+      end;
+      --finally make a slot for state;
+      --res:=res+" INT state;\n";
+      -- space for everything including locals and nested iters
+      -- is generated by the specialized dispatched allocators
+      res := res +" } *"+m.mangle(sig,void)+"_frame;\n\n";
+
+      res := res + "/* Dispatch table entry for "
+	    + sig.str + " */\n";
+      res := res+"typedef struct "+m.mangle(sig,void)
+	    +"_entry {\n"+ "const ";
+      if ~void(sig.ret) then
+	 res := res + m.mangle(sig.ret,void); 
+      else
+	 res := res + "void";
+      end;
+      res := res + " (*iter)("
+	    + m.mangle(sig,void) + "_frame frame";
+      if c.func_tables then
+	 res:=res+", struct _func_frame *";
+      end;
+      res:=res+");\n";
+      res := res 
+	    + "const void* (*alloc_frame)();\n"
+      + "} "+m.mangle(sig,void)+"_entry;\n\n";
+      return res;
+   end;
+end;
+
+
+class CLASS_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather reference class object.
+
+   include TP_LAYOUT create->;
+
+   attr l:AM_OB_DEF;		-- The layout from the AM form.
+   attr prog:PROG;
+   attr dependencies:FLIST{$LAYOUT};
+
+   create(tp:$TP,prog:PROG):SAME is
+      r::=LAYOUT_TBL::layout_tbl.get(tp);
+      res:SAME;
+      if ~void(r) then
+	 typecase r when SAME then
+	    res:=r;
+	 end;
+      else 
+	 res:=new;
+	 res.tp:=tp;
+	 res.prog:=prog;
+	 res.l:=LAYOUT_TBL::cgen.am_ob_def_for_tp(tp);
+	 res.str:=res.tp.str+" - Class";
+	 layouts:=layouts.insert(res);
+	 LAYOUT_TBL::layout_tbl:=LAYOUT_TBL::layout_tbl.insert(tp,res);
+	 res.make_dependencies;
+      end;
+      return res;
+   end;
+
+   private make_dependencies is
+      res::=#FLIST{$LAYOUT};
+      loop 
+	 tp::=l.at.targets!;
+	 if tp.is_immutable then
+	    res:=res.push(LAYOUT_TBL::layout(tp));
+	 end;
+      end;
+      if ~void(l.arr) and l.arr.is_immutable then
+	 res:=res.push(LAYOUT_TBL::layout(l.arr));
+      end;
+      dependencies:=res;
+   end;
+   
+   typedef(c:CGEN):STR is
+      m::=c.mangler;
+      cname:STR:=m.mangle(l.tp,void);
+      res::="typedef struct "+cname+"_struct {";
+      res:=res+"/* layout for "+l.tp.str+" */\n";
+      m.forbid(m.mangle(tp,void)+"_struct");
+      res:=res+" OB_HEADER header;\n";
+      if tp.is_subtype(TP_BUILTIN::dollar_lock) then
+         res:=res+" LOCK_HEADER_STRUCT\n";
+      end;
+      if ~void(l.at) then
+	 loop 
+	    --p::=l.at.pairs!;
+	    p::=sorted_fields(l.at).elt!;
+	    if p.t2.is_builtin then
+	       res:=res+' '+m.mangle(p.t2,void)
+		     +' '+m.mangle(p.t1,l.tp)+";\n";
+	    elsif ~p.t2.is_immutable then
+	       res:=res+" struct "+m.mangle(p.t2,void)
+		     +"_struct *"+m.mangle(p.t1,l.tp)+";\n";
+	    else -- user-defined immutable class
+	       res:=res+" struct "+m.mangle(p.t2,void)
+		     +"_struct "+m.mangle(p.t1,l.tp)+";\n";
+	    end;
+	 end;
+      end;
+      if ~void(l.arr) then
+	 res:=res+" INT asize;\n";
+	 if l.arr.is_builtin then
+	    res:=res+' '+m.mangle(l.arr,void)+" arr_part[";
+	 elsif ~l.arr.is_immutable then
+	    res:=res+" struct "+m.mangle(l.arr,void)+"_struct *arr_part[";
+	 else -- user-defined immutable class
+	    res:=res+" struct "+m.mangle(l.arr,void)+"_struct arr_part[";
+	 end;
+	 res:=res+1.max(l.asize)+"];\n";
+      end;
+      if void(l.at) and void(l.arr) then
+	 -- C doesn't like empty structs
+	 res:=res+" CHAR field_so_not_empty;\n";
+      end;
+      res:=res+" } *"+cname+";\n\n";
+      return res;
+   end;
+
+end;
+
+class IMMUTABLE_CLASS_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather immutable class object.
+
+   include TP_LAYOUT create->;
+
+   attr l:AM_OB_DEF;		-- The layout from the AM form.
+   attr prog:PROG;
+   attr dependencies:FLIST{$LAYOUT};
+
+   create(tp:$TP,prog:PROG):SAME is
+      res:SAME;
+      r::=LAYOUT_TBL::layout_tbl.get(tp);
+      if ~void(r) then
+	 typecase r when SAME then
+	    res:=r;
+	 end;
+      else 
+	 res:=new;
+	 res.tp:=tp;
+	 res.prog:=prog;
+	 res.l:=LAYOUT_TBL::cgen.am_ob_def_for_tp(tp);
+	 res.str:=res.tp.str+" - immutable";
+	 layouts:=layouts.insert(res);
+	 LAYOUT_TBL::layout_tbl:=LAYOUT_TBL::layout_tbl.insert(tp,res);
+	 res.make_dependencies;
+      end;
+      return res;
+   end;
+
+   private make_dependencies is
+      res::=#FLIST{$LAYOUT};
+      loop 
+	 tp::=l.at.targets!;
+	 if tp.is_immutable then
+	    res:=res.push(LAYOUT_TBL::layout(tp));
+	 end;
+      end;
+      if ~void(l.arr) and l.arr.is_immutable then
+	 res:=res.push(LAYOUT_TBL::layout(l.arr));
+      end;
+      --return res;
+      dependencies:=res;
+   end;
+
+   typedef(c:CGEN):STR is
+      m::=c.mangler;
+      cname:STR:=m.mangle(l.tp,void);
+      res::="typedef struct "+cname+"_struct {";
+      res:=res+"/* layout for "+l.tp.str+" */\n";
+      m.forbid(m.mangle(tp,void)+"_struct");
+      --res:=res+" OB_HEADER header;\n";
+      if ~void(l.at) then
+	 chars_and_bools::=0; -- only used in pSather
+	 loop 
+	    --p::=l.at.pairs!;
+	    p::=sorted_fields(l.at).elt!;
+	    if p.t2.is_builtin then
+	       if p.t2=TP_BUILTIN::char or p.t2=TP_BUILTIN::bool then
+		  chars_and_bools:=chars_and_bools+1;
+	       end;
+	       res:=res+' '+m.mangle(p.t2,void) 
+		     +' '+m.mangle(p.t1,l.tp)+";\n";
+	    elsif ~p.t2.is_immutable then
+	       res:=res+" struct "+m.mangle(p.t2,void)
+		     +"_struct *"+m.mangle(p.t1,l.tp)+";\n";
+	    else -- user-defined immutable class
+	       res:=res+" struct "+m.mangle(p.t2,void)
+		     +"_struct "+m.mangle(p.t1,l.tp)+";\n";
+	    end;
+	 end;
+	 if chars_and_bools.is_odd and c.prog.psather then
+	    res:=res+" char _dummy_to_pad; /* make struct size a multiple of 2 */\n";
+	 end;
+
+      end;
+      if ~void(l.arr) then
+	 if l.arr.is_builtin then
+	    res:=res+' '+m.mangle(l.arr,void)+" arr_part[";
+	 elsif ~l.arr.is_immutable then
+	    res:=res+" struct "+m.mangle(l.arr,void)+"_struct *arr_part[";
+	 else -- user-defined immutable class
+	    res:=res+" struct "+m.mangle(l.arr,void)+"_struct arr_part[";
+	 end;
+	 res:=res+1.max(l.asize)+"];\n";
+      end;
+      if void(l.at) and void(l.arr) then
+	 -- C doesn't like empty structs
+	 res:=res+" CHAR field_so_not_empty;\n";
+      end;
+      res:=res+" } "+cname+";\n"
+      +"static "+cname+" "+cname+"_zero;\n\n";
+      m.forbid(cname+"_zero");
+      res:=res+"typedef struct "+cname+"_boxed_struct {\n"
+	    +" OB_HEADER header;\n"
+      +' '+cname+" immutable_part;\n"
+      +" } *"+cname+"_boxed;\n\n";
+      m.forbid(cname+"_boxed");
+      m.forbid(cname+"_boxed_struct");
+      return res;
+   end;
+
+end;
+
+---------------------------------------------------------------
+-- stuff for bound iters --AJ-
+
+
+class BOUND_ITER_FRAME_LAYOUT  < $LAYOUT is
+   -- A layout corresponding to a Sather bound iter object (a function
+   -- pointer plus any bound arguments).
+   
+   -- i.e. a laout serving as frame for bound iters
+   -- one such layout is generated for each bound iter creation 
+   -- e.g bi := bind(a.foo!(_,_)) produces one such layout.
+   
+   include FIX_TYPE; -- treatment of in out ... args
+
+   shared layouts:FMAP{AM_BND_CREATE_EXPR,BOUND_ITER_FRAME_LAYOUT};
+
+   attr e:AM_BND_CREATE_EXPR;   
+   attr prog:PROG;
+   readonly attr str:STR;
+
+   create(e:AM_BND_CREATE_EXPR, p : PROG) : BOUND_ITER_FRAME_LAYOUT is
+      res::=layouts.get(e); 
+      if void(res) then
+	 res:=new;
+	 res.e:=e;
+	 res.prog := p;
+	 res.str:=res.e.fun.str+" - bound iter object"; 
+	 layouts:=layouts.insert(e,res);
+      end;
+      return res;
+   end;
+
+   dependencies:FLIST{$LAYOUT} is
+      res::=#FLIST{$LAYOUT};
+      
+      -- proclaim the dependency to the iterator frame within the bound iter ob
+      fl : $LAYOUT; ident ::= #IDENT("call!"); binding_iter_closure ::= false;
+      if e.fun.tp.is_abstract then 
+	 fl := ABSTRACT_FRAME_LAYOUT::layouts.get(e.fun);
+      elsif (e.fun.name = ident)  then 
+	 binding_iter_closure := true;
+      else
+	 fl := FRAME_LAYOUT::layouts.get(e.fun);
+      end;
+      
+      if binding_iter_closure then
+	 -- in this case fl will be void, since we do not stor call!(..) sigs
+      elsif void(fl) then -- should not occur
+	 #OUT+"Error in Bnd iter obj (sig not found): " + e.fun.str + "\n";
+      else
+	 res := res.push(fl);
+      end;
+      
+      -- dependency to return type, if any
+      if ~void(e.fun.ret) then
+	 res:=res.push(LAYOUT_TBL::layout(e.fun.ret));
+      end;
+      
+      loop
+	 i::=e.unbnd_args.elt!;
+	 if i=0 then
+	    res:=res.push(LAYOUT_TBL::layout(e.fun.tp));
+	 else res:=res.push(LAYOUT_TBL::layout(e.fun.args[i-1].tp));
+	 end;
+      end;
+      
+      loop
+	 i::=e.bnd_args.ind!;
+	 if e.bnd_args[i]=0 then
+	    res:=res.push(LAYOUT_TBL::layout(e.fun.tp));
+	 else
+	    res:=res.push(LAYOUT_TBL::layout(e.fun.args[e.bnd_args[i]-1].tp));
+	 end;
+      end;
+      
+      return res;
+   end;
+   
+   
+   -- the following typedef should be generated  e.g.
+   -- typedef struct bound_iter_frame_struct { 
+   -- INT state;
+   -- INT hotarg1;  
+   -- INT oncearg2;  
+   -- INT ret_val;
+
+   -- iter_frame_stub   iter_frame;
+   -- INT (* call)(void *);
+   -- size_t size;
+   -- BAR boundarg0;
+   -- INT boundarg1;
+   -- } *bound_iter_ob;
+
+   -- problem: inout args, func_tables
+   typedef(c:CGEN):STR is
+      m::=c.mangler;
+      name::=m.mangle(e,void);
+      m.forbid(name+"_iter_frame"); -- for ptr.
+      m.forbid(name+"_iter_frame_struct"); -- for struct 
+      res::="typedef struct "+name+"_iter_ob_struct {\n";
+      res:=res+" OB_HEADER header;\n";
+      res := res + " INT state; \n";
+     
+      hot : BOOL:= false;
+      loop a ::= e.unbnd_args.elt!; i ::= 0.up!;
+	 if a = 0 then 
+	    res := res + ' ' + m.mangle(e.fun.tp,void) +  ' ';
+	    -- self has always 'in' mode
+	 else
+	    arg ::= e.fun.args[a-1]; 
+	    if ~void(e.fun.hot) then 
+	       hot := e.fun.hot[a-1]; 
+	    end;
+	    --res := res + ' ' + m.mangle(arg.tp,void) +  ' ';
+	    res := res + " "+fix_out_type(arg, m.mangle(arg.tp,void)+' ');
+	 end;
+	 if hot then res := res + "hotarg"+i;
+	 else res := res + "oncearg" + i; end;
+	 res := res + ";\n";
+      end;
+	    
+      if ~void(e.fun.ret) then  -- eg. INT ret_val
+	 res:=res+' '+m.mangle(e.fun.ret,void);
+	 res := res +" ret_val;\n"; 
+      end;
+      -- <name>_frame
+      ident ::= #IDENT("call!");  -- bind(a.call!); !!
+      if (e.fun.name = ident) then 
+	 res := res + " "+ m.mangle(e.fun.tp,void) + " iter_frame;\n";
+      else
+	 res := res + " "+m.mangle(e.fun,void) + "_frame iter_frame;\n";
+      end;
+      --res := res + " "+m.mangle(e.fun,void) + "_frame iter_frame;\n";
+      if ~void(e.fun.ret) then  
+	 res:=res+' '+m.mangle(e.fun.ret,void);
+      else res:=res+" void"; 
+      end;
+      
+      res:=res+" (*call)(struct "+name+"_iter_ob_struct *";
+      if c.func_tables then
+	 res:=res+", struct _func_frame *";
+      end;
+      res := res + ");\n";
+      
+      res := res+" size_t size;\n";
+      
+      -- header completed
+      -- now generate bound arguments
+      -- bnd args are always `in` mode
+      loop
+	 i ::= e.bnd_args.ind!;
+	 if e.bnd_args[i]=0 then
+	    if ~e.fun.tp.is_external then
+	       res:=res+' '+m.mangle(e.fun.tp,void);
+	       res:=res+" bound_arg"+i+";\n";
+	    end;
+	 else
+	    bnd_a ::= e.fun.args[e.bnd_args[i]-1];
+	    res:=res+' '+ fix_out_type(bnd_a, m.mangle(bnd_a.tp,void));
+	    res:=res+" bound_arg"+i+";\n";
+	 end;
+      end;   
+      
+      -- psather, slot for exception stack    
+      if c.prog.psather then 
+	 res:=res+" void *ex;\n";
+      end;
+      res := res + "} *"+name+"_iter_ob;\n\n";
+      return res;
+   end;
+end;
+   
+
+-- possibly merge into one with BOUND_ROUT_TYPE
+-- problem inout args and functables
+class BOUND_ITER_TYPE_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather bound iter type 
+   -- i.e. same as above, except no fields for bound args
+   -- e.g.: ITER(INT!,INT):INT
+   -- serves to represent the bnd TYPE 
+
+   include FIX_TYPE;
+
+   attr tp:TP_ITER;
+   readonly attr str:STR;
+
+   shared layouts:FSET{BOUND_ITER_TYPE_LAYOUT};
+
+   create(arg_tp:$TP):BOUND_ITER_TYPE_LAYOUT is
+      res:SAME;
+      ares::=LAYOUT_TBL::layout_tbl.get(arg_tp);
+      --#OUT+"LAYOUT_TBL : \n" + LAYOUT_TBL::layout_tbl.str+"\n\n";
+      if ~void(ares) then
+	 typecase ares when BOUND_ITER_TYPE_LAYOUT then res:=ares; end;
+      else
+	 -- #OUT+"vreate a new bnd iter type layout\n";
+	 res:=new;
+	 typecase arg_tp when TP_ITER then
+	    res.tp:=arg_tp;
+	 end;
+	 LAYOUT_TBL::add(arg_tp,res);
+	 layouts:=layouts.insert(res);
+	 res.str:=res.tp.str+" - bound iter type";
+      end;
+      return res;
+   end;
+
+   dependencies:FLIST{$LAYOUT} is
+      res::=#FLIST{$LAYOUT};
+      loop res:=res.push(LAYOUT_TBL::layout(tp.args.elt!.tp)); end;
+      if ~void(tp.ret) then res:=res.push(LAYOUT_TBL::layout(tp.ret)); end;
+      return res;
+   end;
+
+   -- we are not using the ..._ob and ..._ob_struct stuff here
+   -- might lead to casting problems, fix then aj
+   typedef(c:CGEN):STR is
+      m::=c.mangler;
+      name::=m.mangle(tp,void);
+      m.forbid(name+"_struct");
+      m.forbid(name);
+      res::= "typedef struct " + name +  "_struct {\n";
+      res:=res+" OB_HEADER header;\n";
+      res := res + " INT state; \n";
+      is_hot : BOOL;
+      loop
+	 a ::= tp.args.elt!;
+	 if ~void(tp.hot) then 
+	    is_hot := tp.hot.elt!;
+	 else 
+	    is_hot := false;
+	 end;
+	 i::=tp.args.ind!;
+	 
+	 -- generate the C type identifier
+	 -- remember only hots can be of mode inout/out
+	 -- this is, however, checked eralier
+	 res := res + ' ' + fix_out_type(a,m.mangle(a.tp,void)+' ');
+	 
+	 -- put a hot, once before arg<nr>, not absolutely neccesary
+	 if is_hot then
+	    res := res + "hot";
+	 else -- a once argument
+	    res := res + "once";
+	 end;
+	 -- generate the 'arg<nr>' part
+	 res := res + "arg"+i+";\n";  
+      end; -- ends loop over arguments
+      if ~void(tp.ret) then 
+	 -- eg. INT ret_val;
+	 res:=res+' '+m.mangle(tp.ret,void);
+	 res := res +" ret_val;\n";
+      end;
+      res:=res+" iter_frame_stub iter_frame;\n"; 
+      
+      if ~void(tp.ret) then 	 
+	 res:=res+' '+m.mangle(tp.ret,void);
+      else res:=res+" void"; end;
+      res:=res+" (*call)(struct "+name+"_struct *";
+      --res:=res+" (*call)(void *";
+      if c.func_tables then
+	 res:=res+", struct _func_frame *";
+      end;
+      res := res + ");\n";
+      res := res+" size_t size;\n";
+      res := res + "} *"+name+";\n\n";
+      return res;
+   end;
+
+end;
+
+-- possibly rename to BOUND_ROUT_FRAME_LAYOUT
+-- or consider to 'megre' BND_ROUTS and BND_ITERS  in one class.
+class BOUND_OBJECT_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather bound object (a function
+   -- pointer plus any bound arguments). ie. the frame
+   include FIX_TYPE;
+
+   shared layouts:FMAP{AM_BND_CREATE_EXPR,BOUND_OBJECT_LAYOUT};
+
+   attr e:AM_BND_CREATE_EXPR;
+   readonly attr str:STR;
+
+   create(e:AM_BND_CREATE_EXPR):BOUND_OBJECT_LAYOUT is
+      res::=layouts.get(e);
+      if void(res) then
+	 res:=new;
+	 res.e:=e;
+	 res.str:=res.e.fun.str+" - bound object";
+	 layouts:=layouts.insert(e,res);
+      end;
+      return res;
+   end;
+
+   dependencies:FLIST{$LAYOUT} is
+      res::=#FLIST{$LAYOUT};
+      if ~void(e.fun.ret) then
+	 res:=res.push(LAYOUT_TBL::layout(e.fun.ret));
+      end;
+      loop
+	 i::=e.unbnd_args.elt!;
+	 if i=0 then
+	    if ~e.fun.tp.is_external then
+	       res:=res.push(LAYOUT_TBL::layout(e.fun.tp));
+	    end;
+	 else res:=res.push(LAYOUT_TBL::layout(e.fun.args[i-1].tp));
+	 end;
+      end;
+      loop
+	 i::=e.bnd_args.ind!;
+	 if e.bnd_args[i]=0 then
+	    if ~e.fun.tp.is_external then
+	       res:=res.push(LAYOUT_TBL::layout(e.fun.tp));
+	    end;
+	 else
+	    res:=res.push(LAYOUT_TBL::layout(e.fun.args[e.bnd_args[i]-1].tp));
+	 end;
+      end;
+      return res;
+   end;
+
+   typedef(c:CGEN):STR is
+      m::=c.mangler;
+      name::=m.mangle(e,void);
+      m.forbid(name+"_ob");
+      m.forbid(name+"_ob_struct");
+      res::="typedef struct "+name+"_ob_struct {\n";
+      res:=res+" OB_HEADER header;\n";
+      if e.is_remote then
+	 res:=res+" struct "+name+"_ob_struct *local;\n";
+      end;
+      if ~e.is_remote and ~void(e.fun.ret) then 
+         res:=res+' '+m.mangle(e.fun.ret,void)+' ';
+      else res:=res+" void ";
+      end;
+      res:=res+"(*funcptr)(struct "+name+"_ob_struct *";
+      loop
+	 i::=e.unbnd_args.elt!;
+	 if i=0 then
+	    if ~e.fun.tp.is_external then
+	       res:=res+", "+m.mangle(e.fun.tp,void);
+	       -- self always has ``in'' mode
+	    end;
+	 else res:=res+", "+fix_out_type(e.fun.args[i-1],
+			m.mangle(e.fun.args[i-1].tp,void));
+	 end;
+      end;
+      if c.func_tables then
+	 res:=res+", struct _func_frame *";
+      end;
+      res:=res+");\n";
+      if e.is_remote and ~void(e.fun.ret) then
+	 res:=res+" "+m.mangle(e.fun.ret,void)+" ret_arg;\n";
+      end;
+      loop
+	 i::=e.bnd_args.ind!;
+	 if e.bnd_args[i]=0 then
+	    if ~e.fun.tp.is_external then
+	       res:=res+' '+m.mangle(e.fun.tp,void);
+	       res:=res+" bound_arg"+i+";\n";
+	    end;
+	 else
+	    bnd_a ::= e.fun.args[e.bnd_args[i]-1];
+	    -- even if bound args are of type out or inout we declare
+	    -- them as values, not as pointers (this can only happen in pSather
+	    -- for remote execution function)
+	    res:=res+' '+ m.mangle(bnd_a.tp,void);
+	    res:=res+" bound_arg"+i+";\n";
+	 end;
+      end;
+      res:=res+" } *"+name+"_ob;\n\n";
+      return res;
+   end;
+
+end;
+
+-- possibly rename to BOUND_ROUT_TYPE_LAYOUT
+class BOUND_TYPE_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather bound type (just the
+   -- function pointer). i.e. the header
+   -- for F_ROUTs it is currently extremely simple: just mangles
+   -- it to "F_ROUT"
+   include FIX_TYPE;
+
+   attr tp:TP_ROUT;
+   readonly attr str:STR;
+
+   shared layouts:FSET{BOUND_TYPE_LAYOUT};
+
+   create(arg_tp:$TP):BOUND_TYPE_LAYOUT is
+      res:SAME;
+      ares::=LAYOUT_TBL::layout_tbl.get(arg_tp);
+      --#OUT+"LAYOUT_TBL : \n" + LAYOUT_TBL::layout_tbl.str+"\n\n";
+      if ~void(ares) then
+	 typecase ares when BOUND_TYPE_LAYOUT then res:=ares; end;
+      else
+	 -- #OUT+"vreate a new bnd rout type layout\n";
+	 res:=new;
+	 typecase arg_tp when TP_ROUT then
+	    res.tp:=arg_tp;
+	 end;
+	 LAYOUT_TBL::add(arg_tp,res);
+	 layouts:=layouts.insert(res);
+	 res.str:=res.tp.str+" - bound type";
+      end;
+      return res;
+   end;
+
+   dependencies:FLIST{$LAYOUT} is
+      res::=#FLIST{$LAYOUT};
+      loop res:=res.push(LAYOUT_TBL::layout(tp.args.elt!.tp)); end;
+      if ~void(tp.ret) then res:=res.push(LAYOUT_TBL::layout(tp.ret)); end;
+      return res;
+   end;
+
+   typedef(c:CGEN):STR is
+      res:STR;
+      m::=c.mangler;
+      name::=m.mangle(tp,void);
+      if tp.is_fortran then
+	 res:="typedef ".append("F_ROUT ",name,";\n");
+	 return res;
+      else
+	 m.forbid(name+"_struct");
+	 res:="typedef struct "+name+"_struct {\n";
+	 res:=res+" OB_HEADER header;\n";
+	 if ~void(tp.ret) then res:=res+' '+m.mangle(tp.ret,void);
+	 else res:=res+" void";
+	 end;
+	 res:=res+" (*funcptr)(void *";
+	 loop
+	    a::=tp.args.elt!;
+	    res:=res+", "+fix_out_type(a, m.mangle(a.tp,void));
+	 end;
+	 if c.func_tables then
+	    res:=res+", struct _func_frame *";
+	 end;
+	 res:=res+");\n} *"+name+";\n\n";
+	 return res;
+      end;
+   end;
+
+end;
+
+
+class FRAME_LAYOUT < $LAYOUT is
+   -- A layout corresponding to a Sather iterator frame.
+   -- Later this will be used for ordinary routines too for GC.
+   include FIX_TYPE;
+
+   attr f:AM_ROUT_DEF;
+   attr prog:PROG;
+   --shared layouts:FMAP{AM_ROUT_DEF,FRAME_LAYOUT};
+   shared layouts:FMAP{SIG,FRAME_LAYOUT};
+   readonly attr str:STR;
+
+   create(f:AM_ROUT_DEF,p:PROG):SAME is
+      res::=layouts.get(f.sig); -- changed to f.sig from f
+
+      if void(res) then
+	 res:=new;
+	 res.f:=f;
+       	 res.prog:=p;
+	 res.str:=res.f.sig.str+" - frame";
+	 layouts:=layouts.insert(f.sig,res);
+      end;
+      return res;
+   end;
+   
+   dependencies:FLIST{$LAYOUT} is
+      res::=#FLIST{$LAYOUT};
+      loop
+	 res:=res.push(LAYOUT_TBL::layout(f.elt!.tp));
+      end;
+      loop
+	 res:=res.push(LAYOUT_TBL::layout(f.locals.elt!.tp));
+      end;
+      -- not needed since we are defining somethin like
+      -- struct type *ptr which is legal in C, even if typedef
+      -- for type comes after this definition, therefore biter do
+      -- not need the dependency either
+      --loop
+      --    n::=BE::nested_its.get(f).elt!;
+      --    r::=BE::routs_with_frames.get(n.fun);
+      --    assert(~void(n));
+      --    res:=res.push(#FRAME_LAYOUT(r,prog));
+      --end;
+      return res;
+   end;
+
+   typedef(c:CGEN):STR is
+      m::=c.mangler;
+      res::="typedef struct "+m.mangle(f.sig,void)+"_frame_struct {\n";
+      m.forbid(m.mangle(f.sig,void)+"_frame_struct");
+      -- make slot for each argument
+      name:STR;
+      
+      -- Make a slot for the state number
+      -- Attention this slot has been moved to the beginning of the
+      -- layout for casting purposes with bound iters!!
+      res:=res+" INT state;\n";
+      
+      loop
+	 fi::=f.elt!;
+	 name:=m.mangle(fi.expr,f.sig);
+	 res:=res+' '+fix_out_type(fi, m.mangle(fi.tp,void))+' '+name+';';
+	 res:=res+"/* Formal argument: "+fi.name.str+" */\n";
+      end;      
+
+       -- make slot for each local
+      if ~void(f.locals) then
+	 loop
+	    fli::=f.locals.elt!;	
+	    name:=m.mangle(fli,f.sig);
+	    res:=res+' '+m.mangle(fli.tp,void)+' '+name+";\n";
+	 end;
+      end;
+      
+      -- slot for any nested iter frames
+      loop 
+	 ni::=LAYOUT_TBL::cgen.nested_its.get(f).elt!;
+	 nl::=1.up!;
+	 if ni.fun.is_builtin then
+	    res:=res+" BOOL f_"+ni.uniq+"; /* used by builtin iter */\n";
+	    v::=ni.fun.builtin_info.var;
+	    if ~void(v) then
+	       loop
+	          s::=CGEN::expand_macro(v.elt!,void,ni.fun,void,ni.uniq);
+		  res:=res+" "+s+" /* used by builtin iter */\n";
+	       end;
+	    end;
+	    if ni.fun.builtin_info.use_index then
+	       s::=CGEN::expand_macro("INT $#;",void,ni.fun,void,ni.uniq);
+	       res:=res+" "+s+" /* used by builtin iter */\n";
+	    end;
+	 else
+	    res:=res+" struct "+m.mangle(ni.fun,void)+"_frame_struct *";
+	    name:="nested"+nl;
+	    res:=res+name+"; /* nested iter frame */\n";
+         end;
+      end;
+      
+      -- slots for nested bits
+      loop 
+	 nbi ::=LAYOUT_TBL::cgen.nested_bits.get(f).elt!;
+	 nb ::=1.up!;
+	 res:=res+" struct "+m.mangle(nbi.bi_tp,void)+"_struct *";
+	 name:="nested_biter"+nb;
+	 res:=res+name+"; /* nested biter frame */\n";
+      end;
+            
+      if c.prog.psather then -- slot for exception stack
+	 res:=res+" void *ex;\n";
+      end;
+
+      res := res +" } *"+m.mangle(f.sig,void)+"_frame;\n\n";
+      m.forbid(m.mangle(f.sig,void)+"_frame");
+      return res;
+   end;
+end;
+
+class FIX_TYPE is
+   fix_out_type(e:AM_FORMAL_ARG, s:STR):STR is
+      -- probably inadequate!
+      if (e.mode = MODES::out_mode or e.mode = MODES::inout_mode) then
+	 return s + "*";
+      end;
+      return s;
+   end;        
+
+   fix_out_type(e:ARG, s:STR):STR is
+      -- probably inadequate!
+      if (e.mode = MODES::out_mode or e.mode = MODES::inout_mode) then
+	 return s + "*";
+      end;
+      return s;
+   end;        
+end;
+
+class ARG_LAYOUT < $LAYOUT is
+
+   shared layouts:FMAP{SIG,ARG_LAYOUT};
+
+   attr sig:SIG;
+   readonly attr str:STR;
+
+   create(s:SIG):SAME is
+      res::=layouts.get(s);
+      if void(res) then
+	 res:=new;
+	 res.sig:=s;
+	 res.str:=res.sig.str+" - arg";
+	 layouts:=layouts.insert(s,res);
+      end;
+      return res;
+   end;
+
+   dependencies:FLIST{$LAYOUT} is 
+      res::=#FLIST{$LAYOUT};
+      res:=res.push(LAYOUT_TBL::layout(sig.tp));
+      loop
+	 res:=res.push(LAYOUT_TBL::layout(sig.args.elt!.tp));
+      end;
+      return res;
+   end;
+
+   typedef(c:CGEN):STR is
+      m::=c.mangler;
+      res::="typedef struct "+m.mangle(sig,sig)+"_arg_frame_struct {\n";
+      res:=res+' '+m.mangle(sig.tp,sig)+" self;\n";
+      loop
+	 res:=res+' '+m.mangle(sig.args.elt!.tp,sig)+" arg"+1.up!+";\n";
+      end;
+      res:=res+"} *"+m.mangle(sig,sig)+"_arg_frame;\n\n";
+      return res;
+   end;
+
+end; -- class ARG_LAYOUT
+
+-- vim:sw=3:nosmartindent
+

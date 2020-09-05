@@ -1,0 +1,220 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class OPT_CONST is
+   include OPT_HELPER;
+   -- moves constant expressions out of the loop, and moves while! and until!
+   -- iters from the beginning of the loop to the end. This may help in hoisting 
+   -- either constants or iter initializations.
+
+   const_hoisting(func:AM_ROUT_DEF,pass:INT) is
+      d::=const_hoisting(func,pass);
+   end;
+   const_hoisting(func:AM_ROUT_DEF,pass:INT):BOOL is
+      c::=#AM_CURSOR(prog,func.code);
+      c.ignore_pre:=true;
+      c.ignore_post:=true;
+      c.ignore_assert:=true;
+      res:BOOL:=false;
+      after_loop_break:ARRAY{BOOL}:=#(30); -- not more than 30 loop recursions
+      loop
+         am::=c.next!;
+
+	 typecase am
+	 when AM_RAISE_STMT then
+	    after_loop_break[c.loops]:=true;
+	 when AM_BREAK_STMT then
+	    after_loop_break[c.loops]:=true;
+	 when AM_ITER_CALL_EXPR then -- we don't hoist iter expressions anyway, so
+	 			     -- there is no need to handle this case specially
+	    after_loop_break[c.loops]:=true;
+	 when AM_RETURN_STMT then
+	    after_loop_break[c.loops]:=true;
+	 when AM_LOOP_STMT then
+	    after_loop_break[c.loops+1]:=false;
+	    if prog.move_while and pass <=2 then
+	       b::=am.body;
+	       typecase b when AM_IF_STMT then -- move a first while! or until! out of and to
+					       -- the end of the loop
+		  if (void(b.if_true) or void(b.if_false)) and has_no_iter(b.test) 
+		     and (void(am.first_while_moved) or SYS::id(am.first_while_moved)/=SYS::id(b)) then
+		     if void(am.first_while_moved) then am.first_while_moved:=b; end;
+		     br:$AM_STMT;
+		     if void(b.if_true)  then
+			br:=b.if_false;
+		     else
+			br:=b.if_true;
+		     end;
+		     typecase br when AM_BREAK_STMT then
+			nif::=#AM_IF_STMT(am.source);
+			nif.test:=b.test.copy;
+			c.replace_stmt(nif);
+			if void(b.if_true) then 
+			   nif.if_true:=am;
+			else 
+			   nif.if_false:=am;
+			end;
+			am.next:=void;
+			am.body:=am.body.next;
+			last::=am.body;
+			if void(last) then
+			   am.body:=b;
+			else
+			   loop 
+			      while!(~void(last.next));
+			      last:=last.next;
+			   end;
+			   last.next:=b;
+			end;
+			b.next:=void;
+			prog.stat.incr("O: # of while!/until! moved to the end of the loop");
+			res:=true;
+			if prog.opt_debug then
+			   #OUT+"moved a while!/until! iter to the end of the loop\n";
+			end;
+		     else end;
+		  end;
+	       else end;
+	    end;
+	 when AM_LOCAL_EXPR then -- we don't want to hoist local variables.
+	 when $AM_CONST then -- we don't want to hoist consts either.
+	 when AM_SHARED_EXPR then -- same is true for global expressions
+	 when $AM_EXPR then
+	    hoisted::=false;
+	    if c.loops>0 and prog.hoist_const and c.not_in_a_case_in_a_loop and c.not_prefetch_attr and 
+	        ((pass>1 and ~func.is_iter) or ~c.in_iter_init) and  ~c.is_lhs_of_at_expr then
+	       in_conditional::= ~c.not_in_a_conditional_in_loop;
+	       need_safe_attr::=after_loop_break[c.loops] or in_conditional;
+	       if (~need_safe_attr or ~prog.void_checks or ~has_attr_expr(am))
+	          and hoistable(am,c,need_safe_attr,in_conditional) then
+		  prog.stat.incr("O: # of expressions hoisted");
+		  hoisted:=true;
+		  res:=true;
+		  if void(am.tp) then
+		     se::=#AM_EXPR_STMT(am.source);
+		     se.expr:=am;
+		     c.delete_current;
+		     if need_safe_attr then make_safe_attr(se); end;
+		     c.insert_in_loop_init(se);
+		     if prog.opt_debug then
+			#OUT+"expression stmt hoisted:\n";
+			AM_OUT::AM_out(am);#OUT+" (need_safe_attr="+need_safe_attr+")\n";
+		     end;
+		  else 
+		     e::=c.loop_stmt.hoisted;
+		     found_expr::=false;
+		     if ~void(e) then
+			loop
+			   i::=e.ind!;
+			   if am=e[i].expr then
+			      prog.stat.incr("O: # of double hoisted expressions");
+			      if prog.opt_debug then
+				 #OUT+"double expression stmt hoisted:\n";
+				 AM_OUT::AM_out(am);#OUT+" (need_safe_attr="+need_safe_attr+")\n";
+			      end;
+			      res:=true;
+			      found_expr:=true;
+			      if e[i].is_safe and ~need_safe_attr then
+				 make_unsafe_attr(e[i].expr);
+			      end;
+			      c.replace_expr(e[i].local);
+			      break!;
+			   end;
+			end;
+		     end;
+		     if ~found_expr then
+			l::=new_local(func,am.tp);
+			as::=#AM_ASSIGN_STMT(am.source);
+			as.dest:=l;
+			as.src:=am;
+			comment::=#AM_COMMENT_STMT(am.source);
+			comment.comment:="hoisted expression comming from "+am.source.str;
+			if need_safe_attr then make_safe_attr(am); end;
+			c.insert_in_loop_init(comment);
+			c.insert_in_loop_init(as);
+			c.replace_expr(l);
+			c.loop_stmt.hoisted:=e.push(#EXPR_HOISTED(am,need_safe_attr,l));
+			if prog.opt_debug then
+			   #OUT+"expression hoisted:\n";
+			   AM_OUT::AM_out(am);
+			   #OUT+" (need_safe_attr="+need_safe_attr+")\n"
+			end;
+		     end;
+	          end;
+	       end;
+	    end;
+	    typecase am when AM_ROUT_CALL_EXPR then
+	       -- there could be a raise in this routine cal. If we are unable to
+	       -- know this (because we compile without side effects), we assume
+	       -- the worst.
+	       after_loop_break[c.loops]:=after_loop_break[c.loops] 
+	           or ~c.with_side_effects or (~void(am.fun.get_se_context(prog)) and am.fun.get_se_context(prog).has_raise);
+	    else end;
+            if prog.opt_debug and ~hoisted and c.loops>0 then
+	       typecase am when AM_ATTR_EXPR then
+	       AM_CURSOR::debug:=true;
+	       #OUT+"the following expression is not hoisted:\n";
+	       AM_OUT::AM_out(am);
+               #OUT+"\n";
+	       in_conditional::= ~c.not_in_a_conditional_in_loop;
+	       need_safe_attr::=after_loop_break[c.loops] or in_conditional;
+	       #OUT+"in_conditional="+in_conditional+"  ";
+	       #OUT+"need_safe_attr="+need_safe_attr+"  ";
+	       #OUT+"prog.void_checks="+prog.void_checks+"\n";
+               #OUT+("has_attr_expr(am)="+has_attr_expr(am)+"  hoistable()="+hoistable(am,c,need_safe_attr,in_conditional)+"\n");
+	       AM_CURSOR::debug:=false;
+	       else end;
+	    end;
+	 when AM_ASSIGN_STMT then
+	    hoisted::=false;
+	    if c.loops>0 and prog.hoist_const and c.not_in_a_case_in_a_loop and 
+	        ((pass>1 and ~func.is_iter) or ~c.in_iter_init) then
+	       in_conditional::= ~c.not_in_a_conditional_in_loop;
+	       need_safe_attr::=after_loop_break[c.loops] or in_conditional;
+	       if (~need_safe_attr or ~prog.void_checks or ~has_attr_expr(am))
+		  and hoistable_dest(am,c,need_safe_attr,in_conditional)
+		  and hoistable(am.src,c,need_safe_attr,in_conditional) then
+		     if need_safe_attr then make_safe_attr(am.src); end;
+		     hoisted:=true;
+		     if prog.opt_debug then
+			#OUT+"assignment hoisted: (need_safe_attr="+need_safe_attr+")\n";
+			AM_OUT::AM_one_stmt(am);
+		     end;
+		     c.delete_current;
+		     comment::=#AM_COMMENT_STMT(am.source);
+		     comment.comment:="hoisted assignment comming from "+am.source.str;
+		     c.insert_in_loop_init(comment);
+		     c.insert_in_loop_init(am);
+		     prog.stat.incr("O: # of assignments hoisted");
+		     res:=true;
+	        else
+		     if prog.opt_debug then
+	 		#OUT+"assignment NOT hoisted: need_safe_attr="+need_safe_attr+"  ";
+	 		#OUT+"prog.void_checks="+prog.void_checks;
+	 		#OUT+"   has_attr_expr="+has_attr_expr(am)+"\n";
+	 		#OUT+"hoistable_dest="+hoistable_dest(am,c,need_safe_attr,in_conditional)+
+	 		     "hoistable="+hoistable(am.src,c,need_safe_attr,in_conditional)+"\n";
+	 		AM_OUT::AM_one_stmt(am);
+	 	     end;
+	       end;
+	    end;
+	 else end;
+      end;
+      if ~void(c.top) then -- there may be some new statements at the beginning,
+                           -- so we have to adjust func.code.
+	 tam::=c.top;
+	 typecase tam when $AM_STMT then func.code:=tam; end;
+      end;
+      return res;
+   end;
+end;

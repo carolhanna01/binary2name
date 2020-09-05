@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>Mifluz: Key Specification</title>
+
+<meta name="description" content="Mifluz: Key Specification">
+<meta name="keywords" content="Mifluz: Key Specification">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Concept-Index.html#Concept-Index" rel="index" title="Concept Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html#Top" rel="up" title="Top">
+<link href="Internals.html#Internals" rel="next" title="Internals">
+<link href="Cache-tuning.html#Cache-tuning" rel="previous" title="Cache tuning">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Key-Specification"></a>
+<div class="header">
+<p>
+Next: <a href="Internals.html#Internals" accesskey="n" rel="next">Internals</a>, Previous: <a href="Cache-tuning.html#Cache-tuning" accesskey="p" rel="previous">Cache tuning</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Key-Specification-1"></a>
+<h2 class="chapter">7 Key Specification</h2>
+
+<p>The key structure is what uniquely identifies each word that is inserted
+in the inverted index. A key is made of a string (which is the word being
+indexed), and a document identifier (which is really a list of numbers), as
+discussed above.
+</p>
+<p>The exact structure of the inverted index key must
+be specified in the configuration parameter
+<code>&quot;wordlist_wordkey_description&quot;</code>. See the WordKeyInfo(3) manual
+page for more information on the format.
+</p>
+<p>We will focus on three examples that illustrate common usage.
+</p>
+<p>First example: a very simple inverted index would be to associate each word occurrence
+to an URL (coded as a 32 bit number). The key description would be:
+</p>
+<div class="example">
+<pre class="example">Word 8/URL 32
+</pre></div>
+
+<p>Second example: if building a full text index of the content of a
+database, you need to know in which field, table and record the word
+appeared. This makes three numbers for the document id.
+</p>
+<p>Only a few bits are needed to encode the field and table name (let&rsquo;s say
+you have a maximum of 16 field names and 16 table names, 4 bits each is
+enough). The record number uses 24 bits because we know we won&rsquo;t have
+more than 16 M records.
+</p>
+<p>The structure of the key would then be:
+</p>
+<div class="example">
+<pre class="example">Word 8/Table 4/Field 4/Record 32
+</pre></div>
+
+<p>When you have more than one field involved in a key you must chose the
+order in which they appear. It is mandatory that the <strong>Word</strong> is first. 
+It is the part of the key that has highest precedence
+when sorting. The fields that follow have lower and lower precedence.
+</p>
+<p>Third example: we go back to the first example and imagine we have
+a relevance ranking function that calculates a value for each word
+occurrence. By inserting this relevance ranking value in the inverted
+index key, all the occurrences will be sorted with the most relevant
+first.
+</p>
+<div class="example">
+<pre class="example">Word 8/Rank 5/URL 32
+</pre></div>
+
+<hr>
+<div class="header">
+<p>
+Next: <a href="Internals.html#Internals" accesskey="n" rel="next">Internals</a>, Previous: <a href="Cache-tuning.html#Cache-tuning" accesskey="p" rel="previous">Cache tuning</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,103 @@
+                 Additional Installation Notes for the Gui
+
+Benedict Gomes (gomes@icsi.berkeley.edu)
+David Bailey (dbailey@icsi.berkeley.edu)
+Matthias Ernst (tisi@beutlin.desy.de)
+Holger Klawitter (holger@icsi.berkeley.edu)
+----------------------------------------------------------------------------
+
+   * Using the Gui
+   * Potential Bugs in the Gui Installation
+   * Dual Process Gui
+   * The module structure of the Gui
+
+
+To install the Gui, first see the installation notes in
+Doc/Installation.html.
+----------------------------------------------------------------------------
+
+Using the Gui
+
+Once the Gui has been installed, you can use the gui by providing the
+compiler with the -gui option
+
+   sacomp -gui -main PIZZA_MAIN -o pizza_main -verbose
+
+Then run it with ./pizza_main
+
+Debugging and Reporting Bugs
+
+If you have a problem in getting the Gui to work with any of the demos,
+please set the debug flags to "true"
+
+in System/Platforms/gui/TclCode/gui_setup.tcl:
+sather server_debug false
+sather server_tcldebug false
+
+in System/Platforms/gui/TclCode/gui_post_socket_init.tcl:
+sather app_debug false
+sather app_tcldebug false
+
+The Dual Process Gui
+
+This is a more complex version, that uses two communicating processes over a
+sockets (which is useful for many reasons, not the least of which is better
+performance over a slow network). The server end is linked with the tk/tcl
+libraries while the user's client program only has to link with the Gui code
+and socket libraries.
+
+To install the dual process gui, see the notes in Doc/Installation.html. The
+gui server is created by the rule "make Gui" in the Makefile
+
+Note that the Raster widget as well as demo2 cannot be used with -dualgui
+
+You are now ready to use the gui with your programs. To try out the demos
+compile with the -dualgui option. You will probably also need to specify one
+of the unix platforms to get sockets working
+
+   sacomp -main DEMO1 -dualgui -o demo
+
+Then run it with ./demo
+
+The Module Structure of the Gui
+
+For the gui to work all you should have to use the compiler option -gui OR
+-dualgui. These are not compiler options in the traditional sense of the
+term. Rather, they are specifications of a platform i.e. a set of system
+dependant features. When you specify the compiler option -gui, the compiler
+goes and looks in the directory System/Platforms/gui/ and looks for a file
+named Platform.module. Likewise with the option -dualgui. In general, the
+Gui depends on the tcltk platform, which, in turn, depends on the X
+platform. You should never have to deal with the following nesting of module
+files, but it is described here if you have to debug something:
+
+-gui specifies System/Platforms/gui/Platform.module which includes:
+
+   * -tcltk i.e. System/Platforms/tcltk/Platform.module to specify the
+     locations of various Tcl/Tk headers and libraries. In turn, this
+     includes
+        o -X i.e. System/Platforms/X/Platform.module to specify the
+          locations of the X libraries and header files and the X link
+          flags.
+
+* Library/System/Gui/Widgets.module which specifies the widget classes.
+* Library/System/Gui/Raster.module which specifies the raster widget.
+* Library/System/Gui/TclTkInteface.module which specifies the Gui interface
+to the Tcl/Tk Sather interface (i.e. -tcltk).
+
+-dualgui specifies System/Platforms/dualgui/Platform.module
+which includes
+
+   * Library/System/Gui/AppToServer.module which specifies the dual process
+     application end (which is different and permits intermmittent polling
+     thus essentially providing two threads of control).
+   * Library/System/Gui/Widgets.module which are common to both the single
+     and dual gui modules
+
+System.module is not like the other modules in Library or pLibrary. It does
+not include the modules of its subdirectories. The modules in those
+subdirectories get auto-included by particular Platform modules. I've also
+removed the SATHER_GUI_HOME variable since it seemed less meaningful to
+treat the Gui directory as a separate entity since the server executable is
+in a different place, System/Platforms/dualgui/dual_gui_server
+----------------------------------------------------------------------------

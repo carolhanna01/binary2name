@@ -1,0 +1,736 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+immutable class FLTD < $REAL_NUMBER{FLTD}, $HASH, $FMT is
+   -- IEEE 754-1984 "double" format 64-bit floating point.
+
+   
+   plus(f:SAME):SAME is		-- The sum of self and `f'. Built-in.
+      builtin FLTD_PLUS;
+   end;
+
+   minus(f:SAME):SAME is	
+      -- The difference between self and `f'. Built-in.     
+      builtin FLTD_MINUS;
+   end;   
+    
+   negate:SAME is
+      -- The negation of self. Same as zero minus self,
+      -- except for IEEE rounding modes and the sign bit.
+      builtin FLTD_NEGATE;
+   end;
+
+   times(f:SAME):SAME is	
+      -- The signed product of self and `f'. Built-in.
+      builtin FLTD_TIMES;
+   end;   
+    
+   div(f:SAME):SAME is		-- The quotient of self and `f'. Built-in.
+      builtin FLTD_DIV;
+   end;   
+    
+   is_eq(b:SAME):BOOL is
+      -- True if self and `b' have the same value 
+      builtin FLTD_IS_EQ;
+   end;
+   
+   is_eq(arg: $OB): BOOL is
+      -- Overloaded version of the is_eq routine that works with an argument
+      -- of any type. If the type of the 'arg' is not the same as they
+      -- type of 'self' then return false. Otherwise, deletegate to
+      -- the 'real' is_eq(SAME):BOOL routine
+      typecase arg  when SAME then return is_eq(arg)  else return false end;
+   end;
+   
+   is_lt(f:SAME):BOOL is	
+      -- True if self is less than `f'. Built-in.
+      builtin FLTD_IS_LT;
+   end;   
+
+   is_bet(l,u:SAME):BOOL is return self.is_between(l,u) end; -- Another name for `is_between'.
+    
+   is_between(l,u:SAME):BOOL is
+      -- True if self between l and u.
+      return (l<=self and self<=u) or (u<=self and self<=l) end;
+
+   is_within(tolerance,val:SAME):BOOL is
+      -- True if self close to (within absolute tolerance of) val.
+      return (self-val).abs<=tolerance;
+   end;
+
+   hash:INT is
+      -- A lousy hash function, can someone suggest better?
+      return truncate.int;
+   end;
+
+   is_finite:BOOL is		-- returns true if zero, subnormal or normal.
+      builtin FLTD_FINITE;
+   end;
+
+   is_inf:BOOL is		-- returns true if infinite
+      builtin FLTD_ISINF;
+   end;
+
+   is_nan:BOOL is		
+      -- returns true if NaN.  See somment at "is_nil".
+      return ~(self=self);
+   end;
+
+   is_normal:BOOL is		-- returns true if normal
+      builtin FLTD_ISNORMAL;
+   end;
+
+   is_subnormal:BOOL is		-- returns true if subnormal
+      builtin FLTD_ISSUBNORMAL;
+   end;
+
+   is_zero:BOOL is		-- returns true is zero
+	    builtin FLTD_ISZERO;
+   end;
+
+   signbit_set:BOOL is		-- returns true if sign bit of self is set
+	    builtin FLTD_SIGNBIT;
+   end;
+
+   unbiased_exponent:INT is
+      -- return unbiased exponent of self as an INT;
+      -- for zero this is INT::maxint.negate, for an
+      -- infinite it is INT::maxint.  If subnormal,
+      -- normalization occurs first.
+      builtin FLTD_ILOGB;
+   end;
+
+   copysign(y:SAME):SAME is
+      -- return self with the sign bit set to the same as y's sign bit.
+      builtin FLTD_COPYSIGN;
+   end;
+
+   nextup:FLTD is		-- return next representable number from self.
+      builtin FLTD_NEXTUP;
+   end;
+
+   nextdown:FLTD is		
+      -- return previous representable number from self.
+      builtin FLTD_NEXTDOWN;
+   end;
+
+   remainder(y:FLTD):FLTD is
+      --  x.remainder(y) and x.mod(y) return a remainder of x with respect
+      --  to y; that is, the result r is one of the numbers that differ from
+      --  x by an integral multiple of y.  Thus (x-r)/y  is an integral
+      --  value, even though it might exceed INT::maxint if it were
+      --  explicitly computed as an INT.  Both functions return one  of the
+      --  two such r smallest in magnitude.  remainder(x,y) is the operation
+      --  specified in ANSI/IEEE Std 754-1985; the result of x.mod(y) may
+      --  differ from remainder's result by +-y.  The magnitude of
+      --  remainder's result can not exceed half that of y; its sign might
+      --  not agree with either x or y.  The magnitude of mod's result is
+      --  less than that of y; its sign agrees with that of x.  Neither
+      --  function will raise an exception as long as both arguments are
+      --  normal or subnormal.  x.remainder(0), x.mod(0), oo.remainder(y),
+      --  and oo.mod(y) are invalid operations that produce a NaN.
+      builtin FLTD_REMAINDER;
+   end;
+
+   mod(y:FLTD):FLTD is
+      -- See the comment at FLT::remainder
+      builtin FLTD_FMOD;
+   end;
+
+   scale_by(n:INT):FLTD is
+      -- return x*2.pow(n) computed by exponent manipulation rather
+      -- than by actually performing an exponentiation or a multiplication.
+      -- 1 <= x.abs.scale_by(-x.unbiased_exponent) < 2 for every x
+      -- except 0, infinity, and NaN.
+      builtin FLTD_SCALBN;
+   end;
+
+   bessel_j0:SAME is
+      -- Bessel functions of the first and second kinds.  y0, y1 and yn have
+      -- logarithmic singularities at the origin, so they treat zero and
+      -- negative arguments the way log does.
+      builtin FLTD_J0;
+   end;
+
+   bessel_j1:SAME is
+      -- See comment at `bessel_j0'.
+      builtin FLTD_J1;
+   end;
+
+   bessel_jn(n:INT):SAME is
+      -- See comment at `bessel_j0'.
+      builtin FLTD_JN;
+   end;
+
+   bessel_y0:SAME is
+      -- See comment at `bessel_j0'.
+      builtin FLTD_Y0;
+   end;
+
+   bessel_y1:SAME is
+      -- See comment at `bessel_j0'.
+      builtin FLTD_Y1;
+   end;
+
+   bessel_yn(n:INT):SAME is
+      -- See comment at `bessel_j0'.
+      builtin FLTD_YN;
+   end;
+
+   erf:SAME is
+      -- error function:
+      --
+      --   x.erf = (1/sqrt(pi))*integrate(0,x,exp(-t^2)dt)
+      builtin FLTD_ERF;
+   end;
+
+   one_minus_erf:SAME is
+      -- 1.0-self.erf, but computed in a way to avoid cancellation for
+      -- large self.
+      builtin FLTD_ERFC;
+   end;
+
+   exp:SAME is			-- The exponential e^self.
+      -- Exponential, logarithm, power functions functions handle
+      -- exceptional arguments in the spirit of IEEE 754-1985.  So:
+      --
+      --    0.log is -infinity with a division by zero exception
+      --
+      --    For x<0, including -infinity, x.log is a quiet NaN with an
+      --    invalid op exception
+      --
+      --    For x=+infinity or a quiet NaN, x.log is x without exception
+      --
+      --    For a signaling NaN, x.log is a quiet NaN with an invalid op exception
+      --
+      --    1.log is zero without exception
+      --
+      -- For any other positive x, x.log is a normalized number with an
+      -- inexact exception.
+
+      builtin FLTD_EXP;
+   end;
+    
+   exp_minus_one:SAME is	-- e^self-1.0, accurate even for tiny self.
+      -- See comment at `exp'.
+      builtin FLTD_EXPM1;
+   end;
+
+   exp2:SAME is			-- 2^self
+      -- See comment at `exp'.
+      builtin FLTD_EXP2;
+   end;
+
+   exp10:SAME is		-- 10^self.  Built-in.
+      -- See comment at `exp'.
+      builtin FLTD_EXP10;
+   end;
+    
+   log:SAME is			-- The natural logarithm of self.
+      -- See comment at `exp'.
+      builtin FLTD_LOG;
+   end;
+
+   plus_one_log:SAME is		-- (self+1).log, accurate even for tiny self.
+      -- See comment at `exp'.
+      builtin FLTD_LOG1P;
+   end;
+
+   log2:SAME is			-- The logarithm base two of self.
+      -- See comment at `exp'.
+      return self.log*log2_e;
+   end;
+
+   log10:SAME is		-- The logarithm base ten of self.
+      -- See comment at `exp'.
+      builtin FLTD_LOG10;
+   end;
+
+   pow(arg:SAME):SAME is
+      -- self raised to the arg'th power.  x.pow(0.0)=1.0 for all x.
+      -- See comment at `exp'.
+      builtin FLTD_POW;
+   end;
+
+   acosh:SAME is		-- The inverse hyperbolic cosine of self.
+      -- Hyperbolic functions handle exceptional arguments in the
+      -- spirit of IEEE 754-1985.  So:
+      -- sinh and cosh return +-infinity on overflow
+      -- acosh returns a NaN if its argument is less than 1.0
+      -- atanh returns a NaN if its argument has an absolute value >1.0
+      builtin FLTD_ACOSH;
+   end;
+    
+   sinh:SAME is			-- The hyperbolic sine of self.
+      -- See comment at `acosh'.
+      builtin FLTD_SINH;
+   end;
+    
+   cosh:SAME is			-- The hyperbolic cosine of self.
+      -- See comment at `acosh'.
+      builtin FLTD_COSH;
+   end;
+    
+   tanh:SAME is			-- The hyperbolic tangent of self.
+      -- See comment at `acosh'.
+      builtin FLTD_TANH;
+   end;
+
+   asinh:SAME is		-- The inverse hyperbolic sine of self.
+      -- See comment at `acosh'.
+      builtin FLTD_ASINH;
+   end;
+    
+   atanh:SAME is		-- The inverse hyperbolic tangent of self.
+      -- See comment at `acosh'.
+      builtin FLTD_ATANH;
+   end;
+
+   acos:SAME is			
+      -- The arc sine of self in the range [0.0, pi]
+      -- Trigonometric functions handle exceptional arguments
+      -- in the spirit of IEEE 754-1985.  So:
+      --
+      --    +-infinity.sin, +-infinity.cos, +-infinity.tan return NaN
+      --
+      --    x.asin and x.acos with x.abs>1 return NaN
+      --
+      -- sinpi etc. are similar except they compute
+      -- self.sinpi=(self*pi).sin avoiding range-reduction issues because
+      -- their definition permits range reduction that is fast and exact
+      -- for all self.  The corresponding inverse functions compute
+      -- asinpi(x).
+      builtin FLTD_ACOS;
+   end;
+    
+   hypot(arg:SAME):SAME is
+      -- sqrt(self*self+arg*arg), taking precautions against unwarranted
+      -- IEEE exceptions.  +-infinity.hypot(arg) is +infinity for any arg,
+      -- even a NaN, and is exceptional only for a signaling NaN.
+      builtin FLTD_HYPOT;
+   end;
+
+   sin:SAME is 
+      -- +-infinity.sin, +-infinity.cos, +-infinity.tan return NaN
+      -- x.asin and x.acos with x.abs>1 return NaN
+      -- sinpi etc. are similar except they compute
+      -- self.sinpi=(self*pi).sin avoiding range-reduction issues because
+      -- their definition permits range reduction that is fast and exact
+      -- for all self.  The corresponding inverse functions compute asinpi(x).
+      builtin FLTD_SIN;
+   end;
+
+   cos:SAME is
+      -- See comment for `acos'.
+      builtin FLTD_COS;
+   end;
+
+   sincos(out sin: SAME,out cos: SAME) is
+      -- Simultaneous computation of self.sin and self.cos.  This is faster
+      -- than independently computing them.
+      -- See comment for `acos'.
+      builtin FLTD_SINCOS;
+   end;
+
+   tan:SAME is
+      -- See comment for `acos'.
+      builtin FLTD_TAN;
+   end;
+
+   asin:SAME is			
+      -- The arc sine of self in the range [-pi/2, pi/2]
+      -- See comment for `acos'.
+      builtin FLTD_ASIN;
+   end;
+    
+   atan:SAME is			
+      -- The arc tangent of self in the range [-pi/2, pi/2].
+      -- See comment for `acos'.
+      builtin FLTD_ATAN;
+   end;
+
+   atan2(f:SAME):SAME is
+      -- The arc tangent of self divided by f in the range [-pi, pi].
+      -- It chooses the quadrant specified by (self, arg).
+      -- See comment for `acos'.
+      builtin FLTD_ATAN2;
+   end;
+
+   sinpi:SAME is 
+      -- See comment for `acos'.
+      builtin FLTD_SINPI;
+   end;
+
+   cospi:SAME is
+      -- See comment for `acos'.
+      builtin FLTD_COSPI;
+   end;
+
+   sincospi(out s,out c:SAME) is
+      -- Simultaneous computation of self.sinpi and self.cospi.  This is faster
+      -- than independently computing them.
+      -- See comment for `acos'.
+      builtin FLTD_SINCOSPI;
+   end;
+
+   tanpi:SAME is
+      -- See comment for `acos'.
+      builtin FLTD_TANPI;
+   end;
+
+   asinpi:SAME is
+      -- (1/pi) times the arc sine of self.
+      -- Result in the range [-1/2, 1/2]
+      -- See comment for `acos'.
+      builtin FLTD_ASINPI;
+   end;
+    
+   acospi:SAME is 
+      -- (1/pi) times the arc cosine of self.
+      -- Result in the range [0, 1]
+      -- See comment for `acos'.
+      builtin FLTD_ACOSPI;
+   end;
+    
+   atanpi:SAME is 
+      -- (1/pi) times the arc tangent of self.
+      -- Result in the range [-1/2, 1/2]
+      -- See comment for `acos'.
+      builtin FLTD_ATANPI;
+   end;
+
+   atan2pi(f:SAME):SAME is
+      -- (1/pi) times the arc tangent of self divided by f.
+      -- Result in the range [-1, 1].
+      -- It chooses the quadrant specified by (self, arg).
+      -- See comment for `acos'.
+      builtin FLTD_ATAN2PI;
+   end;
+
+   abs:SAME is			
+      -- The absolute value of self.
+      builtin FLTD_FABS;
+   end;
+    
+   sign:SAME is
+      -- Returns -1.0d, 0.0d or 1.0d depending on sign of self.
+      if self<0.0d then return -1.0d;
+      elsif self>0.0d then return 1.0d;
+      else return self;
+      end;
+   end;
+
+   signum:SAME is return sign end; -- Another name for `sign'.
+    
+   log_gamma:SAME is
+      -- log gamma function.  x.ln_gamma=x.gamma.abs.log
+      builtin FLTD_LGAMMA;
+   end;
+
+   gamma:SAME is
+      -- gamma function.
+      if self>0.0d then return log_gamma.exp;
+      elsif integral then return 0.0d; -- ? Is this correct?
+      elsif abs.floor.int.is_even then return -log_gamma.exp;
+      else return log_gamma.exp;
+      end;
+   end;
+
+   sqrt:SAME is			-- The square root of self.
+      builtin FLTD_SQRT;
+   end;
+    
+   square:SAME is		-- The square of self.
+      return self*self;
+   end;
+    
+   cube_root:SAME is		-- The cube root of self.
+      builtin FLTD_CBRT;
+   end;
+    
+   cube:SAME is			-- The cube of self.
+      return self*self*self;
+   end;
+
+   max(arg:SAME):SAME is	-- The larger of self and arg.
+      -- Caution: may not behave as expected if one argument is a NaN.
+      if self<arg then return arg; else return self; end;
+   end;
+    
+   min(arg:SAME):SAME is	-- The smaller of self and arg.
+      -- Caution: may not behave as expected if one argument is a NaN.
+      if self<arg then return self; else return arg; end;
+   end;
+    
+   at_least(arg:SAME):SAME is return self.max(arg) end; -- Same as `self.max(arg)'
+   at_most(arg:SAME):SAME is return self.min(arg) end; -- Same as `self.min(arg)'
+
+   str:STR is 
+      -- A string version of self.  
+      fdbuf:FSTR:=#(30);  -- fdbuf used to be shared, but this was
+			  -- changed to make the class reentrant.
+			  -- Same thing happens in FLT.  Other str
+			  -- methods do the same thing.
+      -- if ((void(fdbuf)) or (fdbuf.size < 30)) then fdbuf := #FSTR(30) end;
+      fstr ::= str_in(fdbuf);
+      return(fstr.str); end;
+    
+   str(prec:INT):STR is 
+      -- A string version of self with "prec" digits of precision.
+      fdbuf:FSTR;
+      des_sz ::= prec+10;
+      if ((void(fdbuf)) or (fdbuf.size<des_sz)) then 
+	 fdbuf:=#FSTR(des_sz) end;
+      fstr ::= str_in(fdbuf,prec);
+      return(fstr.str);  end;
+    
+   str_in(arg:FSTR):FSTR is 
+      -- Return an FSTR representation of self using the space in 
+      -- arg if possible
+      store_in: FSTR;
+      if (arg.size >= 30) then store_in := arg;
+      else store_in := #FSTR(30) end;
+      sz ::= store_into(store_in); 
+      store_in.loc := sz;
+      return(store_in); end;
+
+   str_in(arg:FSTR, prec: INT): FSTR is
+      -- Return FSTR version of  self with precicsion of "prec" using the
+      -- space in arg if possible. 
+      store_in: FSTR;
+      des_sz ::= prec+10;
+      if (arg.size > des_sz) then store_in := arg
+      else store_in := #FSTR(des_sz) end;
+      sz ::= store_into_prec(prec,store_in);
+      store_in.loc := sz;
+      return(store_in);  end;
+    
+   private store_into(s:FSTR):INT is
+      -- Store the acsii representation into s.  Built-in.
+      builtin FLTD_STORE_INTO;
+   end;
+
+   private store_into_prec(p:INT,s:FSTR):INT is
+      -- Store the acsii representation into s with precision p.  Built-in.
+      builtin FLTD_STORE_INTO_PREC;
+   end;
+
+   fmt( f: STR ): STR
+      -- Convert into a nice ascii string.  See the separate document
+      -- for FMT for the details.
+   is
+      return BASE_FORMAT::fmt_flt( self, f )
+   end;
+   
+   create (s: STR): SAME is
+      builtin FLTD_ATOF;
+   end;
+    
+   create(f:INT):SAME is return f.fltd end;
+   create(f:INTI):SAME is return f.fltd end;
+   create(f:FLT):SAME is return f.fltd end;
+   create(f:FLTD):SAME is return f end;
+
+   --    create(f:FLTX):SAME is return f.fltd end;
+   --    create(f:FLTDX):SAME is return f.fltd end;
+   --    create(f:FLTI):SAME is return f.fltd end;
+    
+   integral:BOOL is return self.is_integral end; -- Same as `is_integral'
+    
+   is_integral:BOOL is
+      -- Return true if self is integral.
+      return self=truncate;
+   end;
+    
+   int:INT post result.fltd=self is
+      -- INT version of self.  It is an error if self is not integral.
+      -- Use truncate, floor, ceiling, or round to achieve this.
+      -- Built-in.
+      builtin FLTD_INT;
+   end;
+    
+   inti:INTI is return #INTI(self) end; -- Convert to INTI.
+    
+   flt:FLT is
+      -- A floating point version of self. It is an error if the
+      -- value cannot be held in a FLT. Built-in.
+      builtin FLTD_FLT; end;
+    
+   fltd:FLTD is return self end;  -- Convert to FLTD.  Identity operation.
+   
+   get_representation(out sign: BOOL,out exp: INT,out mlo: INT,out mhi: INT)
+      -- Gets the internal representation as sequence of INTs.
+   is
+      builtin FLTD_GET_REP;
+   end;
+
+   truncate:SAME is		-- The nearest integer toward zero.  Built-in.
+      builtin FLTD_TRUNCATE;
+   end;
+    
+   floor:SAME is		-- The largest integer not greater than self.
+      builtin FLTD_FLOOR;
+   end;
+    
+   ceiling:SAME is		-- The smallest integer not less than self.
+      builtin FLTD_CEIL;
+   end;
+    
+   round:SAME is		-- The closest integer to self.  Built-in.
+      builtin FLTD_ROUND;
+   end;
+
+   pi:SAME is
+      -- An approximation of the mathematical value "pi".  Built-in.
+      builtin FLTD_PI;
+   end;
+    
+   e:SAME is
+      -- An approximation of the base of the natural logarithms "e".  Built-in.
+      builtin FLTD_E;
+   end;
+
+   sqrt_2:SAME is
+      -- Approximation of 2.sqrt.  Built-in.
+      builtin FLTD_SQRT_2;
+   end;
+
+   log_2:SAME is
+      -- Approximation of 2.log.  Built-in.
+      builtin FLTD_LOG_2;
+   end;
+
+   log2_e:SAME is
+      -- Approximation of e.log2.  Built-in.
+      builtin FLTD_LOG2_E;
+   end;
+
+   log10_e:SAME is
+      -- Approximation of e.log10.  Built-in.
+      builtin FLTD_LOG10_E;
+   end;
+
+   log_10:SAME is
+      -- Approximation of 10.log.  Built-in.
+      builtin FLTD_LOG_10;
+   end;
+
+   half_pi:SAME is
+      -- Approximation of pi/2.  Built-in.
+      builtin FLTD_HALF_PI;
+   end;
+
+   quarter_pi:SAME is
+      -- Approximation of pi/4.  Built-in.
+      builtin FLTD_QUARTER_PI;
+   end;
+
+   inv_sqrt_2:SAME is
+      -- Approximation of 1/(2.sqrt).  Built-in.
+      builtin FLTD_INV_SQRT_2;
+   end;
+
+   inv_pi:SAME is
+      -- Approximation of 1/pi.  Built-in.
+      builtin FLTD_INV_PI;
+   end;
+
+   double_inv_pi:SAME is
+      -- Approximation of 2/pi.  Built-in.
+      builtin FLTD_DOUBLE_INV_PI;
+   end;
+
+   double_sqrt_pi:SAME is
+      -- Approximation of 2*(pi.sqrt).  Built-in.
+      builtin FLTD_DOUBLE_SQRT_PI;
+   end;
+
+   nil:SAME is
+      -- See $NIL for use of `nil'. nil for FLTD is a signalling NaN.
+      return signaling_NaN(0); 
+   end;
+
+   is_nil:BOOL is
+      -- True is self is a NaN.
+      return ~(self=self);
+      -- Blame IEEE arithmetic for this.  I know how awful it looks.
+      -- It works because NaN is the only value which won't compare
+      -- with anything.
+   end;
+
+   signaling_NaN(sig:INT):SAME is
+      -- IEEE signalling NaN.  `sig' is the significand (presently unused).
+      builtin FLTD_SIGNALING_NAN;
+   end;
+
+   quiet_NaN(sig:INT):SAME is 
+      -- IEEE quiet NaN.  `sig' is the significand (presently unused).
+      builtin FLTD_QUIET_NAN;
+   end;
+
+   infinity:SAME is		-- IEEE Infinity.
+      builtin FLTD_INFINITY;
+   end;
+
+   const zero:SAME := 0.0d; 	         -- See $NUMBER.
+   const one: FLTD := 1.0d;
+   maxval:SAME is return infinity; end;  -- Maximal value; see $NUMBER.
+   minval:SAME is return -infinity; end; -- Minimal value; see $NUMBER.
+    
+   const epsilon:SAME:=2.2204460492503131e-16d;
+   -- The minimum x>0.0 such that 1.0+x/=x. 
+    
+   const digits:INT:=15;	-- The number of decimal digits of precision.
+
+   const mantissa_bits:INT:=53;
+      -- The number of bits in the significand, including an implied bit.
+    
+   min_normal:SAME is		-- The smallest normal positive number.
+      builtin FLTD_MIN_NORMAL;
+   end;
+
+   max_normal:SAME is		-- The largest normal positive number.
+      builtin FLTD_MAX_NORMAL;
+   end;
+
+   min_subnormal:SAME is	-- The smallest subnormal positive number.
+      builtin FLTD_MIN_SUBNORMAL;
+   end;
+    
+   max_subnormal:SAME is	-- The largest subnormal positive number.
+      builtin FLTD_MAX_SUBNORMAL;
+   end;
+    
+   const min_exp:INT:=-1021;
+      -- The minimum negative integer x such that b^(x-1) is in the range
+      -- of normalized floating point numbers.
+   
+   const min_exp10:INT:=-307;
+      -- The minimum x such that 10^x is in the range of normalized
+      -- floating point numbers.
+    
+   const max_exp:INT:=1024;	-- The maximum allowable exponent.
+    
+   const max_exp10:INT:=308;	
+      -- The maximum x such that 10^x is within range.
+
+   sum!(i:SAME):SAME is
+      -- Yields the sum of all previous values of `i'.
+      r::=0.0d; loop r:=r+i; yield r end end;
+    
+   product!(i:SAME):SAME is
+      -- Yields the product of all previous values of `i'.
+      r::=1.0d; loop r:=r*i; yield r end end;
+
+end; -- class FLTD
+----------------------------------------------------------------------------

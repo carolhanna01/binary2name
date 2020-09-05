@@ -1,0 +1,460 @@
+@c regpolyg.texi
+
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+ 
+
+@node Regular Polygon Reference, Rectangle Reference, Polygon Reference, Top
+@chapter Regular Polygon Reference 
+
+@tindex Reg_Polygon 
+Class @code{Reg_Polygon} is defined in @file{polygons.web}, and
+is derived from @code{Polygon}, using public derivation.
+
+As noted above in @ref{Affine Transformations for Polygons,,
+Polygon Reference; Affine Transformations}, @code{class Reg_Polygon},
+like @code{class Rectangle}, 
+currently inherits its transformation functions and
+@code{operator*=(const Transform&)} from @code{Polygon}.  Consequently,
+the data members of a @code{Reg_Polygon}, except for @code{center}, are
+not recalculated when it's transformed.  I plan to change this soon!  It
+will also be necessary to add the function
+@code{Reg_Polygon::is_reg_polygonal()}, in order to test whether a
+@code{Reg_Polygon} is still regular and polygonal. 
+
+ 
+@menu
+* Regular Polygon Data Members::  
+* Regular Polygon Constructors and Setting Functions::  
+* Regular Polygon Operators::   
+* Querying Regular Polygons::   
+* Circles for Regular Polygons::  
+@end menu
+
+@node Regular Polygon Data Members, Regular Polygon Constructors and Setting Functions, Regular Polygon Reference, Regular Polygon Reference
+@section Data Members
+
+@deftypevr {Private variable} real internal_angle
+The angle at the center of the @code{Reg_Polygon} of the triangle formed
+by the center and two adjacent corners.
+If @math{n} is the number of sides of a @code{Reg_Polygon},
+@code{internal_angle} will be @math{360.0/n}, so @code{internal_angle} 
+will be 120 for a regular triangle, 90 for a square, 72 for a pentagon,
+etc. 
+@c !! Make figure. 
+@end deftypevr 
+
+@deftypevr {Private variable} real radius
+The radius of the surrounding circle for a @code{Reg_Polygon} (@i{Umkreis}).
+@end deftypevr
+
+@deftypevr {Private variable} unsigned short sides
+The number of sides of a @code{Reg_Polygon}.
+@end deftypevr
+
+@deftypevr {Private variable} bool on_free_store
+@code{true}, if the @code{Reg_Polygon} was dynamically allocated on the
+free store, otherwise @code{false}.  Dynamic allocation of
+@code{Reg_Polygons} should only be 
+performed by @code{create_new<Reg_Polygon>()}, which sets
+@code{on_free_store} to @code{true}. 
+@end deftypevr
+
+@node Regular Polygon Constructors and Setting Functions, Regular Polygon Operators, Regular Polygon Data Members, Regular Polygon Reference
+@section Constructors and Setting Functions
+
+@deftypefn {Default constructor} void Reg_Polygon (void)
+Creates an empty @code{Reg_Polygon}.
+@end deftypefn 
+
+@deftypefn {Constructor} void Reg_Polygon ({const Point&} @var{ccenter}, {const unsigned short} @var{ssides}, {const real} @var{ddiameter}, [{const real} @var{angle_x} = 0, [{const real} @var{angle_y} = 0, [{const real} @var{angle_z} = 0]]])
+@c
+Creates a @code{Reg_Polygon} in the x-z plane, centered at the origin,
+with the number of sides specified by @var{ssides} and with 
+@math{@code{radius} = @var{ddiameter} / 2}.  
+
+The @code{Reg_Polygon} is rotated
+about the x, y, and z-axes in that order by the angles given by
+@var{angle_x}, @var{angle_y}, and @var{angle_z}, respectively, if any
+one of them is non-zero.  Finally, the
+@code{Reg_Polygon} is shifted such that its center is located at
+@var{ccenter}.  
+
+@example
+Reg_Polygon r(origin, 3, 2.75, 10, 15, 12.5);
+r.draw();
+@end example
+
+@c
+@iftex
+@tex 
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(-5, 10, -10, -5, 10, 10, 10);} 
+\immediate\write\examples{Reg_Polygon r(origin, 3, 2.75, 10, 15, 12.5);} 
+\immediate\write\examples{r.draw();} 
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "rt");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF145.png"
+alt="[Figure 145. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 145.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 145 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+@deftypefn {Setting function} void set ({const Point&} @var{ccenter}, {const unsigned short} @var{ssides},  {const real} @var{ddiameter}, [{const real} @var{angle_x} = 0, [{const real} @var{angle_y} = 0, [{const real} @var{angle_z} = 0]]])
+@c
+Corresponds to the constructor above.  
+
+A @code{Reg_Polygon} can theoretically have any number of sides, however
+I haven't tested it for unreasonably large values.  The following
+example demonstrates that @code{set()} can be used to change a
+@code{Reg_Polygon}.  
+
+@example
+Reg_Polygon r;
+real j = .5;
+for (int i = 3; i <= 16; ++i)
+  @OCB
+    r.set(origin, i, j);
+    r.draw();
+    j += .5;
+  @CCB
+@end example
+
+@c
+@iftex
+@tex 
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Reg_Polygon r;}
+\immediate\write\examples{real j = .5;}
+\immediate\write\examples{for (int i = 3; i <= 16; ++i)}
+\immediate\write\examples{  @OCB}
+\immediate\write\examples{    r.set(origin, i, j);}
+\immediate\write\examples{    r.draw();}
+\immediate\write\examples{    j += .5;}
+\immediate\write\examples{  @CCB}
+\OEX{Projections::PARALLEL_X_Z}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF146.png"
+alt="[Figure 146. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 146.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 146 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+@deftypefn {Template specializations} Reg_Polygon* create_new<Reg_Polygon> ({const Reg_Polygon*} @var{r})
+@c
+@deftypefnx {} Reg_Polygon* create_new<Reg_Polygon> ({const Reg_Polygon&} @var{r})
+@c
+Pseudo-constructors for dynamic allocation of @code{Reg_Polygons}.
+They create a @code{Reg_Polygon} on the free store and allocate memory for it using 
+@code{new(Reg_Polygon)}.  They return a pointer to the new @code{Reg_Polygon}.  
+If @var{r} is a non-zero pointer or a reference,
+the new @code{Reg_Polygon} will be a copy of
+@var{r}.  If the new object is not meant to be a
+copy of an existing one, @samp{0} must be passed to
+@code{create_new<Reg_Polygon>()} as its argument.
+@xref{Dynamic Allocation of Shapes}, for more information. 
+@end deftypefn 
+
+@node Regular Polygon Operators, Querying Regular Polygons, Regular Polygon Constructors and Setting Functions, Regular Polygon Reference
+@section Operators
+
+@deftypefn {Operator} {const Reg_Polygon&} operator= ({const Reg_Polygon&} @var{p})
+Makes the @code{Reg_Polygon} a copy of @var{p}.
+@end deftypefn 
+
+  
+
+@node Querying Regular Polygons, Circles for Regular Polygons, Regular Polygon Operators, Regular Polygon Reference
+@section Querying 
+
+@deftypefn {@code{const} inline function} real get_radius (void)
+Returns @code{radius}.
+@end deftypefn 
+
+
+@node Circles for Regular Polygons,  , Querying Regular Polygons, Regular Polygon Reference
+@section Circles
+
+@deftypefn {@code{const} function} Circle in_circle (void)
+Returns the enclosed @code{Circle} of the @code{Reg_Polygon}.
+
+@example
+Point P(0, -1, 1);
+Reg_Polygon h(P, 6, 4, 15, 12, 11.5);
+h.filldraw(black, gray);
+Circle c = h.in_circle();
+c.unfilldraw(black);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 5, -5, 3, 0, 1, 10);}
+\immediate\write\examples{Point P(0, -1, 1);}
+\immediate\write\examples{Reg_Polygon h(P, 6, 4, 15, 12, 11.5);}
+\immediate\write\examples{h.filldraw(black, gray);}
+\immediate\write\examples{h.get_point(4).mediate(h.get_point(5)).label("$h$", "urt");}
+\immediate\write\examples{Circle c = h.in_circle();}
+\immediate\write\examples{c.unfilldraw(black);}
+\immediate\write\examples{P.label("$c$");}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "top");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF147.png"
+alt="[Figure 147. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 147.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 147 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+@deftypefn {@code{const} function} Circle draw_in_circle ([{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [{const string} @var{ddashed} = "", [const string] @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]]) 
+@c
+@deftypefnx {@code{const} function} Circle draw_in_circle ([Picture& @var{picture} = @code{current_picture}, [{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [{const string} @var{ddashed} = "", [const string] @var{ppen} = ""]]]) 
+Draws and returns the enclosed @code{Circle} of the @code{Reg_Polygon}.
+
+@example
+Point P(0, 1, 1);
+Reg_Polygon h(P, 7, 4, 80, 2, 5);
+h.draw(black, "evenly");
+h.draw_in_circle();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(2, 3, -10, 2, 3, 10, 10);}
+\immediate\write\examples{Point P(0, 1, 1);}
+\immediate\write\examples{Reg_Polygon h(P, 7, 4, 80, 2, 5);}
+\immediate\write\examples{h.draw(black, "evenly");}
+\immediate\write\examples{h.get_point(0).label("$h$");}
+\immediate\write\examples{h.draw_in_circle();}
+\immediate\write\examples{P.label("$c$", "");}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "top");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF148.png"
+alt="[Figure 148. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 148.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 148 not displayed.]
+@end ifinfo
+
+@c
+
+
+@end deftypefn 
+
+@deftypefn {@code{const} function} Circle out_circle (void)
+Returns the surrounding @code{Circle} of the @code{Reg_Polygon}.
+
+@example
+Point P(0, -1, 1);
+Reg_Polygon h(P, 6, 4, 15, 12, 11.5);
+Circle c = h.out_circle();
+c.filldraw(black, gray);
+h.unfilldraw(black);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 5, -5, 3, 0, 1, 10);}
+\immediate\write\examples{Point P(0, -1, 1);}
+\immediate\write\examples{Reg_Polygon h(P, 6, 4, 15, 12, 11.5);}
+\immediate\write\examples{Circle c = h.out_circle();}
+\immediate\write\examples{c.filldraw(black, gray);}
+\immediate\write\examples{h.unfilldraw(black);}
+\immediate\write\examples{P.label("$h$");}
+\immediate\write\examples{c.get_point(7).label("$c$");}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "top");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF149.png"
+alt="[Figure 149. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 149.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 149 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+@deftypefn {@code{const} function} Circle draw_out_circle ([{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [{const string} @var{ddashed} = "", [const string] @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]]) 
+@c
+@deftypefnx {@code{const} function} Circle draw_out_circle ([Picture& @var{picture} = @code{current_picture}, [{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [{const string} @var{ddashed} = "", [const string] @var{ppen} = ""]]]) 
+Draws and returns the surrounding @code{Circle} of the @code{Reg_Polygon}.
+
+@example
+Point P(0, 1, 1);
+Reg_Polygon h(P, 7, 4, 80, 2, 5);
+h.draw(black, "evenly");
+h.draw_out_circle();
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(2, 3, -10, 2, 3, 10, 10);}
+\immediate\write\examples{Point P(0, 1, 1);}
+\immediate\write\examples{Reg_Polygon h(P, 7, 4, 80, 2, 5);}
+\immediate\write\examples{h.draw(black, "evenly");}
+\immediate\write\examples{Circle c = h.draw_out_circle();}
+\immediate\write\examples{c.get_point(0).label("$c$");}
+\immediate\write\examples{P.label("$h$", "");}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "top");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+ 
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF150.png"
+alt="[Figure 150. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 150.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 150 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+

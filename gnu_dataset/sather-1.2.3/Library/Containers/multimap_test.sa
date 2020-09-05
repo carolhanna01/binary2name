@@ -1,0 +1,124 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- test_multimap.sa: Test class for multimaps
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class MULTIMAP_TEST is
+   -- Test class for multimaps
+   include TEST;
+   
+   main is
+      -- First create a few multimaps and then run the standard bag
+      -- tests on them
+      multimap;
+      vmultimap;
+   end;
+   
+   multimap is
+      map0 ::= #MULTIMAP{STR,FLT};
+      map1 ::= map0.add("a",0.0).add("a",1.0).add("b",2.0).add("b",1.0)
+	    .add("c",3.0);
+      map2 ::= map0.add("a",0.0).add("b",2.0).add("b",1.0).add("d",4.0);
+      class_name("MULTIMAP - readonly");
+      test_ro_multimap(map0,map1,map2);
+      finish;
+      class_name("MULTIMAP - modifying");
+      test_multimap(map0,map1,map2);
+      finish;
+   end;
+	 
+   vmultimap is
+      class_name("VMULTIMAP");
+      map0 ::= #VMULTIMAP{STR,FLT};
+      map1 ::= map0.add("a",0.0).add("a",1.0).add("b",2.0).add("b",1.0)
+	    .add("c",3.0);
+      map2 ::= map0.add("a",0.0).add("b",2.0).add("b",1.0).add("d",4.0);
+      test_ro_multimap(map0,map1,map2);
+      finish;
+   end;      
+      
+   t(s:STR,f:FLT):TUP{STR,FLT} is
+      return #TUP{STR,FLT}(s,f);
+   end;
+
+   test_multimap(map0,map1,map2:$MULTIMAP{STR,FLT}) is
+      -- Test out the multimaps in the array. 
+      -- map0 is empty
+      -- map1 is ("a",0.0)("a",1.0)("b",2.0)("b",1.0)("c",3.0)
+      -- map2 is ("a",0.0)         ("b",2.0)("b",1.0)         ("d",4.0)
+      map1_clear_copy ::= map1.copy;
+      map1_clear_copy.clear;
+      test("map1.clear",map1_clear_copy,map0);
+      map1_union_copy ::= map1.copy;
+      map1_union_copy.to_union(map2);
+      test("map1.union(map2)",map1_union_copy,map2.add("a",1.0).add("c",3.0));
+      map1_intersect_copy ::= map1.copy;
+      map1_intersect_copy.to_intersection(map2);
+      test("map1.intersect(map2)",map1_intersect_copy,map2.delete("d",4.0));
+   end;
+   
+   test_ro_multimap(map0,map1,map2:$RO_MULTIMAP{STR,FLT}) is
+      -- Test out the multimaps
+      -- map0 is empty
+      -- map1 is ("a",0.0)("a",1.0)("b",2.0)("b",1.0)("c",3.0)
+      -- map2 is ("a",0.0)         ("b",2.0)("b",1.0)         ("d",4.0)
+
+      test("map0.size",map0.size,0);
+      test("map1.size",map1.size,5);
+      test("map0.equals(map1)",map0.equals(map1),false);
+      test("map1.equals(map1.copy)",map1.equals(map1.copy),true);
+      test("map0.is_empty",map0.is_empty,true);
+      test("map1.is_empty",map1.is_empty,false);
+      test("map1.has(a,1.0)",map1.has(t("a",1.0)),true);
+      test("map0.has(a,5.0)",map0.has(t("a",5.0)),false);
+      test("map1.has_ind(a)",map1.has_ind("a"),true);
+      test("map1.has_ind(a)",map1.has_ind("f"),false);
+      test("map1.n_targets(a)",map1.n_targets("a"),2);
+      test("map1.is_subset_of(map2)",map1.is_subset_of(map2),false);
+      test("map1.is_subset_of(map1.copy)",map1.is_subset_of(map1.copy),true);
+      test("map1.add(a,4).delete(a,4)",map1.add("a",4.0).delete("a",4.0),map1);
+      test("map1.is_subset_of(map1.add(a,4))",
+	   map1.is_subset_of(map1.add("a",4.0)),
+	   true);
+      test("map1 = map2+(a,1.0)+(c,3.0)-(d.4.0)",
+	   eq(map1,map2.add(t("a",1.0)).add("c",3.0).delete("d",4.0)),
+	   true);
+      test("map1- a -c =map2 - a -d",
+	   eq(map1.delete_ind("a").delete_ind("c"),
+	      map2.delete_ind("a").delete_ind("d")),
+	   true);
+      res:FLT := 0.0;
+      loop res := res+map1.target!("b") end;
+      test("map1.target!",res.str,3.0.str);
+      
+      ind:ARRAY{STR} := #(map1.n_ind);
+      loop ind.set!(map1.ind!) end;
+      test("map1.ind!",ind.sort.str,#ARRAY{STR}(|"a","b","c"|).str);
+
+      pair1:ARRAY{STR} := #(map1.size);
+      pair2:ARRAY{FLT} := #(map1.size);
+      loop p ::= map1.pair!; pair1.set!(p.t1); pair2.set!(p.t2); end;
+      test("map1.pair!",pair1.sort.str,
+	   #ARRAY{STR}(|"a","a","b","b","c"|).str);
+      test("map1.pair!",pair2.sort.str,
+	   #ARRAY{FLT}(|0.0,1.0,1.0,2.0,3.0|).str);
+   end;
+   
+   eq(m1,m2:$RO_MULTIMAP{STR,FLT}):BOOL is
+      #OUT+"First="+m1.str+"\nSecond="+m2.str+"\n";
+      return m1.equals(m2);
+   end;
+   
+end;
+-------------------------------------------------------------------

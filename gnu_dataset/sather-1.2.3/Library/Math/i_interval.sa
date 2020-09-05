@@ -1,0 +1,270 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- To represent integer intervals [a,b]
+-- Note that since these are integer intervals the difference between
+-- [ and ( is not really significant
+-------------------------------------------------------------------
+immutable class I_INTERVAL <  $IS_EQ, $NIL, $STR is
+   -- A 1D i_interval, [first,last] which includes both end points
+   -- Can also be viewed as start,n_elts
+   -- All empty i_intervals (size=0) are essentially the same 
+   -- are reduced to the canonical case, start = 0 size = 0
+   -- The nil i_interval is represented by: Start= 0 and size = -1
+   -- i.e. negative i_intervals are not considered legal
+   -- This interval can also behave like a read-only array of integers.
+   include COMPARABLE;
+   
+   readonly attr first: INT;
+   readonly attr size: INT;
+
+   create(first,last: INT): SAME pre check_ok_create(first,last) is
+      -- This precondition allows us to create an empty i_interval i.e. size=0
+      size: INT := last-first+1;
+      return(first(first).size(size));
+   end;
+
+   create!(once start: INT,once sizes: ARRAY{INT}): I_INTERVAL is
+      -- Yield successive integer intervals, starting at "start",
+      -- with sizes specified by the "sizes" array.
+      -- For eg.
+      --   sz:ARRAY{INT} := |2,3,2|;
+      --   loop #OUT+I_INTERVAL::create_successive!(1,sz)+" "; end;
+      --   does:  [1,2] [3,5] [6,7]
+      previous::= start;
+      loop 
+	 next_size: INT := sizes.elt!;
+	 next_boundary: INT := previous+next_size-1;
+	 yield #SAME(previous,next_boundary);
+	 previous := next_boundary+1;
+      end;
+   end;
+	 
+   -- ----------------  Basic interface --------------------------
+   last: INT pre check_non_nil("last") is 
+      -- Had to introduce this stupid copying because of a GCC bug
+      -- The "simple" version fails with -O, but works with -O3, or no opts
+      res, f, s:INT;
+      f := first;
+      s := size;
+      res := f+s-1;
+      return res;
+   end;
+   
+   is_empty: BOOL is return(size <= 0); end;
+   -- The nil i_interval is empty...
+   
+   is_nil: BOOL is return (size < 0) end;
+   -- Nil if size is negative
+   
+   nil: SAME is return(first(0).size(-1)) end;
+   -- Return a nil i_interval
+
+   empty: SAME is return(#I_INTERVAL(0,-1)) end;
+   -- Return an empty i_interval - size = 0
+   
+   is_eq(r: SAME): BOOL is 
+      -- If either value is nil, return false.
+      -- Check for empties, since there is no canonical empty..
+      -- and all empty i_intervals are considered equal
+      if is_nil or r.is_nil then return(false);
+      elsif is_empty then return(r.is_empty) 
+      else return (r.first=first) and (r.size=size)  end;
+   end;
+   
+   str: STR is return("["+first.str+","+(first+size-1).str+"]"); end;
+   -- Print out the i_interval
+   
+   -- ----------------  Basic operations --------------------------
+   intersection(i: SAME): SAME pre check_non_nil("intersection") is
+      -- Intersection of self with i
+      -- For now assume that in both i_intervals the first index
+      -- is less than the second. May want to relax this later
+      return #I_INTERVAL(first.max(i.first),last.min(i.last));
+   end;
+
+   is_disjoint(i: SAME): BOOL pre check_non_nil("is_disjoint") is
+      return((i.first>last) or (first > i.last)) end;
+
+   is_intersecting(i: SAME): BOOL is return(~is_disjoint(i)) end;
+
+   shift_up(by: INT): I_INTERVAL pre check_non_nil("shift") is 
+      -- Shift the interval upwards by a the integer "by"
+      return(#I_INTERVAL(first+by,last+by)); 
+   end;
+   
+   shift_down(by: INT): I_INTERVAL pre check_non_nil("shift") is 
+      -- Shift the interval upwards by a the integer "by"
+      return(#I_INTERVAL(first-by,last-by)); 
+   end;
+
+   contains(i2: SAME): BOOL is
+      -- Returns true if self contains "i2"
+      return intersection(i2).size = i2.size
+   end;
+   
+   union(i2: SAME): SAME is
+      -- Union of self with i2. Returns an interval consisting of the
+      -- two extreme points of the interval.
+      -- Only meaningful when the intersection is non-empty
+      -- If the intervals self and "i2" do not intersect, the union
+      -- interval returned will contain points in neither self nor i2
+      if is_empty then return i2
+      elsif i2.is_empty then return self
+      else return #I_INTERVAL(first.min(i2.first),last.max(i2.last)); end;
+   end;
+
+   is_covered_by(covers:$ELT{I_INTERVAL}):BOOL is
+      -- Test if the current interval is completely and uniquely
+      -- covered by the ranges in the array "covers"
+      -- i.e. for all i in [first,last], there is an unique j s.t.
+      --                           i belongs to covers[j] 
+      looking_for ::= first; 
+      loop until!(looking_for > last);
+	 -- Traverse the list of covers until the range is fully covered.
+	 cover_found:BOOL := false; current_cover:I_INTERVAL;
+	 loop c ::= covers.elt!;
+	    if c.first = looking_for then  
+	       if c.last > last then return false; -- Outside bounds
+	       else cover_found := true;  current_cover := c;   end;
+	    end;
+	 end;
+	 if ~cover_found then return false end;
+	 found_one:BOOL := false; -- Only one intersection should be found
+	 loop c ::= covers.elt!;
+	    if ~c.is_disjoint(current_cover) then 
+	       if found_one then return false; else found_one := true; end;
+	    end;
+	 end;
+	 looking_for := current_cover.last;
+      end;
+   end;
+   -- ----------------  Array interface --------------------------
+   -- Functions that treat the interval (a,b) like an array of the
+   -- integers a,a+1,a+2,a+3... b
+   -- The i'th element of the array  = a+i
+   aget(i: INT): INT pre check_non_nil("aget") is return(i+first); end;
+   
+   elt!: INT pre check_non_nil("elt!") is
+      i:INT:=first;
+      fin:INT:=first+size; 
+      loop until!(i = fin); yield(i); i := i + 1; end;  
+   end;
+
+   reverse_elt!: INT pre check_non_nil("reverse_elt!") is
+      i:INT:=first+size;
+      loop until!(i = first); i := i - 1; yield(i); end;  
+   end;
+   
+   contains(i: INT): BOOL pre check_non_nil("contains") is 
+      return(i>=first and i <= last) 
+   end;
+   
+   
+   -- ----------------  Partitioning functions ---------------------
+   -- A set of iters that help divide an object of size "n" into
+   -- "k" smaller chunks. These iters provide the sizes of the smaller
+   -- parts. Takes care of the case where "n" may not be evenly
+   -- divided by "k" Several different policies are possible
+   partition_equally!(once k: INT): I_INTERVAL 
+      pre check_non_nil("partition_evenly!") is
+      -- Distribute the current i_interval equally into "k" sub-intervals
+      -- If k does no evenly divide "size" then spread out the
+      -- remainder,r, over the first "r" partitions
+      -- If size < k then yield singleton intervals from start to finish
+      -- i.e. essentially the same as elt!. For the remaining locations
+      -- return an empty range
+      if size < k then 
+	 i ::= first;
+	 loop until!(i > last); yield #(i,i); i := i + 1; end;
+	 loop until!(i > last+(k-size)); yield empty; i := i + 1 end;
+	 quit;
+      end;
+      beg: INT := first;
+      fin: INT := first;
+      loop 
+	 fin := fin+equally!(size,k);
+	 yield(#I_INTERVAL(beg,fin-1));
+	 beg := fin;
+      end;
+   end;
+   
+   partition_lump_at_end!(once k: INT): I_INTERVAL 
+      pre check_non_nil("partition_lump_at_end")  is
+      -- Distribute the current i_interval evenly over "k" partitions
+      -- If k does not evenly divide "self.size" then spread out the
+      -- remainder over all the partitions
+      -- If size < k then yield singleton intervals from start to finish
+      -- i.e. essentially the same as elt!. For the remaining locations
+      -- return an empty range
+      if size < k then 
+	 i ::= first;
+	 loop until!(i > last); yield #(i,i); i := i + 1; end;
+	 loop until!(i > last+(k-size)); yield empty; i := i + 1 end;
+	 quit;
+      end;
+      beg: INT := first;
+      fin: INT := first;
+      loop fin := fin+lump_at_end!(size,k);
+	 yield(#I_INTERVAL(beg,fin-1));
+	 beg := fin;
+      end;
+   end;
+   
+   private lump_at_end!(once n,once k: INT): INT is
+      -- Partition the integer range [0 to n] into k partitions
+      -- Return the size of each partitiong
+      -- Similar to evenly, but the "remainder" (i.e. n mod k) will be
+      -- placed in the last bin rather than being spread out over the
+      -- first "remainder" bins
+      q: INT := n.div(k);	-- Quotient
+      r: INT := n.mod(k);	-- Remainder
+      loop (k-1).times!; yield(q); end;
+      yield(q+r);
+   end;
+   
+   private equally!(once n,once k: INT): INT is
+      -- Breakdown "n" over "k" partitions. If "k" does
+      -- not evenly divide "n" then spread out the remainder
+      -- starting at partition 1.
+      -- Returns the size of successive partitions
+      q: INT := n.div(k);	-- Quotient
+      r: INT := n.mod(k);	-- Remainder
+      if (r = 0) then
+	 -- If there is no remainder, indicate "k" partitions of size "q"
+	 loop k.times!;  yield(q) end;
+      else 
+	 -- The first "r" partitions have 1 extra element
+	 loop r.times!;  yield(q+1); end;
+	 -- The next n-r have q elements
+	 loop (k-r).times!; yield(q) end;
+      end;
+   end;
+   
+   -- Internals
+   private check_ok_create(f,l: INT): BOOL is
+      if (last-first+1 < 0) then
+	 #ERR+"Cannot create an I_INTERVAL of size<0 ["+first+","+last+"]\n";
+	 return(false)
+      else return(true) end;
+   end;
+      
+   private check_non_nil(r: STR): BOOL is
+      if is_nil then 
+	 #ERR+"Cannot call:"+r+" on a nil object\n";
+	 return(false);
+      else return(true) end;
+   end;
+   
+end;
+-------------------------------------------------------------------

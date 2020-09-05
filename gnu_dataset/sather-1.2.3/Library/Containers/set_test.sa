@@ -1,0 +1,178 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Test for the set class
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class SET_TEST is
+   -- Tests of the set classes. This class is a 'driver' that constructs
+   -- the sets that are actually tested using the SET_TEST{T} class
+   
+   include TEST;
+
+   
+   main is
+      test_int_set;
+      test_int_vset;
+      test_str_set;
+   end;
+
+   test_int_set is
+      elts:ARRAY{INT} := |0,1,2,3,4,5,6,7,8,9,10,11,12|;
+      set0 ::= #SET{INT};
+      set1 ::= #SET{INT}(|0,2,4,6|);
+      set2 ::= #SET{INT}(|1,2,3,4,5,6,7,8,9,10|);
+      SET_TEST{INT}::test_set_readonly(set0,set1,set2,elts);
+      SET_TEST{INT}::test_set_modifying(set0,set1,set2,elts);
+      BAG_TEST{INT}::test_setlike_bags(set0,set1,set2,elts);
+   end;
+   
+   test_int_vset is
+      elts:ARRAY{INT} := |0,1,2,3,4,5,6,7,8,9,10,11,12|;
+      set0 ::= #VSET{INT};
+      set1 ::= #VSET{INT}(|0,2,4,6|);
+      set2 ::= #VSET{INT}(|1,2,3,4,5,6,7,8,9,10|);
+      SET_TEST{INT}::test_set_readonly(set0,set1,set2,elts);
+      BAG_TEST{INT}::test_setlike_bags(set0,set1,set2,elts);
+   end;
+   
+      
+   test_str_set is
+      el:ARRAY{STR} := |"0","1","2","3","4","5","6","7","8",
+		       "9","10","11","12"|;
+      set0 ::= #SET{STR};
+      set1 ::= #SET{STR}(|el[0],el[2],el[4],el[6]|);
+      set2 ::= #SET{STR}(|el[1],el[2],el[3],el[4],el[5],el[6]
+			  ,el[7],el[8],el[9],el[10]|);
+      SET_TEST{STR}::test_set_readonly(set0,set1,set2,el);
+      BAG_TEST{STR}::test_setlike_bags(set0,set1,set2,el);
+      SET_TEST{STR}::test_set_modifying(set0,set1,set2,el);
+   end;
+
+
+end; 
+---------------------------------------------------------------------------
+class SET_TEST{T} is
+   -- Test for sets of type T
+   include TEST;
+   
+   test_set_readonly(set0,set1,set3:$RO_SET{T},e:ARRAY{T}) is
+      -- Various tests of the read-only/value class routines
+      -- set0 must be empty
+      -- set1 must contain {0,2,4,6}
+      -- set3 must contain {1,2,3,4,5,6,7,8,9,10}
+      set2 ::= set1.copy;
+      tpstr ::= SYS::str_for_tp(SYS::tp(set1));
+      class_name("readonly SET:"+tpstr);
+      #OUT+"Set0="+set0.str
+	    +"\nSet1="+set1.str
+	    +"\nSet2="+set2.str
+	    +"\nSet3="+set3.str+"\n";
+      
+      -- Generate some new sets
+      -- set5 contains {0,5,10}
+      -- set6 contains {0,2,4}
+      -- set7 contains {0,2,4}
+      set5 ::= set0.add(e[0]).add(e[5]).add(e[10]);
+      set6 ::= set2.delete(e[6]);
+      set7 ::= set2.delete_all(e[6]);
+
+      test("set0",set0.size,0);
+      test("size set1",set1.size,4);
+      test("size set5",set5.size,3);
+      test("size set6",set6.size,3);
+      test("size set7",set7.size,3);
+      test("is_empty",set0.is_empty,true);
+      test("is_empty",set1.is_empty,false);
+      -- The following test may fail if there is some problem
+      -- with the definition of nil/void
+      test("has",set0.has(e[0]),false);
+      test("has",set1.has(e[0]),true);
+      test("has",set1.has(e[1]),false);
+      test("has",set1.has(e[2]),true);
+      test("has",set5.has(e[5]),true);
+      test("has",set5.has(e[6]),false);
+      test("count set1",set1.count(e[2]),1);
+      test("count set0",set0.count(e[0]),0);
+      test("count set1",set0.count(e[3]),0);
+      
+      test("equals set1=set2",set1.equals(set2),true);
+      test("equals set1=set3",set1.equals(set3),false);
+      test("equals set1=set1",set1.equals(set1),true);
+      test("set1.has(7)",set1.has(e[7]),false);
+      test("set1.add(7).has(7)",set1.add(e[7]).has(e[7]),true);
+      test("set1.add(7).add(7).count(7)",
+	   set1.add(e[7]).add(e[7]).count(e[7]),
+	   2);
+      test("n_unique",set0.n_unique,0);
+      test("n_unique",set1.n_unique,4);
+      
+      test("is_subset_of",set1.is_subset_of(set2),true);
+      test("is_subset_of",set1.is_subset_of(set0),false);
+      
+      test("concat",
+	   eq(set1.concat(set2),
+	      set1.add(e[0]).add(e[2]).add(e[4]).add(e[6])),
+	   true);
+      
+      test("union",
+	   eq(set3.union(set2),set3.insert(e[0])),
+	   true);
+      test("intersection",
+	   eq(set3.intersection(set2),
+	      set2.delete(e[0])),
+	   true);
+      test("diff",
+	   eq(set3.diff(set2),
+	      set3.delete(e[2]).delete(e[4]).delete(e[6])),
+	   true);
+      test("sym_diff", 
+	   eq(set3.sym_diff(set2),
+	      set3.delete(e[2]).delete(e[4]).delete(e[6]).add(e[0])),
+	   true);
+      finish;
+   end;
+
+   test_set_modifying(set0,set1,set3:$SET{T},e:ARRAY{T}) is
+      -- Various tests of the general set routines by comparing
+      -- with the readonly results
+      -- set0 must be empty
+      -- set1 must contain {0,2,4,6}
+      -- set2 must contain {0,2,4,6}
+      -- set3 must contain {1,2,3,4,5,6,7,8,9,10}
+      tpstr ::= SYS::str_for_tp(SYS::tp(set1));
+      class_name("modifying SET:"+tpstr);
+      
+      set2 ::= set1.copy;
+      
+      set6 ::= set1.copy; set6.to_union(set3);
+      test("to_union",eq(set6,set1.union(set3)),true);
+      
+      set7 ::= set1.copy; set7.to_intersection(set3);
+      test("to_intersection",eq(set7,set1.intersection(set3)),true);
+      
+      set8 ::= set1.copy; set8.to_diff(set3);
+      test("to_diff",eq(set8,set1.diff(set3)),true);
+      
+      set9 ::= set1.copy; set9.to_sym_diff(set3);
+      test("to_sym_diff",eq(set9,set1.sym_diff(set3)),true);
+      
+      finish;
+   end;
+   
+   eq(m1,m2:$RO_BAG{T}):BOOL is
+      #OUT+m1.str+" ?= "+m2.str+"\n";
+      return m1.equals(m2);
+   end;         
+end;
+--------------------------------------------------------------------------

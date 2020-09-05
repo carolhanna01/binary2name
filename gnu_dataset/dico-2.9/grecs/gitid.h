@@ -1,0 +1,1 @@
+#define GRECS_GIT_ID "1498bd570eb001a6b2bc3f1a5074e8b384d6db30-1550515932-gray@gnu.org"

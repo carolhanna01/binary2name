@@ -1,0 +1,417 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class ATTRSORT < $IS_LT{ATTRSORT} is
+   include COMPARABLE;
+   
+   attr name:STR;
+   attr elt:ELT;
+   create(n:STR,e:ELT):ATTRSORT is
+      r::=new;
+      r.name:=n;
+      r.elt:=e;
+      return r;
+   end;
+   
+   is_lt(b:SAME):BOOL is return name.is_lt(b.name); end;
+   
+   is_eq(b:SAME):BOOL is return name.is_eq(b.name); end;
+end;
+   
+
+class PRINT_OB is
+   -- generates several functions that can be called from the
+   -- debugger or from a Sather program to visualize objects,
+   -- function frames and stack traces, either graphically
+   -- or textually. See the file Debugging in the Doc
+   -- directory on how to use those functions.
+   -- Original version by Claudio Fleiner <fleiner@icsi.berkeley.edu> 1.11.95
+
+   shared mangler:MANGLE;
+   shared funcs:FLIST{SIG};
+
+   private mang(ob:$OB):STR is
+      return mangler.mangle(ob,void);
+   end;
+
+   private mang(ob,ns:$OB):STR is
+      return mangler.mangle(ob,ns);
+   end;
+
+   mkfname(cl:$TP):FSTR is
+      return mang(cl).fstr;
+   end;
+
+   private get_ref_offsets(p:CODE_FILE,cl:$TP,el:$TP,prefix:STR) is
+      loop
+	 e::=el.impl.elts.elt!;
+	 if e.is_attr_reader then
+	    if ~e.ret.is_immutable and ~e.ret.is_bound and ~e.ret.is_external then
+	       p+prefix+mang(e.name,el)+",";
+	    elsif e.ret.is_immutable then
+	       get_ref_offsets(p,cl,e.ret,prefix+mang(e.name,el)+".");
+	    end
+         end;
+      end;
+      if el.is_immutable and ~void(el.impl) and ~void(el.impl.arr) then 
+	 arr::=el.impl.arr.params[0];
+	 if ~arr.is_immutable and ~arr.is_bound and ~arr.is_external then
+	    loop
+	       i::=0.upto!(el.impl.asize_val-1);
+	       p+prefix+"arr_part["+i+"]"+",";
+	    end;
+	 elsif arr.is_immutable then
+	    loop
+	       i::=0.upto!(el.impl.asize_val-1);
+	       get_ref_offsets(p,cl,arr,prefix+"arr_part["+i+"].");
+	    end;
+	 end;
+      end;
+   end;
+
+   shared num_attr:INT:=0;
+   print(prog:PROG,cgen:CGEN):FSTR is
+      -- p:FSTR:=#(10000);
+      dec:FSTR:=#(1000);
+      mangler:=cgen.mangler;
+      file_count::=0;
+      fc:INT; -- count number of function (we don't want too many, as
+              -- the declarations may be way to big if the file is split
+      p::=#CODE_FILE("Print"+file_count.str+".c");
+      p.is_c_code:=true;
+
+      clt::=prog.tp_tbl.class_tbl;
+      smallest_tag::=0;
+      largest_tag::=0;
+      loop
+         n::=cgen.tags.targets!;
+	 if n<smallest_tag then smallest_tag:=n; end;
+	 if n>largest_tag then largest_tag:=n; end;
+      end;
+      last_largest::=0;
+      last_smallest::=0;
+      tg::=0;
+      loop  -- we want to create the tables for all tags, unfortunatly,
+      	    -- new tags can be touched during the loop
+	 if tg>0 then
+	    if tg<largest_tag then
+	       tg:=tg+1;
+	    else
+	       tg:=0;
+	    end;
+	 elsif tg<0 then
+	    if tg>smallest_tag then
+	       tg:=tg-1;
+	    else
+	       tg:=0;
+	    end;
+	 end;
+	 if tg=0 then
+	    if last_smallest=smallest_tag and last_largest=largest_tag then
+	       if ~cgen.adjust_tag_table then break!; end;
+	       last_smallest:=smallest_tag;
+	       last_largest:=largest_tag;
+	       loop
+		  n::=cgen.tags.targets!;
+		  if n<smallest_tag then smallest_tag:=n; end;
+		  if n>largest_tag then largest_tag:=n; end;
+	       end;
+	    end;
+	    if last_largest<largest_tag then
+	       tg:=last_largest+1;
+	       last_largest:=largest_tag;
+	    elsif last_smallest>smallest_tag then
+	       tg:=last_smallest-1;
+	       last_smallest:=smallest_tag;
+	    else 
+	       break!;
+	    end;
+	 end;
+
+	 cl:$TP:=void;
+	 if tg/=0 then
+	    loop
+	       pr::=cgen.tags.pairs!;
+	       if pr.t2=tg then
+		  cl:=pr.t1;
+		  break!;
+	       end;
+	    end;
+	    if void(cl) then
+	       prog.barf("there seems to be no type for tag "+tg+"\n");
+	    end;
+
+	    if fc=30 then
+	       file_count:=file_count+1;
+	       p:=#CODE_FILE("Print"+file_count.str+".c");
+	       p.is_c_code:=true;
+	       fc:=0;
+	    end;
+	    fc:=fc+1;
+	    if ~void(cl) then
+		  p.uses_tp(cl);
+		  fname::=mkfname(cl);
+		  as:ARRAY{ATTRSORT};
+		  attrs::=0;
+		  if ~cl.is_abstract and ~void(cl.impl) then
+		     as:=#ARRAY{ATTRSORT}(cl.impl.elts.size);
+		     loop 
+			n::=cl.impl.elts.elt!.name.str;
+			c::=cl.impl.elts.elt!;
+			if c.is_attr_reader then
+			   as.set!(#(n,c)); 
+			   attrs:=attrs+1;
+			end;
+		     end;
+		     as:=as.resize(attrs);
+		     as.sort;
+		  end;
+		  p:=p+"\n/* type information for "+cl.str+" */\n";
+		  p:=p+"static int "+fname+"_ref_offsets[]= {";
+		  if cl.is_subtype(TP_BUILTIN::dollar_lock) then
+		     p:=p+"LOCK_HEADER_STRUCT_REFS ";
+		  end;
+		  if ~cl.is_abstract and ~cl.is_bound and ~cl.is_external then 
+		     tps:STR;
+		     if cl.is_immutable then tps:="\n   (int)&(*("+mang(cl)+"*)0).";
+		     else tps:="\n   (int)&(*("+mang(cl)+")0)."; end;
+		     get_ref_offsets(p,cl,cl,tps); 
+		  end;
+		  p:=p+"\t-1};\n";
+		  p:=p+"struct { int *refs;char *sn,*cn;long src;int sz,bx,at;\n"+
+		       "         unsigned is_val:1,is_ref:1,is_abs:1,is_bnd:1,is_ext:1,is_aref:1;";
+		  if ~void(cl.impl) and ~void(cl.impl.arr) then attrs:=attrs+2; end;
+		  if attrs>0 then
+		     p:=p+"\n         struct sather_attribute attr["+attrs+"];";
+		  end;
+		  p:=p+" } "+fname+"_type_table = {\n";
+		  p:=p+"  "+fname+"_ref_offsets,\n"
+		      +"  \""+cl.str+"\", \"";
+		  if ~cl.is_external then p:=p+mang(cl); end;
+		  typecase cl when TP_CLASS then
+		     p:=p+"\",\n  "+filepos(cgen,prog.parse.tree_for(cl.name,cl.params.size).source)+",\n";
+		  else
+		     p:=p+"\",\n  0,\n";
+		  end;
+		  if cl.is_immutable then
+		     p:=p+"  sizeof("+mang(cl)+"),(int)&((*("+mang(cl)+"_boxed)NULL).immutable_part),";
+		  else
+		     if cl.str="EXT_OB" then
+		        p+"  0,0, /* sizeof *EXT_OB is unkown */\n";
+		     elsif cl.is_external then
+		        p:=p+"  0,0, /* externals have no size */\n";
+		     elsif ~void(cl.impl) and ~void(cl.impl.arr) then
+		        p:=p+"  (int)(*("+mang(cl)+")0).arr_part,0, /* size without array */\n"
+		     else
+			p:=p+"  sizeof(*("+mang(cl)+")0),0,\n";
+		     end;
+		  end;
+		  if ~void(cl.impl) and ~void(cl.impl.arr) then p+"  "+(attrs-2); else p+"  "+attrs; end;
+		  if cl.is_immutable then p:=p+"  ,1"; else p:=p+"  ,0"; end;
+		  if ~cl.is_immutable and ~cl.is_abstract and ~cl.is_bound and ~cl.is_external then p:=p+",1"; else p:=p+",0"; end;
+		  if cl.is_abstract then p:=p+",1"; else p:=p+",0"; end;
+		  if cl.is_bound then p:=p+",1"; else p:=p+",0"; end;
+		  if cl.is_external then p:=p+",1"; else p:=p+",0"; end;
+		  if ~void(cl.impl) and ~void(cl.impl.arr) then p:=p+",1"; else p:=p+",0"; end;
+		  if ~cl.is_abstract and ~void(cl.impl) and attrs>0 then
+		     p+",\n  {\n";
+		     first::=true;
+		     i::=1;
+		     loop e::=as.elt!.elt;
+			if e.is_attr_reader then
+			   if first then first:=false else p+",\n"; end;
+			   p+"   { \""+ e.name.str+"\",\""+mang(e.name,cl)+"\","
+			       +cgen.tag_for(e.ret)+",(int)&(*("+mang(cl);
+			   if cl.is_immutable then p:=p+"*"; end;
+			   p:=p+")0)."+mang(e.name,cl);
+			   p:=p+","+filepos(cgen,e.as.source)+" }";
+			end
+		     end;
+		     if ~void(cl.impl.arr) then
+			if first then first:=false else p+",\n"; end;
+			-- note that for value arrays the offset is the 
+			-- size of the array! (asize is not an attribute of a
+			-- value array)
+			p:=p+"   { \"asize\",\"asize\",INT_tag,";
+			if cl.is_immutable then 
+			   p:=p+mang(cl)+"_ASIZE,";
+			else
+			   p:=p+"(int)&(*("+mang(cl)+")0).asize,";
+			end;
+			p:=p+"0 }";
+			arr::=cl.impl.arr.params[0];
+			p:=p+",\n   { \"[]\",\"arr_part[]\","+cgen.tag_for(arr)+
+			      ",(int)(*("+mang(cl);
+			if cl.is_immutable then p:=p+"*"; end;
+			p:=p+")0).arr_part,0 }";
+		     end;
+		     p:=p+"\n  }";
+		  end;
+		  p:=p+"\n};\n";
+		  p.good_place_to_split;
+	       end;
+         end;
+      end;
+      dec:=dec+"\n#define NUM_OF_ATTR "+num_attr+"\n";
+      
+      print_sather_type(prog,cgen,smallest_tag,largest_tag);
+      print_file_list(prog,cgen,p);
+      if cgen.func_tables then print_sather_func(prog,cgen); end;
+
+      return dec;
+   end;
+
+   print_sather_type(prog:PROG,cgen:CGEN,sm:INT,lg:INT) is
+      c::=#CODE_FILE("sather_type.c");
+      c.is_c_code:=true;
+      c.do_not_merge:=true;
+      decl:FSTR:=#(1000);
+      p:FSTR:=#(10000);
+
+      p:=p+"static struct sather_type_description *sather_types_static[] = {\n";
+      decl:=decl+"#define ESS extern struct sather_type_description\n";
+      loop
+         tg::=sm.upto!(lg);
+	 if tg=0 then
+	    p:=p+"  NULL,  /* no type has tag 0 */\n";
+	 else 
+	    cl:$TP;
+	    loop
+	       pr::=cgen.tags.pairs!;
+	       if pr.t2=tg then
+		  cl:=pr.t1;
+		  break!;
+	       end;
+	    end;
+	    if void(cl) then
+	       prog.barf("there seems to be no type for tag "+tg+"\n");
+	    end;
+	    fname::=mkfname(cl);
+	    decl:=decl+"ESS "+fname+"_type_table;\n";
+	    p:=p+"  &"+fname+"_type_table,\n";
+	 end;
+      end;
+      p:=p+"  NULL };\n";
+      -- p:=p+"int sather_type_offset= ("+(-sm)+");\n";
+      p:=p+"struct sather_type_description **sather_types = sather_types_static+"+(-sm)+";\n";
+      c+decl+"\n"+p;
+   end;
+
+   sort(t1,t2:TUP{SIG,INT}):BOOL is
+      return t1.t1.str<t2.t1.str;
+   end;
+   print_sather_func(prog:PROG,cgen:CGEN) is
+      -- Generate FUNC()
+      c::=#CODE_FILE("sather_func.c");
+      c.is_c_code:=true;
+      c.do_not_merge:=true;
+      cs:ARRAY{TUP{SIG,INT}}:=#(funcs.size);
+      loop
+         cs.set!(#TUP{SIG,INT}(funcs.elt!,0.up!));
+      end;
+      cs.insertion_sort_by(bind(sort(_,_)));
+      loop
+         cgen.tags_h+("#define F_tag_"+cs.elt!.t2+" "+0.up!+"\n");
+      end;
+      c+"#define ES extern struct sather_function_definition\n";
+      loop
+         c+("ES "+mang(cs.elt!.t1)+"_iframe;\n");
+      end;
+      c+"\n";
+      c+"struct sather_function_definition *sather_functions[] = {\n";
+      loop
+         c+("  &"+mang(cs.elt!.t1)+"_iframe,\n");
+      end;
+      c+"  NULL\n};\n";
+   end;
+
+   -- print out the list of source files as an array
+   print_file_list(prog:PROG,cgen:CGEN,p:CODE_FILE) is
+      p+"char *source_files[] = {\n";
+      loop
+         p+(" \""+SFILE_ID::files.elt!+"\",\n");
+      end;
+      p+"};\n";
+   end;
+
+   filepos(cgen:CGEN,s:SFILE_ID):INT is
+      if cgen.func_tables then
+	 -- Only genereate file locations when backtracing is
+	 -- on. It is not particularly useful otherwise
+	 return s.index*1048576+s.line_num_in;
+      else
+	 -- When -debug_no_backtrace is specified, then func_tables is
+	 -- false. In this case, don't issue any line numbers, since
+	 -- they are not particularly useful with the object layout
+	 return 0
+      end;
+   end;
+
+   register(s:SIG):STR is 
+      funcs:=funcs.push(s); 
+      return "F_tag_"+(funcs.size-1);
+   end;
+
+   print_frame(prog:PROG,cgen:CGEN,p:CODE_FILE,o:AM_ROUT_DEF,iout:FLIST{AM_LOCAL_EXPR}) is
+      mangler:=cgen.mangler;
+      n::=0;
+
+      args::=o.size;
+      locals::=0;
+      loop
+	 l::=o.locals.elt!;
+	 if l/=o.rres and ~void(l.name) then
+	    locals:=locals+1;
+         end;
+      end;
+      p+"\nstruct { void (*cf)();long src;char *sn,*cn;int args,lc;";
+      if args+locals>0 then
+         p+"\n         struct sather_attribute attr["+(locals+args)+"];";
+      end;
+      p+" } "+mang(o.sig)+"_iframe = {\n";
+      p+"  (void (*)())"+mang(o.sig)+",\n";
+      p+"  "+filepos(cgen,o.source)+",\n";
+      p+"  \""+o.sig.str+"\",\""+mang(o.sig)+"\",\n";
+      p+"  "+args+", "+locals;
+      if args+locals>0 then
+         p+",\n  {";
+	 first::=true;
+	 loop i::=o.ind!;
+	    n:=n+1;
+	    if ~first then p+","; end;
+	    first:=false;
+	    s::=o[i].expr;
+	    if o.sig.is_iter and (o[i].mode=MODES::inout_mode or o[i].mode=MODES::out_mode) then
+	       s:=iout.elt!;
+	    end;
+	    p+"\n     { \""+o[i].name.str+"\",\""+mang(s,o.sig)+"\",";
+	    p+cgen.tag_for(o[i].tp)+",0,"+filepos(cgen,o.source)+" }";
+         end;
+	 loop 
+	    l::=o.locals.elt!;
+	    if l/=o.rres and ~void(l.name) then
+	       n:=n+1;
+	       if ~first then p+","; end;
+	       first:=false;
+	       p+"\n     { \""+l.name.str+"\",\""+mang(l,o.sig)+"\",";
+	       p+cgen.tag_for(l.tp)+",0,"+filepos(cgen,l.source)+" }";
+	    end;
+	 end;
+	 p+"\n  }";
+      end;
+      p+"\n};\n";
+      if n>num_attr then num_attr:=n; end;
+
+   end;
+end;
+-- vim:sw=3:nosmartindent

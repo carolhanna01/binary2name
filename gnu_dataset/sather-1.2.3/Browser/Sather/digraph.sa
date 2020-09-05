@@ -1,0 +1,225 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- graph.sa: Graph classes
+-- Author: Benedict A. Gomes <gomes@icsi.berkeley.edu>
+
+class DIGRAPH{N}  < $DIGRAPH{N,NULL,N} is
+   -- A directed graph with nodes of type N, indexed by N
+   -- No edge information
+   
+   private attr node_list: FLIST{N};
+   private attr in_: FMAP{N,FLIST{N}};
+   private attr out_: FMAP{N,FLIST{N}};
+   -- Keep both around since it is quite expensive to derive one
+   -- from the other.
+   
+   create: SAME is 
+      -- All the data structures can be initialized with void
+      res ::= new;
+      res.in_ := #FMAP{N,FLIST{N}};
+      res.out_ := #FMAP{N,FLIST{N}};
+      return(res) 
+   end;
+
+   node_index(n: N): N pre has_node(n) is return(n) end;
+   
+   node(n: N): N pre has_node(n) is  return(n) end;
+   -- Return the node associated with integer index "n"
+   
+   nodes: FLIST{N} is return node_list.copy end;
+   
+   node_indices: FLIST{N} is return node_list.copy end;
+   
+   has_node(n: N): BOOL is return(in_.test(n)) end;
+   
+   has_index(i: N): BOOL is return(in_.test(i)) end;
+   
+   has_edge(s,t: N): BOOL is
+      if (~(has_index(s)) or ~(has_index(t))) then return(false)
+      else return(in_.get(t).contains(s));   end;
+   end;
+   
+   n_nodes: INT is return(in_.size) end;
+
+   degree(n: N): INT pre has_index(n) is return(n_parents(n)+n_children(n)); end;
+   
+   connections(n: N): FLIST{N} pre has_index(n) is 
+      -- Make sure to make copies of the lists
+      res ::= in_.get(n).copy;
+      res := res.append(out_.get(n));
+      return(res);
+   end;
+      
+   add_node(n: N): N is
+      -- Replaces any preexisting node
+      if (has_node(n)) then return(n) end;
+      node_list := node_list.push(n);
+      in_ := in_.insert(n,#FLIST{N});
+      out_ := out_.insert(n,#FLIST{N});
+      return(n);
+   end;
+   
+   add_node(n: N) is discard ::= add_node(n) end;
+      
+   delete_node(n: N):N is
+      -- Delete a node from the graph, and all its accompanying edges
+      -- Returns the node itself
+      node_list.delete(node_list.index_of(n));
+      in_ := in_.delete(n);
+      out_ := out_.delete(n);
+      return(n);
+   end;
+   
+   delete_edge(src,dest: N): NULL  pre has_index(src) and has_index(dest) is
+      -- Deletes the edge between n1 and n2 if it exists and returns the
+      -- edge value (null)
+      dest_in ::= in_.get(dest);	-- In edges of the destination node
+      dest_in.delete(dest_in.index_of(src)); -- Delete the source node
+      in_ := in_.insert(dest,dest_in);
+      src_out ::= out_.get(src);	-- Out edges of the source node
+      src_out.delete(src_out.index_of(dest)); -- Delete the dest 
+      out_ := out_.insert(src,src_out);
+      return(void);		-- No edge value to return
+   end;
+
+   errmsg(s: N,msg: STR):BOOL is
+      r: STR;
+      typecase s
+      when $STR then r := s.str else r := "" end;
+      #ERR+"INTERNAL ERROR:"+msg+"\n";
+      #ERR+"Node:"+r+"\n";
+      return true;
+   end;
+   
+   connect(s,t: N) is
+      -- Connect source to target. No change if the edge already exists
+      if ~has_index(s) then
+	 -- Known error - will be fixed with new parametrized classes
+	 assert(errmsg(s,"No source in digraph - browser works ok"));
+	 -- assert so that error only turns up with checking on
+	 return;
+      end;
+      if ~has_index(t) then 
+	 assert(errmsg(s,"No destination in digraph - browser works ok"));
+	 return;
+      end;
+      if (has_edge(s,t)) then
+	 return;
+      end;
+      out_ := out_.insert(s,out_.get(s).push(t));
+      in_ := in_.insert(t,in_.get(t).push(s));
+   end;
+   
+   connect(s,t: N, e: NULL) is   
+      -- Cannot specify edge
+      connect(s,t);
+   end;
+   
+   edge(n1,n2: N): NULL is return(void) end;
+   -- Cannot return an edge value
+   
+   n_parents(n: N): INT pre has_index(n) is
+      return(in_.get(n).size);
+   end;
+
+   n_children(n: N): INT pre has_index(n) is
+      return(out_.get(n).size);
+   end;
+
+   parents(n: N): FLIST{N} pre has_index(n) is
+      return(in_.get(n).copy);
+   end;
+   
+   children(n: N): FLIST{N} pre has_index(n) is
+      return(out_.get(n).copy);
+   end;
+
+   is_empty: BOOL is return(node_list.size = 0) end;
+   
+   layout: LAYOUT{N} is
+      return(aux.get_layout(self));
+   end;
+   
+   str: STR is  return(aux.str(self));   end;
+   
+   topo_order!: N is
+      loop yield(aux.topo_order!(self)); end;
+   end;
+
+   node_subset(nt: ROUT{N}:BOOL): FLIST{N} is
+      -- Return a subset of the nodes that meet the test "nt"
+      return(aux.node_subset(self,nt));
+   end;
+   
+   subgraph(nt: ROUT{N}:BOOL): SAME is
+      res ::= #SAME;
+      aux.add_subgraph(self,nt,res);
+      return(res);
+   end;
+   
+   add_subgraph(nt: ROUT{N}:BOOL, to: DIGRAPH{N}) is
+      -- Add nodes from self that meet nt to the graph "to"
+      -- including any edges between these nodes
+      aux.add_subgraph(self,nt,to);
+   end;
+   
+   add_nodes(n: FLIST{N}) is
+      -- Add nodes in "n" to self
+      aux.add_nodes(self,n);
+   end;
+   
+   add_relevant_edges(e: FLIST{TUP{N,N}}) is
+      -- Add all edges from e that are relevant to this graph
+      -- i.e. whose source and destination nodes exist in this graph
+      aux.add_relevant_edges(self,e);
+   end;
+   
+   all_edges: FLIST{TUP{N,N}} is
+      -- Return a list consisting of tuples of all edges
+      return(aux.all_edges(self));
+   end;
+
+   inds_to_nodes(f: FLIST{N}): FLIST{N} is
+      -- Convert a list of indices to  a list of nodes
+      return(aux.inds_to_nodes(self,f));
+   end;
+   
+   union(g2: SAME): SAME is
+      res ::= #SAME;
+      aux.union(self,g2,res);
+      return(res);
+   end;
+
+   dfs_ancestors(n: N):FLIST{N} is
+      -- Uses the parents arrows to find ancestors
+      return(aux.dfs_ancestors(self,n));
+   end;
+   
+   dfs(n: N):FLIST{N} is
+      return(aux.dfs(self,n));
+   end;
+
+   bfs(n: N):FLIST{N} is
+      return(aux.bfs(self,n));
+   end;
+   
+   bfs_ancestors(n: N):FLIST{N} is
+      return(aux.bfs_ancestors(self,n));
+   end;
+
+   private shared aux: DIGRAPH_AUX{N,NULL,N,SAME};
+   -- Never instantiated. Just for the type of the auxilliary class
+   
+end; -- class DIGRAPH{N}
+-------------------------------------------------------------------

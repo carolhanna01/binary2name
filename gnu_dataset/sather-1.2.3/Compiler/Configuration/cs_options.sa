@@ -1,0 +1,902 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class CODE_OPTIONS < $GET_OPTIONS is
+   -- This is an options handler for things with back-ends.
+   -- Don't put things that are specific to the ICSI `cs' compiler
+   -- (e.g. CGEN) here; this is meant to be usable for other back-ends.
+   -- Modify CS_OPTIONS for such things instead.
+
+   include GET_OPTIONS 
+	 create->private old_create,
+	 str->private old_str;
+
+   -- because we don't know the class names at the time
+   -- that the command line is parsed, there is a special
+   -- representation for sets of classes with given checking
+   -- on or off.  *.union(chk_in).difference(chk_out), where
+   -- chk is the check name and * is all classes if chk_all
+   -- is true or the empty set if chk_all is false.
+
+   attr pre_all, post_all, invariant_all, assert_all, arith_all,
+	 bounds_all, void_all, when_all, return_all:BOOL;
+
+   attr pre_in, post_in, invariant_in, assert_in,
+	 arith_in, bounds_in, void_in, when_in, return_in:FSET{STR};
+
+   attr pre_out, post_out, invariant_out, assert_out,
+	 arith_out, bounds_out, void_out, when_out, return_out:FSET{STR};
+
+   attr destroy_chk, psather_chk, stats, psather_stats, psather_trace:BOOL;
+
+   create(p:PROG):SAME is
+      r::=old_create(p);
+      r.bounds_all:=true;
+      r.void_all:=true;
+      p.void_checks:=true;
+      r.when_all:=true;
+      r.return_all:=true;
+      r.psather_chk:=true;
+      return r;
+   end;
+
+   str:STR is
+      r,s:STR;
+      s:=old_str;
+      r:="";
+      if pre_all then r:=r+"All";
+      else loop r:=r+'+'+pre_in.elt!; end;
+   end;
+      loop r:=r+'-'+pre_out.elt!; end;
+      s:=mention("Preconditions",s,r);
+
+      r:="";
+      if post_all then r:=r+"All";
+      else loop r:=r+'+'+post_in.elt!; end;
+   end;
+      loop r:=r+'-'+post_out.elt!; end;
+      s:=mention("Postconditions",s,r);
+
+      r:="";
+      if invariant_all then r:=r+"All";
+      else loop r:=r+'+'+invariant_in.elt!; end;
+   end;
+      loop r:=r+'-'+invariant_out.elt!; end;
+      s:=mention("Invariants",s,r);
+
+      r:="";
+      if assert_all then r:=r+"All";
+      else loop r:=r+'+'+assert_in.elt!; end;
+   end;
+      loop r:=r+'-'+assert_out.elt!; end;
+      s:=mention("Asserts",s,r);
+
+      r:="";
+      if void_all then r:=r+"All";
+      else loop r:=r+'+'+void_in.elt!; end;
+   end;
+      loop r:=r+'-'+void_out.elt!; end;
+      s:=mention("Void checks",s,r);
+
+      r:="";
+      if when_all then r:=r+"All";
+      else loop r:=r+'+'+when_in.elt!; end;
+   end;
+      loop r:=r+'-'+when_out.elt!; end;
+      s:=mention("When clause",s,r);
+
+      r:="";
+      if bounds_all then r:=r+"All";
+      else loop r:=r+'+'+bounds_in.elt!; end;
+   end;
+      loop r:=r+'-'+bounds_out.elt!; end;
+      s:=mention("Bounds",s,r);
+
+      if destroy_chk then r:="On"; else r:="Off"; end;
+      s:=mention("Destroy",s,r);
+
+
+      if psather_chk then r:="On"; else r:="Off"; end;
+      s:=mention("pSather checks",s,r);
+
+      if stats then r:="On"; else r:="Off"; end;
+      s:=mention("Statistics generation",s,r);
+
+      if psather_stats then r:="On"; else r:="Off"; end;
+      s:=mention("pSather stats",s,r);
+
+      if psather_trace then r:="On"; else r:="Off"; end;
+      s:=mention("pSather trace",s,r);
+
+      r:="";
+      if arith_all then r:=r+"All";
+      else loop r:=r+'+'+arith_in.elt!; end;
+   end;
+      loop r:=r+'-'+arith_out.elt!; end;
+      s:=mention("Arith",s,r);
+
+      r:="";
+      if return_all then r:=r+"All";
+      else loop r:=r+'+'+return_in.elt!; end;
+   end;
+      loop r:=r+'-'+return_out.elt!; end;
+      s:=mention("Return",s,r);
+
+      return s;
+   end;
+	
+   pre_chk(n:STR):BOOL is 
+      return (pre_all or pre_in.test(n)) and ~pre_out.test(n);
+   end;
+
+   post_chk(n:STR):BOOL is 
+      return (post_all or post_in.test(n)) and ~post_out.test(n);
+   end;
+
+   invariant_chk(n:STR):BOOL is 
+      return (invariant_all or invariant_in.test(n)) and ~invariant_out.test(n);
+   end;
+
+   assert_chk(n:STR):BOOL is 
+      return (assert_all or assert_in.test(n)) and ~assert_out.test(n);
+   end;
+
+   arith_chk(n:STR):BOOL is 
+      return (arith_all or arith_in.test(n)) and ~arith_out.test(n);
+   end;
+
+   bounds_chk(n:STR):BOOL is 
+      return (bounds_all or bounds_in.test(n)) and ~bounds_out.test(n);
+   end;
+
+   void_chk(n:STR):BOOL is 
+      return (void_all or void_in.test(n)) and ~void_out.test(n);
+   end;
+
+   when_chk(n:STR):BOOL is 
+      return (when_all or when_in.test(n)) and ~when_out.test(n);
+   end;
+
+   return_chk(n:STR):BOOL is 
+      return (return_all or return_in.test(n)) and ~return_out.test(n);
+   end;
+
+   private handle_other_options(s:STR) is
+      case s
+      when "-chk_all", "-chk" then
+	 if s="-chk" then all:=true;
+	 else get_classes;
+	 end;
+	 prog.arith_checks:=true;
+	 prog.pre_checks:=true;
+	 prog.post_checks:=true;
+	 prog.assert_checks:=true;
+	 prog.void_checks:=true;
+	 if all then
+	    arith_all:=true; arith_out:=#;
+	    bounds_all:=true; bounds_out:=#;
+	    void_all:=true; void_out:=#;
+	    pre_all:=true; pre_out:=#;
+	    post_all:=true; post_out:=#;
+	    assert_all:=true; assert_out:=#;
+	    invariant_all:=true; invariant_out:=#;
+	    when_all:=true; when_out:=#;
+	    return_all:=true; return_out:=#;
+	    destroy_chk:=true;
+	    psather_chk:=true;
+	 else
+	    arith_in:=arith_in.union(classes);
+	    bounds_in:=bounds_in.union(classes);
+	    void_in:=void_in.union(classes);
+	    pre_in:=pre_in.union(classes);
+	    post_in:=post_in.union(classes);
+	    assert_in:=assert_in.union(classes);
+	    invariant_in:=invariant_in.union(classes);
+	    when_in:=when_in.union(classes);
+	    return_in:=return_in.union(classes);
+
+	    arith_out:=arith_out.difference(classes);
+	    bounds_out:=bounds_out.difference(classes);
+	    void_out:=void_out.difference(classes);
+	    pre_out:=pre_out.difference(classes);
+	    post_out:=post_out.difference(classes);
+	    assert_out:=assert_out.difference(classes);
+	    invariant_out:=invariant_out.difference(classes);
+	    when_out:=when_out.difference(classes);
+	    return_out:=return_out.difference(classes);
+	 end;
+      when "-chk_arith" then
+	 get_classes;
+	 prog.arith_checks:=true;
+	 if all then arith_all:=true; arith_out:=#;
+	 else
+	    arith_in:=arith_in.union(classes);
+	    arith_out:=arith_out.difference(classes);
+	 end;
+      when "-chk_bounds" then
+	 get_classes;
+	 if all then bounds_all:=true; bounds_out:=#; 
+	 else
+	    bounds_in:=bounds_in.union(classes);
+	    bounds_out:=bounds_out.difference(classes);
+	 end;
+      when "-chk_void" then
+	 get_classes;
+	 prog.void_checks:=true;
+	 if all then void_all:=true; void_out:=#; 
+	 else
+	    void_in:=void_in.union(classes);
+	    void_out:=void_out.difference(classes);
+	 end;
+      when "-chk_pre" then
+	 prog.pre_checks:=true;
+	 get_classes;
+	 if all then pre_all:=true; pre_out:=#; 
+	 else
+	    pre_in:=pre_in.union(classes);
+	    pre_out:=pre_out.difference(classes);
+	 end;
+      when "-chk_post" then
+	 prog.post_checks:=true;
+	 get_classes;
+	 if all then post_all:=true; post_out:=#; 
+	 else
+	    post_in:=post_in.union(classes);
+	    post_out:=post_out.difference(classes);
+	 end;
+      when "-chk_assert" then
+	 prog.assert_checks:=true;
+	 get_classes;
+	 if all then assert_all:=true; assert_out:=#; 
+	 else
+	    assert_in:=assert_in.union(classes);
+	    assert_out:=assert_out.difference(classes);
+	 end;
+      when "-chk_invariant" then
+	 get_classes;
+	 if all then invariant_all:=true; invariant_out:=#; 
+	 else
+	    invariant_in:=invariant_in.union(classes);
+	    invariant_out:=invariant_out.difference(classes);
+	 end;
+      when "-chk_when" then
+	 get_classes;
+	 if all then when_all:=true; when_out:=#; 
+	 else
+	    when_in:=when_in.union(classes);
+	    when_out:=when_out.difference(classes);
+	 end;
+      when "-chk_destroy" then
+	 destroy_chk:=true;
+      when "-chk_psather" then
+	 psather_chk:=true;
+      when "-stats" then
+	 stats:=true;
+      when "-psather_stats" then
+	 psather_stats:=true;
+      when "-psather_trace" then
+	 psather_trace:=true;
+      when "-show_am" then
+	 prog.show_am:=true;
+      when "-return" then
+	 get_classes;
+	 if all then return_all:=true; return_out:=#; 
+	 else
+	    return_in:=return_in.union(classes);
+	    return_out:=return_out.difference(classes);
+	 end;
+
+      when "-chk_no_all", "-chk_no" then
+	 if s="-chk_no" then all:=true;
+	 else get_classes;
+	 end;
+	 if all then
+	    prog.void_checks:=false;
+	    prog.pre_checks:=false;
+	    prog.post_checks:=false;
+	    prog.assert_checks:=false;
+	    prog.arith_checks:=false;
+	    arith_in:=#; arith_all:=false;
+	    bounds_in:=#; bounds_all:=false;
+	    void_in:=#; void_all:=false;
+	    pre_in:=#; pre_all:=false;
+	    post_in:=#; post_all:=false;
+	    assert_in:=#; assert_all:=false;
+	    invariant_in:=#; invariant_all:=false;
+	    when_in:=#; when_all:=false;
+	    destroy_chk:=false;
+	    return_in:=#; return_all:=false;
+	    psather_chk:=false;
+	 else
+	    arith_out:=arith_out.union(classes);
+	    bounds_out:=bounds_out.union(classes);
+	    void_out:=void_out.union(classes);
+	    pre_out:=pre_out.union(classes);
+	    post_out:=post_out.union(classes);
+	    assert_out:=assert_out.union(classes);
+	    invariant_out:=invariant_out.union(classes);
+	    when_out:=when_out.union(classes);
+	    return_out:=return_out.union(classes);
+	 end;
+      when "-chk_no_arith" then
+	 get_classes;
+	 if all then prog.arith_checks:=false;arith_in:=#; arith_all:=false; 
+	 else arith_out:=arith_out.union(classes);
+	 end;
+      when "-chk_no_bounds" then
+	 get_classes;
+	 if all then bounds_in:=#; bounds_all:=false; 
+	 else bounds_out:=bounds_out.union(classes);
+	 end;
+      when "-chk_no_void" then
+	 get_classes;
+	 if all then prog.void_checks:=false;void_in:=#; void_all:=false; 
+	 else void_out:=void_out.union(classes);
+	 end;
+      when "-chk_no_pre" then
+	 get_classes;
+	 if all then prog.pre_checks:=false;pre_in:=#; pre_all:=false; 
+	 else pre_out:=pre_out.union(classes);
+	 end;
+      when "-chk_no_post" then
+	 get_classes;
+	 if all then prog.post_checks:=false;post_in:=#; post_all:=false; 
+	 else post_out:=post_out.union(classes);
+	 end;
+      when "-chk_no_assert" then
+	 get_classes;
+	 if all then prog.assert_checks:=false;assert_in:=#; assert_all:=false; 
+	 else assert_out:=assert_out.union(classes);
+	 end;
+      when "-chk_no_invariant" then
+	 get_classes;
+	 if all then invariant_in:=#; invariant_all:=false; 
+	 else invariant_out:=invariant_out.union(classes);
+	 end;
+      when "-chk_no_destroy" then
+	 destroy_chk:=false;
+      when "-chk_no_psather" then
+	 psather_chk:=false;
+      when "-no_stats" then
+	 stats:=false;
+      when "-no_psather_stats" then
+	 psather_stats:=false;
+      when "-no_psather_trace" then
+	 psather_trace:=false;
+      when "-chk_no_return" then
+	 get_classes;
+	 if all then return_in:=#; return_all:=false; 
+	 else return_out:=return_out.union(classes);
+	 end;
+      when "-chk_no_when" then
+	 get_classes;
+	 if all then when_in:=#; when_all:=false; 
+	 else when_out:=when_out.union(classes);
+	 end;
+      when "-not_a_real_platform" then
+	 prog.genuine_platforms:=prog.genuine_platforms-1;
+      else
+	 if s[0]='-' then
+	    cfs::=prog.home+"/System/Platforms/"+s.tail(s.length-1);
+	    platform_module::=cfs+"/Platform.module";
+	    f::=BFILE::open_for_read(platform_module);
+	    if f.error then
+	       #ERR + "Unrecognized option ``" + s + 
+		     "'' or platform ``" + s.tail(s.length-1)+ "'' missing\n";  
+	       UNIX::exit(1);
+	    else
+	       prog.platforms:=prog.platforms.push(cfs);
+	       prog.genuine_platforms:=prog.genuine_platforms+1;
+	       insert_here(args_from_file(platform_module),"Platform:"+s);
+	    end;
+	 else
+	    handle_files(s);
+	 end;
+      end;
+   end;
+
+end;
+
+class CS_OPTIONS < $GET_OPTIONS is
+   -- This is the options handler used by the standard compiler.
+
+   include CODE_OPTIONS 
+         create->private was_create,
+	 str->private was_str,
+	 handle_other_options->old_handle_other_options;
+
+   private attr cs:CS;
+   private attr parser:PARSE;
+   private attr cgen:CGEN;
+   private attr inliner:INLINE;
+
+   attr side_effects, side_debug, specul_prefetch, loop_prefetch, prefetch, cse, cse_debug :BOOL;
+   attr prefetch_weight:INT;
+   attr local_opt:BOOL;
+   attr local_call:BOOL;
+   attr local_call_access:INT;
+   attr local_call_dynamic:BOOL;
+   attr local_call_dynamic_access:INT;
+   attr remote_call:BOOL;
+   attr remote_call_create:BOOL;
+   attr remote_call_access:INT;
+
+   attr loop_poll:BOOL;		-- true if loops should emit polls
+   attr parloops:BOOL;
+   attr post_write:BOOL;
+   attr cache:BOOL;
+   attr cache_size:INT;
+   attr cache_slot_size:INT;
+
+   private attr debug_C_seen:BOOL;
+   private attr debug_source_seen:BOOL;
+
+   create(p:PROG,cs:CS):SAME is 
+      r::=was_create(p);
+      r.loop_poll:=true;
+      r.prefetch_weight:=15;
+      r.remote_call_access:=5;
+      r.local_call_access:=1;
+      r.local_call_dynamic_access:=3;
+      r.cache_size:=1024;
+      r.cache_slot_size:=8;
+      r.cs:=cs;
+      be::=p.back_end;
+      typecase be when CGEN then r.cgen:=be; end;
+      pr::=p.parse;
+      typecase pr when PARSE then r.parser:=pr; end;
+      il::=p.inliner;
+      typecase il when INLINE then r.inliner:=il; end;
+      r.cgen.executable:="a.out";
+      return r;
+   end;
+
+   str:STR is
+      r,s:STR;
+      s:=was_str;
+      r:=""; loop r:=r+' '+cgen.c_files.elt!; end;
+      s:=mention("C files",s,r);
+      r:=""; loop r:=r+' '+cgen.object_files.elt!; end;
+      s:=mention("object files",s,r);
+      r:=""; loop r:=r+' '+cgen.archive_files.elt!; end;
+      s:=mention("archive files",s,r);
+      s:=mention("Executable",s,cgen.executable);
+      if cgen.gen_c then s:=s+"\nGenerate C."; end;
+      if cgen.pretty then s:=s+"\nPretty C."; end;
+      if cgen.optimize then s:=s+"\nOptimize:"; end;
+      if prog.benchmark then s:=s+"\n  Benchmark Running."; end;
+      if prog.opt_debug then s:=s+"\n  Print Optimizer Debug Info."; end;
+      if prog.opt_verbose then s:=s+"\n  Print Optimizer Statistics."; end;
+      if prog.hoist_const then s:=s+"\n  Hoist Constant Loop Expressions."; end;
+      if prog.move_while then s:=s+"\n  Move while!/until! to the end of loops."; end;
+      if inliner.inline_routs then
+	 s:=s+"\n  Inline routs of up to "+inliner.rout_thres+" stmts." end;
+      if inliner.inline_iters then
+	 s:=s+"\n  Inline iters of up to "+inliner.iter_thres+" stmts." end;
+      if prog.hoist_iter_init then s:=s+"\n  Hoist Iter initializations."; end;
+      if cgen.debug then s:=s+"\nGenerate debugging info."; end;
+      if cgen.deterministic then s:=s+"\nGenerate deterministic ob ids."; end;
+      if cgen.type_tables then s:=s+"\nGenerate Type Tables."; end;
+      if cgen.func_tables then s:=s+"\nGenerate Function Tables."; end;
+      if cgen.print_ob then s:=s+"\nGenerate PO function."; end;
+      if cgen.print_ob_g then s:=s+"\nGenerate POG function."; end;
+      if cs.only_parse then s:=s+"\nStop after parsing."; end;
+      if cgen.only_check then s:=s+"\nDon't generate code."; end;
+      if cgen.only_C then s:=s+"\nDon't compile C."; end;
+      if prog.check_generics then s:=s+"\nCheck generic classes agains typebounds."; end;
+      if cs.only_reachable then s:=s+"\nDon't check unreachable code."; end;
+      if side_effects then r:="On"; else r:="Off"; end;
+      s:=mention("Side effects",s,r);
+      if side_debug then r:="On"; else r:="Off"; end;
+      s:=mention("Side debug",s,r);
+      if local_opt then r:="On"; else r:="Off"; end;
+      s:=mention("local analysing (pSather only):",s,r);
+      if local_call then r:="On"; else r:="Off"; end;
+      s:=mention("local calling (pSather only, access="+local_call_access+")",s,r);
+      if local_call_dynamic then r:="On"; else r:="Off"; end;
+      s:=mention("dynamic local calling (pSather only, access="+local_call_dynamic_access+")",s,r);
+      if remote_call then r:="On"; else r:="Off"; end;
+      s:=mention("remote_call (pSather only, create calls="+remote_call_create+" access="+remote_call_access+")",s,r);
+      if prefetch then r:="On"; else r:="Off"; end;
+      s:=mention("prefetching data (pSather only, weight="+prefetch_weight+")",s,r);
+      if specul_prefetch then r:="On"; else r:="Off"; end;
+      s:=mention("speculating prefetch (pSather only)",s,r);
+      if loop_prefetch then r:="On"; else r:="Off"; end;
+      s:=mention("loop prefetch (pSather only)",s,r);
+      if cache then r:="On"; else r:="Off"; end;
+      s:=mention("cache (pSather only, size="+cache_size+" a "+cache_slot_size+")",s,r);
+      if loop_poll then r:="On"; else r:="Off"; end;
+      s:=mention("poll in loops (pSather only)",s,r);
+      if parloops then r:="On"; else r:="Off"; end;
+      s:=mention("Optimize Parloops (pSather only)",s,r);
+      if post_write then r:="On"; else r:="Off"; end;
+      s:=mention("Post writing (pSather only)",s,r);
+      if cse then r:="On"; else r:="Off"; end;
+      s:=mention("Common Subexpression elimination",s,r);
+      if cse_debug then r:="On"; else r:="Off"; end;
+      s:=mention("CSE debug",s,r);
+      if prog.zones then s:=s+"\nExperimental zone runtime enabled."; end;
+
+      r:="";
+      if ~cgen.c_flags.is_empty then loop r:=r+' '+cgen.c_flags.elt!; end; end;
+      s:=mention("C flags",s,r);
+
+      if ~cgen.externals.is_empty then
+	 s:=s+"\nExternals:";
+	 loop p::=cgen.externals.pairs!;
+	    s:=s+"\n   "+p.t1+" -> {";
+	    loop s:=s+", ".separate!(p.t2.elt!); end;
+	    s:=s+"}";
+	 end;
+      end;
+
+      --if ~parser.has.is_empty then
+      --    s:=s+"\nHas:";
+      --    loop p::=parser.has.pairs!; s:=s+"\n   "+p.t1+" in "+p.t2; end;
+      --    s:=s+"\n";
+      --end;
+
+      r:="";
+      if cgen.force_all then r:=r+"All";
+      elsif ~cgen.force_routines.is_empty then
+	 loop r:=r+' '+cgen.force_routines.elt!; end;
+      end;
+      s:=mention("Forced routines",s,r);
+
+      return s;
+   end;
+
+   private handle_other_options(s:STR) is
+      case s 
+      when "-temp_option_fast_identifiers" then
+	 prog.temp_option_fast_identifiers := true;
+      when "-benchmark" then prog.benchmark:=true;
+      when "-o" then cgen.executable:=next_arg;
+      when "-output_C" then cgen.gen_c:=true;
+      when "-pretty" then cgen.pretty:=true;
+      when "-only_parse" then cs.only_parse:=true;
+      when "-only_check" then cgen.only_check:=true;
+      when "-only_C" then cgen.only_C:=true; cgen.gen_c:=true;
+      when "-only_reachable" then cs.only_reachable:=true;
+      when "-chk_generics" then prog.check_generics:=true;
+      when "-O" then 
+	 prog.inline_routs:=true;
+	 prog.inline_iters:=true;
+	 prog.move_while:=true;
+	 prog.hoist_iter_init:=true;
+	 prog.hoist_const:=true;
+	 cgen.optimize:=true;
+	 inliner.inline_routs:=true;
+	 inliner.inline_iters:=true;
+	 side_effects:=true;
+	 cse:=true;
+      when "-chk_no_line_numbers" then
+	 -- Indicate that source locations should not be printed in
+	 -- assertions (CGEN::runtime_error). 
+	 prog.chk_no_line_numbers := true;
+      when "-debug_source" then
+	 if debug_C_seen then
+	    prog.barf("You may not combine -debug_C with -debug_source");
+	 end;
+	 cgen.debug:=true;
+	 cgen.gen_c:=true;
+	 debug_source_seen:=true;
+      when "-debug_deterministic" then cgen.deterministic:=true;
+      when "-debug" then 
+	 -- Debug source, debug object ,debug backtrace
+	 if cgen.print_ob_g then
+	    prog.barf("You may not combine -debug and -debug_graphical");
+	 end;
+	 if ~cgen.print_ob then
+	    cgen.print_ob:=true;cgen.func_tables:=true;
+	    cgen.type_tables:=true;
+	    insert_here(args_from_file(prog.home+"/System/Debug/PO.module"),
+			"system defined PO module");
+	 end;
+	 cgen.debug:=true;
+	 cgen.gen_c:=true;
+      when "-debug_no_backtrace" then
+	 -- Take out the backtrace
+	 cgen.func_tables:=false;
+      when "-debug_graphical" then
+	 if cgen.print_ob and ~cgen.print_ob_g then
+	    prog.barf("You may not combine -debug and -debug_graphical");
+	 end;
+	 if ~cgen.print_ob_g then
+	    cgen.print_ob_g:=true; cgen.func_tables:=true;
+	    cgen.type_tables:=true;
+	    insert_here(args_from_file(prog.home+"/System/Debug/POG.module"),
+			"system defined POG module");
+	 end;
+	 cgen.debug:=true;
+	 cgen.gen_c:=true;
+      when "-debug_C" then
+	 if debug_source_seen then
+	    prog.barf("You may not combine -debug_C with -debug_source");
+	 end;
+	 debug_C_seen:=true;
+	 cgen.c_flags:=cgen.c_flags.push("-g");
+	 cgen.debug:=false;
+	 cgen.gen_c:=true;
+	 cgen.pretty:=true;
+	 if ~cgen.print_ob then
+	    cgen.print_ob:=true;cgen.func_tables:=true;
+	    cgen.type_tables:=true;
+	    insert_here(args_from_file(prog.home+"/System/Debug/PO.module"),
+			"system defined PO module");
+	 end;
+      when "-reflect" then 
+	 cgen.type_tables:=true;
+	 cgen.func_tables := true;
+	 insert_here(args_from_file(prog.home+"/System/Reflection/reflection.module"), "system defined reflection module");
+      when "-P_type" then cgen.type_tables:=true;
+      when "-P_func" then cgen.type_tables:=true;cgen.func_tables:=true;
+      when "-C_flag" then cgen.c_flags:=cgen.c_flags.push(next_arg);
+      when "-mangle_debug" then
+	 prog.debug_mangle := true;
+      when "-mangle_identifier_length" then
+	 len ::= #INT(next_arg);
+	 cgen.max_identifier_length := len;
+      when "-external" then 
+	 cgen.externals:=cgen.externals.insert(next_arg,files);
+      when "-has" then
+	 fn::=next_arg;
+	 if ~is_filename(fn) then
+	    #ERR+"-has clause did not have a file name after it."
+		  " Found:"+fn+" instead. Will be ignored\n";
+	 end;
+	 parser.known_files:=parser.known_files.insert(fn);
+	 get_classes;
+	 if prog.show_types then
+	    (#OUT+"[has classes:"+classes.str+"]").flush;
+	 end;
+	 loop parser.has:=parser.has.insert(classes.elt!,fn); end;
+      when "-O_hoist_iter_init" then
+	 cgen.optimize:=true;
+	 prog.hoist_iter_init:=true;
+      when "-O_no_hoist_iter_init" then
+	 prog.hoist_iter_init:=false;
+      when "-O_move_while" then
+	 prog.move_while:=true;
+	 cgen.optimize:=true;
+      when "-O_no_move_while" then
+	 prog.move_while:=false;
+      when "-O_hoist_const" then
+	 prog.hoist_const:=true;
+	 cgen.optimize:=true;
+      when "-O_no_hoist_const" then
+	 prog.hoist_const:=false;
+      when "-O_no_inline" then
+	 inliner.inline_routs:=false;
+	 inliner.inline_iters:=false;
+	 prog.inline_routs:=false;
+	 prog.inline_iters:=false;
+      when "-O_inline" then
+	 -- enable default inlining for both routs and iters
+	 inliner.inline_routs:=true;
+	 inliner.inline_iters:=true;
+	 prog.inline_routs:=true;
+	 prog.inline_iters:=true;
+	 cgen.optimize:=true;
+      when "-O_inline_routines" then
+	 inliner.rout_thres:=#INT(next_arg);	    
+	 prog.inline_routs:=true;
+	 inliner.inline_routs:=inliner.rout_thres>0;
+	 cgen.optimize:=true;
+      when "-O_inline_iters" then
+	 inliner.iter_thres:=#INT(next_arg);
+	 prog.inline_iters:=true;
+	 inliner.inline_iters:=inliner.iter_thres>0;	    
+	 cgen.optimize:=true;
+      when "-O_yields_in_locks" then
+	 prog.yields_in_locks:=true;
+	 side_effects:=true;
+      when "-O_no_yields_in_locks" then
+	 prog.yields_in_locks:=false;
+      when "-O_locks_on_stack" then
+	 prog.locks_on_stack:=true;
+	 side_effects:=true;
+      when "-O_no_locks_on_stack" then
+	 prog.locks_on_stack:=false;
+      when "-O_fork" then
+	 prog.fast_fork := true;
+      when "-O_at1" then
+	 prog.fast_at1 := true;
+	 side_effects:=true;
+      when "-O_at2" then
+	 prog.fast_at2 := true;
+	 side_effects:=true;	       
+      when "-O_fast" then
+	 cgen.optimize:=true;
+	 inliner.inline_routs:=true;
+	 inliner.inline_iters:=true;
+	 prog.inline_routs:=true;
+	 prog.inline_iters:=true;
+	 prog.move_while:=true;
+	 prog.hoist_iter_init:=true;
+	 prog.hoist_const:=true;
+	 prog.yields_in_locks:=true;
+	 prog.locks_on_stack:=true;
+	 side_effects:=true;
+	 cse:=true;
+	 arith_in:=#; arith_all:=false;
+	 bounds_in:=#; bounds_all:=false;
+	 void_in:=#; void_all:=false;
+	 pre_in:=#; pre_all:=false;
+	 post_in:=#; post_all:=false;
+	 assert_in:=#; assert_all:=false;
+	 invariant_in:=#; invariant_all:=false;
+	 when_in:=#; when_all:=false;
+	 psather_chk:=false;
+	 destroy_chk:=false;
+	 return_in:=#; return_all:=false;
+	 prog.arith_checks:=false;
+	 prog.assert_checks:=false;
+	 prog.void_checks:=false;
+	 prog.pre_checks:=false;
+	 prog.post_checks:=false;
+      when "-force" then
+	 cgen.force_routines:=cgen.force_routines.insert(next_arg);
+      when "-force_all" then cgen.force_all:=true;
+      when "-threshold" then cgen.threshold:=#STR_CURSOR(next_arg).int;
+      when "-no_loop_poll" then loop_poll:=false; 
+      when "-O_parloops" then
+	 parloops:=true;
+	 cgen.optimize:=true;
+	 side_effects:=true;
+      when "-O_post_write" then
+	 post_write:=true;
+	 cgen.optimize:=true;
+      when "-O_cache" then
+	 cache:=true;
+      when "-O_cache_size" then
+	 cache_size:=#INT(next_arg);
+      when "-O_cache_slot_size" then
+	 cache_slot_size:=#INT(next_arg);
+      when "-O_side_effects" then
+	 side_effects:=true;
+      when "-O_side_debug" then
+	 side_effects:=true;
+	 side_debug:=true;
+      when "-O_local" then
+	 cgen.optimize:=true;
+	 local_opt:=true;
+	 side_effects:=true;
+      when "-O_local_call" then
+	 cgen.optimize:=true;
+	 local_opt:=true;
+	 local_call:=true;
+	 side_effects:=true;
+      when "-O_local_call_access" then
+	 local_call_access:=#INT(next_arg);
+      when "-O_local_call_dynamic" then
+	 cgen.optimize:=true;
+	 local_opt:=true;
+	 local_call:=true;
+	 local_call_dynamic:=true;
+	 side_effects:=true;
+      when "-O_local_call_dynamic_access" then
+	 local_call_dynamic_access:=#INT(next_arg);
+      when "-O_remote_call" then
+	 cgen.optimize:=true;
+	 local_opt:=true;
+	 side_effects:=true;
+	 local_call:=true;
+	 local_call_dynamic:=true;
+	 remote_call:=true;	
+      when "-O_remote_call_create" then
+	 cgen.optimize:=true;
+	 side_effects:=true;
+	 local_opt:=true;
+	 local_call_dynamic:=true;
+	 local_call:=true;
+	 remote_call:=true;
+	 remote_call_create:=true;	
+      when "-O_remote_call_access" then
+	 side_effects:=true;
+	 remote_call_access:=#INT(next_arg);
+      when "-O_prefetch_weight" then
+	 prefetch_weight:=#INT(next_arg);	    
+      when "-O_specul_prefetch" then
+	 cgen.optimize:=true;
+	 loop_prefetch:=true;
+	 specul_prefetch:=true;
+	 prefetch:=true;
+	 side_effects:=true;
+	 cgen.optimize:=true;
+      when "-O_loop_prefetch" then
+	 loop_prefetch:=true;
+	 prefetch:=true;
+	 side_effects:=true;
+	 cgen.optimize:=true;
+      when "-O_prefetch" then
+	 prefetch:=true;
+	 side_effects:=true;
+	 cgen.optimize:=true;
+      when "-O_cse" then
+	 cse:=true;
+	 side_effects:=true;
+	 cgen.optimize:=true;
+      when "-O_cse_debug" then
+	 cse:=true;
+	 cse_debug:=true;
+	 side_effects:=true;
+	 cgen.optimize:=true;
+      when "-O_no_local" then
+	 local_opt:=false;
+      when "-O_no_local_call" then
+	 local_call:=false;
+      when "-O_no_local_call_dynamic" then
+	 local_call_dynamic:=false;
+      when "-O_no_remote_call" then
+	 remote_call:=false;	
+      when "-O_no_remote_call_create" then
+	 remote_call_create:=false;	
+      when "-O_no_side_effects" then
+	 side_effects:=false;
+      when "-O_no_side_debug" then
+	 side_debug:=false;
+      when "-O_no_cache" then
+	 cache:=false;
+      when "-O_no_prefetch" then
+	 prefetch:=false;
+      when "-O_no_specul_prefetch" then
+	 specul_prefetch:=false;
+      when "-O_no_loop_prefetch" then
+	 loop_prefetch:=false;
+      when "-O_no_post_write" then
+	 post_write:=false;
+      when "-O_no_parloops" then
+	 parloops:=false;
+      when "-O_no_cse" then
+	 cse:=false;
+      when "-O_no_cse_debug" then
+	 cse_debug:=false;
+      when "-convert" then
+	 arg::=next_arg;
+	 parser.convert_files := parser.convert_files.insert(arg);
+	 path::=BFILE::resolve_path(arg);
+	 if ~paths.test(path) then
+	    prog.sather_files:=prog.sather_files.insert(arg);
+	    paths:=paths.insert(path);
+	 end;
+      when "-convert_all" then
+	 parser.convert_all := true;
+	 parser.version_1_0 := true;	    
+      when "-V1.0" then
+	 parser.version_1_0 := true;
+      when "-version", "-V" then
+	 prog.print_version := true;
+      when "-zones" then
+	 prog.zones:=true;
+      when "-W" then
+	 prog.warnings:=true;
+      else
+	 old_handle_other_options(s);
+      end;
+   end;
+
+   private handle_other_file_suffix(arg,suf:STR) is	
+      case suf
+      when ".c" then cgen.c_files:=cgen.c_files.insert(arg);
+      when ".o",".obj" then cgen.object_files:=cgen.object_files.insert(arg);
+      when ".a",".lib" then cgen.archive_files:=cgen.archive_files.push(arg);
+      else
+	 #ERR + "Didn't understand apparent file name: " + arg + '\n';
+	 usage;
+	 --rewind;
+      end;
+   end;
+
+end;    
+

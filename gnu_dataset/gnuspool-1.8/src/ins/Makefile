@@ -1,0 +1,89 @@
+#
+#   Copyright 2008 Free Software Foundation, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#	Installation / maintenance / emulation / conversion programs
+#
+
+SHELL		=	/bin/sh
+
+prefix		=	/usr/local
+exec_prefix	=	${prefix}
+PARENT		=	..
+BASE		=	../..
+HDRS		=	$(PARENT)/hdrs
+CC		=	gcc
+CCFLAGS		=	-O -g -Wall -fno-stack-protector 
+LDFLAGS		=	
+LIBS		=	
+LIBNET		=	
+MYLIBDIR	=	$(PARENT)/lib
+LIB		=	$(MYLIBDIR)/.libs/libgnuspool_int.a
+HDRS		=	$(PARENT)/hdrs
+CFLAGS		=	$(CCFLAGS) -I$(HDRS) -I$(BASE)
+RM		=	rm -f
+INSTALL		=	/usr/bin/install -c
+INSTALL_DATA	=	${INSTALL} -m 644
+SPOOLUSER	=	gnuspool
+USERMODES	=	-o $(SPOOLUSER) -g root -m 4755
+BINDIR		=	$(DESTDIR)${exec_prefix}/bin
+SBINDIR		=	$(DESTDIR)${exec_prefix}/sbin
+USERPROGS	=	gspl-lpcover gspl-lpstatc
+PROGS		=	gspl-cjlist gspl-cplist gspl-spuconv gspl-ripc gspl-setspdir gspl-netwcmd
+STAGED_INSTALL	=	false
+
+all:	$(USERPROGS) $(PROGS)
+
+gspl-cjlist:		cjlist.o convcomm.o
+	$(CC) $(LDFLAGS) -o $@ cjlist.o convcomm.o $(LIB)
+
+gspl-cplist:		cplist.o convcomm.o
+	$(CC) $(LDFLAGS) -o $@ cplist.o convcomm.o $(LIB)
+
+gspl-spuconv:	spuconv.o convcomm.o
+	$(CC) $(LDFLAGS) -o $@ spuconv.o convcomm.o $(LIB)
+
+gspl-netwcmd:	netwcmd.o
+	$(CC) $(LDFLAGS) -o $@ netwcmd.o $(LIB)
+
+gspl-lpcover:	lpcover.o
+	$(CC) $(LDFLAGS) -o $@ lpcover.o $(LIB)
+
+gspl-lpstatc:	lpstatc.o
+	$(CC) $(LDFLAGS) -o $@ lpstatc.o $(LIB) $(LIBNET) $(LIBS)
+
+gspl-ripc:		ripc.o
+	$(CC) $(LDFLAGS) -o $@ ripc.o $(LIB) $(LIBNET) $(LIBS)
+
+gspl-setspdir:	setspdir.o
+	$(CC) $(LDFLAGS) -o $@ setspdir.o $(LIB) $(LIBNET) $(LIBS)
+
+install:	all
+	sh installlpcmds
+	$(INSTALL) $(PROGS) $(SBINDIR)
+	$(INSTALL) $(USERMODES) $(USERPROGS) $(BINDIR)
+	$(INSTALL) gspl-lpr gspl-lpq gspl-lprm gspl-cancel $(BINDIR)
+
+install-strip:	all
+	sh installlpcmds
+	$(INSTALL) -s $(PROGS) $(SBINDIR)
+	$(INSTALL) -s $(USERMODES) $(USERPROGS) $(BINDIR)
+	$(INSTALL) gspl-lpr gspl-lpq gspl-lprm gspl-cancel $(BINDIR)
+
+clean:
+	$(RM) *.o gspl-*
+
+distclean: clean
+	$(RM) Makefile installlpcmds

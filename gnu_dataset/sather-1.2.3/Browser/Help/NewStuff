@@ -1,0 +1,152 @@
+=========================================================================
+What's new for 1.1
+=========================================================================
+Complete reorganization of the tcl/tk setup files. The Browser and the
+Gui now depend on the tcltk platform, which depends on the X platform.
+Hence, configuration has changed significantly. The only files that
+need to be modified are in System/Platforms/tcltk/Platform.module
+and System/Platforms/X/Platform.module.  When the browser works, the
+gui should work and vice-versa.
+
+No major functionality changes - just bug fixes. Eliminated the -all
+option, which no longer works as advertised due to changes in the
+compiler that promote more parsimonious parsing.
+
+
+=========================================================================
+What's new for 1.0.8  (TK 4.0 version)
+=========================================================================
+!!!!BIG CHANGE!!!!  The browser now uses TK 4.0 
+
+Significant functionality additions/changes (in order of addition)
+------------------------------------------------------------------
+* Ability to view the features of a class - can either use the toggle
+  features button, which toggles the viewing of all features, 
+  or click with mouse button-3 on the node.
+* Ability to collapse and expand module lines (in the listing of
+  classes, not the graph) with the middle button.
+  The list of collapsed/expanded modules is stored in ~/.bsConfig.tcl
+  whenever you store the configuration.  You can edit the list of modules
+  manually in ~/.bsConfig.tcl, if you want.
+* A "history" feature that keeps track of the previous locations visited
+  (it only records visits to features, not to classes and
+   does not repeat history locations). Suggested by Holger
+   Klawitter. Let me (gomes@icsi.berkeley.edu) know what you think.
+* Ability to save/load particular graph configurations to a named file
+  so that it is not necessary to reposition nodes every time.
+* The ability to change and save configurations (consisting of the setting
+  of most of the menu items). .bsConfig.tcl should
+  not be hand edited. .bs.tcl has become .bsCustom.tcl. 
+* Ability to show/hide edges as well as nodes. A good way to view subtyping
+  is by turning off inclusion and module edges and leaving all nodes visible.
+* The ability to hide singletons
+* Can recenter the graph by a click on the third mouse button.
+  Eliminated the problem where parts of the graph became unreachable?!
+  This was eliminated until I tried 4.0 and graphRecenter is a bit of a mess
+* Added horizontal scroll bar to all text widgets
+* The ability to resize the two halves of the browser.
+* Added a startup window and correct determination of whether the display
+  has color.
+* A bitmap for the icon! Courtesy Holger Klawitter.
+* Check for whether a layout file for a particular node is present in
+  the current directory (will eventually search in the same directory
+  as the source).
+* Possible to fire up the program "dotty" (which does much better graph layout)
+  on the current graph. You will need to get the dotty program separately from
+  Bell Labs
+http://www.research.att.com/orgs/ssr/book/reuse/
+under
+http://www.research.att.com/orgs/ssr/book/reuse/license/binary_form.html
+
+
+TK4.0 changes/benefits 
+----------------------
+Various benefits from using 4.0
+* Key bindings should work better in the text widget.
+* Tearoffs work differently. Not necessarily better.
+* Several small, distributed changes in the code to get compliance.
+* Graph centering is mucked up again (if someone would fix up graphReCenter
+  to do its job in a reasonable way, I'd be eternally grateful!)
+* Postscript dumping works a whole lot better....
+
+Implementation
+--------------
+* Better error checking when sourcing other files.
+* Separated out tcl code into several files - see help/Files
+* Renamed many functions so that function name prefixes reflect 
+  the pane they are concerned with:
+  graph, classList,featureList,text, inform, menu and history
+* Reorganized updating code to center around an updateForClass
+  procedure and updates for each pane, to more clearly separate out 
+  individual pane processing.
+* Uses Mathias' new TkKit with a couple of minor changes
+  (location of the header file for tk.h/tcl.h and a simpler version
+   of TkApp.sa called SimpleTkApp.sa). No visible changes.
+* Locations of the various X lib files should now be more standard.
+* Added ability to save/load  configuration from a .bsConfig.tcl
+* Changed sather/tcl shared variables so that they can be set from
+  tcl. Much more flexible. 
+* Added a startup window. Main purpose is as a "test" window
+  to determine the colormodel before the browser proper starts up.
+  Otherwise tkcolormodel may sometimes lie, since tk sometimes changes 
+  its model after trying (and failing) to get colors.
+  * Changed to use 4.0's winfo depth. The preliminary window may 
+    no longer be needed, but does no harm.
+* Added two new callbacks debugOn (turn on sather debug print stmts) 
+  and flushGraph (which was done hackily before)
+* Changed c_interface.c so that header files use include path
+  that is specified in browser.module
+
+=========================================================================
+What's new for 1.0.7:
+=========================================================================
+Significant functionality additions
+-----------------------------------
+* Added a dumpState menu item. This is for use with the html dumping tools. 
+  See help/HTML
+* The ability to use emacs while browsing, selectable from the 
+  text window. Run M-x server-start in an emacs buffer first.
+  Your version of emacsclient and emacs should match up.  Also
+  make sure you have the new sather-lib.el which has some server.el
+  fixes.  Inform me or Kevin (lewikk@aud.alcatel.com) if you have any 
+  problems.
+* The ability to source an initialization script .bs.tcl in your home
+  directory. You can over-ride definitions of routines and set global
+  variables in this file. See the sample file help/ExampleCustomization in
+  the Browser sudirectory of the sather distribution.
+  There is also a "post-intialization" hook routine afterInitHook 
+  which can be re-defined to add menu items etc.
+* The ability to make large graphs appear over as much space as they
+  need (off by default - look in the graph menu under "Fixed Size Graph"
+* Support for auto detection of a mono screen and the use of different
+  shading and fonts to highlight types, classes and modules.
+
+Layout and other changes
+-----------------------
+* (Yon Uriarte) Improved graph layout for single level graphs 
+	(changes to digraph_aux.sa)
+* (Yon Uriarte) The ability to not see TEST_ and C_ files in the graph
+   display, selectable from the graph menu.
+* (Matt Kennel) The ability to choose different window layouts based on the 
+  variable  (which you can set in your .bs.tcl) 
+        set gConfigMode SingleWindow 
+   or
+        set gConfigMode MultiWindow
+* (Matt Kennel) Intelligent use of consistent colors
+* (Matt Kennel) Different color choices, which you can also set in your .bs.tcl
+  They are rather primary at present. Some colors have been tied together,
+  so you may have to do some work to get full customization
+* (Matt Kennel) Cursor indication of busy states. 
+* (Matt Kennel) Flushing of events (update calls) to indicate progress.
+* The ability to choose to use b/w or color - color works ok on a b/w display,
+   but is not ideal
+
+Code changes, Bug fixes etc.
+----------------------------
+* Brought the feature factors up to the tcl level, so fancier things may
+  be possible (highlighting attributes or shareds or somesuch with different
+  colors?)
+* gHighlightComments is off by default which should make things faster
+* Fixed bug in viewing private attributes. 
+* Change manner of viewing attributes - all relevant factors have to be on
+  for a feature to be visible. Enables easy hiding of all private features.

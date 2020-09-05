@@ -1,0 +1,120 @@
+#!/bin/sh
+exec ${GUILE-guile} -e '(guile-baux re-prefixed-site-dirs)' -s $0 "$@" # -*- scheme -*-
+!#
+;;; re-prefixed-site-dirs --- display site dirs, reprefixed
+
+;; Copyright (C) 2011 Thien-Thi Nguyen
+;;
+;; This program is free software; you can redistribute it and/or
+;; modify it under the terms of the GNU General Public License as
+;; published by the Free Software Foundation; either version 3, or
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this software; see the file COPYING.  If not, write to
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
+
+;;; Commentary:
+
+;; Usage: re-prefixed-site-dirs guile-config-program vprefix
+;;
+;; Retrieve build information either from ‘%guile-build-info’
+;; (if builtin) or by running GUILE-CONFIG-PROGRAM (otherwise),
+;; and display three lines representing a shell-script fragment
+;; that sets variables ‘VPREFIX_libsite’, ‘VPREFIX_site’, and
+;; ‘VPREFIX_cv_minstroot’.
+
+;;; Code:
+
+(define-module (guile-baux re-prefixed-site-dirs)
+  #:export (main)
+  #:use-module ((guile-baux common) #:select (fs fso die check-hv))
+  #:use-module ((srfi srfi-13) #:select (string-prefix?
+                                         string-suffix?
+                                         string-replace))
+  #:autoload (ice-9 popen) (open-input-pipe)
+  #:autoload (ice-9 rdelim) (read-line)
+  #:autoload (ice-9 regex) (match:substring))
+
+(define (badness s . args)
+  (apply die #f (fs "~A: ~A~%" (car (command-line)) s) args))
+
+(define (get-all prog)
+  (or (access? prog (logior R_OK X_OK))
+      (badness "program not executable: ~S" prog))
+  (let ((rx (make-regexp "^([^=]+) = (.*)"))
+        (p (open-input-pipe (fs "~S info" prog))))
+    (let loop ((acc '()))
+      (let ((line (read-line p)))
+        (cond ((eof-object? line)
+               (close-pipe p)
+               ;; rv
+               acc)
+              ((regexp-exec rx line)
+               => (lambda (m)
+                    (loop (acons (string->symbol (match:substring m 1))
+                                 (match:substring m 2)
+                                 acc))))
+              (else
+               ;; Ignore the weirdness.
+               (loop acc)))))))
+
+(define (first-site-directory)
+  (or-map (lambda (dir)
+            (and (string-suffix? "/site" dir)
+                 dir))
+          %load-path))
+
+(define (spew prog vprefix)
+  (let ((all (or (false-if-exception %guile-build-info)
+                 (get-all prog)))
+        (first (first-site-directory))
+        (first-prefix #f))
+
+    (define (look key)
+      (assq-ref all key))
+
+    (define (re-prefix sym orig)
+      (let ((pre (look sym))
+            (s (if (symbol? orig)
+                   (look orig)
+                   orig)))
+        (and s (begin
+                 (and (string-prefix? s first)
+                      (set! first-prefix sym))
+                 (if (string-prefix? pre s)
+                     (string-replace s (fs "${~A}" sym)
+                                     0 (string-length pre))
+                     s)))))
+
+    (define (site-of dir)
+      (in-vicinity dir "site"))
+
+    (define (out vsuffix s)
+      (fso "~A_~A='~A'~%" vprefix vsuffix s))
+
+    (out 'libsite
+         (or (re-prefix 'exec_prefix 'scheme_libsite_dir)
+             (site-of (re-prefix 'exec_prefix 'pkglibdir))))
+    (out 'site
+         (or (re-prefix 'prefix 'scheme_site_dir)
+             (site-of (re-prefix 'prefix 'pkgdatadir))))
+    (out 'cv_minstroot
+         (re-prefix (or first-prefix 'prefix) first))))
+
+(define (main args)
+  (check-hv args '((package . "Guile-BAUX")
+                   (version . "0.0")
+                   (help . commentary)))
+  (case (length args)
+    ((1) (badness "missing args"))
+    ((2) (badness "missing VPREFIX"))
+    (else (apply spew (cdr args)))))
+
+;;; re-prefixed-site-dirs ends here

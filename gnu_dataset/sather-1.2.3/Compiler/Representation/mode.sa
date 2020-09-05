@@ -1,0 +1,166 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- tp.sa: Classes relating to modes in the Sather compiler.
+-------------------------------------------------------------------
+-- $MODE: Abstract interface to Sather modes;
+-- IN_MODE: Mode of in arguments
+-- OUT_MODE: Mode of our arguments
+-- INOUT_MODE: Mode of inout arguments
+-- ONCE_MODE: Mode for once arguments
+-- MODES: Defines unique copies of different modes used all over
+-------------------------------------------------------------------
+abstract class $MODE < $STR is
+    -- Abstract interface to classes representing Sather modes
+    -- Decsendants are IN_MODE, OUT_MODE, INOUT_MODE, and ONCE_MODE
+
+   str:STR;			-- The string representation of self.
+    -- Uses no whitespace, eg: "inout"
+
+   is_eq(m:$OB):BOOL;	-- Equality test.
+
+   is_eq(m:$MODE):BOOL;	-- Equality test.
+
+   is_out_inout:BOOL;   -- true for out and inout
+end;
+
+class MODE is
+    -- Implementation to be included by $MODE objects
+   
+    is_eq(ob: $OB): BOOL is
+      typecase ob when $MODE then return is_eq(ob)
+      else return false end;
+    end;
+   
+    is_eq(m:$MODE): BOOL is
+	return SYS::ob_eq(self, m);
+    end;
+	 
+    create:SAME is
+	res ::= new; return res;
+    end;
+
+    create_from_as(as_mode: AS_ARG_MODE): $MODE is
+	case as_mode.mod
+	when AS_ARG_MODE::in_mode then
+	    return MODES::in_mode
+	when AS_ARG_MODE::out_mode then
+	    return MODES::out_mode
+	when AS_ARG_MODE::inout_mode then
+	    return MODES::inout_mode
+	when AS_ARG_MODE::once_mode then
+	    return MODES::once_mode
+	end;
+     end;
+   
+end;
+
+class IN_MODE < $MODE is
+    -- Implementation of in argument mode
+   include MODE;
+   
+   create: SAME is
+      if void(MODES::in_mode) then
+	 res ::= new;
+	 return res;
+      else
+	 return MODES::in_mode;
+      end;
+   end;
+
+   is_out_inout:BOOL is
+      return false;
+   end;
+   
+   str:STR is
+      return "";  
+   end;
+end;
+
+class INOUT_MODE < $MODE is
+   -- Implementation of in argument mode
+   include MODE;
+   
+   create: SAME is
+      if void(MODES::inout_mode) then
+	 res ::= new;
+	 return res;
+      else
+	 return MODES::inout_mode;
+      end;
+   end;
+   
+   is_out_inout:BOOL is
+      return true;
+   end;
+   
+   str:STR is
+      return "inout";
+   end;
+end;
+
+class OUT_MODE < $MODE is
+   -- Implementation of in argument mode
+   include MODE;
+   
+   create: SAME is
+      if void(MODES::out_mode) then
+	 res ::= new;
+	 return res;
+      else
+	 return MODES::out_mode;
+      end;
+   end;
+
+   is_out_inout:BOOL is
+      return true;
+   end;
+
+   str:STR is
+      return "out";
+   end;
+end;
+
+class ONCE_MODE < $MODE is
+    -- Implementation of in argument mode
+   include MODE;
+   
+   create: SAME is
+      if void(MODES::once_mode) then
+	 res ::= new;
+	 return res;
+      else
+	 return MODES::once_mode;
+      end;
+   end;
+   
+   is_out_inout:BOOL is
+      return false;
+   end;
+   
+   str:STR is
+      return "once";
+   end;
+end;
+
+-- Only 4 distinct immutable objects are used to facilitate
+-- fast pointer comparison and reduce memory consumption
+class MODES is
+    readonly shared in_mode:IN_MODE := IN_MODE::create;
+    readonly shared out_mode:OUT_MODE := OUT_MODE::create;
+    readonly shared inout_mode:INOUT_MODE := INOUT_MODE::create;
+    readonly shared once_mode:ONCE_MODE := ONCE_MODE::create;
+end;
+    
+
+

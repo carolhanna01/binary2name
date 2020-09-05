@@ -1,0 +1,191 @@
+@c glbcnvar.texi
+      
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+
+  
+@node Global Constants and Variables, Dynamic Allocation of Shapes, Typedefs and Utility Structures, Top
+@chapter Global Constants and Variables
+
+The global constants and variables described in this chapter are
+found in @file{pspglb.web}.  Others, of types
+defined in 3DLDF, are described in subsequent chapters.
+
+
+@deftypevr  {Constants} bool ldf_real_float
+@deftypevrx {} bool ldf_real_double
+@c
+Set to 0 or 1 to match the values of the preprocessor macros
+@code{LDF_REAL_FLOAT} and @code{LDF_REAL_DOUBLE}.  The latter are used
+for conditional compilation and determine whether @code{real} is
+``typedeffed'' to @code{float} or @code{double}, i.e., whether
+@code{real} is made to be a synonym of @code{float} or @code{double}
+using @code{typedef}.  
+
+@code{ldf_real_float} and @code{ldf_real_double} can be used to control
+conditional expressions in non-conditionally compiled code. 
+@end deftypevr
+
+
+@deftypevr {Constant} real PI
+@c
+The value of @code{PI} 
+@iftex 
+@tex
+($\pi$)
+is calculated as 
+$4.0 \times \arctan(1.0)$.  
+@end tex
+@end iftex
+@ifnottex 
+is calculated as 
+4.0 * arctan(1.0).  
+@end ifnottex 
+@c
+I believe that a preprocessor macro ``@code{PI}'' was
+available when I compiled 3DLDF using the DEC @cpp{} compiler, and that
+it wasn't, when I used GNU CC under Linux, but I'm no longer sure.
+@end deftypevr
+
+@deftypevar {valarray <real>} null_coordinates
+Contains four elements, all 0.  Used for resetting the sets of
+coordinates belonging to @code{Points}, but only when the DEC @cpp{}
+compiler is used.  This doesn't work when GCC is used.
+@end deftypevar 
+
+@deftypevr Constant real INVALID_REAL
+Actually, @code{INVALID_REAL} is the largest possible @code{real} value
+(i.e., @code{float} or @code{double}) on a given machine.
+So, from the point of view of the compiler, it's not invalid at all.
+However, 3DLDF uses it to indicate failure of some kind.  For example,
+the return value of a function returning @code{real} can be compared
+with @code{INVALID_REAL} to check whether the function succeeded or
+failed.  
+
+An alternative approach would be to use the exception handling
+facilities of @cpp{}.  I do use these, but only in a couple of places,
+so far.  
+@end deftypevr 
+
+@deftypevr Constant real_pair INVALID_REAL_PAIR
+@code{first} and @code{second} are both @code{INVALID_REAL}.
+@end deftypevr
+
+@deftypevr Constant real INVALID_REAL_SHORT
+@code{first} is @code{INVALID_REAL} and @code{second} is 0. 
+@end deftypevr
+
+@deftypevar real MAX_REAL
+@c
+@cindex system dependencies
+@c
+The largest @code{real} value permitted in the the elements of
+@code{Transforms} and the coordinates of
+@code{Points}.  It is the second largest @code{real} value (i.e.,
+@code{float} or @code{double}) on a given machine (@code{INVALID_REAL}
+is the largest). 
+
+@code{MAX_REAL} is a variable, but it should be used like a constant.
+In other words, users should never reset its value.  It can't be
+declared @code{const} because its value must be calculated using
+function calls, which can't be done before the entry point of the
+program, i.e., @code{main()}.  Therefore, the value of @code{MAX_REAL}
+is calculated at the beginning of @code{main()}.
+@end deftypevar 
+
+@deftypevar real MAX_REAL_SQRT
+The square root of @code{MAX_REAL}.  
+
+@code{MAX_REAL_SQRT} is a variable, but it should be used like a
+constant. In other words, users should never reset its value.  It can't
+be declared @code{const} because its value is calculated using the 
+@code{sqrt()} function, 
+which can't be done before the entry point of the
+program, i.e., @code{main()}.  Therefore, the value of
+@code{MAX_REAL_SQRT} is set after @code{MAX_REAL} is calculated, at the
+beginning of @code{main()}.   
+
+@code{MAX_REAL_SQRT} is used in @code{Point::magnitude()} 
+(@pxref{Vector Operations}).  The magnitude of a @code{Point} is found
+by using the formula
+@iftex 
+@tex
+$\sqrt{\strut x^2 + y^2 + z^2}$.  
+@end tex
+@end iftex
+@c
+@ifnottex 
+@math{\sqrt{x^2 + y^2 + z^2}}.  
+@end ifnottex 
+@c
+@math{x}, @math{y}, and @math{z} are all tested against 
+@code{MAX_REAL_SQRT} to ensure that 
+@math{x^2}, @math{y^2}, and @math{z^2} 
+will all be
+less than or equal to @code{MAX_REAL} before trying to calculate them.   
+
+
+
+
+@c !! TO DO. 
+Metafont implements an operation called @dfn{Pythagorean addition},
+notated as ``@code{++}''which
+can be used to calculate distances without first squaring and then
+taking square roots:@c
+@c
+@c !! GET REF., Metafont the program.
+@footnote{Knuth, Donald E. @cite{The Metafontbook}, p.@: 66.} 
+@c 
+@iftex 
+@tex 
+\setbox0=\hbox{$+$}
+\setbox1=\hbox to 2\wd0{\copy0\hss\copy0}
+$a\copy1 b\equiv \sqrt{\strut a^2 + b^2}$ 
+and 
+$a\copy1 b\copy1 c\equiv \sqrt{\strut a^2 + b^2 + c^2}$. 
+@end tex
+@end iftex
+@c
+@ifnottex 
+@math{a++b @equiv{} \sqrt(a^2 + b^2)}
+and 
+@math{a++b++c @equiv{} \sqrt(a^2 + b^2 + c^2)}. 
+@end ifnottex 
+@c
+This makes it possible to calculate distances for greater values of 
+@math{a}, @math{b}, and @math{c}, that would otherwise cause floating point errors.
+Metafont also implements the inverse operation
+@dfn{Pythagorean subtraction}, notated as ``@code{+-+}'':
+@c
+@c !! TO DO:   There's an ugly space before ``a+-+b'' in the TeX
+@c output.  It probably has to do with finding the best line breaks.
+@c There's not much leeway, because of the shortness of the paragraph.
+@c That's my interpretation, anyway.  LDF 2003.12.08.
+@c
+@c It might be worthwhile trying to find out how Knuth did it for _The
+@c METAFONTbook_.  LDF 2003.12.08.
+@c
+@iftex
+@tex
+\setbox0=\hbox{$+$}
+\setbox1=\hbox{$-$}
+\dimen0=2\wd0
+\advance\dimen0 by \wd1
+\setbox2=\hbox to \dimen0{\copy0\hss\copy1\hss\copy0}
+$a\copy2 b \equiv \sqrt{\strut a^2 - b^2}$.
+@end tex
+@end iftex
+@ifnottex 
+@math{a+-+b @equiv{} \sqrt(a^2 - b^2)}.
+@end ifnottex 
+@c
+Unfortunately, 3DLDF implements neither Pythagorean addition
+nor subtraction as yet, but it's on my 
+@c
+@cindex TO DO 
+@c
+list of ``things to do''.
+@end deftypevar 

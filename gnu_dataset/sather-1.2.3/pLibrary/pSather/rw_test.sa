@@ -1,0 +1,168 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class TEST_RW is
+   include R_TEST;
+
+   r1(r:$READER_LOCK,g:GATE,t:INT) is
+      loop
+         i::=1.upto!(10);
+	 lock when r then
+	    g.enqueue;
+	    TIMING::sleep(t);
+	 end;
+      end;
+   end;
+
+   r(r:$READER_LOCK,g:GATE):ATTACH is
+      a:ATTACH:=#;
+      loop
+         i::=1.upto!(5);
+	 a:-r1(r,g,i)@i%clusters;
+      end;
+      lock when g.not_empty then end;
+      return a;
+   end;
+
+   w(w:$WRITER_LOCK,g:GATE):INT is
+      lock when w then
+         return g.size;
+      end;
+   end;
+
+   start_reader(r:$READER_LOCK,g:GATE) is
+      lock when r then
+         g.set;
+	 #OUT + "satrt_reader: BEFORE\n";
+	 SYS::defer;
+	 lock when g.empty then end;
+	 #OUT + "satrt_reader: AFTER\n";
+      else
+	 test("lock failed",true,false);
+      end;
+   end;
+      
+   rw(rw:$RW_LOCK) is
+      g:GATE:=#;
+      a:ATTACH:=#;
+      a:-start_reader(rw.reader,g)@1%clusters;
+      #OUT + "FORKED\n";      
+      lock 
+	when g.not_empty then 
+      end;
+
+      #OUT + "NOT EMPTY\n";
+      lock when rw.reader then
+         test("locking reader twice",true,true);
+	 #OUT + "Locked reader\n";
+
+      else
+         test("locking reader twice",false,true);
+      end;
+      
+      lock when rw.writer then
+         test("locking reader -> writer",true,false);
+      else
+         test("locking reader twice",false,false);
+      end;
+      g.dequeue;
+      lock when a.no_threads then end;
+
+      lock when rw.reader then
+         lock when rw.writer then
+	    test("upgrading reader -> writer",true,false);
+	 else
+	    test("upgrading reader -> writer",false,false);
+         end;
+      else
+         test("locking reader once",false,true);
+      end;
+
+      lock when rw.writer then
+         lock when rw.reader then
+	    test("upgrading writer -> reader",true,true);
+	 else
+	    test("upgrading reader -> writer",false,true);
+         end;
+      else
+         test("locking writer once",false,true);
+      end;
+      lock when rw.reader,rw.writer then
+         test("reader/writer simultaneously",true,true); 
+      else
+         test("reader/writer simultaneously",false,true); 
+      end;
+   end;
+
+   endless_reader(r:$READER_LOCK,g:GATE) is
+      lock when r,g.not_empty then end;
+   end;
+
+   endless_writer(w:$WRITER_LOCK,g:GATE) is
+      lock when w,g.not_empty then end;
+   end;
+
+   precedence(lck:$RW_LOCK):TUP{BOOL,BOOL} is
+      g::=#GATE;
+      a::=#ATTACH;
+      a:-endless_reader(lck.reader,g);
+      a:-endless_writer(lck.writer,g);
+      TIMING::sleep(2); -- wait long enough so that both threads wait in the lock
+      rok,wok:BOOL;
+      lock when lck.reader then
+         rok:=true;
+      else
+	 rok:=false;
+      end;
+      lock when lck.writer then
+         wok:=true;
+      else
+	 wok:=false;
+      end;
+      g.set;
+      lock when a.no_threads then end;
+      return #(rok,wok);
+   end;
+        
+   main is
+      class_name("FRW_LOCK");
+      frw::=#FRW_LOCK;
+      g::=#GATE;
+
+      rw(frw);
+      -- the writer should not be able to get the lock until 
+      -- only one or two readers are running. This is not 
+      -- very precise, and a failure does not necessarly mean
+      -- that there is a problem.
+      -- a::=r(frw.reader,g);
+      -- test("fairness",w(frw.writer,g)>42,true);
+      -- lock when a.no_threads then end;
+      --test("precedence",precedence(frw),#TUP{BOOL,BOOL}(true,true));
+      finish;
+
+      class_name("RW_LOCK");
+      rwl::=#RW_LOCK;
+      rw(rwl);
+      test("precedence",precedence(rwl),#TUP{BOOL,BOOL}(true,false));
+      finish;
+
+      class_name("RW_LOCK");
+      wrl::=#WR_LOCK;
+      rw(wrl);
+      test("precedence",precedence(wrl),#TUP{BOOL,BOOL}(false,true));
+      finish;
+   end;
+    
+end; -- class RW_TEST
+
+-------------------------------------------------------------------

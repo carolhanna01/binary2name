@@ -1,0 +1,2104 @@
+2019-07-12  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 2.1
+
+2019-07-10  Sergey Poznyakoff  <gray@gnu.org>
+
+	Use wordsplit for a submodule
+
+2019-07-01  Sergey Poznyakoff  <gray@gnu.org>
+
+	Bugfixes
+
+	* doc/rush.rc.5: Fix typo.
+	* src/cfgram.y: Allow for multiple EOLs and comments after
+	the preface
+	statement.
+	* src/cflex.l: \n produces a single EOL token
+	* tests/regexp.at: Fix improper usage of literal user name in the
+	expected string.
+
+2019-07-01  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 2.0
+
+2019-06-30  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fix
+
+	* configure.ac: Version 1.9.91
+	* NEWS: Update.
+	* src/cfgram.y: Fix calls to compile_transform_expr.
+	* src/config.c: Likewise.
+	* src/rush.c (die): Allow for fmt==NULL.
+	(die_usage): New function.
+	* src/rush.h (die_usage): New proto.
+	(compile_transform_expr): Change signature.
+	* src/transform.c (parse_transform_expr): Take struct cfloc * as
+	an additional argument. Use it in diagnostics.
+	(compile_transform_expr): Likewise.
+
+2019-06-29  Sergey Poznyakoff  <gray@gnu.org>
+
+	Issue a notice when parsing a legacy configuration file
+
+	* NEWS: Document changes.
+	* doc/rush.texi: Fix references to the legacy syntax docs.
+	* src/config.c (cfparse_old): Issue a notice.
+	* src/rush.c (vlogmsg): Discern between LOG_INFO and LOG_NOTICE.
+	* tests/legacy/argc.at: Update stderr expectation.
+	* tests/legacy/backref.at: Likewise.
+	* tests/legacy/chdir.at: Likewise.
+	* tests/legacy/command.at: Likewise.
+	* tests/legacy/delete.at: Likewise.
+	* tests/legacy/env.at: Likewise.
+	* tests/legacy/error.at: Likewise.
+	* tests/legacy/fallthrough.at: Likewise.
+	* tests/legacy/gid.at: Likewise.
+	* tests/legacy/interactive.at: Likewise.
+	* tests/legacy/map.at: Likewise.
+	* tests/legacy/match.at: Likewise.
+	* tests/legacy/matchprog.at: Likewise.
+	* tests/legacy/newgrp.at: Likewise.
+	* tests/legacy/set.at: Likewise.
+	* tests/legacy/setvar.at: Likewise.
+	* tests/legacy/transform.at: Likewise.
+	* tests/legacy/uid.at: Likewise.
+	* tests/legacy/umask.at: Likewise.
+	* tests/legacy/unsetvar.at: Likewise.
+
+2019-06-29  Sergey Poznyakoff  <gray@gnu.org>
+
+	Finish the docs
+
+2019-06-27  Sergey Poznyakoff  <gray@gnu.org>
+
+	New transformation statements: insert and remopt
+
+	* doc/rush.rc.5: Update (unfinished).
+	* doc/rush.texi: Document the changes.
+	* etc/rush.rc (svn): Rewrite the rule using insert and remopt.
+	* src/cfgram.y: New statements: insert and remopt.
+	* src/cflex.l: New keywords.
+	* src/config.c (_parse_transform_ar,_parse_map_ar)
+	(_parse_delete_ar,_parse_delete): Initialize
+	node->target.v.arg.ins
+	to 0.
+	* src/rush.c (get_arg_no): Strict boundary checking.
+	(rush_transform): Special handling for transform_remopt.
+	Support argument insertions.
+	* src/rush.h (transform_target.arg): Change type.
+	(transform_remopt): New constant.
+	(option_defn): New struct.
+	(transform_node.v.remopt): New member.
+	* tests/insert.at: New file.
+	* tests/remopt.at: New file.
+	* tests/Makefile.am: Add new tests.
+	* tests/testsuite.at: Include new tests.
+
+2019-06-13  Sergey Poznyakoff  <gray@gnu.org>
+
+	Make sure user-defined variables are given preference over the
+	environment ones.
+
+	The order of precedence is: (1) request variables, (2) user
+	variables,
+	(3) environment.
+
+	* lib/wordsplit.c (wordsplit_find_env): Rewrite as
+	wsplt_env_lookup
+	(wsplt_env_getvar): New function.
+	(expvar): Select preference of wsplt_env_lookup
+	vs. wsplt_env_getvar
+	depending on the value if WRDSO_GETVARPREF option.
+	* lib/wordsplit.h (WRDSO_GETVARPREF): New option.
+	* src/map.c (rush_expand_string): Set WRDSO_GETVARPREF option.
+
+2019-06-13  Sergey Poznyakoff  <gray@gnu.org>
+
+	Propagate changes to the environment due to ${X=V} constructs.
+
+	* doc/rush.texi: Document the evalenv statement.
+	* lib/wordsplit.c (_wsplt_store_errctx): Fix typo in the error
+	message.
+	(wsplt_assign_var): Fix a +1 offset of the ws_envidx field.
+	* src/cfgram.y: New rule for the evalenv statement.
+	* src/cflex.l: Likewise.
+	* src/map.c (find_user_varptr): New function.
+	(rush_getvarptr): Use find_user_varptr.
+	(getvar): Try user-defined variables if no request variable
+	matched.
+	Environment variables are handled by wordsplit itself.
+	(rush_expand_string): Pass environment to wordsplit. Propagate
+	changes
+	back to req->env and req->var_kv.
+	* src/rush.c (envar_eval): New case.
+	* src/rush.h (envar_eval): New constant.
+
+	* tests/Makefile.am: Add new test.
+	* tests/testsuite.at: Add new test.
+	* tests/evalenv.at: New test.
+
+2019-06-06  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fix in wordsplit (pull from grecs a0c096190f)
+
+2019-06-03  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fix
+
+	* lib/librush.h (wildmatch): Both string arguments are constant.
+	* lib/wildmatch.c: Likewise.
+
+2019-06-01  Sergey Poznyakoff  <gray@gnu.org>
+
+	Bugfix
+
+	* lib/wildmatch.c (wilder_match): Fix processing of Kleene star.
+
+2019-05-31  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix typo
+
+2019-05-21  Sergey Poznyakoff  <gray@gnu.org>
+
+	Accept wildcards as arguments to keepenv and unsetenv commands.
+
+	* lib/wildmatch.c: New source.
+	* lib/Makefile.am: Add wildmatch.c
+	* lib/librush.h (wildmatch): New proto.
+
+	* src/cfgram.y (asgn_list): Accept quoted strings.
+	(unset_envar): New function.
+	(env_setup): Call unset_envar.
+
+	* tests/keepenv.at: Test new features.
+	* tests/unsetenv.at: Likewise.
+
+	* doc/rush.8: Update.
+	* doc/rush.rc.5: Start rewriting.
+	* doc/rush.texi: Update.
+
+2019-05-16  Sergey Poznyakoff  <gray@gnu.org>
+
+	Synch with grecs 1fa2dd2c
+
+2019-05-15  Sergey Poznyakoff  <gray@gnu.org>
+
+	Rename "member" test to "group"
+
+2019-05-15  Sergey Poznyakoff  <gray@gnu.org>
+
+	Bugixes
+
+	* doc/rush.texi: Revise the docs.
+	* etc/rush.rc: Fix typo.
+	* src/cf.c (glattrib_debug): Don't override the value set from the
+	command line.
+
+2019-05-15  Sergey Poznyakoff  <gray@gnu.org>
+
+	Report names of undefined variables
+
+	* lib/wordsplit.c: Import from grecs 20899f65
+	* lib/wordsplit.h: Likewise.
+	* src/map.c (rush_ws_error): New function.
+	(rush_expand_string): Set ws.ws_error. Use error context when
+	reporting WRDSE_UNDEF.
+	* src/rush.c (main): Use reparse_cmdline.
+	* src/rush.h (rush_ws_error): New proto.
+	* tests/undef.at: Update.
+
+2019-05-15  Sergey Poznyakoff  <gray@gnu.org>
+
+	Refuse to set or unset read-only request variables.
+
+	Among the request variables, only $program, $command, and
+	positional variables can be changed. Neither $program nor
+	$command can be unset. Unsetting a positional variable has
+	the same effect as deleting it.
+
+	* doc/rush.texi: Improve docs.
+	* src/cf.h (new_rush_rule): Change signature.
+	* src/cfgram.y: Refuse to modify read-only variables.
+	New statement: unset [N] (equivalent to "delete N")
+	* src/config.c (parse_input_buf): Rule tag generation is
+	handled by new_rush_rule now.
+	* src/map.c (vardef): New field: target.
+	(rush_variable_target): New function.
+	(rush_request_getvar): Removed.
+	(rush_getvarptr): New function to use instead of it.
+	* src/rush.c (rush_transform): Use rush_getvarptr
+	* src/rush.h (target_readonly): New target type.
+	(rush_request_getvar): Remove proto.
+	(rush_getvarptr)
+	(rush_variable_target): New proto.
+	* tests/delete.at: Reflect the changes.
+	* tests/setvar.at: Likewise.
+	* tests/unsetvar.at: Likewise.
+
+2019-05-14  Sergey Poznyakoff  <gray@gnu.org>
+
+	Import wordsplit from grecs 1658f568
+
+	* doc/rush.texi: Document $#
+	* lib/wordsplit.c: Update.
+	* lib/wordsplit.h: Update.
+	* src/cflex.l: Handle $#, $@, and $* as one word.
+	* src/config.c (_parse_argc): Translate to $#
+	* src/map.c (var_argc): Remove.
+	(request_vars): Remove argc.
+	* tests/argc.at: Use $# instead of $argc
+	* tests/compound.at: Likewise.
+
+2019-05-14  Sergey Poznyakoff  <gray@gnu.org>
+
+	Import wordsplit from grecs 8652a500
+
+	This fixes handling of variable and command references in
+	the request
+	command line.
+
+2019-05-14  Sergey Poznyakoff  <gray@gnu.org>
+
+	docs: spell checking
+
+2019-05-13  Sergey Poznyakoff  <gray@gnu.org>
+
+	Convert example configuration to the new format
+
+2019-05-13  Sergey Poznyakoff  <gray@gnu.org>
+
+	Add support for ${-N} argument references
+
+	* lib/wordsplit.c (ISPOSBEG): New define.
+	(expvar): Support for ${-N} notation.
+	* src/cflex.l: Support for ${-N} notation.
+	* tests/matcharg.at: Test ${N} and ${-N} notations.
+
+2019-05-12  Sergey Poznyakoff  <gray@gnu.org>
+
+	Rewrite rush.texi (initial draft)
+
+2019-05-12  Sergey Poznyakoff  <gray@gnu.org>
+
+	Improve the "member" condition
+
+	* src/cfgram.y: "member" condition can take one argument.
+
+2019-05-10  Sergey Poznyakoff  <gray@gnu.org>
+
+	Improve scanner
+
+	* src/cf.c (cfstream_open_stdin): New function.
+	(cfstream_avail): Use eof field.
+	* src/cf.h (CFSTREAM): New field: eof.
+	(cfstream_open_stdin,cflex_test,dumpstr): New proto.
+	* src/cflex.l: Don't expand escapes within ${V:-""} construct.
+	Keep track of locations when returning single-character tokens.
+	(cflex_test): New function.
+	* src/dump.c (dumpstr): New function.
+	* src/map.c (rush_expand_string): Retain backslash in invalid
+	escape sequences.
+	* src/rush.c: Implement scanner test mode.
+	* src/rushopt.opt (-T): New option.
+	* tests/lex.at: New test.
+	* tests/Makefile.am: Add new test.
+	* tests/testsuite.at: Add new test.
+
+2019-05-09  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update rush-po to support both versions of the configuration file.
+
+2019-05-08  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fixes in scanner
+
+	* src/cflex.l: Merge INMATCH and ARGS.
+	Generalize rule for unquoted strings.
+	Use stringbuf_add_escape_octal and
+	stringbuf_add_escape_hex (complements dc4dcf015f24).
+
+2019-05-08  Sergey Poznyakoff  <gray@gnu.org>
+
+	New comparison operator !~
+
+	* src/cfgram.y: New production.
+	* src/cflex.l: Handle !~
+	* tests/regexp.at: Add new test.
+
+2019-05-08  Sergey Poznyakoff  <gray@gnu.org>
+
+	Additional documentation
+
+2019-05-07  Sergey Poznyakoff  <gray@gnu.org>
+
+	Bugfixes.
+
+	* src/cf.c (cfstream_open_file)
+	(cfstream_open_mem,cfstream_rewind): Initialize eol to 0.
+	(cfstream_read): Force final newline.
+	* src/cf.h (CFSTREAM): New field: eol.
+	* src/cfgram.y: Initialize current_rule->file and line.
+
+2019-05-07  Sergey Poznyakoff  <gray@gnu.org>
+
+	Implement include statements
+
+	* src/cf.c (cfstream_same_file): New function.
+	* src/cf.h (cfstream_same_file): New proto.
+	* src/cfgram.y: Fix processing of the "include" statement.
+	(new_envar): Bugfix. Initialize the "next" field.
+	* src/cflex.l: Fix processing of the "include" statement.
+	Forbid the use of "rule" and "global" in include files.
+	* src/rush.c (env_setup): Catch internal errors.
+	* tests/Makefile.am: Add new files.
+	* tests/testsuite.at: Add new files.
+	* tests/inc00.at: New file.
+	* tests/inc01.at: New file.
+
+2019-05-07  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fixes
+
+	* src/cfgram.y: Free unnecessary string values.
+
+2019-05-06  Sergey Poznyakoff  <gray@gnu.org>
+
+	Use consistent printable token representation.
+
+2019-05-06  Sergey Poznyakoff  <gray@gnu.org>
+
+	Change config format version recognition.
+
+	* src/cf.h (cflex_normal): New proto.
+	* src/cfgram.y: Change format version selection algorithm.
+	* src/cflex.l: Likewise.
+
+2019-05-06  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix testsuite
+
+	* tests/delete.at: Add missing "rush 2.0" preface.
+
+2019-05-06  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix backreference expansion.
+
+	* src/cfgram.y (eol): New production. Use it instead of the
+	EOL token.
+	* src/cflex.l: Optimize handling of backslash escapes in quoted
+	strings.
+	* src/dump.c (dump_string_data): Fix escaping.
+	* src/map.c (expandref): Allow for accessing backreferences with
+	numbers greater than 9. The syntax is %{NN}.
+	(rush_expand_string): Expand backreferences before all other
+	expansions,
+	to avoid spurious expansion of '%' sequences obtained as a
+	result of
+	variable expansion.
+	Don't expand '\%'.
+	* tests/Makefile.am: Add new tests.
+	* tests/backref.at: Test the %{N} form.
+	* tests/testsuite.at: Add new tests.
+	* tests/qstr.at: New test case.
+
+2019-05-06  Sergey Poznyakoff  <gray@gnu.org>
+
+	Improve parser. Add more tests.
+
+	* src/cf.c: New global option "expand-undefined".
+	(global_attrib_set): Handle the 'b' data type marker.
+	* src/cf.h (expand_undefined): New extern.
+	* src/cfgram.y: Provide textual descriptions for named tokens.
+	Require '=' or '=~' between identifier and value in SET and SETENV
+	rules. Allow for values in UNSETENV list.
+	* src/cflex.l: Accept slashes in unquoted strings.
+	Gracefully handle undefined escape sequences in strings.
+	* src/map.c (expand_undefined): New global.
+	(rush_expand_string): Expand undefined variables to empty strings
+	if expand_undefined is set.
+	* tests/Makefile.am: Add new tests.
+	* tests/testsuite.at: Add new tests.
+	* tests/backref.at: New file.
+	* tests/clrenv.at: New file.
+	* tests/keepenv.at: New file.
+	* tests/regexp.at: New file.
+	* tests/setenv.at: New file.
+	* tests/setvar.at: New file.
+	* tests/undef.at: New file.
+
+2019-05-04  Sergey Poznyakoff  <gray@gnu.org>
+
+	Add testcases for the new rc syntax
+
+	* src/Makefile.am (EXTRA_DIST): Add cfgram.output
+	(AM_YFLAGS): Produce state map.
+	* src/cf.c (vcferror): Finalize the stringbuf.
+	* src/cf.h (cflex_pushargs,cflex_popargs)
+	(skiptoeol,restorenormal): New protos.
+	* src/cfgram.y: Provide textual token descriptions.
+	Minor fixes in the grammar.
+	* src/cflex.l: Various fixes.
+
+	* tests/Makefile.am: Move old tests to the legacy/ subdirectory.
+	Add new tests.
+
+2019-05-03  Sergey Poznyakoff  <gray@gnu.org>
+
+	Simplify parser
+
+2019-05-03  Sergey Poznyakoff  <gray@gnu.org>
+
+	Bugfixes
+
+	* src/cf.c (cfloc_print): Don't null-terminate the string.
+	* src/cf.h (cflex_debug,cfgram_debug): New protos.
+	(curloc): New extern.
+	* src/cfgram.y (yyerror): Rewrite using vlogmsg.
+	(cfgram_debug): New function.
+	* src/cflex.l (cflex_debug): New function.
+	* src/rush.c (main): Configure parser and scanner traces if
+	-x was given.
+	* src/rushopt.opt (-x, --trace): New option.
+
+2019-05-03  Sergey Poznyakoff  <gray@gnu.org>
+
+	Major rewrite: implement rest of configuration file statements
+
+	* src/cf.c: Add functions for handling the following statements:
+
+		Rule attributes:
+
+		umask		OCTAL
+		chroot		STRING
+		chdir		STRING
+		fork		BOOL
+		acct		BOOL
+		post-socket	STRING
+		text-domain	STRING
+		locale-dir	STRING
+		locale		STRING
+		interactive	BOOL
+		newgroup|newgrp STRING
+
+		Global attributes:
+
+		debug		STRING
+		message sleep-time|usage-error
+			|nologin-error|config-error
+			|system-error STRING
+		regexp		[+-]STRING ...
+		include-security STRING...
+		acct-file-mode	OCTAL
+		acct-dir-mode	OCTAL
+		acct-umask	OCTAL
+
+	* src/cf.h: New prototypes.
+	* src/cfgram.y: New statement "global". Handle rule and global
+	attributes.
+	Rewrite strlist support.
+	* src/cflex.l: New rules for handling rule and global attributes,
+	and
+	the new "global" keyword.
+	Handle +STRING, -STRING, and positional arguments as strings.
+	* src/config.c (_parse_re_flags): Bugfix. "basic" and "icase"
+	were mishandled if prefixed with "+" or "-"
+	(_parse_acct_umask): Bugfix. rushdb_dir_mode was changed,
+	instead of
+	rushdb_umask.
+	(all): Use functions from cf.c where possible. Use cferror
+	for error
+	reporting.
+
+2019-05-02  Sergey Poznyakoff  <gray@gnu.org>
+
+	Begin major rewrite
+
+	* configure.ac: Version 1.9.90.
+	Check for yacc and lex
+	* src/Makefile.am: Add new files.
+	* src/cf.c: New file.
+	* src/cf.h: New file.
+	* src/cfgram.y: New file.
+	* src/cflex.l: New file.
+	* src/config.c: Use new I/O functions and control structures.
+	* src/limits.c (limits_record_create)
+	(limits_record_add): New functions.
+	(parse_limits): Use them. Improve error reporting.
+	* src/map.c: New built-in rush variable "argc".
+	(rush_request_getvar,rush_request_delvar): New functions.
+	(getvar): Support negative positional argument indexes.
+	* src/rush.c: Rewrite test, transformation and environment
+	evaluator.
+	Use cfparse to process configuration file.
+	* src/rush.h (transform_target_type): New enum.
+	(transform_target): New struct.
+	(transform_node,test_node): Complete rewrite.
+	(test_type): New enum.
+	(cmp_match,cmp_in): New opcodes.
+	(test_numeric_node,test_arg_node): Remove.
+	(rush_num_t): New data type.
+	(rush_bool_t): New data type.
+	(rush_error): New struct.
+	(rush_rule): Remove test_head, test_tail; Use test_node instead.
+	Remove error_msg, error_fd; Use single pointer instead.
+	New fields: clrenv, envar_head, envar_tail.
+	(vlogmsg): New proto.
+	(limits_record_create)
+	(limits_record_add)
+	(rush_request_getvar)
+	(rush_request_delvar)
+	(new_standard_error)
+	(new_error)
+	(rush_error_msg): New protos.
+	(envar_type): New enum.
+	(envar): New struct.
+	* lib/wordsplit.c (wordsplit_finish): Return single empty word in
+	ws_wordv[0] on empty input.
+	* tests/unsetvar.at: Fix typo
+
+2019-04-24  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 1.9
+
+2019-04-23  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fixes
+
+2019-04-23  Sergey Poznyakoff  <gray@gnu.org>
+
+	New program rush-po
+
+	Extracts translatable strings from the rush
+	configuration. Replaces
+	rush-po.awk
+
+2019-04-22  Sergey Poznyakoff  <gray@gnu.org>
+
+	Revise the docs
+
+2019-04-20  Sergey Poznyakoff  <gray@gnu.org>
+
+	Implement backreference expansion and user-defined variables
+
+	* NEWS: Updated.
+	* configure.ac: Version 1.8.90
+	* doc/rush.texi: Document new features.
+	* gnulib.modules: Remove obstack
+
+	* src/config.c (_parse_command)
+	(_parse_match): Don't pass REG_NOSUB flag. Subexpressions
+	are needed
+	now.
+	(_parse_setvar,_parse_unsetvar): New functions.
+	(TOK_ASSC): New token type.
+	(parse_input_buf): Handle TOK_ASSC tokens.
+	(toktab): Two new statements: setvar and unsetvar.
+	* src/dump.c: Include user-defined variables to the dump.
+	* src/map.c (rush_expand_string): Pass user-defined variables to
+	wordsplit. Expand backreferences.
+	* src/rush.c (test_regex): New function.
+	(test_request_cmdline)
+	(test_request_arg): Use test_regex.
+	(expand_dir): New function.
+	(transform_setvar_fun): New function.
+	(run_rule): Use expand_dir to process directories.
+	* src/rush.h (transform_setvar)
+	(transform_unsetvar): New transform types.
+	(transform_node): New member: varname.
+	(rush_backref): New struct.
+	(rush_request): Keep track of backreferences.
+	* tests/Makefile.am: Add new tests.
+	* tests/backref.at: New test.
+	* tests/setvar.at: New test.
+	* tests/unsetvar.at: New test.
+	* tests/testsuite.at (m4_run_rush, m4_fmt_out)
+	(m4_fmt_err, m4_fmt_out): Escape any double-quotes present
+	in the argument to -c.
+	Include new tests.
+
+	* gnulib.modules: Remove obstack.
+	* lib/Makefile.am (AM_CPPFLAGS): Define LOCALEDIR.
+	* lib/i18n.c: Forget about configmake.h
+	* po/POTFILES.in: Update.
+
+2019-04-20  Sergey Poznyakoff  <gray@gnu.org>
+
+	Rewrite string expansion via wordsplit.
+
+	Note: this commit drops support for $^ variable.
+
+	* lib/wordsplit.c: Pull from grecs
+	3e07e3ad30e8a7a091e213eb4df839b7cf7f1e64
+	* lib/wordsplit.h: Likewise.
+	* src/map.c (rush_expand_string): Use wordsplit to expand string.
+	* tests/transform.at: Use $program instead of ${^}
+
+2019-04-19  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update copyright years
+
+	Upgrade gnulib
+
+	Upgrade wordsplit from grecs
+	1498bd570eb001a6b2bc3f1a5074e8b384d6db30
+
+2019-04-19  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fixes.
+
+	* gnulib.modules: Remove vasprintf.
+	* lib/rushdb.c (format_error): Use static buffer.
+	* lib/wtmp.c (output_duration): Make sure outbytes is always
+	initialized.
+	(rush_wtmp_rewind,rush_wtmp_read): Add default statements,
+	just in case.
+	* src/rush.c (main): Check return from setuid.
+
+2019-04-19  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor doc fixes
+
+	* doc/Makefile.am: Rename rush.1
+	* doc/rush.1: Move to section 8
+	* doc/rush.rc.5: Fix section number.
+	* doc/rush.texi: Fix wording of the copyright statement to
+	match exactly
+	that of GFDL without invariant sections.
+
+2019-04-19  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fix
+
+	* src/rush.c: Remove unnecessary condition
+
+2017-01-02  Sergey Poznyakoff  <gray@gnu.org>
+
+	Happy GNU Year
+
+2016-10-01  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 1.8
+
+2016-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix testsuite
+
+	Use AT_CHECK_UNQUOTED with variable substitution instead of
+	postprocessing stderr and stdout with sed.
+
+2016-08-22  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix spelling errors
+
+2016-08-20  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Document the request dump mode.
+
+2016-08-20  Sergey Poznyakoff  <gray@gnu.org>
+
+	Bugfixes
+
+2016-08-20  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes
+
+	* src/config.c (TOK_ENV): New flag.
+	(toktab): Mark "env" with this flag.
+	(parse_input_buf): If TOK_ENV bit is set, do environment
+	variable expansion.
+	* src/rush.c (env_setup): Bugfixes.  Make sure it operates
+	exactly as documented.
+	(run_transforms): Major cleanup.
+	* tests/env.at: New tests.
+
+	* NEWS: Document the changes.
+	* doc/rush.rc.5: Likewise.
+	* doc/rush.texi: Likewise.
+
+2016-08-19  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Finish the testsuite.
+
+	* doc/rush.rc.5: Fix typos.
+	* doc/rush.texi: Likewise.
+	* src/dump.c (dump_argv): Optionally sort the array.
+	* src/map.c (meta_expand_string): Fix $N evaluation.
+	(mapdef): Allow to use ${^} as a synonym to ${program}.
+	* src/rush.c (env_setup): Fix handling of NAME+= and NAME=+
+
+	* tests/Makefile.am: Add new files.
+	* tests/atlocal.in (RUSHDIR): New variable.
+	(myfilter): New function.
+	* tests/testsuite.at (AT_RUSH_TEST): Handle optional
+	environment and interactive settings.
+	Include New tests.
+
+	* tests/chdir.at: New file.
+	* tests/delete.at: New file.
+	* tests/env.at: New file.
+	* tests/error.at: New file.
+	* tests/fallthrough.at: New file.
+	* tests/gid.at: New file.
+	* tests/interactive.at: New file.
+	* tests/map.at: New file.
+	* tests/newgrp.at: New file.
+	* tests/set.at: New file.
+	* tests/transform.at: New file.
+	* tests/uid.at: New file.
+	* tests/umask.at: New file.
+
+2016-08-18  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix typos
+
+2016-08-18  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Add testsuite
+
+	* .gitignore: Update
+	* src/.gitignore: Update.
+	* Makefile.am (SUBDIRS): Add tests
+	* configure.ac: Initialize testsuite
+
+	* src/Makefile.am (rush_SOURCES)L Add dump.c
+	* src/dump.c: New file.
+	* src/rush.c (dump_option): New variable.
+	(run_rule): Dump request if dump_option is set.
+	* src/rush.h (dump_option): New extern.
+	(dump_request): New proto.
+	* src/rushopt.opt: New option --dump (-D)
+
+	* tests/Makefile.am: New file.
+	* tests/testsuite.at: New file.
+	* tests/.gitignore: New file.
+	* tests/argc.at: New file.
+	* tests/atlocal.in: New file.
+	* tests/command.at: New file.
+	* tests/match.at: New file.
+	* tests/matchprog.at: New file.
+	* tests/myid.c: New file.
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Simplify the debugging code
+
+	* src/rush.h (debug): Rewrite as a variadic macro.
+	(debug2-debug6): Remove.
+	* src/config.c: Use the debug macro.
+	* src/limits.c: Likewise.
+	* src/rush.c: Likewise.
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Get rid of the argmatch module
+
+	* gnulib.modules: Remove argmatch
+	* src/rush.h: Remove argmatch.h
+	* src/cfck.c (chk_args): Change into struct.
+	(chk_vals): Remove.
+	(cfck_keyword): Rewrite.
+	* src/rush.c (string_to_error_index): Scan array.
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update copyright years in --version output
+
+	* src/getopt.m4 (version_etc_copyright): Update copyright years.
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update wordsplit.
+
+	* lib/wordsplit.c: Update.
+	* lib/wordsplit.h: Update.
+	* src/rush.c: Use wordsplit_getwords to steal
+	parsed-out words from the wordsplit_t.
+	* src/rush.h (rush_request) <argc>: Change type to size_t.
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfix
+
+	* lib/rushdb.c (output_duration): Fix format specification.
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update copyright years
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Redo support for interactive requests
+
+	* src/rush.h (rush_rule, rush_request) <interactive>: New member.
+	* src/rush.c (rush_interactive_shell): Remove.
+	(match_rule): Remove.
+	(env_concat): Fix eventual use of uninitialized
+	variable.
+	(run_rule): Select the return message depending on whether
+	the request is interactive.
+	Fix up argv[0] for interactive requests.
+	(main): Redo support for interactive requests.
+	* src/rushopt.opt: New option -i
+	* src/config.c: The interactive keyword must be used within
+	a rule.
+
+	* doc/rush.texi: Document new interactive features.
+	* NEWS: Likewise.
+	* doc/rush.1: Update.
+	* doc/rush.rc.5: Update.
+	* doc/rushlast.1: Update.
+	* doc/rushwho.1: Update.
+
+	* src/map.c: Minor change.
+
+2016-08-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.7.91
+
+	Add gnulib as a submodule
+
+	* .gitignore: Update.
+	* .gitmodules: Update.
+
+	Set version number 1.7.91
+
+	* configure.aca: Update.
+	* NEWS: Update.
+	* README: Update.
+
+	Fix documentation.
+
+	* src/getopt.m4: Fix --usage output.
+	* doc/rush.1: New file.
+	* doc/rushlast.1: New file.
+	* doc/rushwho.1: New file.
+	* doc/rush.rc.5: New file.
+	* doc/Makefile.am: Distribute new manpages.
+
+2015-04-24  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix doc generation.
+
+	Default Config file applied to all output formats, which is wrong.
+	Use a dedicated configuration file for html output formats, and
+	defaults for the rest.
+
+	* doc/Makefile.am (GENDOCS): Add html-specific configuration file.
+	* doc/Config: Rename to doc/html.init (with changes).
+
+2015-03-01  Sergey Poznyakoff  <gray@gnu.org>
+
+	Switch to Texinfo 5.0
+
+	* doc/Config: Rewrite.
+	* doc/Makefile.am: Use Makeinfo 5 instead of texi2htm
+	* doc/gendocs_template: Ps is not built
+	* imprimatur: Upgrade.
+
+2014-05-26  Sergey Poznyakoff  <gray@gnu.org>
+
+	Update copyleft years
+
+2014-02-11  Sergey Poznyakoff  <gray@gnu.org>
+
+	bootstrap.conf: initialize submodules
+
+2014-01-20  Mats Erik Andersson  <gnu@gisladisker.se>
+
+	Protect against CVE-2013-6889 (tiny change).
+
+	Reset the effective user identification in testing mode.
+
+2013-12-18  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement the "none" keyword in the "include-security" statement.
+
+	Use imprimatur as submodule.
+
+2013-12-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Use wordsplit instead of the obsolete argcv_ stuff
+
+	* lib/argcv.h: Remove.
+	* lib/wordsplit.c: New file (from grecs).
+	* lib/wordsplit.h: Likewise.
+	* lib/Makefile.am (librush_a_SOURCES): Update.
+	* lib/argcv.c: Rewrite.
+	* lib/librush.h (slist_alloc)
+	(argcv_free,argcv_string): New protos.
+	* lib/slist.c (new_line_seg): New function.
+	* src/config.c: Use wordsplit.
+	* src/map.c: Likewise.
+	* src/rush.c: Likewise.
+	* src/rush.h: Include wordsplit.h
+
+	* .gitignore: Update
+	* po/.gitignore: Update
+
+2013-06-19  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Reread passwd database after chrooting.
+
+	* src/rush.c (run_rule): Reread pw after chrooting.
+
+2013-06-19  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Set supplementary groups when switching to user privileges.
+
+	* src/rush.c (membergid, get_user_groups)
+	(setowner): New static functions.
+	(run_rule): Call setowner to switch to user privileges.
+
+2011-11-02  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.7.90
+
+2011-11-02  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Assorted fixes.
+
+	* lib/rushdb.c (output_duration): Select the best suitable time
+	representation for the requested width.
+	* NEWS: Fix typo.
+	* lib/librush.h (RUSH_NORETURN): New define.
+	* src/rush.h: Use RUSH_NORETURN.
+
+2011-01-30  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fix
+
+	* src/socket.c (post_socket_send): Use "a+" file mode. Suggested
+	by Mats Erik Andersson.
+
+2011-01-30  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Remove obsolete gnulib modules.
+
+2010-07-07  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.7
+
+	* NEWS: Update.
+	* configure.ac: Update.
+
+2010-06-23  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Allow the use of symbolic names in 'uid' and 'gid'. New command
+	'newgrp'.
+
+	This also undoes commit ccb22a037, which became superfluous with
+	the advent of these changes.
+
+	* src/config.c (parsegid, parseuid): New functions.
+	(new_rush_rule): Initialize gid to NO_GID.
+	(parse_cmp_op): Handle != (accidentally sunonymous to !)
+	(numstrtonum): New function.
+	(parse_numtest): Take conversion function as 4th argument.
+	All callers updated.
+	(uidtonum): New function.
+	(_parse_uid): Use uidtonum as a conversion function.
+	(gidtonum): New function.
+	(_parse_gid): Use gidtonum as a conversion function.
+	(_parse_newgroup): New function.
+	(_parse_main_group): Remove.
+	(toktab): Remove "main-group", add "newgroup" and
+	"newgrp".
+	* src/rush.c (groupcmp): Remove princ parameter. All
+	callers updated.
+	(test_request): Remove test_request_main_group.
+	(run_rule): Handle `newgrp' request.
+	(main): Initialize req.gid to NO_GID.
+	* src/rush.h (test_type): Remove test_main_group.
+	(rush_rule)<gid>: New member.
+	(rush_request)<gid>: New member.
+	(NO_GID): New constant.
+
+	* doc/rush.texi: Update.
+	* NEWS, configure.ac: Set version 1.6.91
+
+2010-06-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Add new condition: main-group.
+
+	* src/config.c (toktab): New condition main-group.
+	* src/rush.c (groupcmp): New argument `princ' specifies
+	whether to match only principal group or all the groups
+	the user is member of.
+	(test_request_group): Call groupcmp with princ=0.
+	(test_request_main_group): New test.
+	(test_request): Add test_request_main_group.
+	* src/rush.h (test_type): New type test_main_group.
+	* NEWS, THANKS: Update.
+
+2010-04-21  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Allow for "include" statements outside of rule context.
+
+	* src/config.c (toktab): Remove TOK_RUL from the flags.
+
+2010-04-20  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update NEWS.
+
+2010-04-20  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Improve rule parsing.
+
+	A configuration file consisting of a single fall-through rule
+	caused infinite loop in main.
+
+	* src/rush.c (match_rule): return immediately if
+	rule is NULL.
+	(run_rule): Run accounting only if req->acct is
+	rush_true.
+	(main): Break the loop when NULL rule is hit.
+	Report "no matching rule" if exited from the
+	loop.
+
+2010-04-20  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfix
+
+	* src/rush.c (run_transforms)<transform_setcmd>: Add
+	GET_TGT_VAL();
+
+2010-04-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.6.90
+
+	* configure.ac: Update version number.
+	* NEWS: Update.
+
+2010-04-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Configurable permissions for accounting database.
+
+	* lib/librush.h (rush_wtmp_mode): Remove.
+	(rushdb_umask, rushdb_dir_mode, rushdb_file_mode): New externs.
+	* lib/rushdb.c (rushdb_umask, rushdb_dir_mode)
+	(rushdb_file_mode): New variables.
+	(rushdb_open_internal): New function.
+	(rushdb_open): Call rushdb_open_internal after setting
+	the rushdb_umask.
+	(rushdb_print_header)<FDATA_STRING>: Fix first argument
+	to output_string.
+	* lib/utmp.c (rush_utmp_open): Use file permissions from
+	rushdb_file_mode.
+	* lib/wtmp.c (rush_wtmp_mode): Remove.
+	(rush_wtmp_open): Use file permissions from
+	rushdb_file_mode.
+	* src/config.c (parse_file_mode): New function.
+	(_parse_umask): Use parse_file_mode.
+	(_parse_acct_file_mode,_parse_acct_dir_mode)
+	(_parse_acct_umask): New functions.
+	(toktab): New keywords: acct-file-mode, acct-dir-mode, acct-umask.
+	* src/rush.c (run_rule): Don't set umask before calling
+	rushdb_open,
+	the function itself takes care of it.
+
+	* doc/rush.texi: Document new configuration statements.
+	* NEWS: Update.
+
+2010-04-17  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix http://puszcza.gnu.org.ua/bugs/?127
+
+	* src/rush.c (make_file_name): Fix typo (misplaced
+	`+ 1').
+
+2010-02-05  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Apply the default regex flags to `transfer' statement.
+
+	* src/rush.h (compile_transform_expr): Change signature.
+	* src/transform.c (parse_transform_expr)
+	(compile_transform_expr): Pass regcomp flags as argument.
+	* src/config.c (_parse_transform_common): Pass re_flags to
+	compile_transform_expr.
+
+2010-02-05  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Improve configuration machinery.
+
+	* configure.ac: Enable silent rules. Require Automake 1.11.1.
+	* Makefile.am (make-ChangeLog): Remove rule.
+	(ChangeLog): Rewrite.
+	* src/Makefile.am (sbinPROGRAMS_INSTALL): Remove. New Automake
+	does
+	not support it any more. Instead use:
+	(change-suid-mode): New rule.
+	(install-exec-hook): New rule.
+	(defines.h): Make rule a silent one.
+	(.opt.h): Likewise.
+
+2010-01-02  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update copyright years.
+
+	Happy GNU Year!
+
+2009-10-29  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix doc/Commit
+
+	* doc/Commit (gray_print_section): Output anchors before
+	chapter/section/etc. titles, so that the heading menu in
+	monolithic document works properly.
+
+2009-10-27  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes.
+
+	* configure.ac: Check for socket.h and sys/socket.h.
+	Needed for socklen_t check below.
+	* src/getopt.m4: Remove useless test.
+
+2009-10-27  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update docs to match the new webpage format.
+
+	* doc/Makefile.am (manual.tar.bz2, man-tar): New rules.
+	(manual): Declare as phony.
+	* doc/gendocs_template: Rewrite.
+	* doc/rush.texi: Minor changes.
+
+2009-08-04  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes
+
+	* src/getopt.m4 (BEGIN): Remove extra quoting.
+	(GETOPT): Rename c to optchar
+	* src/rlopt.opt: Change the way of handling -[0-9]+
+	argument. In particular, it is able to correctly
+	handle options like -10.
+
+2009-02-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes
+
+	* configure.ac: Check for socklen_t.
+	* src/rush.h: Include sys/time.h;
+	Provide a backup definition for LOG_AUTHPRIV.
+
+2009-02-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix diagnostic message in run_transforms
+
+	Update docs, set version number 1.6
+
+	Update docs
+
+2009-02-04  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Allow references to predefined error messages in `exit'
+	statements.
+
+	* NEWS, doc/rush.texi: Update
+	* src/cfck.c: Remove inclusion of argmatch.h
+	* src/config.c (_parse_usage_error, _parse_nologin_error)
+	(_parse_config_error, _parse_system_error): Use set_error_msg.
+	(_parse_exit): Special handling of initial @ in the message text.
+	* src/rush-po.awk: Special handling of initial @ in the message
+	text.
+	Capture arguments of usage-error, nologin-error, config-error and
+	system-error.
+	Fix input line counting.
+	* src/rush.c (error_msg): Array of structures.
+	(set_error_msg, string_to_error_index): New functions.
+	(send_msg): Use error_msg[type].custom to decide what textual
+	domain to use
+	for translation.
+	(run_transforms): Remove temp. The result of rush_expand_string
+	is assigned
+	to val directly and is never freed.
+	(run_rule): Special handling of initial @ in the error message
+	text.
+	* src/rush.h: Include argmatch.h
+	(error_msg): Remove declaration.
+	(set_error_msg, string_to_error_index): New prototypes.
+
+2009-02-04  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update docs
+
+2009-02-03  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update docs
+
+2009-02-02  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor docs changes
+
+2009-02-02  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Allow to use patterns in set rules.
+
+	* lib/argcv.c (quote_transtab): Add \v.
+	* src/config.c (_parse_set, _parse_set_ar): Store value in
+	node->pattern.
+	* src/rush.c (run_transforms): Use patterns in set rules.
+	(run_rule): Fix wording of a diagnostic message.
+	* src/rush.h (struct transform_node.v): Remove val.
+
+	* NEWS: Update
+	* doc/Makefile.am (check-writeme): New goal.
+	(all-check-docs): Add dependency on check-writeme.
+	* doc/rendition.texi (WRITEME): New macro.
+	* doc/rush.texi: Update.
+
+2009-02-01  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor change
+
+2009-02-01  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Allow to specify source strings for transformations.
+
+	* NEWS: Update.
+	* lib/argcv.c (_ARGCV_WORD_SED_EXPR, _ARGCV_WORD_MASK): New
+	defines.
+	(argcv_scan): Treat sed expressions as words, if ARGCV_SED_EXPR
+	is set.
+	(argcv_get_np): Do not unquote word if ARGCV_QUOTE is not set,
+	or the
+	word is a sed expression.
+	(ARGCV_DEFFLAGS): Move to argcv.h
+	* lib/argcv.h (ARGCV_DEFFLAGS, ARGCV_SED_EXPR): New defines.
+	* src/config.c (_parse_transform_common): New function.
+	(_parse_transform,_parse_transform_ar): Call
+	_parse_transform_common.
+	(TOK_SED): New define.
+	(toktab): Mark `transform' with TOK_SED.
+	(parse_input_buf): Use argcv_get_np for field splitting. If the
+	token is
+	marked with TOK_SED, assume ARGCV_SED_EXPR flag.
+	* src/map.c (mapdef): New meta-variable: "command".
+	(rush_expand_string): New function.
+	* src/rush.c (run_transforms): Use node->pattern, if not NULL.
+	* src/rush.h (struct transform_node.pattern): New field.
+	(rush_expand_string): New proto.
+
+2009-02-01  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Allow to modify program name, as opposed to argv[0]
+
+	* configure.ac, NEWS: Version 1.5.90
+	* lib/argcv.c, lib/argcv.h: Fix copyright years.
+	* src/config.c (new_transform_node): Take addtional argument. All
+	uses updated.
+	(struct stmt_env.progmode): New field.
+	(check_argc): New function.
+	(TOK_CRT): New token flag.
+	(toktab): New commands "delete" and "set".
+	Mark "transform" and "map" with TOK_CRT.
+	(parse_input_buf): If TOK_CRT is set, allow ^ as an index,
+	indicating
+	program name, as opposed to argv[0].
+	* src/map.c (mapdef): New meta-variable "program".
+	* src/rush.c (ARG_NO): New macro.
+	(test_request_arg): Use ARG_NO.
+	(get_arg_no,assign_string): New functions.
+	(run_transforms): Handle delete and set commands. Set or modify
+	program name, if required ([^]).
+	(run_rule): Use req->prog, if set.
+	* src/rush.h (transform_delarg, transform_setcmd)
+	(transform_setarg): New constants.
+	(struct transform_node): New fields: progmod, v.val, v.arg_end.
+	(struct rush_request): New field: prog.
+	(PROGFILE): New macro.
+
+2009-01-31  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix use of index in map[] instruction
+
+2009-01-30  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix word splitting.
+
+	* src/argcv.h, src/argcv.c: Move to lib.
+	* lib/argcv.h (ARGCV_WS, ARGCV_QUOTE, ARGCV_RETURN_DELIMS):
+	New defines.
+	* lib/argcv.c: Implement more flags to control the word splitter
+	behavior.
+	* lib/Makefile.am (librush_a_SOURCES): Add argcv.[ch]
+	* src/config.c (_parse_map_ar): Allocate memory for defval.
+	* src/map.c (map_string): Strip off trailing newline before
+	parsing the buffer.
+
+2009-01-30  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement `map' transformations (follow-up).
+
+	* gnulib.modules: Add getline and obstack.
+	* src/Makefile.am (rush_SOURCES): Add map.c
+	* src/map.c: New file.
+	* src/cfck.c (cfck_keyword): Remove 2nd argument.
+	* src/config.c (parse_strv): Remove.
+	(struct stmt_env): New data type.
+	(parse_neg_strv): New function.
+	(_parse_map_ar): New function.
+	(TOK_ARGN,TOK_DFLN): New defines.
+	(struct token.parses): Change proto. All _parse_.* functions
+	updated.
+	(toktab): Update flags. New command word "map".
+	(parse_input_buf): Update use of token.parses. Handle TOK_ARGN.
+	* src/rush.c (run_transforms): Handle transform_map case.
+	(run_rule): Add typecast.
+	* src/rush.h (struct rush_map): New data type.
+	(transform_map): New transform type.
+	(struct transform_node): Replace "trans" with union.
+	(debug6): Fix definition.
+	(debug7): New macro.
+	(cfck_keyword): Takes 1 argument.
+	(map_string): New prototype.
+
+	* src/rushlast.c, src/rushopt.opt, src/rushwho.c: Minor fixes.
+
+2009-01-30  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement `map' transformations.
+
+	* gnulib.modules: Add getline and obstack.
+	* src/Makefile.am (rush_SOURCES): Add map.c
+	* src/map.c: New file.
+	* src/cfck.c (cfck_keyword): Remove 2nd argument.
+	* src/config.c (parse_strv): Remove.
+	(struct stmt_env): New data type.
+	(parse_neg_strv): New function.
+	(_parse_map_ar): New function.
+	(TOK_ARGN,TOK_DFLN): New defines.
+	(struct token.parses): Change proto. All _parse_.* functions
+	updated.
+	(toktab): Update flags. New command word "map".
+	(parse_input_buf): Update use of token.parses. Handle TOK_ARGN.
+	* src/rush.c (run_transforms): Handle transform_map case.
+	(run_rule): Add typecast.
+	* src/rush.h (struct rush_map): New data type.
+	(transform_map): New transform type.
+	(struct transform_node): Replace "trans" with union.
+	(debug6): Fix definition.
+	(debug7): New macro.
+	(cfck_keyword): Takes 1 argument.
+	(map_string): New prototype.
+
+	* src/rushlast.c, src/rushopt.opt, src/rushwho.c: Minor fixes.
+
+2009-01-30  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Initial implementation of "interactive" mode.
+
+	* src/config.c (_parse_interactive): New function.
+	(toktab): New token "interactive".
+	* src/rush.c (rush_interactive_shell): New variable.
+	(main): Use rush_interactive_shell as the command, if -c is
+	not given.
+	* src/rush.h (rush_interactive_shell): New declaration.
+
+2009-01-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.15
+
+	* NEWS: Version 1.15
+	* configure.ac: Likewise.
+	* bootstrap.conf: Remove SKIP_PO setting. The TP URL is
+	operational now.
+	* doc/gendocs_template: Mark as a GNU project.
+	* doc/rush.texi: Change bug-reporting email.
+
+	* gnulib.modules: Remove progname.
+	* lib/progname.c: Provide own version of the progname module.
+	* lib/Makefile.am (librush_a_SOURCES): Add progname.c
+	* lib/librush.h (program_name): New global decl.
+	(rush_set_program_name): New proto.
+	* src/rush.h: Remove progname.h
+	* src/rush.c (main): Use rush_set_program_name.
+	* src/rushlast.c: Likewise.
+	* src/rushwho.c: Likewise.
+
+2009-01-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fixes.
+
+	* README, doc/rush.texi: Update.
+	* configure.ac: Allow relative file name as an
+	argument to --with-default-config.
+	* confpaths.h.in: Remove.
+	* gnulib.modules: Add progname
+	* lib/librush.h: Include unistd.h
+	* src/Makefile.am (LDADD): Add @LTLIBINTL@
+	* src/defconf.sed: Bugfix.
+	* src/rush.c (main): Use set_program_name
+	* src/rushwho.c: Likewise.
+	* src/rushlast.c: Likewise.
+	* src/socket.c: Move network-related includes to rush.h
+
+2009-01-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Rush is dubbed GNU software
+
+	Change documentation license to GFDLv1.3+
+
+2009-01-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Finish 1.4.90
+
+	* NEWS: Update.
+	* README: Update.
+	* configure.ac: New option --with-default-config
+	* doc/rush.texi: Update.
+	* src/.gitignore: Add rlopt.h, rushopt.h and rwopt.h
+	* src/Makefile.am (EXTRA_DIST): Add defconf.sed
+	(BUILT_SOURCES): Add rwopt.h and rlopt.h
+	(defines.h): Define RUSH_DEFAULT_CONFIG, if requested by
+	--with-default-config.
+	* src/config.c (init_input_buf): Do not abort on unexisting
+	file, if RUSH_DEFAULT_CONFIG is defined.
+	(include-safety): Rename include-security.
+	(parse_config): Add debug diagnostics.
+	* src/rushopt.opt: Rename --safety-check to --security-check.
+	New option --show-default.
+
+2009-01-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Add missing files
+
+2009-01-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Redo option parsing.
+
+	* src/getopt.m4: New file.
+	* src/rlopt.opt: New file.
+	* src/rushopt.opt: New file.
+	* src/rwopt.opt: New file.
+	* src/Makefile.am (EXTRA_DIST): Add getopt.m4, *.opt
+	(rush_SOURCES): Add rushopt.h
+	(rushwho_SOURCES): Add rwopt.h
+	(rushlast_SOURCES): Add rlopt.h
+	(MAINTAINER_CLEANFILES): Add rushopt.h, rwopt.h, rlopt.h
+	(.opt.h): New rule.
+	* src/config.c (check_dir): Fix diagnostic messages.
+	(toktab): Rename config-safety to include-safety
+	* src/rush.c, src/rushlast.c, src/rushwho.c: Redo option parsing.
+
+	* NEWS: Update.
+
+2009-01-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement configuration file safety checks.
+
+	* gnulib.modules (argmatch,dirname): New modules.
+	* src/cfck.c: New file.
+	* src/Makefile.am (rush_SOURCES): Add cfck.c
+	* src/config.c (init_input_buf): Call check_config_permissions
+	(_parse_include): Store NULL into ret_buf, if the file does
+	not exist.
+	(_parse_config_safety): New function.
+	(toktab): New statement "config-safety"
+	(parse_input_buf): Do not reset the input buf, if ret_buf is NULL.
+	* src/rush.c: New option --safety-check (-C)
+	* src/rush.h (RUSH_CHK_.*): New defines.
+	(check_config_permissions,cfck_keyword): New prototypes.
+
+2009-01-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update docs
+
+2009-01-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fixes.
+
+	* src/rush-po.awk: New file.
+	* src/Makefile.am (pkgdata_DATA): Add rush-po.awk
+	* NEWS, doc/rush.texi: Update docs.
+	* src/config.c (toktab): Fix flags of several statements.
+	* lib/librush.h, src/Makefile.am, src/rush.c, src/rush.h
+	src/rushlast.c, src/rushwho.c: Update copyright years.
+
+2009-01-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fixes.
+
+	* src/config.c (free_input_buf): Avoid freeing ibuf->file,
+	which remains
+	used by node structures.
+	(_parse_locale): Allow for empty locale value.
+	* src/rush.c: Minor fixes.
+	(run_rule): Form environment before eventually printing error_msg.
+	* src/rushlast.c, src/rushwho.c: Fix typos.
+
+2009-01-09  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Rewrite support for file inlcusion.
+
+	* src/config.c: Rewrite support for file inlcusion.
+	Files can be included at any point.
+
+2009-01-07  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement I18n.
+
+	* lib/i18n.c: New file.
+	* Makefile.am: Add po.
+	* po: New directory
+	* po/POTFILES.in: New file.
+	* bootstrap.conf: Add i18n.
+	* configure.ac: Check for gettext.
+	* gnulib.modules: Add gettext-h
+	* lib/Makefile.am (librush_a_SOURCES): Add i18n.c
+	* librush.h: Include gettext.h
+	(_,N_): New macros.
+	(RUSH_ARG_UNUSED, RUSH_PRINTFLIKE): New macros.
+	(rush_i18n_init, user_gettext): New prototypes.
+	* lib/readfmt.c: Include librush.h
+	Add nls markers.
+	* lib/rushdb.c, lib/version.c, src/config.c, src/limits.c,
+	src/rushlast.c, src/rushwho.c, src/socket.c, src/transform.c:
+	Add nls markers
+	* src/rush.c: Add nls markers
+	(rush_pw): New global.
+	(die): Take an extra argument. Use user_gettext to
+	translate user message.
+	(make_file_name): New function.
+	(run_rule): Copy i18n to the request.
+	(main): Save struct passwd in rush_pw.
+	* src/rush.h (struct rush_i18n): New structure.
+	(struct rush_rule, rush_request): New member i18n.
+	(rush_pw): New global.
+	(die): Change prototype.
+	(make_file_name, expand_tilde): New prototypes.
+
+2008-12-09  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.4.90
+
+	* NEWS, configure.ac: Version 1.4.90
+	* doc/rush.texi: Document notification
+	* src/rush.c (run_rule): Non-empty post-sockaddr implies
+	`fork on'.
+
+2008-12-09  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Socket notification: switch to TCPMUX protocol.
+
+	* src/config.c (_parse_post_socket): Use tcpmux service by
+	default.
+	* src/socket.c: Use TCPMUX protocol.
+
+2008-12-07  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Initial implementation of socket notification interface.
+
+	* src/socket.c: New file.
+	* src/Makefile.am: Add socket.c
+	* src/config.c: New statement `post-socket'.
+	* src/rush.c (struct rush_request): Move to rush.h
+	(fork_process): Run post_socket_send, if post_sockaddr is given.
+	(run_rule): Propagate post_sockaddr.
+	(main): Minor fix.
+	* src/rush.h (struct rush_request): Moved from rush.c; New member
+	post_sockaddr.
+	(struct rush_sockaddr): New structure.
+	(struct rush_rule): New member post_sockaddr.
+	(post_socket_send): New proto.
+
+2008-10-20  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.4
+
+2008-10-19  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor changes.
+
+	* src/rushlast.c: Format preferences: command line option,
+	RUSHLAST_FORMAT env. variable, default format.
+	* src/rushwho.c: Format preferences: command line option,
+	RUSHWHO_FORMAT env. variable, default format.
+	* doc/rush.texi: Mention RUSHLAST_FORMAT and RUSHWHO_FORMAT vars.
+
+2008-10-19  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfix
+
+	Fix direntry references
+
+2008-10-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update
+
+2008-10-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Version 1.3
+
+	* Makefile.am (DISTCLEANFILES, EXTRA_DIST): Remove.
+	* NEWS: Version 1.3
+	* configure.ac: Version 1.3
+	* doc/rush.texi (direntry): Fixed.
+	Add missing opindexes.	Arrange option tables in a
+	traditional manner (short options first).
+	* lib/rushdb.c (output_duration): Fix indentation.
+	(format_pid): Fix size of buf.
+	* src/Makefile.am (INCLUDES): Fix.
+	* src/rush.c: Remove isatty restriction.
+
+2008-10-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor improvement
+
+	* doc/rush.texi: Document --user option.
+	* src/rush.c: Support all options only if invoked from a tty,
+	otherwise
+	support only -c.
+
+2008-10-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fix.
+
+	* doc/rush.texi: Various fixes.
+	* src/rush.c: Implement --user (-u) option.
+
+2008-10-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Rearrange the docs
+
+2008-10-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor changes.
+
+	* lib/rushdb.c (output_duration): Minor fix in width calculation.
+	* doc/rush.texi: Added missing sections.  Spell checked.
+
+2008-10-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Various improvements.
+
+	* gnulib.modules: Add error.
+
+	* lib/readfmt.c: New file.
+	* lib/Makefile.am (librush_a_SOURCES): Add readfmt.c
+	* lib/librush.h (rush_read_format): New prototype.
+	* lib/rushdb.c: Fix indentation.
+	Allow to use quoted strings and escapes inside forms.
+	Ignore explicit newlines.
+	* lib/wtmp.c (rush_wtmp_copy): Copy pid.
+	* src/rushlast.c: Use error instead of fprintf to stderr.
+	Accept --format=@file.
+	Fix default output format.
+	* src/rushwho.c: Likewise.
+
+	* doc/rush.texi: Document rushlast and rushwho
+	* doc/strftime.texi: New file.
+	* doc/Makefile.am (rush_TEXINFOS): Add strftime.texi
+
+2008-10-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes
+
+	* doc/rush.texi: Document forked mode.
+	* lib/rushdb.c (output_duration): Honor width.
+	(rushdb_compile_format): Use xzalloc to create new form.
+	* src/rushwho.c: Change default format.
+
+2008-10-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement acct db locking.
+
+	* gnulib.modules: Add vasprintf
+	* lib/librush.h (rush_utmp_lock_all)
+	(rush_utmp_unlock_all,rushdb_lock,rushdb_unlock): New functions.
+	* lib/rushdb.c (rushdb_lock,rushdb_unlock): New functions.
+	(rushdb_start): Lock utmp for writing.
+	* lib/utmp.c (rush_utmp_write): Lock affected record for writing.
+	(rush_utmp_lock_all,rush_utmp_unlock_all): New functions.
+	* lib/wtmp.c (rush_wtmp_append): Lock affected record for writing.
+
+2008-10-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fix
+
+2008-10-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Finish rushlast and rushwho.
+
+	* lib/librush.h (RUSH_UTMP_NAME, RUSH_WTMP_NAME): New defines,
+	instead of _SUF counterparts.
+	(enum rushdb_result, enum rush_wtmp_dir): new constants.
+	(rush_wtmp_set_dir, rush_wtmp_rewind): New functions.
+	(rush_wtmp_read, rush_utmp_read): Return enum rushdb_result.
+	(rushdb_backward_direction): New function.
+	* lib/rushdb.c (format_error): New function
+	(rushdb_open): Return enum rushdb_result.
+	(rushdb_backward_direction): New function.
+	(format_stop): Correctly handle empty stop date.
+	(rushdb_compile_format): Make sure time formats have correct
+	widths.
+	* lib/utmp.c (rush_utmp_read0, rush_utmp_read): Change return
+	value.
+	* lib/wtmp.c (rush_wtmp_dir): New variable.
+	(rush_wtmp_rewind): New function.
+	(rush_wtmp_read): Rewrite to be able to scan the file in both
+	directions.
+	(rush_wtmp_update,rush_wtmp_update): Likewise.
+	* src/limits.c: Use RUSH_DB_FILE, handle new return type from
+	rushdb_open.
+	* src/rush.c: Likewise.
+	* src/rush.h (RUSH_DB_FILE): Rename to RUSH_DB.
+
+	* src/rushlast.c: Implement new options. Show records in reverse
+	chronological
+	order by default.
+	* src/rushwho.c: Implement new options.
+
+2008-10-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement accounting (in forked mode only).
+
+	* paths, acinclude.m4, lib/logwtmp.c,
+	lib/utmp_init.c, lib/utmp_logout.c: Delete
+	* src/slist.c: Move to lib/slist.c
+	* configure.ac: Remove utmp stuff
+	* gnulib.modules (readutmp): Remove
+	(fprintftime): Add
+	* lib/Makefile.am: Add new files.
+	* src/.gitignore: Add rushlast, rushwho and .gdbinit
+	* src/Makefile.am (bin_PROGRAMS): New var. Add rushlast and
+	rushwho.
+	(rush_SOURCES): Remove slist.c
+	(defines.h): Define LOCALSTATEDIR
+	* src/config.c (new_rush_rule): Init acct and mask members.
+	(_parse_acct): New function.
+	* src/limits.c (check_logins): Use rushdb, instead of the system
+	utmp/wtmp.
+	* src/rush.c (struct rush_request): new members: umask, home_dir,
+	acct.
+	(acct_on, acct_off): New functions.
+	(fork_process): Run accounting, if requested.
+	(run_rule): Save chroot_dir, umask and acct in the struct
+	rush_request.
+	Always do chroot only once.
+	(version): Remove. Implemented in lib/version.c
+	(main): Initialize new members in req.
+	* src/rush.h: Add new includes.
+	(RUSH_DB_FILE): New define.
+	(slist_t, slist_append, slist_create)
+	(slist_reduce, slist_free): Remove.
+	(struct rush_rule): New member `acct'.
+	(NO_UMASK): New define.
+
+2008-10-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Add framework for updating wtmp/utmp
+
+2008-10-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement 'forked mode'
+
+	* gnulib.modules: Add inttostr.
+	* src/config.c (new_rush_rule): Initialize p->fork
+	(get_bool, _parse_fork): New functions.
+	(toktab): New statement "fork".
+	(parse_input_buf): If a rule is not tagged set
+	its tag to #NUM, where NUM is its number.
+	* src/rush.c (struct rush_request): New member: fork.
+	(fork_process): New function.
+	(run_rule): Call fork_process if fork is true.
+	(all functions): Use rule->tag freely, it can't be NULL.
+	* src/rush.h: include <inttostr.h>
+	(enum rush_three_state): New type.
+	(struct rush_rule): Remove const from tag;
+	New members: fork, prologue, epilogue.
+
+2008-10-06  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fix
+
+2008-09-06  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Release 1.2
+
+	* NEWS, configure.ac: Version 1.2
+	* doc/rush.texi: Proof-read.
+
+2008-09-05  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement a test mode.
+
+	* NEWS: Document test mode.
+	* doc/rush.texi: Document test mode.
+	* src/config.c (_parse_debug): Command line settings override
+	the configuration
+	file.
+	* src/rush.c (debug_option): New global.
+	(run_rule): Exit instead of executing the command, if lint_option
+	is set.
+	(longopts): New option --test, an alias for -t.
+	(help): Improve help output.
+	(usage): New function.
+	(main): Implement full-fledged test mode.
+
+2008-09-05  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement command line options for testing configuration files.
+
+	* NEWS, configure.ac: version 1.1.90.
+	* gnulib.modules: Add getopt.
+	* src/Makefile.am (AM_INSTALLCHECK_STD_OPTIONS_EXEMPT): Remove.
+	* src/config.c (init_input_buf): Report ENOENT as error if
+	lint_option is set.
+	(parse_config): Use rush_config_file.
+	(all funcs): Replace calls to syslog with logmsg.
+	* src/limits.c: Replace calls to syslog with logmsg.
+	* src/rush.h: Likewise.
+	* src/rush.c: Include getopt.h
+	(rush_config_file, lint_option): New globals.
+	(vlogmsg, logmsg): New functions.
+	(die): Rewrite using vlogmsg. Do not print error_msg if
+	lint_option is set.
+	(main): Handle new command line options.
+
+2008-08-30  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Finish release 1.1
+
+	* NEWS, configure.ac: version 1.1
+	* doc/rush.texi: Updated.
+	* src/config.c (_parse_command, _parse_match): Use global
+	regex flags.
+	(_parse_re_flags): New function.
+	(toktab): New statement `regexp'.
+
+2008-08-29  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fixes.
+
+	* doc/rush.texi: Spell check.
+
+2008-08-29  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix typos
+
+	Update docs and examples
+
+	Update docs and examples
+
+	Update docs
+
+2008-08-28  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fixes.
+
+	* doc/rush.texi: Write `git' section.
+
+2008-08-28  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fixes.
+
+	* src/rush.c (send_msg): First try to send message to stderr
+	and fall back to stdout if this fails.
+	* doc/rush.texi: Guidelines for further improvements.
+
+2008-08-28  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Introduce exit rules.
+
+	* src/config.c (copy_string): Force terminating newline.
+	(_parse_exit): New function.
+	(toktab): New keyword "exit".
+	* src/rush.c (expand_tilde): Shut GCC warnings.
+	(run_rule): Support `exit' rules.
+	* src/rush.h (getmaxfd): New define.
+	(struct rush_rule): New members error_msg and error_fd.
+	(die): Mark with ATTRIBUTE_NORETURN.
+
+	* NEWS: Version number 1.0.90. Document new features.
+	* configure.ac: Check for sysconf and getdtablesize.
+	Raise version number to 1.0.90.
+	* doc/rush.texi: Document new features.
+	* etc/rush.rc: Improve.
+
+2008-08-28  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Introduce negated conditions.
+
+	* src/config.c (_parse_negation): New function.
+	(_parse_command, _parse_match, _parse_argc, _parse_uid,
+	_parse_gid)
+	(_parse_user, _parse_group): Handle negation operator.
+	* src/rush.c (run_tests): Handle negation.
+	* src/rush.h (struct test_arg_node): New member `negate'.
+
+	* doc/rush.texi (Conditions): Document condition negation.
+	* NEWS: Update
+
+2008-08-27  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update docs
+
+2008-08-27  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Run command line transformations sequentially.
+
+	* src/config.c (_parse_transform, _parse_transform_ar): Use
+	new transform
+	node structure.
+	* src/rush.c (run_transforms, rebuild_cmdline, reparse_cmdline):
+	New functions.
+	(run_rule): Run all transformations sequentially, in the order
+	of their
+	appearance in the configuration file.
+	* src/rush.h (struct transform_node, enum transform_node_type):
+	New data types.
+	(struct rush_rule): Remove trans, arg_head, arg_tail.
+	(transform_head, transform_tail): New members.
+
+2008-08-26  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Release 1.0
+
+	Update docs
+
+	Add doc/.gitignore
+
+2008-08-26  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Change bug-reporting email.
+
+	* NEWS:
+	* README:
+	* README-alpha:
+	* configure.ac:
+	* doc/rush.texi:
+
+2008-08-26  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Improve configuration syntax.
+
+	* src/argcv.c (argcv_string): Remove const specifier from the
+	2nd arg.
+	* src/argcv.h: Likewise.
+	* src/config.c: Improve the syntax. Introduce fall-through
+	statement.
+	Remove the default_entry, it can be provided using
+	RUSH_DEFAULT_CONFIG
+	define and an external file.
+	* src/limits.c: Renumber debug levels.
+	* src/rush.c: Support fall-through rules.
+	* src/rush.h (struct command_config): Rename to rush_rule. All
+	uses updated.
+	(config_list, config_tail): Rename to rule_head, rule_tail,
+	correspondingly.
+
+	* etc/rush.rc: Use new syntax.
+
+	* doc/rush.texi: Update.
+
+2008-08-26  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Code cleanup.
+
+	* src/config.c: Rewrite using table-driven parser.
+
+2008-08-26  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Rewrite look ups in config file in a more logical manner.
+
+	* src/rush.h (struct match_arg): Remove.
+	(enum test_type, struct test_numeric_node, struct test_arg_node)
+	(struct test_node): New data types.
+	(struct command_config): Remove regex, match_head, match_tail,
+	argc,
+	cmp_op, users, groups, min_uid.
+	New members: test_head, test_tail
+
+	* src/config.c (parse_input_buf): Reflect changes to struct
+	command_config.
+	* src/rush.c (run_tests, test_request_cmdline, test_request_arg)
+	(test_request_argc, test_request_uid, test_request_gid,
+	test_request_group)
+	(test_request_user): New functions.
+	(run_tests): New function.
+	(match_config): Rewrite using run_tests.
+
+2008-08-26  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fix.
+
+	* run_config: Set umask as late as possible.  Provide a reasonable
+	default in case it is not set in the config.
+
+2008-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Discern config entries based on user/group name.
+
+	* src/config.c: New keywords: users and groups.
+	* src/rush.c (match_config): Take an additional argument (all uses
+	updated).  Compare username and groups.
+	* src/rush.h: Include grp.h
+	(struct command_config): New members: users and groups.
+
+2008-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes.
+
+	* Makefile.am: Add distuninstallcheck_listfiles.
+	* etc/rush.rc: Update.
+	* src/config.c (read_line): Fix keeping track of input line
+	number.
+	(check_dir): Avoid checks for existency of ~-directories.
+	(parse_input_buf): Don't check for home dir presence, if
+	chroot was
+	requested.
+	* src/rush.c (run_config): Remove implicit / home.
+
+2008-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Improve docs
+
+2008-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Provide a documentation framework.
+
+	* doc/Makefile.am: New file.
+	* doc/fdl.texi: New file.
+	* doc/gendocs_template: New file.
+	* doc/rendition.texi: New file.
+	* doc/rush.info: New file.
+	* doc/rush.texi: New file.
+
+	* Makefile.am (SUBDIRS): Add doc.
+	* configure.ac: Add doc.
+
+2008-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Provide a way for modifying program environment.
+
+	* src/config.c (new_command_config): Set default env.
+	(parse_input_buf): New keyword env.
+	* src/rush.c (run_config): Tailor environment before running
+	the command.
+	* src/rush.h (struct command_config): New member env.
+
+2008-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Add default configuration file.
+
+	* etc/Makefile.am: New file.
+	* etc/rush.rc: New file.
+	* Makefile.am (SUBDIRS): Add etc
+	* configure.ac: Add etc.
+
+2008-08-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update .gitignore's
+
+	Add rules for generating ChangeLog
+
+	Add .gitignore's
+
+	Initial import
+Local Variables:
+mode: change-log
+version-control: never
+buffer-read-only: t
+End:

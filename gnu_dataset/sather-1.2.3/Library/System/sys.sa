@@ -1,0 +1,103 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- sys.sa: System related information.
+-------------------------------------------------------------------
+class SYS is
+    -- System related information.
+   const char_size:=8;		-- Number of bits in a CHAR.
+
+   destroy(o:$OB) is
+      builtin SYS_DESTROY; 
+   end;
+
+   is_eq(ob1,ob2:$OB): BOOL is
+      return ob_eq(ob1,ob2);
+   end;
+
+   is_lt(ob1,ob2: $OB): BOOL is
+      return id(ob1) < id(ob2);
+   end;
+   
+   hash(ob1: $OB): INT is
+      return id(ob1).hash;
+   end;
+   
+   id(o:$OB):INT is  builtin SYS_ID;   end;
+
+   tp(o:$OB):INT is builtin SYS_TP; end;
+   
+   str_for_tp(i:INT):STR is builtin SYS_STR_FOR_TP; end;
+
+   ob_eq(o1,o2:$OB):BOOL is builtin SYS_OB_EQ; end;
+    
+   ext_ob_for(o:$OB):EXT_OB is	builtin SYS_EXT_OB_FOR; end;
+
+   -- Generate some inline C.  The argument has to be a STR literal.  The
+   -- '#' character followed by an identifier substitutes the C variable
+   -- corresponding to the Sather argument or local.  When there is more
+   -- than one variable with the given name, one will be chosen randomly.
+   -- This routine is not intended for general use, and is most
+   -- emphatically NOT in the Sather language spec.  You have been
+   -- warned!
+
+   inlined_C(s:STR) is
+      raise "SYS::inlined_C undefined"; 
+   end;
+    
+   -- These indicate if any of the IEEE exceptions transpired.
+   -- They may be set/cleared by the programmer.  These are broken.
+   ieee_invalid_operation(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_division_by_zero(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_overflow(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_underflow(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_inexact(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_invalid_operation:BOOL is raise "undefined IEEE op"; end;
+   ieee_division_by_zero:BOOL is raise "undefined IEEE op"; end;
+   ieee_overflow:BOOL is raise "undefined IEEE op"; end;
+   ieee_underflow:BOOL is raise "undefined IEEE op"; end;
+   ieee_inexact:BOOL is raise "undefined IEEE op"; end;
+
+   -- If an IEEE exception occurs while the corresponding ieee_trap_on
+   -- BOOL is set, then an exception will be generated.  These are broken.
+   ieee_trap_on_invalid_operation(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_trap_on_division_by_zero(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_trap_on_overflow(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_trap_on_underflow(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_trap_on_inexact(v:BOOL) is raise "undefined IEEE op"; end;
+   ieee_trap_on_invalid_operation:BOOL is raise "undefined IEEE op"; end;
+   ieee_trap_on_division_by_zero:BOOL is raise "undefined IEEE op"; end;
+   ieee_trap_on_trap_on_overflow:BOOL is raise "undefined IEEE op"; end;
+   ieee_trap_on_underflow:BOOL is raise "undefined IEEE op"; end;
+   ieee_trap_on_inexact:BOOL is raise "undefined IEEE op"; end;
+
+   -- JN:  added the following for use by the 80x86 compilers internals
+   -- the floating point number's bit representation as an integer
+   flt_rep(f:FLT,out bits:INT) is builtin SYS_FLT_REP; end;
+   -- fltd bits as two integer
+   fltd_rep(f:FLTD,out msbits,out lsbits:INT) is builtin SYS_FLTD_REP; end;
+
+   -- These are used by psather.
+   defer is builtin SYS_DEFER; end;
+   import is builtin SYS_IMPORT; end;
+   export is builtin SYS_EXPORT; end;
+
+   builtin_clusters!:INT is
+      -- calls to clusters! will be translated to this.
+      loop yield clusters.times! end;
+   end;
+
+   psather_statistics(b:BOOL) is builtin SYS_PSATHER_STATISTICS; end;
+   psather_trace(b:BOOL) is builtin SYS_PSATHER_TRACE; end;
+end; -- class SYS
+

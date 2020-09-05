@@ -1,0 +1,169 @@
+<!DOCTYPE HTML PUBLIC "-//W3O//DTD W3 HTML 2.0//EN">
+<!Converted with LaTeX2HTML 95.1 (Fri Jan 20 1995) by Nikos Drakos (nikos@cbl.leeds.ac.uk), CBLU, University of Leeds >
+<HEAD>
+<TITLE>TKKIT  --- a GUI class library for the Tk toolkit</TITLE>
+</HEAD>
+<BODY>
+<meta name="description" value="TKKIT  --- a GUI class library for the Tk toolkit">
+<meta name="keywords" value="TkKit.latex-2e">
+<meta name="resource-type" value="document">
+<meta name="distribution" value="global">
+<P>
+<H1>TKKIT  --- a GUI class library for the Tk toolkit</H1>
+<P><STRONG>Matthias Ernst<BR> <tt>mernst@x4u2.desy.de</tt></STRONG><P>
+<P>
+<H3>Introduction</H3>
+<EM>
+The TkKit is an older version of the Gui classes and is used by the
+Browser, since the browser was written before the full Gui was developed.
+It is an interface to Tcl-Tk. The browser only makes use of the most
+rudimentary classes, but the whole interface is preserved here, in
+case other users may want to use it.  This document is a modified
+version of Matthias original documentation.  TkKit will not be
+directly supported by ICSI, but this document is provided for any who
+wish to make modifications to the Browser interface to the Gui.
+
+
+You will find it in Browser/TkKit.
+
+</EM><P>
+<H1><A NAME=SECTION00010000000000000000> The Class Library</A></H1>
+<P>
+TKKIT -objects represent graphical, possibly interactive objects which
+form the user interface of an application. There are two forms of
+TKKIT -classes:
+<UL><LI> One set of classes establish a one to one mapping to builtin
+  Tk-objects. Examples are labels, frames, entries, etc..
+<LI> Other classes represent composed UI-objects, e.g. menubars,
+  file-selectors, .... It is important to design these classes in
+  such a way that a) one can easily build new composed objects and
+  b) these objects have a programming interface very similar to that of `atomic' wigets.
+</UL><H2><A NAME=SECTION00011000000000000000> The TK_APP class</A></H2>
+<A NAME=secTkApp>&#160;</A>
+This class represents the GUI part of an application. Due to technical
+reasons this is just a wrapper around shareds.
+Features:
+<UL><LI> <code>create(basename, classname, your_tkkit_path: STR): SAME</code>: This is a <b>
+    fake !</b> Call this at the beginning of your application
+  (i.e. <code>app ::= #TK_APP(&quot;tk_clock&quot;, &quot;TkClock&quot;, &quot;/home/tisi/sources/sather/TkKit/&quot;);</code>) to initialize
+  the shareds. You can safely handle the result like an object.
+<LI> <code>tcl_tk: TCL_TK</code>: The interface to the Tcl/Tk lib,
+  including the interpreter.
+<LI> <code>windows: FMAP{STR, $TKWINDOW}</code>: All windows in this
+  application (plus related routines).
+<LI> <code>callbacks: FMAP{STR, $TKKIT_CB}</code>: Defined callbacks (plus
+  related routines).
+</UL><H2><A NAME=SECTION00012000000000000000> Windows</A></H2>
+<A NAME=secwindows>&#160;</A>
+Now we come to the really graphical objects. Here an overview over the existing
+window classes:
+<PRE>$TK_WINDOW
+    $TK_TOPLEVEL
+        TK_ROOT
+        TK_TOPLEVEL
+    $TK_WIDGET
+        TK_FRAME
+        TK_LABEL
+        TK_ENTRY
+        TK_MESSAGE
+</PRE>
+... really to be continued.
+<P>
+You can bind callbacks to events with 'bind' where the
+event specification is a string that Tk understands.
+<P>
+<H3><A NAME=SECTION00012100000000000000> The $TK_WINDOW class</A></H3>
+<A NAME=secTkWindow>&#160;</A>
+Basetype for all windows in Tk, i.e. such with a pathname.
+Features:
+<UL><LI> <code>app: TK_APP</code>: The application this window belongs to.
+<LI> <code>typus: STR</code>: The type of this window, i.e. ``label'',
+  ``frame'' or others. This is the command handed to Tk to create a widget.
+<LI> <code>name: STR</code>: The `basename' of the window's
+<LI> <code>pathname: STR</code>: Tk pathname
+<LI> <code>show; show_all; hide; hide_all; visible: BOOL</code>: control
+  visibility
+<LI> <code>configure(STR)</code>: ``low level'' Tk window configuration
+<LI> <code>destroy</code>: Destroy this window
+</UL><H3><A NAME=SECTION00012200000000000000> The $TK_WIDGET class</A></H3>
+<A NAME=secTkWidget>&#160;</A>
+Objects of this type represent Tk widgets inside of top level
+windows. TK_WIDGETs add facilities of placement and geometry
+management using Tk's packer. By now you can assign to <code>widget.pack_info: STR</code> 
+which is handed verbatim as options to TK's 'pack'.
+<P>
+<H1><A NAME=SECTION00020000000000000000> An example</A></H1>
+<P>
+<A NAME=secexample>&#160;</A>
+	The benefits of TKKIT can best be seen in an example. Edit one
+entry and hit return to get the corresponding temperature
+<pre>
+class TEMPERATURE is
+   attr celsius, fahrenheit: TK_ENTRY;
+
+   c2f is
+      c ::= #FLT(celsius.get);
+      fahrenheit.set((c*1.8 + 32.0).str);
+   end;
+
+   f2c is
+      f ::= #FLT(fahrenheit.get);
+      celsius.set(((f-32.0)/1.8).str);
+   end;
+
+   main is
+      app ::= #TK_APP("temperature", "Temperature", "/usr/local/Sather/System/Library/TkKit/Library/");
+
+      caption ::= #TK_LABEL("caption", app.root).relief_raised;
+      caption.text := "Temperature converter";
+
+      f ::= #TK_FRAME("f", app.root).relief_raised;
+
+      f1 ::= #TK_FRAME("f1", f).configure("bd", 2).relief_ridge;
+
+      cl ::= #TK_BUTTON("cl", f1);
+      cl.text := "Celsius degree: ";
+      cl.pack_info := "-side left";
+
+      celsius := #TK_ENTRY("ce", f1).relief_sunken;
+      celsius.pack_info := "-side left";
+
+      f2 ::= #TK_FRAME("f2", f).configure("bd", 2).relief_ridge;
+
+      fl ::= #TK_BUTTON("fl", f2);
+      fl.text := "Fahrenheit degree: ";
+      fl.pack_info := "-side left";
+
+      fahrenheit := #TK_ENTRY("fe", f2).relief_sunken;
+      fahrenheit.pack_info := "-side left";
+
+      f2c_cb ::= #TKKIT_CB("f2c", #ROUT(f2c));
+      c2f_cb ::= #TKKIT_CB("c2f", #ROUT(c2f));
+
+      cl.callback := c2f_cb;
+      celsius.bind("<Return>", c2f_cb, void); -- no args
+
+      fl.callback := f2c_cb;
+      fahrenheit.bind("<Return>", f2c_cb, void);
+
+      app.root.show_all;
+      app.tcl_tk.main_loop;
+   end;
+end; -- class TEMPERATURE
+
+-------------------------------------------------------------------
+</pre>
+<P>
+<H1><A NAME=SECTION00030000000000000000>   About this document ... </A></H1>
+<P>
+ <STRONG>TKKIT  --- a GUI class library for the Tk toolkit</STRONG><P>
+This document was generated using the <A HREF="http://cbl.leeds.ac.uk/nikos/tex2html/doc/latex2html/latex2html.html"><STRONG>LaTeX</STRONG>2<tt>HTML</tt></A> translator Version 95.1 (Fri Jan 20 1995) Copyright &#169; 1993, 1994,  <A HREF="http://cbl.leeds.ac.uk/nikos/personal.html">Nikos Drakos</A>, Computer Based Learning Unit, University of Leeds. <P> The command line arguments were: <BR>
+<STRONG>latex2html</STRONG> <tt>-split 0 -no_navigation TkKit.latex-2e.tex</tt>. <P>The translation was initiated by Benedict A. Gomes on Fri May 24 21:58:17 PDT 1996<DL> <A NAME=7><DT>... <DD>Pronounce it like `ticket'</A>
+<PRE><P>
+</PRE> </DL>
+<BR> <HR>
+<P><ADDRESS>
+<I>Benedict A. Gomes <BR>
+Fri May 24 21:58:17 PDT 1996</I>
+</ADDRESS>
+</BODY>

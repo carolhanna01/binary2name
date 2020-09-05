@@ -1,0 +1,181 @@
+<html lang="en">
+<head>
+<title>Declaring and Initializing Paths - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Paths.html#Paths" title="Paths">
+<link rel="prev" href="Paths.html#Paths" title="Paths">
+<link rel="next" href="Drawing-and-Filling-Paths-Intro.html#Drawing-and-Filling-Paths-Intro" title="Drawing and Filling Paths Intro">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Declaring-and-Initializing-Paths"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Drawing-and-Filling-Paths-Intro.html#Drawing-and-Filling-Paths-Intro">Drawing and Filling Paths Intro</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Paths.html#Paths">Paths</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Paths.html#Paths">Paths</a>
+<hr>
+</div>
+
+<h3 class="section">6.1 Declaring and Initializing Paths</h3>
+
+<p>There are various ways of declaring and initializing <code>Paths</code>.  The
+simplest is to use the constructor taking two <code>Point</code> arguments:
+
+<pre class="example">     Point A;
+     Point B(2, 2);
+     Path p(A, B);
+     p.draw();
+</pre>
+   <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF9.png"
+alt="[Figure 9. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 9. 
+<br>
+</p>
+
+   <p><code>Paths</code> created in this way are important, because they are
+guaranteed to be linear, as long as no operations are performed on them
+that cause them to become non-linear. 
+Linear <code>Paths</code> can be used to find <dfn>intersections</dfn>. 
+See <a href="Path-Intersections.html#Path-Intersections">Path Intersections</a>.
+
+   <p><code>Paths</code> can be declared and initialized using a single connector
+and an arbitrary number of <code>Points</code>.  The first argument is a
+<code>string</code> specifying the connector.  It is followed by a
+<code>bool</code>, indicating whether the
+<code>Path</code> is cyclical or not. Then, an arbitrary number of
+pointers to <code>Point</code> follow.  The last argument must be 0.<a rel="footnote" href="#fn-1" name="fnd-1"><sup>1</sup></a>
+
+<pre class="example">     Point p[3];
+     p[0].shift(1);
+     p[1].set(1, 2, 2);
+     p[2].set(1, 0, 2);
+     Path pa("--", true, &amp;p[0], &amp;p[1], &amp;p[2], 0);
+     pa.draw();
+</pre>
+   <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF10.png"
+alt="[Figure 10. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 10. 
+<br>
+</p>
+
+   <p>Another constructor must be used for <code>Paths</code> with
+more than one connector and an arbitrary number of <code>Points</code>. 
+The argument list starts with a pointer to <code>Point</code>, followed by
+<code>string</code> for the first connector.  Then,
+pointer to <code>Point</code> arguments alternate with <code>string</code> arguments
+for the connectors. 
+Again, the list of arguments ends in 0.  There is no
+need for a <code>bool</code> to indicate whether the <code>Path</code> is cyclical
+or not;  if it is, the last non-zero argument will be a connector,
+otherwise, it will be a pointer to <code>Point</code>.
+
+<pre class="example">     Point p[8];
+     p[0].set(-2);
+     p[1].set(2);
+     p[2].set(0, 0, -2);
+     p[3].set(0, 0, 2);
+     p[4] = p[0].mediate(p[2]);
+     p[5] = p[2].mediate(p[1]);
+     p[6] = p[1].mediate(p[3]);
+     p[7] = p[3].mediate(p[0]);
+     p[4] *= p[5] *= p[6] *= p[7].shift(0, 1);
+     Path pa(&amp;p[0], "..", &amp;p[4], "...", &amp;p[2],
+             "..", &amp;p[5], "...", &amp;p[1], "..", &amp;p[6],
+             "...", &amp;p[3], "..", &amp;p[7], "...", 0);
+     pa.draw();
+</pre>
+   <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF11.png"
+alt="[Figure 11. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 11. 
+<br>
+</p>
+
+   <p>As mentioned above (see <a href="Accuracy.html#Accuracy">Accuracy</a>), specifying connectors is
+problematic for three-dimensional <code>Paths</code>,
+because MetaPost ultimately calculates the &ldquo;most pleasing curve&rdquo;
+based on the two-dimensional points in the MetaPost code written by
+3DLDF.<a rel="footnote" href="#fn-2" name="fnd-2"><sup>2</sup></a>
+For this reason, it's advisable to avoid specifying &lsquo;<samp><span class="samp">curl</span></samp>&rsquo;,
+&lsquo;<samp><span class="samp">dir</span></samp>&rsquo;, &lsquo;<samp><span class="samp">tension</span></samp>&rsquo; or control points in connectors. 
+The more <code>Points</code> a (3DLDF) <code>Path</code> or other object contains,
+the less freedom MetaPost has to determine the (MetaPost) <code>path</code>
+through them. 
+So a three-dimensional <code>Path</code> or
+other object in 3DLDF should have enough <code>Points</code> to ensure
+satisfactory results.  The <code>Path</code> in [the previous figure]
+ does not
+really have enough <code>Points</code>.  It may require some trial and error
+to determine
+what a sufficient number of <code>Points</code> is in a given case.
+
+   <p><code>Paths</code> are very flexible, but not always convenient.  3DLDF
+provides a number of classes representing common geometric
+<code>Shapes</code>, which will be described in subsequent sections, and I
+intend to add more in the course of time.
+
+   <div class="footnote">
+<hr>
+<h4>Footnotes</h4><p class="footnote"><small>[<a name="fn-1" href="#fnd-1">1</a>]</small> It's easy to forget to use <code>Point*</code> arguments, rather
+than plain <code>Point</code> arguments, and to forget to end the list of
+arguments with 0.  If plain <code>Point</code> arguments are used, compilation
+fails with GCC.  With the DEC compiler, compilation succeeds, but a
+memory fault error occurs at run-time.  If the argument list doesn't end
+in 0, neither compiler signals an error, but a memory fault error always
+occurs at run-time.</p>
+
+   <p class="footnote"><small>[<a name="fn-2" href="#fnd-2">2</a>]</small> Knuth, <cite>The METAFONTbook</cite>, Chapter 14, p. 127.</p>
+
+   <hr></div>
+
+   </body></html>
+

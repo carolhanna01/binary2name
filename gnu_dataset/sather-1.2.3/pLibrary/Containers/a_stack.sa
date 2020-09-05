@@ -1,0 +1,137 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- a_stack.sa: Array based stack
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class STACK{T} < $STACK{T} is include A_STACK{T} end; --NR:
+---NR: class NR_STACK{T} < $NR_STACK{T} is include NR_A_STACK{T} end;
+-------------------------------------------------------------------
+
+class A_STACK{T} < $STACK{T}  --NR: class NR_A_STACK{T} < $NR_STACK{T}
+  is
+   -- An array-based stack implemented by delegation to an FLIST{T},
+   -- which allocates space by amortized doubling.
+   
+   include VISITOR_MUTATOR;
+
+   private attr s: FLIST{T};
+   
+   create: SAME is
+      res ::= new;
+      res.init_visitor_mutator;
+      res.s := #FLIST{T};
+      return(res);
+   end;
+
+   create(e: $ELT{T}): SAME is
+      -- Push the elements of "e" onto the stack.
+      -- If "e" is an ordered collection this will push elements
+      -- such that the last element is left at the top of the stack
+      res ::= #SAME;
+      loop res.push(e.elt!) end;
+      return res;
+   end;
+
+   create_from(a: ARRAY{T}): SAME is
+      return create(a);
+   end;
+      
+   create_capacity(n: INT): SAME is
+      -- Preallocate n empty elements 
+      res ::= new;
+      res.s := #FLIST{T}(n);
+      res.init_visitor_mutator;
+      return(res);
+   end;
+   
+   remove:T is
+      lock mutator then 
+         return pop; 
+      end; -- lock mutator
+   end;
+   
+   current: T is 
+      lock visitor then
+	 return top ;
+      end; -- lock visitor
+   end;
+   
+   push(e: T) pre ~void(self)  is
+      lock mutator then 
+	 s := s.push(e);
+      end; -- lock mutator
+   end;
+   
+   pop: T pre ~void(self) and ~is_empty is 
+      lock mutator then 
+	 return(s.pop);
+      end; -- lock mutator
+   end;
+   
+   top: T pre ~void(self) and ~is_empty is
+      -- Return the  top element of the stack
+      lock visitor then 
+	 return(s.top);
+      end; -- lock visitor
+   end;
+   
+   reverse_elt!: T pre ~void(self) is
+      -- Yield the elements of the stack in reverse order i.e.
+      -- ending with "top". 
+      lock visitor then 
+	 loop yield(s.elt!) end;
+      end; -- lock visitor
+   end;
+
+   elt!: T pre ~void(self) is
+      lock visitor then
+         loop yield s[(s.size-1).downto!(0)]; end;
+      end; -- lock visitor
+   end;
+   
+   top!: T pre ~void(self) is
+      -- Same as elt!
+      lock visitor then
+         loop yield s[(s.size-1).downto!(0)]; end;
+      end; -- lock visitor
+   end;
+
+
+   size: INT pre ~void(self) is return(s.size) end;
+   
+   is_empty: BOOL pre ~void(self) is return(size = 0) end;
+   
+   has(e: T): BOOL pre ~void(self) is
+      lock visitor then 
+	 return(s.has(e));
+      end; -- lock visitor
+   end;
+   
+   str: STR is
+      lock visitor then 
+	 return s.str;
+      end; -- lock visitor
+   end;
+
+   copy: SAME pre ~void(self) is --NR:
+   --NR: copy: SAME pre ~void(self) is
+      lock visitor then 
+	 res ::= create_capacity(size);
+	 res.s := s.copy;
+	 return res;
+      end; -- lock visitor
+   end;
+   
+end;
+-------------------------------------------------------------------   

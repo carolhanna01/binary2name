@@ -1,0 +1,328 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1996 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- regexp.sa: Object oriented regular expression frontend.
+-- Author: Holger Klawitter <holger@icsi.berkeley.edu>
+
+class REGEXP
+-- Sather frontend for regular expressions.
+-- As specified in POSIX draft 1003.2/D11.2.
+is
+    ------------ Creation of atomic regular expressions:
+    
+    digit: SAME is return new.init("[0-9]") end;
+    -- Returns a regular expression matching '0', '1' .. or '9'.
+    
+    letter: SAME is return new.init("[a-zA-Z]") end;
+    -- Returns a regular expression matching 'a' .. 'z' or 'A' .. 'Z'
+    
+    uppercase: SAME is return new.init("[A-Z]") end;
+    -- Returns a regular expression matching 'A', 'B' .. or 'Z'
+    
+    lowercase: SAME is return new.init("[a-z]") end;
+    -- Returns a regular expression matching 'a', 'b' .. or 'z'
+    
+    whitespace: SAME is return new.init("[ \t\v\n]"); end;
+    -- Returns a regular expression matching ' ','\t','\v' and '\n'
+    
+    beginning: SAME is return new.init("^"); end;
+    -- Returns a regular expression matching the beginning of the string.
+    
+    ending: SAME is return new.init("$"); end;
+    -- Returns a regular expression matching the end of a string.
+
+    char: SAME is return new.init("."); end;
+    -- Returns a regular expression matching one arbitrary char.
+    
+    str(s:STR): SAME
+    -- Returns a regular expression matching exactly the string 's'
+    is
+	return new.init(escape(s))
+    end;
+    
+    oneof(s:STR): SAME
+    -- Returns a regular expression matching one of the chars in 's'.
+    is
+	s := normalize(s);
+	if s.length=1 then return new.init(escape(s)); end;
+	return new.init("["+s+"]");
+    end;
+    
+    noneof(s:STR): SAME
+    -- Returns a regular expression matching none of the chars in 's'.
+    is
+	return new.init("[^"+normalize(s)+"]");
+    end;
+    
+    ------------ Combination of regular expressions
+    
+    pow( r:SAME ): SAME
+    -- Returns a regular expression machting self and then r.
+    -- Ignores the case when one of the subexpressions ignores the case.
+    is
+	return new.init(c_str+r.c_str,ignore_case or r.ignore_case);
+    end;
+    
+    plus( r:SAME ): SAME
+    -- Returns a regular expression matching self or r.
+    -- Ignores the case when one of the subexpressions ignores the case.
+    is
+	return new.init
+	      ("("+c_str+"|"+r.c_str+')', ignore_case or r.ignore_case );
+    end;
+
+    nocase: SAME
+    -- Returns a regular expression as self but ignoring the case
+    is
+	return new.init(c_str,true);
+    end;
+    
+    usecase: SAME
+    -- Returns a regular expression as self but respecing case.
+    is
+	return new.init(c_str,false);
+    end;
+    
+    any_times: SAME
+    -- Returns a regular expression matching self in zero or more occurences.
+    is
+	return new.init("("+c_str+")*",ignore_case);
+    end;
+    
+    atleast(i:INT): SAME
+    -- Returns a regular expression matching self in at least i occurences.
+      pre i>=0
+    is
+	return new.init("("+c_str+"){"+i+",}",ignore_case);
+    end;
+    
+    atmost(i:INT): SAME
+    -- Returns a regular expression matching self in zero or at most
+    -- 'i' occurences.
+      pre i>=1
+    is 
+	return new.init("("+c_str+"){0,"+i+"}",ignore_case);
+    end;
+    
+    between(i,j:INT): SAME
+    -- Returns a regular expression matching self in between 'i' and 'j'
+    -- occurences.
+      pre j>=i and i>=0
+    is
+	return new.init("("+c_str+"){"+i+","+j+"}",ignore_case);
+    end;
+					    
+    regexp(s:STR,ignorecase:BOOL): SAME
+    -- Passing a regular expression directly from string 's' using the 
+    -- POSIX syntax. (Special meanings are carried by unescaped characters.)
+    -- Returns void if the expression is illegal.
+    is
+	res: SAME := new.init(s,ignorecase);
+	res.compile;
+	if void(res.c_regexp) then return void end;
+	return res;
+    end;
+    
+    ------------ Using regular expressions
+    
+    match( s:STR ): BOOL
+    -- Peturns true if the string 's' is being accepted by the regular
+    -- expression
+    is
+	b,e: INT;
+	match(s,out b,out e);
+	return b>=0;
+    end;
+
+    match( s:STR, out from: INT, out to: INT )
+    -- Peturns the first position of 'string' matching the regular and the
+    -- position of the first character after the match.
+    -- 'from' and 'to' are -1 when no match is found.
+    is
+	cstr,outfrom,outto: EXT_OB;
+	
+	if void(c_regexp) then compile end;
+	assert ~void(c_regexp);
+	
+	SYS::inlined_C("#cstr=(void*)s->arr_part;");
+	SYS::inlined_C("outfrom=(void*)&#from;");
+	SYS::inlined_C("outto=(void*)&#to;");
+	C_REGEXP::C_REGEXP_match(c_regexp,cstr,outfrom,outto);
+	
+	-- This does the same:
+	--creg := c_regexp;
+	--SYS::inlined_C("C_REGEXP_match(#creg,#s->arr_part,&#from,&#to);");
+    end;
+    
+    compile
+    -- Preparation of a regular expression to be used in 'match'.
+    -- If not called before, will be called automatically on the first call
+    -- to 'match'.
+    is
+	if ~void(c_regexp) then return end;
+	
+	s: STR := c_str;
+	ic: BOOL := ignore_case;
+	cstr,ccase: EXT_OB;	
+	SYS::inlined_C("#cstr=(void*)#s->arr_part");
+	SYS::inlined_C("#ccase=(void*)(int)#ic");
+	c_regexp := C_REGEXP::C_REGEXP_compile(cstr,ccase);
+    end;
+
+    ------------ Internal routines
+    
+    readonly attr c_str: STR;
+    -- Regular expression in POSIX syntax.
+
+    readonly attr ignore_case: BOOL;
+    -- True, if regular expression does not respect the case.
+    
+    private attr c_regexp: EXT_OB;
+    -- Compiled version of the regular expression.
+
+    private finalize
+    -- The internal buffers of the POSIX regexp may keep some of the
+    -- buffers reachable, meaning unreachable for GC.
+      post void(c_regexp)
+    is
+	creg: EXT_OB;
+	if void(c_regexp) then return; end;
+	creg := c_regexp;
+	C_REGEXP::C_REGEXP_free(c_regexp);
+	c_regexp := void;
+    end;
+
+    private init(s:STR): SAME is return init(s,false) end;
+
+    private init(s:STR,ignorecase:BOOL): SAME
+    -- Internal creation routine.
+    is
+	c_regexp := void;
+	ignore_case := ignorecase;
+	c_str := s;
+	return self;
+    end;
+
+    private normalize(s:STR): STR
+    -- Returns a normalized version of 's'. Characters with special meaning
+    -- in bracket expressions are rearranged to keep literal meaning.
+    is
+	if s.contains('^') then s := s.remove('^')+'^';	end;
+	if s.contains('-') then s := s.remove('-')+'-'; end;
+	if s.contains(']') then s := "]"+s.remove(']') end;
+	return s;
+    end;
+    
+    private escape(s:STR): STR
+    -- Returns a string in which all characters with special meaning
+    -- are escaped to keep their literal meaning.
+    is
+	res: STR;
+	loop
+	    c: CHAR := s.elt!;
+	    if "\\[]*.^$+(){}".contains(c) then
+		res := res + '\\' + c;
+	    else
+		res := res + c;
+	    end;
+	end;
+	return res;
+    end;
+
+end; -- class REGEXP
+----------------------------------------------------------------------
+external class C_REGEXP
+is
+    C_REGEXP_compile(string:EXT_OB,ignorecase:EXT_OB):EXT_OB;
+    -- Gets a string and returns a compiled regular expression or void
+    -- if the expression had an error.
+    
+    C_REGEXP_match(regexp,string,beg,ending:EXT_OB);
+    -- Tries to match the string agains the precompiled regular expression
+    -- returns the beginning and ending position of the string as (int*)
+    -- or (-1,-1) if no match found.
+    
+    C_REGEXP_free(regexp:EXT_OB);
+    -- Removes a precompiled regular expression from memory. Called from
+    -- finalize as the regexp library might keep internal pointer otherwise.
+    
+end; -- external class C_REGEXP
+----------------------------------------------------------------------
+class TEST_REGEXP
+is
+    include TEST;
+    
+    main
+    is
+	r1,r2,r3: REGEXP;
+
+	class_name("REGEXP");
+	
+	r1 := REGEXP::beginning ^
+	      (REGEXP::oneof("^{}[]()")
+	       ^ REGEXP::str("{}[]()")
+	       ^ REGEXP::noneof("^-a")
+	       + REGEXP::str("banana")
+	       );
+	r2 := REGEXP::beginning
+	      ^ (REGEXP::str("foo") + REGEXP::str("bar"))
+	      ^ REGEXP::ending;
+	r3 := REGEXP::regexp("((",false);
+	
+	test( "POSIX syntax selection", void(r2).str, "false" );
+	test( "POSIX syntax selection", void(r3).str, "true" );
+	test( "'^' handling", r1.match("^{}[]()b").str, "true" );
+	test( "'[]' handling", r1.match("{{}[]()x").str, "true" );
+	test( "'[^]' handling", r1.match("^{}[]()a").str, "false" );
+	test( "'-' handling", r1.match("^{}[]()-").str, "false" );
+	test( "'|' precedence", r1.match("banana").str, "true" );
+	test( "beginning", r2.match("fobar"), "false" );
+	test( "ending", r2.match("fooar"), "false" );
+	test( "'|' handling", r2.match("foo"), "true" );
+	test( "'|' handling", r2.match("bar"), "true" );
+
+	r3 := REGEXP::str("a")^REGEXP::str("b").atmost(3)^REGEXP::str("c");
+	b,e: INT;
+	r3.match("xabbcz",out b,out e);test("match", b.str+","+e.str, "1,5");
+	r3.match("xabbz",out b,out e);test("match", b.str+","+e.str, "-1,-1");
+	test( "atmost", r3.match("abbc"), "true" );
+	test( "atmost", r3.match("abbbc"), "true" );
+	test( "atmost", r3.match("abbbbc"), "false" );
+	
+	r3 := REGEXP::str("a")^REGEXP::str("b").between(2,3)^REGEXP::str("c");
+	test( "between", r3.match("abc"), "false" );
+	test( "between", r3.match("abbbc"), "true" );
+	test( "between", r3.match("abbbbc"), "false" );
+
+	r3 := REGEXP::str("a")^REGEXP::str("b").atleast(2)^REGEXP::str("c");
+	test( "atleast", r3.match("abc"), "false" );
+	test( "atleast", r3.match("abbc"), "true" );
+	test( "atleast", r3.match("abbbc"), "true" );
+
+	r3 := REGEXP::str("ananas");
+	test( "right case", r3.match("ananas"), "true" );
+	test( "wrong case", r3.match("Ananas"), "false" );
+	test( "wrong case", r3.match("ananaS"), "false" );
+	r3 := r3.nocase;
+	-- If the following four tests fail, the REG_ICASE in regexp.c
+	-- probably has to be set for the current architecture.
+	test( "ignorecase", r3.match("Ananas"), "true" );
+	test( "ignorecase", r3.match("ananaS"), "true" );
+	r3 := r3.usecase;
+	test( "usecase", r3.match("Ananas"), "false" );
+	test( "usecase", r3.match("ananas"), "true" );
+	
+	finish;
+	
+    end; -- main
+end;

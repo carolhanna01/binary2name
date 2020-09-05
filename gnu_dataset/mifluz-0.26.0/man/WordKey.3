@@ -1,0 +1,436 @@
+
+'''
+''' Part of the ht://Dig package   <http://www.htdig.org/>
+''' Copyright (c) 1999, 2000, 2001 The ht://Dig Group
+''' For copyright details, see the file COPYING in your distribution
+''' or the GNU General Public License version 2 or later
+''' <http://www.gnu.org/copyleft/gpl.html>
+''' 
+''' 
+.TH WordKey 3 local
+.SH NAME
+WordKey \-
+inverted index key.
+
+
+.SH SYNOPSIS
+.nf
+.ft CW
+
+#include <WordKey.h>
+
+#define WORD_KEY_DOCID    1
+#define WORD_KEY_LOCATION 2
+
+WordList* words = ...;
+WordKey key = words->Key("word 100 20");
+WordKey searchKey;
+words->Dict()->SerialExists("dog", searchKey.Get(WORD_KEY_WORD));
+searchKey.Set(WORD_KEY_LOCATION, 5);
+WordCursor* cursor = words->Key(searchKey);
+.ft R
+.fi
+
+.SH DESCRIPTION
+
+Describes the key used to store a entry in the inverted index.
+Each field in the key has a bit in the
+.B set
+member that says if it is set or not. This bit allows to
+say that a particular field is
+.I undefined
+regardless of
+the actual value stored. The methods
+.B IsDefined, SetDefined
+and
+.B Undefined
+are used to manipulate
+the
+.I defined
+status of a field. The
+.B Pack
+and
+.B Unpack
+methods are used to convert to and from the disk storage representation
+of the key. 
+
+Although constructors may be used, the prefered way to create a 
+WordKey object is by using the
+.B WordContext::Key
+method.
+
+The following constants are defined:
+.TP
+.B  WORD_KEY_WORD
+the index of the word identifier with the key for Set and Get
+methods.
+.TP
+.B  WORD_KEY_VALUE_INVALID
+a value that is invalid for any field of the key.
+.PP
+
+
+.SH ASCII FORMAT
+
+The ASCII description is a string with fields separated by tabs or
+white space.
+.nf
+.ft CW
+Example: 200 <UNDEF> 1 4 2
+Field 1: The word identifier or <UNDEF> if not defined
+Field 2 to the end: numerical value of the field or <UNDEF> if
+                    not defined
+.ft R
+.fi
+
+
+.SH METHODS
+.TP
+.B   WordKey(WordContext* ncontext) 
+Constructor. Build an empty key.
+The
+.B ncontext
+argument must be a pointer to a valid
+WordContext object.
+.TP
+.B   WordKey(WordContext* ncontext, const String& desc) 
+Constructor. Initialize from an ASCII description of a key.
+See
+.I ASCII FORMAT
+section.
+The
+.B ncontext
+argument must be a pointer to a valid
+WordContext object.
+.TP
+.B   void Clear() 
+Reset to empty key.
+.TP
+.B   inline int NFields() const 
+Convenience functions to access the total number of fields
+in a key (see
+.I WordKeyInfo(3)
+).
+.TP
+.B   inline WordKeyNum MaxValue(int position) 
+Convenience functions to access the 
+maximum possible value for field at
+.B position.
+in a key (see
+.I WordKeyInfo(3)
+).
+.TP
+.B   inline WordContext* GetContext() 
+Return a pointer to the WordContext object used to create
+this instance.
+.TP
+.B   inline const WordContext* GetContext() const 
+Return a pointer to the WordContext object used to create
+this instance as a const.
+.TP
+.B   inline WordKeyNum Get(int position) const 
+Return value of numerical field at
+.B position
+as const.
+.TP
+.B   inline WordKeyNum& Get(int position) 
+Return value of numerical field at
+.B position.
+.TP
+.B   inline const WordKeyNum & operator[] (int position) const 
+Return value of numerical field at
+.B position
+as const.
+.TP
+.B   inline WordKeyNum & operator[] (int position) 
+Return value of numerical field at
+.B position.
+.TP
+.B   inline void Set(int position, WordKeyNum val) 
+Set value of numerical field at
+.B position
+to
+.B val.
+.TP
+.B   int IsDefined(int position) const 
+Returns true if field at
+.B position
+is
+.I defined
+, false
+otherwise.
+.TP
+.B   void SetDefined(int position) 
+Value in field
+.B position
+becomes
+.I defined.
+A bit
+is set in the bit field describing the defined/undefined state
+of the value and the actual value of the field is not modified.
+.TP
+.B   void Undefined(int position) 
+Value in field
+.B position
+becomes
+.I undefined.
+A bit
+is set in the bit field describing the defined/undefined state
+of the value and the actual value of the field is not modified.
+.TP
+.B   int Set(const String& bufferin)
+Set the whole structure from ASCII string in
+.B bufferin.
+See
+.I ASCII FORMAT
+section.
+Return OK if successfull, NOTOK otherwise.
+.TP
+.B   int Get(String& bufferout) const
+Convert the whole structure to an ASCII string description 
+in
+.B bufferout.
+See
+.I ASCII FORMAT
+section.
+Return OK if successfull, NOTOK otherwise.
+.TP
+.B   String Get() const
+Convert the whole structure to an ASCII string description 
+and return it.
+See
+.I ASCII FORMAT
+section.
+.TP
+.B   int Unpack(const char* string, int length)
+Set structure from disk storage format as found in
+.B string
+buffer or length
+.B length.
+Return OK if successfull, NOTOK otherwise.
+.TP
+.B   inline int Unpack(const String& data) 
+Set structure from disk storage format as found in
+.B data
+string.
+Return OK if successfull, NOTOK otherwise.
+.TP
+.B   int Pack(String& data) const
+Convert object into disk storage format as found in 
+and place the result in
+.B data
+string.
+Return OK if successfull, NOTOK otherwise.
+.TP
+.B   int Merge(const WordKey& other)
+Copy each
+.I defined
+field from other into the object, if 
+the corresponding field of the object is not defined. 
+Return OK if successfull, NOTOK otherwise.
+.TP
+.B   int PrefixOnly()
+Undefine all fields found after the first undefined field. The
+resulting key has a set of defined fields followed by undefined fields.
+Returns NOTOK if the word is not defined because the resulting key would 
+be empty and this is considered an error. Returns OK on success.
+.TP
+.B   int SetToFollowing(int position = WORD_FOLLOWING_MAX)
+Implement ++ on a key.
+
+It behaves like arithmetic but follows these rules:
+.nf
+.ft CW
+. Increment starts at field <position>
+. If a field value overflows, increment field
+.B position
+- 1
+. Undefined fields are ignored and their value untouched
+. When a field is incremented all fields to the left are set to 0
+.ft R
+.fi
+If position is not specified it is equivalent to NFields() - 1.
+It returns OK if successfull, NOTOK if
+.B position
+out of range or
+WORD_FOLLOWING_ATEND if the maximum possible value was reached.
+.TP
+.B   int Filled() const 
+Return true if all the fields are
+.I defined
+, false otherwise.
+.TP
+.B   int Empty() const 
+Return true if no fields are
+.I defined
+, false otherwise.
+.TP
+.B   int Equal(const WordKey& other) const
+Return true if the object and
+.B other
+are equal. 
+Only fields defined in both keys are compared.
+.TP
+.B   int ExactEqual(const WordKey& other) const 
+Return true if the object and
+.B other
+are equal. 
+All fields are compared. If a field is defined in
+.B object
+and not defined in the object, the key are not considered
+equal.
+.TP
+.B   int Cmp(const WordKey& other) const
+Compare
+.B object
+and
+.B other
+as in strcmp. Undefined
+fields are ignored. Returns a positive number if
+.B object
+is
+greater than
+.B other
+, zero if they are equal, a negative
+number if
+.B object
+is lower than
+.B other.
+.TP
+.B   int PackEqual(const WordKey& other) const
+Return true if the object and
+.B other
+are equal. 
+The packed string are compared. An
+.I undefined
+numerical field 
+will be 0 and therefore undistinguishable from a
+.I defined
+field
+whose value is 0.
+.TP
+.B   int Outbound(int position, int increment) 
+Return true if adding
+.B increment
+in field at
+.B position
+makes
+it overflow or underflow, false if it fits.
+.TP
+.B   int Overflow(int position, int increment) 
+Return true if adding positive
+.B increment
+to field at
+.B position
+makes it overflow, false if it fits.
+.TP
+.B   int Underflow(int position, int increment) 
+Return true if subtracting positive
+.B increment
+to field 
+at
+.B position
+makes it underflow, false if it fits.
+.TP
+.B   int Prefix() const
+Return OK if the key may be used as a prefix for search.
+In other words return OK if the fields set in the key
+are all contiguous, starting from the first field.
+Otherwise returns NOTOK
+.TP
+.B   static int Compare(WordContext* context, const String& a, const String& b)
+Compare
+.B a
+and
+.B b
+in the Berkeley DB fashion.
+.B a
+and
+.B b
+are packed keys. The semantics of the
+returned int is as of strcmp and is driven by the key description
+found in
+.I WordKeyInfo.
+Returns a positive number if
+.B a
+is
+greater than
+.B b
+, zero if they are equal, a negative number 
+if
+.B a
+is lower than
+.B b.
+.TP
+.B   static int Compare(WordContext* context, const unsigned char *a, int a_length, const unsigned char *b, int b_length)
+Compare
+.B a
+and
+.B b
+in the Berkeley DB fashion.
+.B a
+and
+.B b
+are packed keys. The semantics of the
+returned int is as of strcmp and is driven by the key description
+found in
+.I WordKeyInfo.
+Returns a positive number if
+.B a
+is
+greater than
+.B b
+, zero if they are equal, a negative number 
+if
+.B a
+is lower than
+.B b.
+.TP
+.B   int Diff(const WordKey& other, int& position, int& lower)
+Compare object defined fields with
+.B other
+key defined fields only,
+ignore fields that are not defined in object or
+.B other.
+Return 1 if different 0 if equal. 
+If different,
+.B position
+is set to the field number that differ,
+.B lower
+is set to 1 if Get(
+.B position
+) is lower than
+other.Get(
+.B position
+) otherwise lower is set to 0.
+.TP
+.B   int Write(FILE* f) const
+Print object in ASCII form on
+.B f
+(uses
+.I Get
+method).
+See
+.I ASCII FORMAT
+section.
+.TP
+.B   void Print() const
+Print object in ASCII form on
+.B stdout
+(uses
+.I Get
+method).
+See
+.I ASCII FORMAT
+section.
+.PP
+
+.SH AUTHORS
+Loic Dachary loic@gnu.org
+
+The Ht://Dig group http://dev.htdig.org/
+
+
+.SH SEE ALSO
+htdb_dump(1), htdb_stat(1), htdb_load(1), mifluzdump(1), mifluzload(1), mifluzsearch(1), mifluzdict(1), WordContext(3), WordList(3), WordDict(3), WordListOne(3), WordKeyInfo(3), WordType(3), WordDBInfo(3), WordRecordInfo(3), WordRecord(3), WordReference(3), WordCursor(3), WordCursorOne(3), WordMonitor(3), Configuration(3), mifluz(3)
+

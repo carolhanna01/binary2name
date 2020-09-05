@@ -1,0 +1,88 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- toplevel.sa: Toplevel widget
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class TK_TOPLEVEL_CFG < $TK_WIDGET_CFG is
+   include TK_WIDGET_CFG_INCL
+	 borderwidth->borderwidth,
+	 highlightcolor->highlightcolor,
+	 highlightbackground->highlightbackground,
+	 highlightthickness->highlightthickness,
+	 relief_none->relief_none,relief_groove->relief_groove,
+	 relief_raised->relief_raised,relief_sunken->relief_sunken,
+	 relief_flat->relief_flat,relief_ridge->relief_ridge
+	 ;
+end;
+-------------------------------------------------------------------
+class TK_TOPLEVEL < $TK_WIDGET is
+   include TK_WIDGET_INCL{TK_TOPLEVEL_CFG}
+	 create->private widget_create;
+    
+   private tk_widget_type: STR
+   -- Returns the tk_widget type. As the root window is also a toplevel
+   -- but has a different type name, there has a distinction to be made.
+   is
+      if self=root_window then return "RootWindow(.)"
+      else return "toplevel"
+      end
+   end;
+    
+   widget_name: STR is
+      if self=the_root_window then return "." end;
+      return path_name
+   end;
+    
+   root_window: TK_ROOT_WINDOW is
+      -- Dedicating one special object as the root window. This root window
+      -- does not comply with the regular creation process, so do something
+      -- sepcial here.
+      if void(the_root_window) then the_root_window := #TK_ROOT_WINDOW   end;
+      return the_root_window
+   end;
+    
+   private shared the_root_window: TK_ROOT_WINDOW;
+   -- The dedicated object will be stored here.
+    
+   create: SAME is
+      -- Create a new toplevel with default options under the root window
+      return create("toplevel",default_config);
+   end;
+    
+   create(np: STR, cf: TK_TOPLEVEL_CFG): SAME is
+      if void(cf) then cf := default_config; end;
+      res ::= new;
+      res.init(np,cf);
+      return res;
+   end;
+    
+   private init(np: STR,cf: TK_TOPLEVEL_CFG) is
+      name ::= fix_tcl_name(np)+UNIQ::next;
+      deb("Creating widget named:"+name+" specfied name:"+np);
+      path_name := "."+name;
+      eval("toplevel",path_name);
+      register;      
+      eval(actual_widget_name,"configure", cf.str);
+   end;
+    
+   private default_config: TK_TOPLEVEL_CFG is  return #TK_TOPLEVEL_CFG; end;
+    
+   act_on(i: INT,args: ARRAY{STR}) is
+      raise "Can't bind events to  toplevels yet";
+   end;
+   
+end; -- class TK_TOPLEVEL
+-------------------------------------------------------------------
+
+

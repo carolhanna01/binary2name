@@ -1,0 +1,256 @@
+<html lang="en">
+<head>
+<title>Ellipse Intersections - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Ellipse-Reference.html#Ellipse-Reference" title="Ellipse Reference">
+<link rel="prev" href="Returning-Elements-and-Information-for-Ellipses.html#Returning-Elements-and-Information-for-Ellipses" title="Returning Elements and Information for Ellipses">
+<link rel="next" href="Solving-Ellipses.html#Solving-Ellipses" title="Solving Ellipses">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Ellipse-Intersections"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Solving-Ellipses.html#Solving-Ellipses">Solving Ellipses</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Returning-Elements-and-Information-for-Ellipses.html#Returning-Elements-and-Information-for-Ellipses">Returning Elements and Information for Ellipses</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Ellipse-Reference.html#Ellipse-Reference">Ellipse Reference</a>
+<hr>
+</div>
+
+<h3 class="section">31.9 Intersections</h3>
+
+<div class="defun">
+&mdash; <code>const</code> virtual function: bool_point_pair <b>intersection_points</b> (<var>const Point&amp; p0, const Point&amp; p1</var>)<var><a name="index-intersection_005fpoints-750"></a></var><br>
+&mdash; <code>const</code> virtual function: bool_point_pair <b>intersection_points</b> (<var>const Path&amp; p</var>)<var><a name="index-intersection_005fpoints-751"></a></var><br>
+<blockquote><p>These functions return the intersection points of a line with an
+<code>Ellipse</code>.  In the first version, the line is specified by the two
+<code>Point</code> arguments. 
+In the second version, <var>p</var><code>.is_linear()</code> must return <code>true</code>,
+otherwise, <code>intersection_points()</code> issues an error message and
+returns <code>INVALID_BOOL_POINT_PAIR</code>.
+
+        <p>If the line and the <code>Ellipse</code> are coplanar, there can be at most two
+intersection points.  Otherwise, there can be at most one.
+
+     <pre class="example">          Ellipse e(origin, 5, 7, 30, 30, 30);
+          e.shift(3, 0, 3);
+          Point p0 = e.get_center().mediate(e.get_point(3));
+          Point normal = e.get_normal();
+          Point A = normal;
+          A *= 2.5;
+          A.shift(p0);
+          Point B = normal;
+          B *= -2.5;
+          B.shift(p0);
+          bool_point_pair bpp = e.intersection_points(A, B);
+          bpp.first.pt.dotlabel("$i_0$", "rt");
+          Point C = e.get_point(15).mediate(e.get_point(11), 1.25);
+          Point D = e.get_point(11).mediate(e.get_point(15), 1.5);
+          Path q = C.draw(D);
+          bpp = e.intersection_points(q);
+          bpp.first.pt.dotlabel("$i_1$", "llft");
+          bpp.second.pt.dotlabel("$i_2$", "ulft");
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF167.png"
+alt="[Figure 167. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 167. 
+<br>
+</p>
+
+     </blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> virtual function: bool_point_quadruple <b>intersection_points</b> (<var>Ellipse e, </var>[<var>const real step = 3, </var>[<var>bool verbose = </var><code>false</code>]])<var><a name="index-intersection_005fpoints-752"></a></var><br>
+<blockquote><p>Returns the intersection points of two <code>Ellipses</code>.  Two <code>Ellipses</code>
+can intersect at at most four points.
+
+        <p>Let <var>bpq</var> be the <code>bool_point_quadruple</code> returned by
+<code>intersection_points()</code>.  If one or more intersection points are
+found, the corresponding <code>Points</code> are stored in the
+<code>pt</code> elements of the four <code>bool_points</code> belonging to
+<var>bpq</var>, otherwise <code>INVALID_POINT</code>.  If a <code>Point</code> is found, the
+<code>b</code> element of the <code>bool_point</code> will be <code>true</code>, otherwise
+<code>false</code>.
+
+        <p>The <var>step</var> argument is used when the <code>Ellipses</code> are coplanar
+and either have different centers or the vertical axis of one <code>Ellipse</code> is
+colinear with the horizontal axis of the other (and vice versa).  In
+these cases, the intersection points must be found by an iterative
+routine.  A <code>Point</code> p travels around the perimeter of <code>*this</code>,
+and its location with respect to <var>e</var> is tested.  <var>step</var> is the
+angle of rotation used for stepping around the perimeter of
+<code>*this</code>.  The default value, 3, should be adequate, unless the
+<code>Ellipses</code> differ greatly in size.
+
+        <p>If the <var>verbose</var> argument is <code>true</code>,
+<code>intersection_points()</code> will print information about the
+intersection points to standard output.
+
+        <p>In [next figure]
+, the <code>Ellipses</code> e and f both lie in the x-z
+plane, are centered at the origin, and intersect at four points.
+
+     <pre class="example">          Ellipse e(origin, 5, 2);
+          Ellipse f(origin, 2, 5);
+          bool_point_quadruple bpq = e.intersection_points(f);
+          bpq.first.pt.dotlabel(1, "llft");
+          bpq.second.pt.dotlabel(2, "urt");
+          bpq.third.pt.dotlabel(3, "ulft");
+          bpq.fourth.pt.dotlabel(4, "lrt");
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF168.png"
+alt="[Figure 168. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 168. 
+<br>
+</p>
+
+        <p>In [next figure]
+, e and f are coplanar, but don't lie in a major plane,
+have different centers, and only intersect at two points.
+
+     <pre class="example">          Ellipse e(origin, 4, 2);
+          Ellipse f(origin, 2, 5);
+          f.shift(0, 0, 1);
+          f.rotate(0, 15);
+          f.shift(1, 0, 1);
+          e *= f.shift(-.25, 1, -1);
+          e *= f.rotate(10, -12.5, 3);
+          bool_point_quadruple bpq = e.intersection_points(f, true);
+          bpq.first.pt.dotlabel(1, "urt");
+          bpq.second.pt.dotlabel(2, "ulft");
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF169.png"
+alt="[Figure 169. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 169. 
+<br>
+</p>
+
+        <p>If the planes of the <code>Ellipses</code> are parallel, there are, of course,
+no intersection points.  If the <code>Ellipses</code> are non-coplanar, and
+their planes are not parallel to each other,
+<code>intersection_points()</code> first finds the line of intersection of the
+planes of the <code>Ellipses</code>.  It then returns the <code>Points</code> of
+intersection of this line with the <code>Ellipses</code>, if they exist.  If
+the <var>verbose</var> argument is <code>true</code>, information about the
+<code>Points</code> is printed to standard output.
+
+        <p>In [next figure]
+, the two <code>Ellipses</code> lie in skew planes.  The plane
+of f intersects with e at the <code>Points</code> labelled &ldquo;1&rdquo; and &ldquo;2&rdquo;,
+while the plane of e intersects with f at the <code>Points</code> labelled
+&ldquo;3&rdquo; and &ldquo;4&rdquo;.
+
+     <pre class="example">          Ellipse e(origin, 5, 3);
+          Ellipse f(origin, 2, 5);
+          f.rotate(0, 0, 30);
+          f.rotate(0, 10);
+          f.rotate(45);
+          f.shift(1.5, 1);
+          bool_point_quadruple bpq = e.intersection_points(f, true);
+          bpq.first.pt.dotlabel(1);
+          bpq.second.pt.dotlabel(2);
+          bpq.third.pt.dotlabel(3, "rt");
+          bpq.fourth.pt.dotlabel(4, "urt");
+          -| First point lies on the perimeter of *this.
+             First point lies inside e.
+             Second point lies on the perimeter of *this.
+             Second point lies outside e.
+             Third point lies outside *this.
+             Third point lies on the perimeter of e.
+             Fourth point lies inside *this.
+             Fourth point lies on the perimeter of e.
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF170.png"
+alt="[Figure 170. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 170. 
+<br>
+</p>
+
+        <p>In [next figure]
+, the two <code>Ellipses</code> lie in skew planes.  The plane of
+f intersects with e at the <code>Points</code> labelled &ldquo;1&rdquo; and &ldquo;2&rdquo;. 
+The plane of e does not intersect with f, so <code>bpq.third.pt</code>
+and <code>bpq.fourth.pt</code> are <code>INVALID_POINT</code>.
+
+     <pre class="example">          Ellipse e(origin, 5, 3);
+          Ellipse f(origin, 2, 5, 45);
+          f.shift(0, 2.5, 3);
+          bool_point_quadruple bpq = e.intersection_points(f, true);
+          bpq.first.pt.dotlabel(1);
+          bpq.second.pt.dotlabel(2);
+          -| First point lies on the perimeter of *this.
+             First point lies outside e.
+             Second point lies on the perimeter of *this.
+             Second point lies outside e.
+             Third intersection point is INVALID_POINT.
+             Fourth intersection point is INVALID_POINT.
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF171.png"
+alt="[Figure 171. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 171. 
+<br>
+</p>
+
+        </blockquote></div>
+
+   </body></html>
+

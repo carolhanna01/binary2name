@@ -1,0 +1,1412 @@
+Structure
+=========
+
+Sound is represented by the following structure:
+
+sound[track[block[frame_count, 
+                  peak cache, 
+                  sample cache], 
+            block[...]],
+      track[...]]
+
+That is, an N-channel sample is represented in memory as N tracks,
+with each of those containing a number of variable size blocks that
+contain the actual sample data. In addition to the sample data, these
+blocks contain peak data for the samples in the sample cache. The peak
+data simply consists of a high & low value for every 128 samples in
+the sample cache. 
+
+The API then decomposes into five layers:
+
+1. sound layer (snd_*)
+2. track layer (track_*)
+3. blocklist layer (blocklist_*)
+4. block layer (block_*)
+5. cache layer (cache_*)
+
+user ------> sound ----------+
+ |             |             |
+ |             v             v
+ +---------> track ---> blocklist
+               |             |
+               |             v
+               +---------> block
+               |             |
+               |             v
+               +---------> cache
+
+
+1. sound layer (snd_*)
+
+The primary purpose of this layer is to convert between the
+interleaved sound format as used by libaudiofile and sound devices to
+the non-interleaved format that this API works with.
+
+2. track layer (track_*)
+
+The track layer provides a means to interface with the data stored in
+the peak and sample caches. It's primary purpose is to present a
+contiguous flat view of a track by stitching the constituent blocks
+together as required. For sample caches this involves simple
+concatenation, but for peak caches some extra work is necessary.
+
+3. block layer (block_*)
+
+A block is a thin wrapper around a peak cache and a sample cache. It
+has the necessary knowledge to drive the cache layer, i.e. it knows
+how to split and join peak caches, but very little else.
+
+4. blocklist layer (blocklist_*)
+
+Manages the blocklist and provides fast functions for mapping offsets
+to blocks.
+
+5. cache layer (cache_*)
+
+A cache has no sound specific knowledge at all. It's job is simply to
+store bytes and return them. There are two types of cache, either REAL
+(i.e. real memory), or NULL, which is a special kind of cache that
+takes up space but no memory and always returns zeroes (silence).
+
+Peak cache
+==========
+
+When drawing a sample, we can make use of the fact that displays are
+small relative to the size of an audio sample. That is, on a 1024x768
+display, we only need to ever draw a maximum of 1024 samples, assuming
+a scaling factor of 1:1. For a 16 bit stereo sample this is only 4K of
+data, which takes very little time to process. But as the scaling
+factor increases, the work quickly starts to overwhelms us (e.g. at a
+scaling factor of 1:128 the number of bytes that we need to look at
+for every redraw is already half a megabyte and the delays start to
+become noticable).
+
+Thus, in order to keep drawing quick at large scaling factors, we need
+to somehow reduce to amount of work we need to do at drawing time. The
+peak cache does this. The peak cache contains precalculated high,low
+values for every 128 samples in the corresponding sample cache. 
+
+When something needs to be drawn at a scaling factor below 128, we
+derive the image from the sample cache, giving us the most accurate
+picture. However, when something needs to be drawn at a scaling factor
+of 128 or above, we derive the image from the peak cache, thus
+reducing the amount of work 128-fold in exchange for slightly less
+accuracy.
+
+Now constructing the peak cache is easy because we can ensure that
+every block (except the final one) has a frame count that is divisible
+by 128. However because we may split blocks on non-128 sample
+boundaries, we must be aware of the possibility that a single peak
+cache element describes fewer than 128 samples. 
+
+One consequence of this is that any peak data that we stitch together
+from the peak cache may not exactly represent the underlying
+samples. E.g. when you have two blocks chained like this:
+
+ +---------------------+     +----------------------+
+ | block 1, 64 samples |()-()| block 2, 300 samples |
+ | 1 peak element      |     | 3 peak elements      |
+ +---------------------+     +----------------------+
+
+Then a request for the peaks of samples 128 - 384 will actually return
+the peaks for samples 64 - 320 (peak elements 1 and 2 in block 2),
+because a peak element, being just a high/low pair, cannot be further
+broken down. Now the practical impact of the error is limited because
+requests of only 256 frames are very rare. More typically, assuming on
+a 1024x768 display, at a scaling factor of 1:128 (below this we don't
+use the peak cache at all), the request will be 1024 * 128 = 131072
+frames. An error of 127 frames (the maximum error) is then only a ~ 1%
+error, and at higher scaling factors, the error becomes rapidly
+smaller.
+
+When splitting a block, if the split point is not divisible by 128,
+you must recalculate the last element in the peak cache for the first
+block, and recalculate the entire peak cache for the second block.
+
+When joining two blocks, if the block 1 frame count is not divisible
+by 128, then the final peak cache element of the first block is
+discarded, the sample caches are joined, and the peak cache is
+recalculated over the range (block 1 frame count) - (block 1 + block 2
+frame count).
+
+track/cache interaction notes
+=============================
+
+size_t
+cache_fill(cache *c,
+           void *src,
+           size_t offset,
+           size_t sz);
+
+This function copies sz bytes from the buffer src to offset offset in
+cache c.
+
+void
+cache_find(cache *c,
+           void *dst,
+           size_t *offset,
+           size_t *sz);
+
+This function copies sz bytes from offset offset in cache c to the
+buffer dst. On return, offset and sz are set to the actual offset
+where data was found (always larger than or equal to the requested
+offset) and the actual number of bytes actually copied (always smaller
+than or equal to the requested size).
+
+void
+track_cache_fill(track *tr,
+                 void *bits,
+                 AFframecount frame_offset,
+                 AFframecount frame_count);
+
+This function copies frame_count frames from the buffer bits into the
+cache at offset frame_offset.
+
+First, we need to find the cache block that stores the offset given by
+frame_offset. We can do this by finding the first block, then checking
+how many frames this block stores. If it stores more frames than our
+frame_offset, we have found the correct block. Otherwise, we subtract
+the block's frame_count from the required offset, and repeat the
+procedure for the next block.
+
+When the correct block has been found, we have a diminished
+frame_offset that specifies the offset into the cache for the found
+block, and an unchanged frame_count. We then call cache_fill with
+these parameters (converted from frames to bytes), and it returns the
+number of bytes actually written to the cache. We add this number to
+the src pointer to get the proper offset into the source buffer,
+convert it back to frames, and subtract it from the frame_count. The
+frame_offset becomes 0. Then we get the next block and repeat the
+procedure, until either there are no blocks left or the frame_count
+has gone to zero. If the frame_count is non-zero and there are no
+blocks left, then the cache is dropping frames for some reason and we
+notify the user.
+
+void
+track_cache_find(track *tr,
+                 void *bits,
+                 AFframecount *frame_offset,
+                 AFframecount *frame_count);
+
+This function copies frame_count frames from offset frame_offset in
+the cache into the buffer bits. On return, the frame_offset and
+frame_count values specify the frame_offset and the frame_count that
+still need to be filled (i.e. that could not be located in the cache).
+
+Again, first we need to find the block that contains the frame
+specified by the requested frame_offset, as above.
+
+When the correct block has been found, we have a diminished
+frame_offset that specifies the offset into the cache for the found
+block, and an unchanged frame_count. We then call cache_find with
+these parameters (converted from frames to bytes). 
+
+Now the problem is that we need to return a contiguous block of data,
+with the additional constraint that either the start of this block or
+the end must be equal to either the requested start and the requested
+end, respectively. That is, in the case of a partial cache miss, we
+need the cache to either return data from the beginning (frame_offset
+== new frame_offset, i.e. frame_offset unchanged), or up until the end
+(new frame_offset - frame_offset + new frame_count ==
+frame_count). This is because we need to be able to satisfy any
+remaining data requirements in a single read; we cannot do that if we
+need to fill the buffer "around" the data that was returned from the
+cache.
+
+So after calling cache_find, we need to check the returned
+frame_offset. If the returned frame_offset is unchanged, then we know
+that the bits buffer has been filled from the start. We can then add
+the returned frame_count to the frame_offset, adjust the offset into
+the bits buffer, subtract the returned frame_count from the
+frame_count, and repeat the procedure until the cache returns either a
+frame_count of zero (i.e. no more data in the cache) or a frame_offset
+that is not equal to the frame_offset that was given (i.e. we stumbled
+onto a gap in the cache).
+
+Otherwise, if the frame_offset returned by cache_find() has changed,
+then basically we cannot allow any more cache gaps or misses to occur
+(or it would mean that the bits buffer is not either filled from start
+-> ... or from ... -> end). So if the frame_offset has changed, we
+check that the returned frame_offset - frame_offset + returned
+frame_count equals either the requested frame_count (in which case we
+are done), or the block frame_count (indicating that we reached the
+end of the cache). In the last case, we add the returned frame_count
+to the returned frame_offset, subtract the returned frame_count from
+the frame_count, and repeat the procedure for the next block. If any
+of the cache retrievals for any of the subsequent blocks fails,
+(meaning the cache cannot fully satisfy a request), then the entire
+request fails and we did all our work for nothing. C'est la vie.
+
+Guile?
+======
+
+Actions make it possible to programmatically construct manipulations
+on the sound structure. Actions can be grouped together to form
+primitive compound expressions whose primary use is to enable undo.
+It would be logical (although perhaps not wise) to extend and
+restructure this into a command language.
+
+The action_group for COPY, which looks like this ...
+
+    ag = action_group_new(3,
+                          ACTION_CUT_NEW(DONT_UNDO,
+                                         a->shl,
+                                         a->sr_target,
+                                         a->channel_map,
+                                         a->offset,
+                                         a->count),
+                          ACTION_PASTE_NEW(DONT_UNDO,
+                                           a->shl,
+                                           a->sr_target,
+                                           a->channel_map,
+                                           a->offset,
+                                           0),
+                          ACTION_SELECT_NEW(DONT_UNDO,
+                                            a->shl,
+                                            a->sr_target,
+                                            a->channel_map,
+                                            a->offset,
+                                            a->count));
+    
+... is ugly and incorrect, because the CUT may fail. With a more
+powerful language (e.g. Scheme via Guile) it could perhaps be rewritten something
+like this:
+
+(define (copy shell map offset count)
+        (if (zero? count)
+                ((cut DONT_UNDO shell map offset count) 
+                 (paste DONT_UNDO shell map offset 0)
+                 (select DONT_UNDO shell map offset count))
+                (alert '(Cannot copy empty selection))))
+
+Maybe.
+
+Locking
+=======
+
+Most of the data in tracks and sound structures is manipulated from 2
+threads simultaneously. The manipulation functions thus need locking
+to ensure sane behaviour. Because most activity consists of reads
+(playback, drawing) it makes sense to distinguish between locking for
+reads and locking for writes. rwlock.c implements such a lock.
+
+There is an rwlock associated with every sound structure and with each
+of its component track structures. The rwlock for the sound structure
+protects the sound structure from manipulation (for example, while the
+sound structure's tracks are being walked). It does not protect the
+tracks within the sound structure. An individual lock (read/write)
+must be obtained on every individual track that is being
+manipulated. So, given a sound structure with two tracks sr[tr[0],
+tr[1]], it is possible for thread 1 to hold a write lock on sr[] while
+thread 2 manipulates tr[0].
+
+Most of the track_* and snd_* functions acquire the necessary locks to
+guarantee sanity automatically, but if atomicity is required across
+multiple track_* or snd_* invocations (for example, copy is
+implemented as delete/insert, but we don't want anybody to see that
+anything was in fact deleted) then the necessary locks must be acquired
+"by hand". In particular a lock must always be acquired when walking
+the snd->tracks array.
+
+Actions
+=======
+
+Not every action is permitted at every point in time. A matrix must be
+constructed relating the actions currently in progress to the actions
+that are permitted (partial list):
+
+Load disallows cut, paste, tools, undo.
+Save disallows cut, paste, tools, quit, undo.
+Tool disallows undo, tools, show/hide markers.
+
+Something like that. Maybe better to proceed on case by case basis instead
+of gigantic matrix (like buffers_being_saved).
+
+
+LADSPA Audio I/O
+================
+
+LADSPA plugins have a variable number of audio input and output ports.
+The standard module processing loop is something like:
+
+  for(track = next_selected_track()) {
+      offset = start;
+      count = end-start;    
+      while(count > 0) {
+          read = track_frames_get(track, buf, offset, 4096);
+          <...process...>
+          track_frames_replace(track, buf, offset, read);
+          count -= read;
+      }
+  }
+
+This is suitable for mono effects, but not for stereo effects or some
+of the tortured schemes (9 inputs/1 output?) that LADSPA can throw at
+us. To handle those requires something more involved.
+
+First we must fill the required number of input buffers. To do this we
+must walk the selected tracks and fill a buffer from each of those.
+Then we can run the plugin. Finally the results must be returned to
+the track. We can do this by walking the selected tracks and replacing
+those with the output buffers. We proceed until there are no more
+frames left. Finally we distinguish between mono audio processors (1
+input/1 output) and multichannel processors. For mono audio
+processors, we need to apply the plugin to every single track
+individually. For multichannel processors we make no such attempts,
+and we require that the number of selected tracks matches either the
+number of input or the number of outputs.
+
+Function naming
+===============
+
+Early on I made the decision to name functions as
+<object>_<property>_<verb>.  That was a mistake. It should be
+<object>_<verb>_<property>. I'm trying to slowly move to the new
+naming scheme by naming new functions according to it and renaming old
+functions as I work on them. Maybe at some point a wholesale change is
+best.
+
+Recording (1 feb 2004)
+=========
+
+Right now recording is very simplistic. It just records the first X
+channels (where X is the number of tracks selected) and maps them to
+the selected tracks. It needs to be possible to specify which channels
+to record from. To prepare the player engine for this functionality in
+the future we need some nomenclature and definitions.
+
+The term "channel" stands for a mono channel on the hardware. The term
+"track" means one of the audio tracks in GNUsound.
+
+So we have, for playback:
+
+output channels - where the audio goes.
+source tracks - where the audio comes from. (in the current setup,
+exactly those tracks which are not target tracks).
+
+And for record:
+
+input channels - where the audio comes from.
+target tracks - where the audio goes. (in the current setup, exactly
+those tracks which are not source tracks).
+
+The mapping between source tracks and output channels is determined by
+the mixer matrix. The mixer defines a many-to-many relationship,
+i.e. we can send one source track to many output channels or send many
+source tracks to one output channel.
+
+What we need now is a mapping between input channels and target
+tracks. It does not have to be a many-to-many relationship, it can be
+a simple one-to-one relationship, i.e. every input channel goes to one
+target track. This connection is called an assignment. 
+
+Now lets describe the current situation in these terms. Currently, it
+is only possible to assign input channels sequentially, beginning from
+the first input channel and moving up to the second, third etc. The
+number of input channels to use is determined from the number of
+selected tracks. So in the current situation, we have about half of
+what we need: while it is not possible to assign random input channels
+to random tracks, it is possible to assign fixed input channels to
+random tracks.
+
+What is missing is input channel selection. Each track needs another
+widget to specify the input channel that is assigned to that track.
+
+Implementation-wise this (might) mean that we need to record audio
+from all of the input channels that the audio hardware supports (at
+least up until some user specified maximum). This puts some strain on
+the system, especially with 10 or 16 channel cards (but GNUsound is
+not really meant to be used beyond 8 input and output channels
+anyway). In any case the user should be able to specify that fewer
+input channels should be used.
+
+From this "full spectrum" of input channels we can extract the
+required input channels using mixer_demux(). Then from there we can
+place them on the selected tracks. 
+
+What info is needed to perform this task? Basically we only need to
+know the mapping (input_channel_assign) and the number of input
+channels. The mapping can be placed in the mixer:
+mixer_assign_input_channel(input, track). The number of input channels
+can also be placed in the mixer: it already knows the number of output
+channels, so that is a nice fit.
+
+So for starters, the code will have to be changed to use the new
+definitions throughout: input_channels, output_channels,
+source_tracks, target_tracks, and assignment.
+
+One important thing not to forget is that we must allow for audio
+driver optimization: if an audio driver can record from just the input
+channels that we need, this saves a lot of processing (the same
+optimization is not possible for playback due to the many-to-many
+relationship).
+
+Major/architectural changes (5 feb 2004)
+===========================
+
+The shell must be split up. Right now the shell is too much of a grab
+bag, it builds and controls the interface, dispatches commands, and
+stores vital information. It should ideally just store information. So
+that it becomes a "faceless" container for sound, mixer settings,
+marker settings, and document settings (i.e. the "model" in MVC
+terms). A separate view object should do all the GUI work (the
+"view"). The view then attaches/detaches to/from a shell. Ie. opening
+a file becomes a matter of creating the shell, then creating a view,
+then attaching the view to the shell, then invoking the "open file"
+command on the shell. The view will also have to provide functions to
+deal with status messages, progress info, etcetera, i.e. it becomes a
+kind of UI abstraction layer (ick). The view translates UI messages
+into commands (the "controller").
+
+It might be good to rethink command processing, turn it into a
+deferred bottlenecked architecture, where we maintain a queue of
+commands that are processed in an event loop. Issuing a command then
+becomes a matter of pushing it onto the command queue. This gives a
+much cleaner flow of control and gives the app some backbone (instead
+of tying everything to the shells and their windows as it is now).
+
+The "action" structure and evaluator must be replaced by a function
+registry -- possibly by a full-blown language. The key is that we want
+to preserve the type checking of the current system. I.e. we want to
+be able to say something like, "1st param to function 'select' has
+type 'shell', ...". The problem is that if we make this too generic we
+lose the ability to have the compiler check the types for us. A
+language for this has been designed and implemented but still not sure
+whether it is the best thing to do. This ties into the command queue
+above.
+
+All typedef struct's should disappear, it is better to write
+e.g. "struct shell *shl" rather than "shell *shl".
+
+The undo mechanism must become a history mechanism and provide redo as
+well as undo. This is closely tied to the command
+language/architecture.
+
+There needs to be a disk backing store for snd structures. The rough
+idea for how to do this has already been sketched.
+
+Sometimes the terminology peak cache is used, sometimes graph
+cache. The peak terminology is clearer, so all references to "graph
+whatever" need to be replaced by "peak whatever".
+
+Replace AFframecount by long to diminish libaudiofile dependency.
+
+NuPlayer architecture
+=====================
+
+GNUsound 0.6.3 has a new playback architecture. This architecture
+provides better performance and the ability to use different audio
+backends. Schematically:
+
+    +------------+       +---------------+
+ +->| GUI thread |       | Player thread |
+ |  +------------+       +---------------+
+ |        |                      |
+ |        v                      v
+ |  player_update_view()   driver->open()
+ |        |                      |
+ +--------+                      v
+                           driver->transfer() -> player_get_playback_buffer()
+                                 |     ^                     |
+                                 |     |                     v
+                                 |     |         player_flush_playback_buffer()
+                                 |     |                     |
+                                 |     |                     v
+                                 |     |         player_get_record_buffer()
+                                 |     |                     |
+                                 |     |                     v
+                                 |     |         player_flush_record_buffer()
+                                 |     |                     |
+                                 |     +---------------------+
+                                 v
+                           driver->close()
+
+Testing an audio driver:
+
+1. Playback audio file.
+2. Record on new track & undo.
+3. Record on first track & undo.
+4. Select a small region, repeat 1, 2, 3.
+5. Enable loop, repeat 1, 2, 3.
+6. Enable record replace, repeat 1, 2, 3.
+
+Mixer & Snd API
+===============
+
+Currently these APIs only provide methods to do interleaved
+access. They should also provide methods without interleaving.  The
+snd_mux() and snd_demux() interfaces should disappear. They are
+replaced by:
+
+snd_geti() - get as interleaved
+snd_getn() - get as non-interleaved
+snd_puti() - put from interleaved
+snd_putn() - put from non-interleaved
+
+The 'i' functions are wrappers around the 'n' functions.
+
+The mixer functions mixer_mux() and mixer_demux() are replaced by:
+
+snd_iton() - convert interleaved to non-interleaved
+snd_ntoi() - convert non-interleaved to interleaved
+mixer_mixn() - mix non-interleaved
+mixer_mixi() - mix interleaved
+
+Issues: 
+- Should snd_iton() provide facility to "extract" a single track as
+  mixer_demux() does right now? 
+- Currently mixer_mux() combines mixing and interleaving in a single
+  step. Will making it a 2 step process (first mixer_mix(), then
+  snd_ntoi()) hurt performance?
+- How can we build this so that it's easy to extend once GNUsound
+  supports floats as a native data format?
+
+Roadmap (22 march 2004)
+=======
+
+0.7: New playback engine & GUI.
+
+0.8: New file load/save architecture (libsndfile, libmad support),
+record input channel assign, module components.
+
+0.9: New view & action architectures, (limited) Disk backing store,
+maybe scripting support.
+
+1.0: As 0.9 but without bugs.
+
+GUI redesign (13 march 2004)
+============
+
+The GUI needs a redesign. It needs to look good. In particular, the
+info window (showing selection position etc) needs new design. Since
+we also need some way to unobtrusively alert the user (i.e. no alert
+boxes), that should find a place in there as well. Finally we
+ultimately want to reduce the number of windows as much as possible:
+i.e. think about allocating module UIs inside the main shell window.
+
+Elements we need:
+
+- transport buttons (play, cue play, stop, record, ff, rwd)
+- xrun indicator
+- clipping indicator
+- error box
+- selection start/end indicators
+- playback indicator
+- loop start/end indicators
+- mouse position indicators
+- horizontal/vertical zoom indicators
+
+
+Cache & block layers (17 march 2004)
+====================
+
+Currently we maintain 3 caches per block, one for the samples, and two
+for the peak data. This is fairly nonsensical, really, since the
+access to the peak data will probably never need to be abstracted (it
+doesn't need to be paged from/to disk etc). So it would be best to
+slightly extend the block layer with put() and get() primitives for
+sample and peak data, and use the cache layer for the sample data
+only. Something like:
+
+/* block_put_samples() either fails completely or succeeds completely */
+int
+block_put_samples(block *block,
+                  void *buf,
+                  AFframecount frame_offset,
+                  AFframecount frame_count)
+AFframecount
+block_get_samples(block *block,
+                  void *buf,
+                  AFFramecount frame_offset,
+                  AFframecount frame_count)
+AFframecount 
+block_get_peaks(block *block,
+                graph_bits_unit_t *lows, 
+                graph_bits_unit_t *highs,
+                AFframecount frame_offset,
+                AFframecount frame_count)
+
+This is a fairly big change! It requires big changes in the way
+samples are retrieved by the track layer, and changes the assumptions
+about which data is available when.
+
+Currently, the assumption is that no data at all may be available from
+the caches. This is a holdover from very early versions, where sample
+data would be dynamically loaded from the soundfile as required, and
+peak data would be generated on demand, then stuffed back into the
+peak caches.
+
+The new assumption has to be that for every block for which sample
+data is available, peak data will also be available. Ie. the peak data
+is never generated on demand, but always exactly tracks the
+availability of sample data. The whole complicated scheme to return
+"gappy" data can be dropped.
+
+This means a function like track_graph_cache_find() will always
+succeed to get peak data up until the end of the track. Let's look at
+how it can be changed to ensure easy porting. Currently it looks like
+this:
+
+void
+track_graph_cache_find(track *tr,
+                       void *low_bits,
+                       void *high_bits,
+                       AFframecount *frame_offset,
+                       AFframecount *frame_count);
+
+On entry, frame_offset & frame_count contain the requested data, on
+exit, they contain the data that was actually found. This is too
+complex for the new situation. In the new situation, the only failure
+case is that fewer frames are available than requested. So the new
+prototype could be something like:
+
+AFframecount
+track_get_peaks_from_cache(track *tr,
+                           void *lows,
+                           void *highs,
+                           AFframecount frame_offset,
+                           AFframecount frame_count)
+
+and it's accompanying user-level function looks like this:
+
+AFframecount
+track_get_peaks(track *tr,
+                void *lows,
+                void *highs,
+                AFframecount frame_offset,
+                AFframecount frame_count,
+                float res)
+
+It determines whether to retrieve from the cache or from the sample
+data and scales as needed.
+
+Lets look at track_get_peaks_from_cache() first. It has to do something like:
+
+    err = blocklist_block_find(tr->bl, &frame_offset, &block);
+
+    if(err)  /* The offset is out of bounds. */
+        return 0; 
+ 
+    offset = 0;
+    while(block && frame_count) {
+      got = block_get_peaks(block, lows + offset, 
+                            highs + offset, frame_offset, frame_count);
+      frame_count -= got;
+      offset += got;
+      frame_offset = 0;
+      block = block->next;
+    }
+
+    return offset;
+
+A lot simpler then the track_graph_cache_find() mess! Now
+track_get_peaks() doesn't change much. Mainly it becomes simpler,
+because it doesn't have to account for "gappy" returns. The
+architecture overview becomes:
+
+user ------> sound ----------+
+ |             |             |
+ |             v             v
+ +---------> track ---> blocklist
+               |             |
+               |             v
+               +---------> block
+                             |
+                             v
+                           cache
+
+Which is also a lot better.
+
+Tool buttons & modules
+======================
+
+The new GUI affords tool buttons which operate much like GIMP's tool
+buttons.  This would be a good time to start thinking about how to
+extend the module interface to enable modules to integrate more
+tightly with the main program. Ultimately the goal is to have modules
+which can add tool buttons and affect the display.
+
+Some considerations:
+
+- Each module would register an "edit mode" with the shell so that the
+  shell can dispatch UI events to the proper module callback. How would
+  we best do this?
+- Module UI needs to be swallowed into the notebook. It seems to best
+  way to do this is to equip each module with a 'get_interface()' callback
+  which returns a GtkWidget which is inserted into the notebook.
+- Two drawing callbacks, for exposed and obscured.
+- Modules need a way to expose their functionality to the rest of the program.
+  This ties in with the scripting support (need typing etcetera).
+- Do in a piecemeal fashion; don't overdesign.
+- Needs the ability to dynamically add preference items.
+- It would clean up the shell object and reduce the need to change it 
+  for every new feature.
+
+This is planned for after the separation of shell into view and model
+and before the scripting support.
+
+Application architecture (23 march 2004)
+========================
+
+The minimal application architecture has done a great job in getting
+out of the way and giving space for trying various approaches, but now
+it's time to solidify some of that and provide more support. Some
+ideas have been hinted at above such as separation of shell and
+view. But a more comprehensive strategy is required.
+
+We need a few new objects:
+
+The arbiter. The arbiter controls global resources and enforces
+policies such as which actions can be performed when. The arbiter is
+also responsible for dispatching commands and monitoring outside
+events.
+
+The clip. A clip contains a snd and all information that goes with it,
+namely the markers, mixer settings, flags and (optionally) the display
+-- information that is currently in the shell. The idea is that clips
+are used in places where display is not necessary (currently shells
+are used in those places). It has functions which are a union of all
+the functions that its components need to perform. The clip becomes
+the data type that everything revolves around.
+
+The view. This is the view for a shell. It handles all user
+interaction, and dispatches commands thru the arbiter.
+
+The shell. This should be radically trimmed and become a true model in
+some sense. Basically all it should do is function as a bag for a
+clip, a player, and a view. This is easier said than done. I'm still
+not sure what it is that a shell actually models. The only consistent
+explanation is probably "all the things contained in the window that
+the user interacts with", but that's circular (since the window
+obviously contains whatever the shell is a model of). But hopefully by
+having a view the distinction becomes clearer. The best way to
+understand the shell is probably that it models a single audio file.
+
+Shells, views and clips need some kind of mechanism to attach to
+eachother, as well as a mechanism to notify people when things are
+being attached/deattached. Having objects attach themselves should be
+avoided, this is a job for the arbiter. Maybe it needs to be possible
+to have multiple attachments (having multiple views on a clip e.g.).
+
+So we'd get:
+
+clip_attach(struct view *view);
+view_attach(struct clip *clip);
+shell_attach_clip(struct clip *clip);
+shell_attach_view(struct view *view);
+
+I.e. something like:
+
+clip = clip_new(...);
+view = view_new(...);
+shl = shell_new(...);
+clip_attach(view);
+view_attach(clip);
+shell_attach_clip(clip);
+shell_attach_view(view);
+
+This can be simplified. A view always needs a clip, and a shell always
+needs a view. So:
+
+clip = clip_new(...);
+view = view_new(clip);
+shl = shell_new(view);
+
+But then destroying the clip would also have to destroy the view and
+the shell, since the view can't exist without a clip. So we'd need a
+view_attach(struct clip *clip) anyway, which detaches any previous
+clip and reattaches a new one.
+
+The clip needs some callbacks. Objects such as the view need to be
+able to specify that they're interested when something happens to
+it. So, a clip would need:
+
+clip_add_callback(const char *event,  /* or integer event id */
+                  void *id,           /* listener id */
+                  void (*callback)(struct clip *clip,  
+                                   const char *event, 
+                                   void *user_data),
+                  void *user_data);
+clip_remove_callback(const char *event,
+                     void *id);
+
+Going in this direction moves us very close to the GObject system. I
+don't think it's wise yet to actually have it become a GObject
+(because we need compatibility for GTK1 and GTK2, because I'm not
+familiar with GObject, and (as a result of that) because making
+mistakes with our GObject design would be harder to correct then
+something like this), but it's something to keep in mind.
+
+Frankly it's probably sufficient to drop the listener id's, and have
+the callback be an arbiter function which then dispatches the event to
+the correct listener. Then it's the arbiters job to keep track of who
+listens to what. That's an ugly relationship though. And so far I
+haven't been able to think of a case where multiple viewers on the
+same clip would actually make sense. So there could just as well only
+be a single listener (i.e. set_callback rather than add_callback).
+
+The goals here are:
+
+- Remove the need to have a display on a sound object for some
+  operations; if there is a display, it should get updated automatically.
+- Fix the mess with markers in snd objects as part of the effort
+  towards freezing the snd API completely.
+
+What the hell is a shell?
+=========================
+
+A shell is the context in which the user applies commands to clips.
+It maintains the history (undo state), and links together the user
+interface, the clip, the playback driver, and assorted state
+information.
+
+History
+=======
+
+To implement undo/redo we need to maintain a list of two pieces of
+information. First, the name of the command (from the user's
+perspective) which caused a change. Second, the command necessary to
+undo the change. These are referred to as the "what" and the "how" (as
+in, "what" happened and "how" to undo it). Finally we need a pointer
+to know where we are in the list.
+
+The "what" doesn't change across undo/redo, whereas the "how" changes
+after each undo. For example:
+
+History: [ what, how ] 
+
+--- current position ---
+[ "Select All", set selection to nothing ]
+[ "Cut", insert deleted frames and adjust selection ]
+[ "Select 1 to 10", revert selection to previous ]
+
+After undo:
+
+[ "Select All", select everything ]
+--- current position ---
+[ "Cut", insert deleted frames ]
+[ "Select 1 to 10", revert selection to previous ]
+
+After redo:
+
+--- current position ---
+[ "Select All", set selection to nothing ]
+[ "Cut", delete selected frames and adjust selection]
+[ "Select 1 to 10", revert selection to previous ]
+
+Note that each undo changes the history so that a subsequent redo
+reverts the state to the state before the undo. It's also important to
+note (although this is not explicitly illustrated in the example) that
+undo (and redo) are not identical to "reversing all effects".
+
+For example, when the user issues "Cut", the effect is that some
+frames are deleted, put on the clipboard, and the selection is
+adjusted. When undoing a "Cut" though, the clipboard is left
+unaffected. Similarly, when redoing the "Cut", frames are deleted and
+the selection adjusted, but the clipboard is not touched.
+
+Implementation:
+
+array of transitions: transitions
+int: position
+int: state
+transition: transition currently under construction
+
+history_go_back()
+history_go_forward()
+history_begin()
+history_remember()
+history_commit()
+history_rollback()
+
+More history (6 august 2004)
+============
+
+OK, the implementation of the history system is posing a few
+problems. There are a few goals:
+
+- A command should have to know as little as possible about its
+  relationship wrt the history. It should be able to just push
+  commands onto the history using history_remember() without having to
+  worry about whether its being undone or redone or whatever. 
+  In particular, we don't want commands to initiate their own
+  history transactions. This makes it possible to use commands
+  in the construction of compound commands, and have the undo/redo
+  thing automatically turn out right. So, we use a bottleneck:
+  every command which can affect the history is "pushed through"
+  a top-level command called "dispatch-cmd". dispatch-cmd does
+  the history_begin() and history_end() calls required to start
+  and end a transaction. The command being dispatched can then just do
+  history_remember() calls as is required.
+
+- Some commands take a long time to complete. During that time,
+  it must be possible to continue performing commands. So the
+  history must be able to accomodate nested invocations. 
+
+  Since the user can issue a (outer) command, and during its
+  execution issue another (inner) command which completes before
+  the outer command completes, the inner command has to appear in
+  the history (since after all it was performed). But if the inner
+  command has to appear in the history, then the outer command has
+  to appear as well, otherwise you get the confusing situation
+  where the inner command apparently was executed after the
+  command preceding the outer command. Not to mention that when
+  the outer command finally finishes, it suddenly appears in the
+  history out of nowhere, between two transitions that already
+  exist.
+
+  So transitions have to appear in the history as soon as they start.
+  But this gives rise to another problem: transitions that are 
+  started may be aborted due to an error, or cancelled by the user. 
+  At that point the transition has to be rolled back and removed
+  from the history. Having transitions suddenly disappear out of
+  the history is confusing, but there's another problem even worse:
+  when we add a transition to the history, we need to destroy all
+  transitions that come after it (the redo information). Since we
+  add transitions before we even know whether they succeed or yield
+  anything we can add to the history, this means we will destroy
+  valuable redo information before even knowing whether that was
+  necessary. This problem is made worse by the command dispatcher
+  (bottleneck architecture): if commands could manage their own
+  transitions (by using history_begin() and history_end()), then
+  they could perform their own checks before actually doing the
+  action and decide for themselves whether to initiate a history
+  transition or not. But since everything goes through the
+  bottleneck, and the bottleneck always sets up a history
+  transition, we can't do that.
+
+  In plain terms, history_begin() used to be a declaration of intent,
+  which was evaluated at history_end(). Now history_begin() has become
+  a promise, and history_end() a formality. This causes the command
+  dispatcher to make promises on someone's else behalf, and that's
+  a bad idea.
+
+Let's consider the possible solutions:
+
+1. Don't allow nested commands. This is the simplest solution by far.
+   It doesn't just simplify the history, but lots of other things
+   as well.
+   The drawback, obviously, is that the user then can't do pretty
+   much anything useful while the command is working. But this has 
+   been pretty much a design requirement from the earliest beginnings.
+   It would be a shame to give up.
+
+2. Get rid of the command dispatcher architecture. Have each top-level
+   (user-invokable) command manage the history itself. This would 
+   introduce a division between top-level and sub-level commands, 
+   reducing the reusability of the top-level commands as well as that
+   of sub-level commands, and require manual maintenance for
+   each and every top-level command to ensure it manages the history
+   properly.
+
+3. Don't actually destroy the redo information but keep it hidden
+   until we know the status of the pending transition. Drawback:
+   what do we do with hidden redo information when a command is nested?
+   Destroy it after all? But what if neither the nested command
+   nor the outer command yield any undo information? This just 
+   delays the problem by a layer.
+
+(13 august 2004) 
+
+I don't know how to fix this issue. None of the solutions is very
+palatable. Some variant of the second solution may be the best course
+of action. It ties in closely to the issue of command orthogonality,
+though, so lets examine that first:
+
+Command orthogonality (13 august 2004)
+=====================
+
+Two commands are orthogonal if they can be executed at the same time
+without affecting eachother. For example, you could have 2
+amplification commands working on different tracks without affecting
+eachother.
+
+The nested history thing is closely related to the notion of command
+orthogonality: a command can only be nested if it is orthogonal to the
+command already running.
+
+Orthogonality is determined by constraints on regions. A region is a
+any number of offsets, lengths and bitmaps denoting the tracks. Three
+constraints are defined: INSERT, DELETE and REPLACE.
+
+By applying constraints to regions, commands can lock those regions
+for the duration of an operation. Any set of commands is orthogonal if
+none of the commands violates the constraints imposed by any other
+command.
+
+When two commands are orthogonal, then the undo's produced by those
+commands are also orthogonal. While normally it matters a great deal
+in which order undo's are performed, the order is irrelevant for
+orthogonal undo's.
+
+Alright -- but order of execution is not the problem. The problem is
+that we need to hold on to the redo information until we -know- we can
+successfully add a transition to the history.
+
+More more history (13 august 2004)
+=================
+
+Okay, I think I finally get it. 
+
+When a transition is created using history_begin(), we remove the redo
+information and store it in a safe place. A subsequent call to
+history_end() destroys the redo information, unless no transition
+information was given: in that case, we look at the nesting level. If
+the nesting level is 0, the redo information is restored. The same
+thing happens on history_rollback().
+
+This way, the history_begin() becomes a declaration of intent once
+more, and redo information is not destroyed until at least one command
+yields undo information.
+
+Region constraints (16 august 2004)
+==================
+
+We need some kind of data structure and API to express
+constraints. The most important property it needs to have is a
+stack-like behavior, so that commands can push constraints onto the
+constraints stack and pop them off when their done. This way nested
+commands can accumulate constraints as required.
+
+So at the least we need something like constraints_push() and
+constraints_pop():
+
+int constraints_push(struct constraints *cs, struct region *r, const char *reason, int constraints);
+void constraints_pop(struct constraints *cs);
+
+The ``constraints'' integer specifies what properties of the region
+are to be constrained, a combination of POSITION, LENGTH or CONTENTS.
+
+Which means struct constraints has to look something like this:
+
+struct constraints {
+        GList *reasons;
+        GList *regions;
+        GList *constraints;
+};
+
+With struct region being:
+
+struct region {
+        int64_t map;
+        int64_t offset;
+        int64_t count;
+};
+
+Where map, offset & count can be a wildcard (a negative value) which
+matches nothing or anything.
+
+Of course we need to be able to test constraint violation:
+
+int constraints_test(struct constraints *cs, struct region *r, int oper);
+
+The ``oper'' integer specifies what kind of operation will be
+performed on the given region, i.e. INSERT, DELETE or REPLACE.
+
+And creation/destruction:
+
+struct constraints *constraints_new();
+void constraints_destroy(struct constraints *cs);
+
+struct region *region_new(int64_t map, int64_t offset, int64_t count);
+void region_destroy(struct region *rgn);
+
+Drawing hooks (30 august 2004)
+=============
+
+A drawing hook is simply a callback executed when something needs to
+be drawn. A set of drawing hooks is associated with the main drawing
+area (the wavecanvas), as well as with each track. Drawing hooks can
+be independantly enabled/disabled by name. The pencil tool uses this
+functionality to substitute the pencil drawing for the actual waveform
+peaks while the user is pencilling.
+
+Module API redesign (30 august 2004)
+===================
+
+The current design uses dlopen() and dlsym() to scan an object file
+for the presence of symbols which should represent functions. This
+makes it impossible for the compiler to verify signatures. A better
+approach is to export a single symbol which is a struct containing the
+functions a module should implement.
+
+Configurable Mixdown (31 august 2004) 
+====================
+
+The mixdown function basically plays back to disk. Thus you get an
+audio file with as many tracks as there are audio channels.
+
+It should be possible to specify which output channels you want to
+appear in the mixdown file, since usually you will want to use the
+mixdown as the basis of further work.
+
+Say you have a file with 4 tracks and a mixer with 4 output
+channels. The mixer table might look something like this:
+
+     |  source tracks
+     |  1    2    3    4
+  ---+-------------------
+  o 1|0.5    1  0.5  0,5
+  u 2|  0    0    0    0
+  t 3|  1    0  .25    1
+    4|  0    0    0    0
+
+Nothing is happening on output channels 2 and 4 so you might as well
+mixdown channels 1 and 3 onto 2 tracks. Is it possible to construct a
+mixer which does this?
+
+     |  source tracks
+     |  1    2    3    4
+  ---+-------------------
+  o 1|0.5    1  0.5  0,5
+  t 2|  1    0  .25    1
+
+Clearly we simply have to delete output channels 2 and 4. So we need
+mixer_delete_output_channels().
+
+How to determine when a dragging operation finishes (3 sept 2004)
+===================================================
+
+The implementation of the move tool posed an interesting problem that
+I hadn't considered before, namely that button-press and
+button-release events do not always arrive in pairs. For example, when
+another application pops up a window and grabs the pointer, or when
+the user switches to another virtual desktop while dragging, we won't
+receive a button-release event. So it's unsafe to rely on the
+button-release event to determine whether the dragging operation has
+finished. Instead we need a combination of both leave-notify and
+button-release. See modules/tool_move.c for details.
+
+File handling (14 sept 2004)
+=============
+
+Until now file handling has been very simple: just use audiofile to
+read the file, then write it back, always in WAVE format.
+
+It should be more flexible and allow for different formats. The
+support architecture is more or less analogous to the player driver
+subsystem.
+
+There are a couple of issues:
+
+1. GNUsound has a pretty high level view of the files it opens. It
+   knows about a few different sample formats, sampling rate, and the
+   number of tracks, and that's pretty much it. When opening and 
+   saving a file, though, it would be nice if the saved file preserved
+   as many qualities from the original file as possible (least 
+   astonishment). So each document needs to provide some space where 
+   the file driver can store details about the file format that would
+   otherwise be lost.
+
+2. The file driver needs to be able to provide a configuration dialog
+   both for general defaults, and a dialog with settings for each file 
+   formats it supports.
+
+3. We need to distinguish between documents that have been read from disk
+   and newly created documents. Documents that have been read from disk
+   are associated with a driver. Newly created documents are not. So:
+
+   save-document(shell)                    save-document-as(shell)
+        |                                            |
+        v                                            v
+   [does document come from disk?] ------> select-file-and-save(shell)
+        |                           no /             | 
+        | yes                          |             v
+        |                              |   [user selected file?] ----> [nop]
+        |                              |             |            no
+        |                              |             | yes
+        v                              |             v
+   [can driver write disk format?] ----'   select-format-and-save(shell, file)
+        |                           no               |
+        | yes                                        v
+        |                                  [user selected format?] ----> [nop]
+        |                                            |              no
+        |                                            | yes
+        | -------------------------------------------'
+        |/
+        v                                            
+    save-doc-as(shell, format, file)
+
+File handling part 2 (17 sept 2004)
+====================
+
+File drivers are a kind of translators. They translate between the
+file format representation and the GNUsound audio representation.
+Sometimes, the translation process is controlled by some
+parameters. So:
+ 
+Load: file -> translation + options -> GNUsound audio representation
+Save: GNUsound audio representation -> translation + options -> file
+
+However not all GNUsound audio representations can be translated
+directly. The LAME file driver, for example, needs 16 bit audio to
+work with. So an extra conversion step may be necessary:
+
+Load: file -> translation + options -> conversion -> GAR
+Save: GAR -> conversion -> translation + options -> file
+
+So the question is how to specify this conversion, and what this
+entails. The problem is where to draw the boundary between conversion
+and translation. There's not much sense in a file driver saying
+"convert this .WAV data to GAR", because converting .WAV to the GAR is
+exactly what the file driver should do. But a file driver might, for
+example, only be able to load data into a non-interleaved format. This
+is a valid conversion specification.
+
+There is also a difference between input conversions and output
+conversions. When the file driver identify()'s a file, it should
+establish how to best translate the file data into the GAR. There is
+no point in loading the file as a format that GNUsound does not
+understand, then specifying a conversion to a format that GNUsound
+does understand; because if GNUsound can provide a fitting input
+conversion, then it might as well understand it proper. The key issue
+is that on load, the file driver controls and understands the input --
+that's it's job.
+
+On save, however, the file driver doesn't control the input, and it is
+completely reasonable if it only understands a very small section of
+the possible input space. So the conversion step should make sure that
+the proper input is provided.
+
+Valid input conversions:
+
+- Interleaved/non-interleaved
+
+Valid output conversions:
+
+- Interleaved/non-interleaved
+- Any GAR sample format to any GAR sample format
+- Sample rate (?)
+
+This is analogous to what (should) happen for audio drivers.
+
+Anyway, none of this is really the point. The conversion step could be
+subsumed into the translation step, i.e. the file driver could do any
+necessary conversions itself, at a little efficiency cost.
+
+The real issue is the file driver API and lifetime/management of the
+translation options. I'm really looking for some sort of symmetry in
+the API. For load, the process is obvious:
+
+  filespecs = driver->identify(filename);
+  shell_attach(shell, filespecs);
+  driver->open(filespecs);
+  driver->read(filespecs, buf, count);
+  driver->close(filespecs);
+
+For save it isn't. Something like:
+
+  filespecs = driver->new(...options...);
+  shell_attach(shell, filespecs); /* optional */
+  driver->open(filespecs, "w");
+  driver->write(filespecs, buf, count);
+  driver->close(filespecs);
+  
+The problem is how to obtain the options. Right now we have:
+
+  driver->open_format_config();
+  filespecs = driver->commit_format_config();
+
+And filespecs contains the options. 
+
+File handling part 3 (21 sept 2004)
+====================
+
+Just for completeness, the issue has been solved. The API looks like:
+
+  attach - allocates driver specific data structures
+  open   - either read or write, read identifies file format
+  read   - read frames
+  write  - write frames
+  close  - close file
+  detach - free driver specific data structures
+
+
+Objects and signals (17 jan 2005)
+=================== 
+
+One very nice feature of the GObject system is the generalized signal
+handling capability. There are a few instances where this would be
+convenient right now:
+
+- A struct snd signalling that it's being destroyed is necessary
+  for the Mix tool.
+- Currently track.c needs to know about a few drawing routines, this violates
+  the principle of containment. It would be better if it didn't need
+  to know about drawing specifically but if there was a general way of
+  associating this information with it.
+
+The problem is that GObject is not supported by glib 1. So we need our
+own mechanism. The risk is that it grows into a huge but inferior
+version of GObject. The best thing to do would be to keep the number
+of features limited and mostly implementable as a wrapper around the
+GObject class.
+
+Filter abstractions (11 mar 2005)
+===================
+
+Right now all the core functions operate on snd's or tracks. Sometimes
+this is inconvenient, especially we really want them to operate on
+some derivation of the sound. The only way to do that is to first copy
+the snd, then process the copy, then pass that along. This limits
+generality and is wasteful. Ideally some functions should accept
+"promises" rather than actual snd's. These promises are then evaluated
+on an as-needed basis. Or perhaps even better, the track and snd
+objects could be extended to provide this functionality with some
+degree of transparency.
+
+The primary challenge is how to cope with the fact that filtering may
+introduce some semantic changes. For example, if N frames are
+requested, then that can either mean the caller wants the *segment*
+denoted by those N frames, or it can mean that the caller actually
+wants N frames. Normally these two meanings are satisfied by the same
+operation. But if the segment can grow or shrink depending on the
+filter (e.g. a resampling filter) then it is unclear which meaning to
+apply.
+
+The secondary challenge is that of bookkeeping. Considerable amounts
+of behind-the-curtain magic and hand-waving are going to be needed if
+we're going to integrate this functionality into the existing snd and
+track infrastructure.
+
+Finally since filtering may take large amounts of time, there has to
+be the possibility of user interface interaction.
+
+(more later)
+
+Objects (11 mar 2005)
+======= 
+
+It seems that an object base class would need:
+
+- Creation and type registration:
+
+  tag = obj_register_type(label, size)
+  obj_new(tag)
+
+- Messaging (implemented via msg.c):
+
+  obj_send(obj, msg, args)
+  obj_subscribe(obj, msg, handler, data)
+  obj_publish(obj, msg, params) -- called during obj_new()
+
+- Properties
+
+  obj_set_data(name, value)
+  obj_get_data(name)
+
+  or perhaps more elaborate:
+
+  obj_set_data(name, type, value)
+  obj_get_data(name)
+
+- Error handling (implemented via error.c):
+
+  obj_set_error(obj, error)
+
+- Refcounting
+
+  obj_ref(obj)
+  obj_unref(obj)
+
+

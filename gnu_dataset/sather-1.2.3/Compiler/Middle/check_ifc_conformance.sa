@@ -1,0 +1,94 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class CHECK_IFC_CONFORMANCE < $CHECK_IFC_CONFORMANCE is
+    -- This phase checks the conformance of interfaces for each
+    -- type against its parents and children.
+
+    include CS_COMPONENT;
+   
+    create(p:PROG):SAME
+    is
+       r::=new; r.prog:=p; return r
+    end;
+   
+    check_ifc_conformance
+        -- Check all type interfaces for conformance to their ancestors
+        -- and descendants.
+    is
+        loop
+            tp ::= prog.tp_done.elt!;
+            typecase tp
+            when TP_CLASS then
+                ti:IFC := tp.ifc; -- this computes also the impl's.
+                if void(ti) then 
+                    err_loc(void);  -- Don't print a source location
+                    err("Can't compute interface of "+ tp.str + ".");
+                    return
+                end;
+                if prog.show_ifc then ti.show end;
+                loop
+		   parents:TP_CLASS := prog.tp_graph.get_parents(tp).elt!;
+		   pi:IFC := parents.ifc;
+		   ncs:FLIST{SIG} := ti.nonconforming_sig_list(pi);
+		   -- print_err: STR := "The interface of type " + tp.str
+		   --      + " doesn't have a signature conforming to "
+		   --	    + ncs.str + " in its parent " + parents.str + ".";
+		   if ~void(ncs) then
+		      print_err: STR := "The interface of type "+tp.str
+	   	          +" doesn't conform to its parent: "+parents.str+".";
+		      sigtbl: SIG_TBL := ti.sigs; -- What we *do* have
+		      loop sig_index:INT := ncs.size.times!;
+			 asig:SIG := ncs[sig_index];
+			 -- Look for a match in name but not in type
+			 found_one ::= false;
+			  sug_str: STR := "";
+			  actual: SIG := void;
+			 loop actual:= sigtbl.get_query!(asig.name);
+			    found_one := true;
+			    sug_str:=sug_str+
+				  " and\n\t   ".separate!(actual.str);
+			 end;
+			 print_err := print_err
+			       +"\n\t"+(sig_index+1)+")For signature:"+asig.str;
+			 if found_one then
+			    print_err := print_err+"\n\t  It has:"+sug_str;
+			 end;
+		      end;
+		      err_loc(tp.as_tree);
+                        -- *H* (Don't) print a source location
+		      err( print_err);
+                    end
+                end;
+                loop
+                    chld:$TP := prog.tp_graph.get_children(tp).elt!;
+                    typecase chld
+                    when TP_CLASS then
+                        if ~chld.ifc.conforms_to(ti) then
+                            err_loc(tp.as_tree); -- *H*
+                            --err_loc(void);  -- Don't print a source location
+                            err( "The interface of type " + tp.str
+                                + " isn't conformed to by the child "
+                                + chld.str + ".")
+                        end;
+                    else
+                        break!;
+                        -- Bail out for non-class types. Do right later.
+                    end;
+                end;
+            else
+            end; -- typecase tp
+        end; -- loop
+    end; -- check_ifc_conformance
+   
+end; -- class CHECK_IFC_CONFORMANCE

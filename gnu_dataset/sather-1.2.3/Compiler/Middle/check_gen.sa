@@ -1,0 +1,53 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class CHECK_GENERICS is
+   -- Check the code for routines in generic classes
+
+   include CS_COMPONENT;
+
+   create(p:PROG):SAME is
+      r::=new; 
+      r.prog:=p; 
+      return r; 
+   end;   
+
+   check_code is
+      loop 
+	  gen_class ::= prog.tp_tbl.class_tbl.elt!;
+	  if prog.trace_generics then
+	      #ERR + "Checking " + gen_class.str + "\n"; 
+	  end;
+	  if gen_class.is_generic and ~gen_class.is_abstract then 
+	      ti::=gen_class.ifc;
+	      if ~void(ti) and ~void(ti.sigs) then 
+		  loop check_sig(ti.sigs.elt!) end;
+	      end;
+	  end;
+      end;
+   end;
+   
+   check_sig(s:SIG) 
+      -- Check `s' for errors, but only generate code for it if 
+      -- `generate_checked_code' is true.
+      pre ~void(s) is
+      if s.am_created then return end; -- Already did it.
+      s.am_created:=true; -- Mark it done.
+      if prog.show_checked_sig then
+         #OUT + "Check sig " + s.str + "\n" end;	 
+      if s.tp.is_abstract then return end;
+      elt:ELT:=s.tp.impl.elts.elt_with_sig(s);
+      am:AM_ROUT_DEF:=TRANS::transform_elt(elt);
+   end;
+	 
+end; -- class CHECK_GENERICS

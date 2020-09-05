@@ -1,0 +1,289 @@
+<html lang="en">
+<head>
+<title>Path Constructors and Setting Functions - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Path-Reference.html#Path-Reference" title="Path Reference">
+<link rel="prev" href="Path-Data-Members.html#Path-Data-Members" title="Path Data Members">
+<link rel="next" href="Path-Destructor.html#Path-Destructor" title="Path Destructor">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Path-Constructors-and-Setting-Functions"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Path-Destructor.html#Path-Destructor">Path Destructor</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Path-Data-Members.html#Path-Data-Members">Path Data Members</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Path-Reference.html#Path-Reference">Path Reference</a>
+<hr>
+</div>
+
+<h3 class="section">26.2 Constructors and Setting Functions</h3>
+
+<div class="defun">
+&mdash; Default constructor: void <b>Path</b> (<var>void</var>)<var><a name="index-Path-543"></a></var><br>
+<blockquote><p>Creates an empty <code>Path</code> with no
+<code>Points</code> and no connectors. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Constructor: void <b>Path</b> (<var>const Point&amp; p0, const Point&amp; p1</var>)<var><a name="index-Path-544"></a></var><br>
+<blockquote><p>Creates a line (more precisely, a line segment) between <var>p0</var>
+and <var>p1</var>.  The single
+connector between the two <code>Points</code> is set to <code>"--"</code> and the
+data member <code>line_switch</code> (of type <code>bool</code>) is set to
+<code>true</code>.  There are certain operations on <code>Paths</code> that are only
+applicable to lines, so it's necessary to store the information that a
+<code>Path</code> is a line.<a rel="footnote" href="#fn-1" name="fnd-1"><sup>1</sup></a>
+
+     <pre class="example">          Point A(-2, -2.5, -1);
+          Point B(3, 2, 2.5)
+          Path p(A, B);
+          p.show("p:");
+          -| p:
+             (-2, -2.5, -1) -- (3, 2, 2.5);
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF110.png"
+alt="[Figure 110. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 110. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Setting function: void <b>set</b> (<var>const Point&amp; p0, const Point&amp; p1</var>)<var><a name="index-set-545"></a></var><br>
+<blockquote><p>Corresponds to the constructor above.
+
+     <pre class="example">          Point P0(1, 2, 3);
+          Point P1(3.5, -12, 75);
+          Path q;
+          q.set(P0, P1);
+          q.show("q:");
+          -| q:
+             (1, 2, 3) -- (3.5, -12, 75);
+</pre>
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Constructor: void <b>Path</b> (<var>string connector, bool cycle, Point* p, </var>[<var><small class="dots">...</small></var>]<var>, 0</var>)<var><a name="index-Path-546"></a></var><br>
+<blockquote><p>For <code>Paths</code> with an arbitrary number of <code>Points</code>
+and one type of connector.
+
+        <p><var>connector</var> is passed unchanged to <code>out_file</code>, so it
+must be a valid connector in MetaPost.
+
+        <p><var>cycle</var> indicates whether the <code>Path</code> is a cycle or not. 
+<code>cycle_switch</code> is set to <var>cycle</var>. 
+See <a href="Path-Data-Members.html#Path-Data-Members">Path Reference; Data Members</a>. 
+The filling and unfilling functions
+only work for
+<code>Paths</code> that are cycles. 
+See <a href="Drawing-and-Filling-Paths.html#Drawing-and-Filling-Paths">Path Reference; Drawing and Filling</a>. 
+If a <code>Path</code> is a cycle, it is up to the user to make sure that it
+has sensible <code>Point</code> and connector values;  3DLDF doesn't check
+them.  If they are not sensible, for instance, if the <code>Path</code>
+crosses itself, and you try to fill it, this will cause an error in
+MetaPost.  It is possible that a <code>Path</code> will be &ldquo;sensible&rdquo; in
+some projections and not in others, although I have not tested this.
+
+        <p><var>p</var> is a pointer to the first <code>Point</code> that should go onto the
+<code>Path</code>. 
+The ellipsis points (<code>...</code>) represent an arbitrary number of
+pointers to <code>Points</code> that should go onto the <code>Path</code>. 
+The final
+argument must be <code>0</code>,
+which is interpreted by the C++
+ compiler as the null
+pointer.<a rel="footnote" href="#fn-2" name="fnd-2"><sup>2</sup></a>
+
+        <p>It is admittedly a bit
+awkward to have to type &ldquo;<code>&amp;p0</code>&rdquo; rather than &ldquo;<code>p0</code>&rdquo;, and
+I have frequently forgotten to do it, which causes a compiler error,
+but all of the arguments must be pointers in order to be able to use 0 to
+indicate the end of the argument list.  Convenience in typing function
+calls is not a high priority in 3DLDF, because once I've written
+an input routine, these function calls should be generated
+automatically.  It will be more important to define a convenient syntax
+for the input routine.
+
+     <pre class="example">          Point P0;
+          Point P1(2);
+          Point P2(2,2);
+          Point P3(0,2);
+          Path p("..", true, &amp;P0, &amp;P1, &amp;P2, &amp;P3, 0);
+          p.draw();
+          
+          
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF111.png"
+alt="[Figure 111. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 111. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Setting function: void <b>set</b> (<var>string connector, bool cycle, Point* p, </var>[<var><small class="dots">...</small></var>]<var>, 0</var>)<var><a name="index-set-547"></a></var><br>
+<blockquote><p>Corresponds to the constructor above.
+
+     <pre class="example">          Point P[4];
+          P[0].set(2, 1, 3);
+          P[3] = P[2] =  P[1] = P[0];
+          P[3] *= P[2] *=  P[1].rotate(3, 12, 18);
+          P[3] *= P[2].shift(-2, -1, 3);
+          P[3].shear(1.5, .5, 3.5);
+          Path q("...", false, &amp;P[0], &amp;P[1], &amp;P[2], &amp;P[3], 0);
+          q.show("q:");
+          -| q:
+             (2, 1, 3) ... (0.92139, 1.51449, 3.29505) ...
+             (-1.07861, 0.514487, 6.29505) ... (2.84065, -3.26065, 6.29505);
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF112.png"
+alt="[Figure 112. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 112. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Constructor: void <b>Path</b> (<var>Point* first_point_ptr, char* s, Point* p, </var>[<var><small class="dots">...</small></var>]<var>, 0</var>)<var><a name="index-Path-548"></a></var><br>
+<blockquote><p>Constructor for <code>Paths</code> with an arbitrary number of <code>Points</code>
+and connectors.  The first, required, argument is a pointer to a
+<code>Point</code>, followed by pointers to <code>char</code> alternating with pointers to
+<code>Points</code>.<a rel="footnote" href="#fn-3" name="fnd-3"><sup>3</sup></a>
+The last argument must be 0, i.e., the null pointer.
+
+        <p>There is no need to indicate by means of an argument whether the
+<code>Path</code> is a cycle or not:  If it is, the last argument before the 0
+will be a <code>char*</code> (pointer to <code>char</code>), if not, it will be a
+<code>Point*</code>.  The data member <code>cycle_switch</code> (of type
+<code>bool</code>) will be set to <code>true</code> or <code>false</code> accordingly.
+
+     <pre class="example">          Point A;
+          Point B(2, 0);
+          Point C(3, 2);
+          Point D(1, 3);
+          Path p(&amp;A, "..", &amp;B, "..", &amp;C, "--", &amp;D, "...", 0);
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF113.png"
+alt="[Figure 113. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 113. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Setting function: void <b>set</b> (<var>Point *first_point_ptr, string s, Point *p, </var>[<var><small class="dots">...</small></var>]<var>, 0</var>)<var><a name="index-set-549"></a></var><br>
+<blockquote><p>Corresponds to the constructor above. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Copy constructor: void <b>Path</b> (<var>const Path&amp; p</var>)<var><a name="index-Path-550"></a></var><br>
+<blockquote><p>Creates a new <code>Path</code>, making it a copy of <var>p</var>. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Template specializations: Path* <b>create_new&lt;Path&gt;</b> (<var>const Path* p</var>)<var><a name="index-create_005fnew_003cPath_003e-551"></a></var><br>
+&mdash; : Path* <b>create_new&lt;Path&gt;</b> (<var>const Path&amp; p</var>)<var><a name="index-create_005fnew_003cPath_003e-552"></a></var><br>
+<blockquote><p>Pseudo-constructors for dynamic allocation of <code>Paths</code>. 
+They create a <code>Path</code> on the free store and allocate memory for it using
+<code>new(Path)</code>.  They return a pointer to the new <code>Path</code>.
+
+        <p>If <var>p</var> is a non-zero pointer or a reference,
+the new <code>Path</code> will be a copy of
+<var>p</var>.  If the new object is not meant to be a
+copy of an existing one, &lsquo;<samp><span class="samp">0</span></samp>&rsquo; must be passed to
+<code>create_new&lt;Path&gt;()</code> as its argument. 
+See <a href="Dynamic-Allocation-of-Shapes.html#Dynamic-Allocation-of-Shapes">Dynamic Allocation of Shapes</a>, for more information.
+
+        <p><code>create_new&lt;Path&gt;()</code> is used in the drawing and filling functions
+for copying a <code>Path</code> and putting the copy onto a <code>Picture</code>. 
+See <a href="Drawing-and-Filling-Paths.html#Drawing-and-Filling-Paths">Path Reference; Drawing and Filling</a>. 
+</p></blockquote></div>
+
+   <div class="footnote">
+<hr>
+<h4>Footnotes</h4><p class="footnote"><small>[<a name="fn-1" href="#fnd-1">1</a>]</small> It isn't sufficient to check whether a
+<code>Path</code> consists of only two <code>Points</code> to determine whether it
+is a line or not, since a connector with &ldquo;<code>curl</code>&rdquo; could cause it
+to be non-linear.  On the other hand, <code>Paths</code> containing only
+colinear <code>Points</code> and the connector <code>"--"</code> are perfectly
+legitimate lines.  I'm in the process of changing all of the code that
+tests for linearity by checking the value of <code>line_switch</code>, so that
+it uses <code>is_linear()</code> instead.  When I've done this, it may be
+possible to eliminate <code>line_switch</code>. 
+See <a href="Path-Data-Members.html#Path-Data-Members">Path Reference; Data Members</a>, and
+<a href="Querying-Paths.html#Querying-Paths">Path Reference; Querying</a>.</p>
+
+   <p class="footnote"><small>[<a name="fn-2" href="#fnd-2">2</a>]</small> Stroustrup, <cite>The C++
+ Programming Language</cite>, p.&nbsp;<!-- /@w -->88.</p>
+
+   <p class="footnote"><small>[<a name="fn-3" href="#fnd-3">3</a>]</small> Where possible, I prefer to use the C++
+ data
+type <code>string</code> rather than <code>char*</code>, however it was necessary to
+use <code>char*</code> here because 0 is not a valid <code>string</code>, even
+though <code>string</code> may be implemented as <code>char*</code>,
+and 0 must be a valid argument, since it is needed to indicate the end
+of the argument list.</p>
+
+   <hr></div>
+
+   </body></html>
+

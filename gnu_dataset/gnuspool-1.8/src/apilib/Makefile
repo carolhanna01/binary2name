@@ -1,0 +1,90 @@
+#
+#   Copyright 2008 Free Software Foundation, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#	Makefile for api library
+#
+
+prefix		=	/usr/local
+exec_prefix	=	${prefix}
+SHELL		=	/bin/sh
+PARENT		=	..
+BASE		=	../..
+AR		=	ar
+CC		=	libtool --mode=compile gcc
+RM		=	rm -f
+HDRS		=	$(PARENT)/hdrs
+CCFLAGS		=	-O -g -Wall -fno-stack-protector 
+CFLAGS		=	$(CCFLAGS) -I$(HDRS)
+RPATH		=	${exec_prefix}/lib
+LIBDIR		=	$(DESTDIR)$(RPATH)
+INCLUDEDIR	=	$(DESTDIR)${prefix}/include
+APILIB		=	libgnuspool.la
+INSTALL		=	/usr/bin/install -c
+INSTALL_DATA	=	${INSTALL} -m 644
+
+OBJECTS=gspool_getspd.o\
+	gspool_getspu.o\
+	gspool_jobadd.o\
+	gspool_jobdata.o\
+	gspool_jobdel.o\
+	gspool_joblist.o\
+	gspool_jobread.o\
+	gspool_jobupd.o\
+	gspool_jobswap.o\
+	gspool_ptradd.o\
+	gspool_ptrdel.o\
+	gspool_ptrlist.o\
+	gspool_ptrop.o\
+	gspool_ptrread.o\
+	gspool_ptrupd.o\
+	gspool_ptrswap.o\
+	gspool_putspd.o\
+	gspool_putspu.o\
+	gspool_open.o
+
+LIBOBJECTS=$(OBJECTS:.o=.lo)
+
+all:	gspool.h $(OBJECTS)
+	libtool --mode=link gcc $(CCFLAGS) -o $(APILIB) $(LIBOBJECTS) -rpath $(RPATH) -version-info 0:0:0
+
+# Build header out of the bits
+
+gspool.h:	gspool.pre\
+		gspool.post\
+		$(BASE)/config.h\
+		$(HDRS)/xtapi_int.h\
+		$(HDRS)/defaults.h\
+		$(HDRS)/pages.h\
+		$(HDRS)/spq.h\
+		$(HDRS)/spuser.h
+	sh ./Hdrmake.sh $(BASE)/config.h $(HDRS)
+
+install: all
+	libtool --mode=install $(INSTALL) $(APILIB) $(LIBDIR)
+	$(INSTALL_DATA) gspool.h $(INCLUDEDIR)
+	$(INSTALL_DATA) $(APILIB) $(LIBDIR)
+
+install-strip: all
+	libtool --mode=install $(INSTALL) -s $(APILIB) $(LIBDIR)/$(APILIB)
+	$(INSTALL_DATA) gspool.h $(INCLUDEDIR)
+	$(INSTALL_DATA) $(APILIB) $(LIBDIR)
+
+clean:
+	$(RM) gspool.h *.[oa] *.ln *.so *.la *.lo
+	$(RM) -r .libs
+
+distclean:	clean
+	$(RM) Makefile

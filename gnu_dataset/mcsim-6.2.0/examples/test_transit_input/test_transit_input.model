@@ -1,0 +1,73 @@
+#------------------------------------------------------------------------------
+# test_transit_input.model
+#
+# PK model to test the PerTransit() function. The PK model is a 
+# one-compartment model with first-order input from a single absorption 
+# compartment. 
+# Input to the absorption compartment is from a transit compartment model,
+# proposed by Savic et al., J Pharmacokinet Pharmacodyn. 2007, 34:711, using
+# 1.  The input function PerDose() with an example chain of 6 individual 
+#     transit compartments;
+# 2.  The analytic solution provided by PerTransit(), for a continuous 
+#     variable number of compartments.
+#
+# Dimensions: units (abbreviation).
+#   mass: milligrams (mg), volume: liters (L), time: hours (h).
+#
+# This example was provided by Michael A. Lyons at Colorado State University
+# who suggested the implementation of Savic's model in GNU MCSim.
+#
+# Copyright (c) 2016-2018 Free Software Foundation, Inc.
+#------------------------------------------------------------------------------
+
+States = {
+  Q[0-5],           # Drug mass in individual transit compartments 0-5.
+  Q_a,              # Drug mass in absorption compartment.
+  C_central,        # Drug concentration in central compartment.
+}
+ 
+Inputs = {input};   # Per unit drug mass input forcing function. 
+
+Outputs = {Q_tr};   # Drug mass output from transit model.
+
+
+# Dosing parameters
+
+Dose   = 0;     # Drug dose (mg).
+Fa     = 1;     # Drug bioavailability (fraction absorbed).
+Period = 24;    # Period of administration (h).
+
+Delta  = 1E-3;  # Duration of bolus dose infusion (h).
+
+isOnTr = 1;     # Switch for analytic transit compartment (0=off, 1=on).
+Ntr    = 0;     # Transit compartment index  (0, 1,...).
+Ktr    = 0;     # Transit compartment mass transfer rate (1/h). 
+
+
+# Central compartment PK parameters
+
+Ka = 0;         # Drug absorption rate (1/h). 
+CL = 0;         # Clearance (L/h)
+V  = 1;         # Volume of distribution (L).
+
+
+Dynamics {
+
+  # Transit compartments: tedious chain of 6 individual compartments
+  # to use with input = Perdose()
+  dt(Q[0])   = Fa * Dose * input / Delta - Ktr * Q[0];
+  dt(Q[1-5]) = Ktr * (Q[i-1] - Q[i]);
+
+  # Transit compartments: analytic form to use with u = PerTransit()
+  Q_n = Fa * Dose * input;
+
+  # Transit compartment output. 
+  Q_tr = (isOnTr < 1 ? Q[5] : Q_n);
+
+  # PK model equations.
+  dt(Q_a) = Ktr * Q_tr - Ka * Q_a; 
+  dt(C_central) = (Ka * Q_a - CL * C_central) / V;
+
+}
+
+End.

@@ -1,0 +1,300 @@
+This file describes Siva, the zoned memory manager.  A detailed
+description will be available in my thesis.  A short description
+follows.  Please send comments and questions to
+
+   David Stoutamire
+   davids@icsi.berkeley.edu
+
+
+
+Siva in a nutshell
+------------------
+
+"Any philosophy that can be put in a nutshell belongs there."
+
+Siva is a memory manager similar to the Boehm collector.  However, it
+will ultimately support an extended interface allowing a programmer to
+hierarchically describe the intended locality of threads and objects
+using meta-objects called _zones_.  Siva can also be used as an
+conventional memory manager that is highly optimized for the specific
+cache organization of the target platform.
+
+Because it attempts to make more aggressive use of the specifics of
+the platform memory system and is optimized for multiple threads, it
+is a bit harder to port than the Boehm collector, and has only so far
+been ported to Solaris platforms.  Siva can also be configured as
+a simple interface to the Boehm collector, so it remains as portable
+as the Boehm collector when considered as a package.
+
+Siva is built on top of the Brahma low level communication and
+synchronization layer, from which it gets the functionality of active
+messages and synchronization such as custom spinlocks.  Siva supplies a
+far pointer representation in which local pointers have unchanged
+representation while far pointers are encoded with unused bits.  It is
+expected that the client code uses Brahma for communication and
+synchronization as well.  Siva dictates the far pointer representation
+and must be used for memory management, but the application is expected
+to translate pointers passed over messages explicitly.
+
+
+
+Compiling Siva
+--------------
+
+Siva has both compile- and link-time components consisting of C code
+that is compiled into an library archive file, as well as macros that
+must be obtained from included header files.  Furthermore, there are
+macros that must be defined which are very platform specific (such as
+the cache block size) as well as dependent on the code using Siva.  For
+example, if typed objects are used, Siva may be informed about the
+layout of pointers within objects to allow less conservative
+collection.
+
+All Siva routines and macros begin with "SI_".  An otherwise lowercase
+name is guaranteed to be a function.
+
+Siva must be compiled separately for each platform, including for serial,
+threaded, and distributed/threaded variations.  Presently these platforms
+are available:
+
+   serial_boehm		- Built using Brahma "serial"; uses Boehm collector
+   serial_solaris       - Built using Brahma "serial"; ultrasparc/solaris
+   smp_solaris          - Built using Brahma "smp_solaris"; ultrasparc/solaris
+
+Siva considers more than just operating system and ISA when
+distinguishing platforms; cache and TLB organization may also be
+important.  Two files must be provided for a given system "foo":
+"foo.c" and "foo.h".  Siva is made by calling
+
+   make foo INSTALL=xxx.a
+
+Eg. a version of Siva that just uses the Boehm collector can be
+compiled with
+
+   make serial_boehm INSTALL=xxx.a
+
+Documentation on the specifics on each platform can be found in the
+file <platform>.doc.
+
+This will compile the Siva library using the appropriate platform files
+place it in "xxx.a".  Often multiple Siva archives will be desired, for
+example, separate serial and threaded versions.  Siva requires creating
+these multiple versions instead of using runtime switching, in order to
+specialize as much as possible at compile time on the specifics of each
+platform.
+
+The platform file "foo.h" must provide the following:
+
+   - macro definitions of constants from which many other compile-time
+     constants are derived:
+
+	SI_MIN_ALIGNMENT  	- Alignment required of allocated objects
+	SI_BYTES_PER_BLOCK	- Cache block size
+	SI_BYTES_PER_PAGE  	- Page size
+        SI_MAX_NODES		- Number of clusters of processors
+	SI_MINIMUM_HEAP		- Initial heap size, in bytes
+	SI_MAXIMUM_HEAP		- Maximum heap may need address space for
+	SI_FREE_RATIO		- Collect when <1/FREE_RATIO free
+	SI_DURESS_FREE_RATIO 	- Ratio for big heap
+	SI_HEAP_GROWTH		- Grow heap by 1/HEAP_GROWTH increments
+	SI_DURESS_HEAP_GROWTH 	- Growth for big heap
+	SI_MAX_FINALIZATION	- Max possible objects to need finalization
+	SI_MESSAGE_PAYLOAD      - Words in optimal active message
+
+   - Functionality macros:
+
+	SI_ZERO_OUT(x,y)	- Quickly zero aligned region of memory
+	SI_FIRST_BIT(x)		- Quickly find first bit, LSB first
+	SI_NEAR(x)		- Test if pointer is near (need not be valid)
+	SI_VALID_FAR(x)		- Test if looks like a valid far pointer
+	SI_VALID_NEAR(x)	- Test if looks like a valid near pointer
+	SI_MAKE_LOCAL(x)	- Make far pointer look local
+	SI_PTR_FROM(x,cl)	- Translate ptr from cl to local encoding
+	SI_PTR_TO(x,cl)	 	- Translate ptr going to cl to that encoding
+
+The platform file "foo.c" must provide the following:
+
+  void SI_mark_roots()
+
+     - Find potential roots and call SI_MARK (see below) on each.  This
+       may involve stopping threads, draining the net, and other
+       antisocial actions.
+
+  size_t SI_threshold()  
+  
+     - Return heap threshold in bytes beyond which performance degrades.
+
+  void SI_platform_specific()
+
+     - Anything else; called once after initialization.  This should
+       initialize the global "SI_global" (see below) with the
+       appropriate hardware zone tree, potentially distributed across
+       the nodes.
+
+See the platform files for "serial_hyper" for an example, which is set up
+for ROSS Hypersparcs running Solaris.
+
+
+
+Using Siva
+----------
+
+Siva provides routines to be called as well as macros.  The user must
+also provide functionality back to Siva (for example, to identify
+pointers within objects).  This functionality can't be placed in the
+platform files because it may change depending on what Siva is linked
+in with (eg. the pointer layout in objects may change).  Siva must be
+used with ANSI C.
+
+The calls Siva provides are defined in "siva.h".  This file uses
+conditional compilation to select the appropriate "platform/xxx.h"
+file.  To use Siva, it is necessary to define a macro corresponding to
+the specific platform to allow this conditional compilation.  For
+example, the version of Siva using the Boehm collector requires
+defining SIVA_BOEHM before the include of "siva.h".  Using a different
+platform symbol from the one used to compile the archive that is linked
+in is Very Bad.  "siva.h" also automatically includes the header from
+Brahma (see the README file in the Brahma directory for details).
+
+
+   void SI_init(int clusters, int argc, char *argv[])
+
+      - Initialization; must be called once before any other routines.
+	"SI_init" initializes Brahma, so "BR_init" should not be called
+	elsewhere.  The arguments are passed to "BR_init".
+
+   void SI_exit()
+
+      - Shut system down.  "SI_exit" shuts down Brahma, so "BR_exit"
+	should not be called elsewhere.
+
+   void SI_call_on_collect((*f)())
+
+      - Specify a function to be called once on each cluster every time
+	a collection occurs there.  If "SI_call_on_collect" is never
+	called, no action will be taken.
+
+   void SI_call_on_failure((*f)())
+
+      - Specify a function to be called on cluster zero if the system
+	runs out of memory.  Unlike "malloc", there is no reason to
+	test the return result of Siva allocation calls.
+
+   caddr_t SI_alloc(size_t size)
+
+      - Allocate storage.  Objects allocated with this call
+	will be scanned using "SI_scan_object" (see below).
+
+   caddr_t SI_alloc_untyped(size_t size)
+
+      - Allocate storage which must be scanned conservatively.
+
+   caddr_t SI_alloc_leaf(size_t size)
+
+      - Allocate some storage that will never be scanned for pointers.
+
+   void SI_dealloc(void *x)
+
+      - Deallocate.  This is only a hint.
+
+   void SI_collect_now()
+
+      - Perform garbage collection now.  This is only a hint.
+
+Macro versions of these calls to be used when size is known to be a
+compile-time constant:
+
+   caddr_t SI_ALLOC_CONST(size_t size)
+   caddr_t SI_ALLOC_UNTYPED_CONST(size_t size)
+   caddr_t SI_ALLOC_LEAF_CONST(size_t size)
+
+
+Scanning for pointers
+---------------------
+
+To link with Siva, the user must define a way of scanning objects:
+
+   void SI_scan_object(void *x)
+
+"scan_object" must call the macro
+
+   void SI_MARK(caddr_t x)
+
+on each potential pointer in the object.  SI_MARK is defined in
+"siva.h".  An aggressive implementation of SI_scan_object may
+recursively mark other reachable near objects before returning, as long
+as it obeys SI_VALID_NEAR.
+
+Typically, scan_object will examine a tag field of the object x and
+then uses a table to locate each pointer.  A dummy scan_object which
+will never be called can be used if "SI_alloc" and "SI_ALLOC_CONST" are
+never called; all scanning will then be conservative.
+
+
+
+Zones
+-----
+
+Defined in the platform-specific files:
+
+   SI_zone_t
+
+      - Definition of ZONE type (may have system-specific fields)
+
+   SI_zone_t SI_global
+     
+      - Global on cluster zero that defines "ZONE::global".  This should
+	be initialized in SI_platform_specific().
+
+Zones define a hierarchy of object storage.  With the exception of the
+above, the presence of zones in the system should be transparent if the
+following zone-specific operations are not used.
+
+   SI_zone_t SI_HERE()
+   void SI_SET_HERE(SI_zone_t)
+
+      - The zone currently associated with the calling thread.
+	This is different than BR_HERE() because it returns a zone
+	rather than a integer cluster id.  SI_SET_HERE() sets this
+	value.  When "main" begins, the zone is automatically set to be
+        the value of SI_global.
+
+	This is kept in thread-private memory, but is not automatically
+	passed during a BR_FORK call; it has to be set up explicitly
+	across nodes.  Similarly, over exceptions (longjmp()) it must
+	be restored explicitly.
+
+   SI_zone_t SI_WHERE(void *)
+
+      - The zone of the argument object.  May be a far pointer.
+
+   SI_zone_t SI_create()
+
+      - Create a software zone which is a child of the current zone.
+
+   int SI_within(SI_zone_t x, SI_zone_t y)
+
+      - Nonzero if zone y is within (a descendent of) zone x.
+
+   unsigned int SI_divisions(SI_zone_t)
+
+      - Return number of divisions of the enclosing hardware zone.
+
+   SI_zone_t SI_division(SI_zone_t, unsigned int d)
+
+      - Return division `d' of the enclosing hardware zone.
+
+   unsigned int SI_capacity(SI_zone_t)
+
+      - Return capacity of the enclosing hardware zone.
+
+   SI_zone_t SI_division_of(SI_zone_t x, void *y)
+
+      - Return the enclosing hardware zone of x in which y resides.
+
+
+Debugging:
+
+   const char *SI_ASCII_PLATFORM
+
+      - Return human-readable description of the Siva platform.

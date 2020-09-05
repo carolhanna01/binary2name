@@ -1,0 +1,53 @@
+;;; Zippy filter
+;;;
+;;;  Copyright (c) 1995, 1996 Henry Minsky.
+;;;  Copyright (c) 1996 Universal Access Inc.
+;;;
+;;;  Author: Henry Minsky (hqm@ua.com)
+;;;  Changes: Jarlath O'Carroll (jarlath@oisin.com) Thu May  2 00:27:08 1996
+;;;  More Changes: Brian J. Fox (bfox@ua.com) Sun Jun 23 14:29:30 1996
+;;;  Even More Changes: Brian J. Fox (bfox@ua.com) Fri Aug 30 21:00:48 1996.
+<require filter>
+<require zippy-lines>
+<set-var zippy::total-lines = <filter::sizeof zippy::zippy-lines>>
+
+;;; Here is the function which produces quotes.
+<defsubst zippy-quote>
+  <get-var zippy::zippy-lines[<random <get-var zippy::total-lines>>]>
+</defsubst>
+
+;;; And here is the function which the filterer runs over.
+<defun zippy-filter var>
+  <subst-in-var <get-var var>
+		"(\\.[^.]+\\.[^.]+\\.[ \t\r\n]+)"
+		"\\1<verbatim><zippy-quote> </verbatim>">
+</defun>
+
+;;; Okay, filter the posted URL or PATH_INFO if there is one.
+<filter::page-filter zippy-filter>
+
+;;; Add the forms interface
+<hr>
+<h5>
+<a href="http://www.metahtml.com">Meta-HTML Active Filter</a>
+by <a href="mailto:hqm@ua.com">(hqm@ua.com)</a>
+<br><i>Quotes from various comic books and strips by Bill Griffith</i>
+<br>
+<when <get-var-once filter::explanation>>
+  <hr>
+  <get-var filter::explanation>
+  <hr>
+</when>
+<form method="post" action="<thisdoc>">
+  Enter URL:<INPUT NAME="posted-url" TYPE="text" VALUE=""
+		   MAXLENGTH="1024"SIZE="50">
+  <br>
+  <a href="<concat <get-var mhtml::http-to-host>
+		   <get-var mhtml::relative-prefix>/welcome.mhtml>">
+    Click Here To Exit The Filter
+  </a>
+</form>
+<br>
+</h5>
+
+

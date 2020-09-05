@@ -1,0 +1,222 @@
+class TEST_SOCKET is
+
+--        This program class implements the required test facilities for the
+--   network socket class.  Two concurrent copies must be run, one initiating
+--   and the other connecting.  The command line arguments determine which is
+--   originating and which is connecting.  The test concludes after a given
+--   number of alternating exchanges of messages.
+
+--         Version 1.0 Jul 97.   Copyright K Hopper, U of Waikato
+
+--                          Development History
+--                          -------------------
+
+--        Date           Who By         Detail
+--        ----           ------         ------
+
+--        25 Jan 93        db       Original for Sather 0.2
+--        17 Apr 95        db       Revised for 1.0
+--        20 Jun 96        db       Further revision for 1.1
+--        16 May 99        kh       Interim revision for 1.2
+
+
+attr is_unix : BOOL ;
+attr is_init : BOOL ;
+
+attr skt : SOCKET ;
+attr skt_type : STR ;
+
+attr iterations : INT ;
+
+
+fail is
+
+--        This routine produces a failure message and then exits the program
+--   with a non-zero error code.
+
+     #OUT + skt_type + " SOCKET TEST FAILED.\n" ;
+     UNIX::exit(1)
+end ;
+
+
+check_skt_status is
+
+--        This routine checks if the socket is alive and, if not, issues an
+--   error message before failing the test.
+
+     if skt.is_dead then
+          #OUT + "Socket died prematurely.\n" ;
+          fail
+     end
+end ;
+
+
+write_read_loop is
+
+--        This routine operates in a blocking loop to send and then receive
+--   messages.
+
+     #OUT + "In write-read loop\n" ;
+     
+     loop
+          iterations.times! ;
+          check_skt_status ;
+
+          skt + "Hello world " + 42.str ;
+
+          #OUT + "Socket now blocking until can read:\n" ;
+
+          skt.block_until_can_read ;
+
+          #OUT + "Socket can now read:\n" ;
+
+          msg1 : STR := skt.get_str ;
+          msg2 : STR := skt.get_str ;
+          msg3 : STR := skt.get_str ;
+
+          #OUT + 0.up!.str ;
+
+          if ~void(msg1)
+                    and ~void(msg2)
+                    and ~void(msg3) then
+               #OUT + ' ' + msg1.pretty + ' ' + msg2.pretty +
+                      ' ' + msg3.pretty + '\n'
+          else
+               #OUT + " Something went wrong receiving in write_read_loop.\n" ;
+               fail
+          end
+     end
+end ;
+
+
+read_write_loop is
+
+--        This routine is a loop for the required number of iterations which
+--   reads first before writing.
+
+     #OUT + "In read-write loop\n" ;
+     
+     loop
+          iterations.times! ;
+          check_skt_status ;
+
+          msg1 : STR := skt.get_str ;
+          msg2 : STR := skt.get_str ;
+
+          out_msg : STR := STR::create ;
+
+          #OUT + "Socket blocking until it can write :- \n" ;
+
+          skt.block_until_can_write ;
+
+          #OUT + "Socket can now write:\n" ;
+
+          skt + "Two empty strings :-" + "" + out_msg ;
+
+          #OUT + 0.up!.str ;
+
+          if ~void(msg1)
+                    and ~void(msg2) then
+               #OUT + ' ' + msg1.pretty + ' ' + msg2.pretty + '\n'
+          else
+               #OUT + " Something went wrong receiving in read_write_loop.\n" ;
+               fail
+          end
+     end
+end ;
+
+
+print_usage_and_exit is
+
+--        This routine emits a unix-style usage message through the standard
+--   output channel and then exits.
+
+     #OUT + "Formats: test_socket -<iterations> -unix -init name\n" +
+          "         test_socket -<iterations> -unix -conn name\n" +
+          "         test_socket -<iterations> -inet -init portnum\n" +
+          "         test_socket -<iterations> -inet -conn hostname portnum\n" ;
+      fail
+end ;
+
+
+main(
+      args : ARRAY{STR}
+      ) : INT is
+
+--        This is the program body routine.  It expects that arguments will be
+--   provided in one of the following forms :-
+--
+--        test_socket -<iterations> -unix -init name
+--        test_socket -<iterations> -unix -conn name
+--        test_socket -<iterations> -inet -init portnum
+--        test_socket -<iterations> -inet -conn hostname portnum
+
+     if args.size < 5 then
+          print_usage_and_exit
+     end ;
+
+     iterations := INT::create(args[1].tail(args[1].size - 1)) ;
+
+     #OUT + "Testing sockets for " + iterations.str + " iterations.\n" ;
+
+     if args[2] = "-unix" then
+          is_unix := true ;
+          skt_type := "UNIX"
+     elsif args[2] = "-inet" then
+          is_unix := false ;
+          skt_type :="INTERNET"
+     else
+          print_usage_and_exit
+     end ;
+
+     if args[3] = "-init" then
+          is_init := true
+     elsif args[3] = "-conn" then
+          is_init := false
+     else
+          print_usage_and_exit
+     end ;
+
+     #OUT + "Creating socket...\n" ;
+
+protect
+     if is_unix
+               and is_init then
+         skt := SOCKET::create_initiating_unix(args[4]) ;
+         skt.use_exceptions(true)
+     elsif is_unix
+               and ~is_init then
+          skt := SOCKET::create_connecting_unix(args[4])
+     elsif ~is_unix
+               and is_init then
+          skt := SOCKET::create_initiating_inet(INT::create(args[4])) ;
+          skt.use_exceptions(true)
+     else
+          skt := SOCKET::create_connecting_inet(args[4],INT::create(args[5]))
+     end ;
+
+     if skt.is_dead then
+          #OUT + "Socket was stillborn.\n" ;
+          fail
+     end ;
+
+     #OUT + "Created.  Now exchanging messages...\n" ;
+
+     if is_init then
+          write_read_loop
+     else
+          read_write_loop
+     end ;
+
+     #OUT + skt_type + " SOCKET TEST SUCCESSFULLY COMPLETED.\n"
+
+when SOCKET_EXCEPTION then
+     #OUT + exception.str + "\n" + skt_type + " SOCKET TEST FAILED.\n" ;
+     return 1
+end ;
+
+     return 0
+end ;
+
+end ; -- TEST_SOCKET
+

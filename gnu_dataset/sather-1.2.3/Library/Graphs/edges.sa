@@ -1,0 +1,97 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Edges for the graph classes
+-- Author: Benedict A. Gomes <gomes@tiramisu.ICSI.Berkeley.EDU>
+
+abstract class $EDGE{NTP} < $STR is
+   first: NTP;
+   second: NTP;
+end;
+-------------------------------------------------------------------
+class UEDGE{NTP} < $EDGE{NTP}, $HASH is
+   -- Undirected edge
+   include COMPARABLE;
+   private include COMPARE{NTP};
+   
+   readonly attr first, second: NTP;
+
+   create(f,s: NTP): SAME is
+      res ::= new;  res.first := f; res.second := s; return res;
+      --res: SAME;   return(res.first(f).second(s));
+   end;
+
+   is_eq(e:UEDGE{NTP}): BOOL is
+      return (elt_eq(first,e.first) and elt_eq(second, e.second)) or
+	      (elt_eq(first,e.second) and elt_eq(second, e.first))
+   end;
+   
+   is_reflexive: BOOL is  return elt_eq(first,second);end;
+   
+   hash:INT is
+      -- A simple hash value computed from the hash values of the 
+      -- components. For this to work, these must either be value
+      -- types which define hash values or reference types.
+      h1,h2:INT;
+      h1 := elt_hash(first);
+      h2 := elt_hash(second);
+      return h1.bxor(h2.lshift(2)) 
+   end;
+   
+   str: STR is  return "{"+elt_str(first)+","+elt_str(second)+"}"; end;
+   
+   elt_str(e: NTP): STR is
+      typecase e  when $STR then return e.str else return "first" end;
+   end;
+
+end;
+-------------------------------------------------------------------
+class DIEDGE{NTP} < $EDGE{NTP}, $HASH is
+   -- Directed edge
+   include COMPARABLE;
+   include COMPARE{NTP};
+   
+   readonly attr first, second: NTP;
+
+   create(f,s: NTP): SAME is
+      res ::= new;  res.first := f; res.second := s; return res;
+     -- res: SAME;
+      -- return(res.first(f).second(s));
+   end;
+
+   reverse: DIEDGE{NTP} is  return #(second,first); end;
+   
+   is_reflexive: BOOL is return elt_eq(first, second) end;
+   
+   is_eq(e:DIEDGE{NTP}): BOOL is
+      return ((elt_eq(first,e.first) and elt_eq(second,e.second)))
+   end;
+   
+   hash:INT is
+      -- A simple hash value computed from the hash values of the 
+      -- components. For this to work, these must either be value
+      -- types which define hash values or reference types.
+      h1,h2:INT;
+      h1 := elt_hash(first);
+      h2 := elt_hash(second);
+      return h1.bxor(h2.lshift(2)) 
+   end;
+
+   str: STR is  return "{"+elt_str(first)+","+elt_str(second)+"}"; end;
+   
+   elt_str(e: NTP): STR is
+      typecase e  when $STR then return e.str else return "first" end;
+   end;
+
+end;
+-------------------------------------------------------------------

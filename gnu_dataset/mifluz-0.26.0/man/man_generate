@@ -1,0 +1,483 @@
+use strict;
+use Getopt::Long;
+
+my($opt_format);
+my(%config_format);
+
+my(%head) = (
+	     'man' => "
+'''
+''' Part of the ht://Dig package   <http://www.htdig.org/>
+''' Copyright (c) 1999, 2000, 2001 The ht://Dig Group
+''' For copyright details, see the file COPYING in your distribution
+''' or the GNU General Public License version 2 or later
+''' <http://www.gnu.org/copyleft/gpl.html>
+''' 
+''' 
+.TH \$name \$mansection local
+",
+             'texi' => '
+\@node $name, , ,
+\@section $name
+
+',
+);
+
+my($config_help) = <<'EOF';
+The format of the configuration file read by WordContext::Initialize is:
+<pre>
+keyword: value
+</pre>
+Comments may be added on lines starting with a #. The default
+configuration file is read from from the file pointed by the <b>MIFLUZ_CONFIG</b> environment variable or <b>~/.mifluz</b> or <b>/etc/mifluz.conf</b> in this
+order. If no configuration file is available, builtin defaults are used.
+Here is an example configuration file:
+<pre>
+wordlist_extend: true
+wordlist_cache_size: 10485760
+wordlist_page_size: 32768
+wordlist_compress: 1
+wordlist_wordrecord_description: NONE
+wordlist_wordkey_description: Word/DocID 32/Flags 8/Location 16
+wordlist_monitor: true
+wordlist_monitor_period: 30
+wordlist_monitor_output: monitor.out,rrd
+</pre>
+EOF
+
+my(%config_help) = (
+'texi' => $config_help,
+'man' => $config_help,
+'conf' => "# mifluz(3) configuration file
+#
+# All the configuration parameter known by mifluz are listed
+# here with their default values. To change a value, uncomment
+# the corresponding line and set your own value. If the value
+# is ... it means that there is no default value for this parameter.
+#",
+);
+
+my(@xref);
+my(%contents);
+my(%config);
+my(%nosections) = (
+        'texi' => {
+             'AUTHORS' => 1,
+             'SEE ALSO' => 1,
+        },
+        'conf' => {
+              'NAME' => 1,
+              'SYNOPSIS' => 1,
+              'DESCRIPTION' => 1, 
+              'CLASSES AND COMMANDS' => 1,
+	      'ASCII FORMAT' => 1, 
+              'FILE FORMAT' => 1, 
+              'OPTIONS' => 1,
+              'KEYWORDS' => 1,
+              'METHODS' => 1,
+              'ENVIRONMENT' => 1,
+              'AUTHORS' => 1,
+	      'SEE ALSO' => 1,
+         },
+);
+
+my(%sectionformat) = (
+        'man' => '.SH $section
+$content
+
+',
+        'texi' => '
+\@node $name $section
+\@subsection $name $section
+
+$content
+
+',
+        'conf' => '#
+$content
+',
+);
+
+my(%html2other) = (
+	'man' => {
+		 '<pre>' => ".nf\n.ft CW",
+		 '</pre>' => ".ft R\n.fi",
+		 '<b>' => ".B ",
+		 '</b>' => "WHITE",
+		 '<i>' => ".I ",
+		 '</i>' => "WHITE",
+                 '<dl>' => "WHITE",
+                 '</dl>' => ".PP",
+                 '<dt>' => ".TP\n.B ",
+                 '<dd>' => "WHITE",
+                 '<br>' => "\n",
+	},
+	'texi' => {
+		 '<pre>' => '@example',
+		 '</pre>' => '@end example',
+		 '<b>' => '@strong{',
+		 '</b>' => '}',
+		 '<i>' => '@code{',
+		 '</i>' => '}',
+		 '<tt>' => '@code{',
+		 '</tt>' => '}',
+                 '<dl>' => '@table @samp',
+                 '</dl>' => '@end table',
+                 '<dt>' => '@item ',
+                 '<dd>' => "\n",
+                 '<br>' => "\n",
+	},
+	'conf' => {
+		 '<pre>' => 'WHITE',
+		 '</pre>' => 'WHITE',
+		 '<b>' => 'SPACE"',
+		 '</b>' => 'GLUE"',
+		 '<i>' => "SPACE'",
+		 '</i>' => "GLUE'",
+		 '<tt>' => 'SPACE"',
+		 '</tt>' => 'GLUE"',
+                 '<dl>' => 'WHITE',
+                 '</dl>' => 'WHITE',
+                 '<dt>' => 'WHITE',
+                 '<dd>' => "WHITE",
+                 '<br>' => "WHITE",
+	}
+);
+
+sub html2other {
+    my($string, $format) = @_;
+    my($map) = $html2other{$format};
+
+    $string =~ s[&(.*?);]{
+	local $_ = $1;
+	/^amp$/i	? "&" :
+	/^quot$/i	? '"' :
+        /^gt$/i		? ">" :
+	/^lt$/i		? "<" :
+	/^#(\d+)$/	? chr($1) :
+	/^#x([0-9a-f]+)$/i ? chr(hex($1)) :
+	$_
+	}gex;
+    
+    if($format eq 'texi') {
+	$string =~ s/([{}])/\@$1/g;
+    }
+    my($other, $man);
+    foreach $other (keys(%$map)) {
+	$string =~ s/([^\n])\s*$other/$1\n$other/gs;
+    }
+    while(($other, $man) = each(%$map)) {
+	$string =~ s/$other/$man/g;
+    }
+    $string =~ s/WHITE\s*//gs;
+    $string =~ s/\s*GLUE\s*//gs;
+    $string =~ s/\s*SPACE\s*/ /gs;
+    return $string;
+}
+
+sub handle_object {
+    my($xref, $object, $objects) = @_;
+
+    my(%content);
+    my($file);
+    foreach (qw(htdb mifluz search)) {
+	$file = "../$_/$object" if(-f "../$_/$object");
+    }
+    die "unable to find $object" if(! -f $file);
+    open(IN, "<$file") or die "cannot open $file for reading : $!";
+    if($object eq 'mifluz.h') {
+	toc($object, \%content, @$objects);
+    } else {
+	object($object, \%content);
+    }
+    xref($object, \%content, @$xref);
+    build($object, \%content);
+    close(IN);
+    $contents{$object} = \%content;
+}
+
+sub maintexi {
+    my($xref, @objects) = @_;
+
+    my($file) = "../doc/reference.texinfo";
+
+    open(OUT, ">$file") or die "cannot open $file for writing : $!";
+    my($object);
+    foreach $object (@objects) {
+	handle_object($xref, $object, \@objects);
+    }
+    close(OUT);
+}
+
+sub mainconf {
+    my($xref, @objects) = @_;
+
+    my($conf) = "../mifluz.conf";
+
+    my($object);
+    foreach $object (@objects) {
+	my($file) = $object eq 'mifluz.h' ? $conf : "/dev/null";
+	open(OUT, ">$file") or die "cannot open $file for writing : $!";
+	handle_object($xref, $object, \@objects);
+	close(OUT);
+    }
+}
+
+sub mainman {
+    my($xref, @objects) = @_;
+
+    my($object);
+    foreach $object (@objects) {
+	my($mansection) = object2mansection($object);
+	my($name) = object2name($object);
+	my($man) = "$name.$mansection";
+	open(OUT, ">$man") or die "cannot open $man for writing : $!";
+	handle_object($xref, $object, \@objects);
+	close(OUT);
+    }
+}
+
+sub toc {
+    my($object, $content, @objects) = @_;
+
+    parse_header($object, $content);
+    toc_objects($content, @objects);
+    toc_config($content);
+}
+
+sub toc_config {
+    my($content) = @_;
+
+    my($format) = $config_format{$opt_format};
+
+    my(@content) = ($config_help{$opt_format});
+    push(@content, &$format(sort(keys(%config))));
+
+    $content->{'CONFIGURATION'} = join("\n", @content);
+}
+
+sub toc_objects {
+    my($content, @objects) = @_;
+
+    my(@content) = ( "<dl>" );
+    my($object);
+    foreach $object (sort(@objects)) {
+	next if($object eq 'mifluz.h');
+	my($name) = object2name($object);
+	my($short) = $contents{$object}->{'NAME'};
+	if($opt_format eq 'man') {
+	    $short =~ s/\\-//;
+	    push(@content, "<dt> $short");
+	} else {
+	    push(@content, "<dt> $name");
+	    push(@content, "<dd> $short");
+	}
+    }
+
+    push(@content, "</dl>");
+
+    $content->{'CLASSES AND COMMANDS'} = join("\n", @content);
+}
+
+sub object {
+    my($object, $content) = @_;
+
+    parse_header($object, $content);
+    parse_object($object, $content);
+}
+
+sub object2name {
+    my($object) = @_;
+    my($name) = $object =~ /^(.*?)\./;
+    return $name;
+}
+
+sub object2mansection {
+    my($object) = @_;
+    return '1' if($object =~ /\.cc$/);
+    return '3' if($object =~ /\.h$/);
+    die "object2section: unknown extension\n";
+}
+
+sub build {
+    my($object, $content) = @_;
+
+    my($name) = object2name($object);
+    my($mansection) = object2mansection($object);
+    eval "print OUT \"$head{$opt_format}\"";
+    $content->{'AUTHORS'} .= <<'EOF';
+Loic Dachary loic@gnu.org
+
+The Ht://Dig group http://dev.htdig.org/
+EOF
+    my($section);
+    foreach $section ('NAME', 'SYNOPSIS', 'DESCRIPTION', 'CLASSES AND COMMANDS',
+		      'ASCII FORMAT', 'FILE FORMAT', 'OPTIONS', 'KEYWORDS',
+		      'CONFIGURATION', 'METHODS', 'ENVIRONMENT', 'AUTHORS',
+		      'SEE ALSO') {
+	next if($content->{$section} =~ /\A\s*\Z/s);
+	next if($nosections{$opt_format}->{$section});
+	my($content) = html2other($content->{$section}, $opt_format);
+	if($content !~ /\A\s*\Z/s) {
+	  eval "print OUT \"$sectionformat{$opt_format}\"";
+	}
+    }
+}
+
+sub xref {
+    my($object, $content, @xref) = @_;
+
+    my($name) = object2name($object);
+    my(@section) = grep { !/^$name\(/ } @xref;
+    $content->{'SEE ALSO'} = join(', ', @section);
+}
+
+sub parse_header {
+    my($object, $content) = @_;
+
+    my($name) = object2name($object);
+
+    my($section, @section);
+    while(<IN>) {
+	chop;
+	my($new_section) = m:^//\s+([A-Z ]+?)\s*$:;
+	if($new_section && $new_section ne $section) {
+	    if($section) {
+		if($section eq 'NAME') {
+		    $section[0] =~ s/^\s*//;
+		    unshift(@section, "$name \\-") if($opt_format eq 'man');
+		} elsif($section eq 'SYNOPSIS') {
+		    unshift(@section, '<pre>');
+		    push(@section, '</pre>');
+		} elsif($section eq 'CONFIGURATION') {
+		    my(@attributes);
+		    my($buffer) = join("\n", @section);
+		    while($buffer =~ /^(wordlist_\w+)(.*?)\n(.*?)\n\n/sgm) {
+			my($attribute, $title, $lines) = ($1, "$1$2", $3);
+			push(@attributes, $attribute);
+			$lines =~ s/^  //gms;
+			$config{$attribute} = [ $title, $lines ];
+		    }
+		    my($format) = $config_format{$opt_format};
+		    @section = &$format(@attributes);
+		    unshift(@section, "For more information on the configuration attributes and a complete list of attributes, see the mifluz(3) manual page.");
+		}
+		$content->{$section} = join("\n", @section);
+	    }
+	    $section = $new_section;
+	    @section = ();
+	    last if($new_section eq 'END');
+	} else {
+	    s|^// ?||;
+	    push(@section, $_);
+	}
+    }
+}
+
+sub parse_object {
+    my($object, $content) = @_;
+
+    my($name) = object2name($object);
+    my(@method);
+    my(@methods) =  ( "<dl>" );
+    while(<IN>) {
+	chop;
+	if(/^class\s+$name/ .. /^\}/) {
+	    if(m://-: .. !m://:) {
+		if(!m://-:) {
+		    my($line) = $_;
+		    $line =~ s:^\s*// ?::;
+		    push(@method, $line);
+		}
+		if(!m://:) {
+		    if(@method) {
+			my($function) = pop(@method);
+			$function =~ s/[;\{].*?$//;
+			$function =~ s/\s+/ /g;
+			unshift(@method, "<dt> $function");
+			push(@methods, join("\n", @method));
+		    }
+		    @method = ();
+		}
+	    }
+	}
+    }
+    push(@methods, "</dl>");
+    #
+    # If there only is <dl></dl> don't build the 
+    #
+    if(scalar(@methods) > 2) {
+       $content->{'METHODS'} = join("\n", @methods);
+    }
+}
+
+sub config_format {
+    my(@attributes) = @_;
+    my(@content) = ("<dl>");
+    my($attribute);
+    foreach $attribute (@attributes) {
+	my($spec) = $config{$attribute};
+	push(@content,
+	     "<dt> $spec->[0]",
+	     "<dd> $spec->[1]");
+    }
+    push(@content, "</dl>");
+    return @content;
+}
+
+sub config_format_conf {
+    my(@attributes) = @_;
+    my(@content);
+    my($attribute);
+    foreach $attribute (@attributes) {
+	my($spec) = $config{$attribute};
+	print "$spec->[0]\n";
+	$spec->[0] =~ /^([\w_]+).*?\((?:default\s+(.*)\))?/;
+	my($parameter, $default) = ($1, $2);
+	print "$default\n";
+	if($default eq 'none' || !defined($default)) {
+	    $default = "...";
+	} elsif($default =~ /^(\d+)([mk])/i) {
+	    $default = $1 * ( lc($2) eq 'm' ? (1024 * 1024) : 1024 );
+	}
+	my($explain) = $spec->[1];
+	$explain =~ s/^/# /gm;
+	
+	push(@content,
+	     "$explain",
+	     "#\n#$parameter: $default\n#\n#");
+    }
+    return @content;
+}
+
+sub usage {
+    print STDERR "Usage: format --format={texi|man|conf}\n";
+    exit(1);
+}
+
+%config_format = (
+    'man' => \&config_format,
+    'texi' => \&config_format,
+    'conf' => \&config_format_conf,
+);
+
+sub main {
+    no strict 'refs';
+
+    GetOptions("format=s" => \$opt_format);
+
+    usage() if(!$opt_format);
+
+    my($function) = "main$opt_format";
+
+    my(@xref) = @ARGV;
+    @xref = map { s/\.cc/(1)/; s/\.h/(3)/; $_; } @xref;
+
+    return &$function(\@xref, @ARGV);
+}
+
+main(@ARGV);
+
+# Local Variables: ***
+# mode: perl ***
+# End: ***

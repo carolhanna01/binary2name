@@ -1,0 +1,643 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- $AM_STMT: Supertype of statement-like components.
+-- AM_STMT: Implementation to be included by $AM_STMT nodes. 
+-- AM_ASSIGN_STMT: Assignment statment.
+-- AM_IF_STMT: Conditional statement.
+-- AM_LOOP_STMT: Loop statement.
+-- AM_BREAK_STMT: Exit the innermost loop.
+-- AM_RETURN_STMT: Return statement.
+-- AM_YIELD_STMT: Yield statement.
+-- AM_CASE_STMT: Multi-way branch statement.
+-- AM_TYPECASE_STMT: Typecase statement.
+-- AM_PRE_STMT: Statement representing a precondition.
+-- AM_POST_STMT: Statement representing a postcondition.   
+-- AM_INITIAL_STMT: Statement with initial code for a postcondition.
+-- AM_ASSERT_STMT: Assert statement.
+-- AM_INVARIANT_STMT: Statement representing an invariant check.   
+-- AM_PROTECT_STMT: Protect statement.
+-- AM_RAISE_STMT: Raise statement.
+-- AM_EXPR_STMT: An expression used for side-effect
+-- AM_COMMENT_STMT: a comment to be inserted into the C-Code
+--
+-- pSather:
+-- AM_ATTACH_STMT
+-- AM_LOCK_STMT
+-- AM_UNLOCK_STMT
+-- AM_WITH_NEAR_STMT
+-- AM_SYNC_STMT
+-- AM_PREFETCH_STMT
+-- AM_FORK_STMT   a "simple" version of fork
+-- AM_PAR_STMT    a "simple" version of par
+   
+-------------------------------------------------------------------      
+abstract class $AM_STMT < $AM, $NEXT{$AM_STMT} is
+   -- Supertype of statement-like components.
+   copy:$AM_STMT;  -- returns a deep copy of self
+end;
+   
+-------------------------------------------------------------------      
+class AM_STMT is
+   include AM;
+   include NEXT{$AM_STMT};	-- The next pointer represents the
+      -- next statement in the list, if any.   
+end;
+   
+-------------------------------------------------------------------      
+class AM_ASSIGN_STMT < $AM_STMT is
+   -- Assignment statment.
+   include AM_STMT;
+   
+   attr dest:$AM_EXPR;		-- The destination expression.
+      -- This must be AM_LOCAL_EXPR, AM_SHARED_EXPR, AM_ATTR_EXPR,
+      -- or AM_ARR_EXPR. 
+   attr src:$AM_EXPR;		-- The source expression.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(dest) then r.dest:=dest.copy; end;
+      if ~void(src) then r.src:=src.copy; end;
+      return r;
+   end;
+
+   -- creates an assignment that has the same effect
+   -- as the AM_PREFETCH_STMT. 
+   create(c:AM_PREFETCH_STMT):SAME is
+      r::=#SAME(c.source);
+      r.dest:=c.dest;
+      r.src:=c.src;
+      r.next:=void;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_COMMENT_STMT < $AM_STMT is
+   -- Assignment statment.
+   include AM_STMT;
+   
+   attr comment:STR;		-- The comment
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      r.comment:=comment;
+      return r;
+   end;
+
+end;
+   
+-------------------------------------------------------------------      
+class AM_IF_STMT < $AM_STMT is
+   -- Conditional statement.
+   include AM_STMT;
+   
+   attr test:$AM_EXPR;		-- Boolean test expression.
+   attr if_true:$AM_STMT;	-- Statements for true branch.
+   attr if_false:$AM_STMT;	-- Statements for false branch.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(test) then r.test:=test.copy; end;
+      if ~void(if_true) then r.if_true:=if_true.copy; end;
+      if ~void(if_false) then r.if_false:=if_false.copy; end;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------   
+class AM_LOOP_STMT < $AM_STMT is
+   -- Loop statement.
+   include AM_STMT;
+   
+   attr its:FLIST{AM_ITER_CALL_EXPR}; -- A list of the enclosed iters 
+      -- which must be initialized when the loop is entered. 
+   attr bits:FLIST{AM_BND_ITER_CALL_EXPR}; -- A list of the enclosed bound
+      -- iter calls which must be initialized when the loop is entered.
+
+   attr firsts:FLIST{AM_LOCAL_EXPR};
+   -- Ivin.  A list of local Boolean variables corresponding to inlined
+   -- iterators, which must be initialized to true when the loop is entered.
+
+   attr breaks:INT; -- number of breaks used in the loop
+   attr no_begin_loop:BOOL; -- only for pSather: a loop that uses no iters with
+		       -- yields inside locks does not need "BEGIN_LOOP"
+
+   attr has_init_stmt:BOOL;	-- true if the C code has an initial '{'
+   attr has_yield:BOOL;		-- True if there is a "yield" in the
+      -- loop body (or a nested loop body). 
+   attr body:$AM_STMT;          -- The body of the loop.
+   attr init:$AM_STMT;		-- statements to execute before entering 
+                                -- the loop.
+   attr loop_index_var:AM_LOCAL_EXPR; -- local expression used for the loop index
+   attr loop_index:STR;         -- local_expr of the array index variable,
+                                -- used by the optimizer.
+   uses_loop_index:BOOL is return ~void(loop_index_var); end;
+   attr ar_max_expr:FLIST{STR};
+   				-- list of exprs used to test if ar_local
+				-- has reached the maximum value. Used
+				-- by the optimizer
+   attr first_while_moved:$AM;	-- the first while!/until! statement that has been
+   				-- moved to the end of the loop. used to avoid
+				-- recursion if the loop consists of only
+				-- while!/until! statements
+   attr hoisted:FLIST{EXPR_HOISTED}; -- list of expressions hoisted, used by the optimizer
+
+   copy:SAME is
+      if void(self) then return void; end;
+      #OUT+"it is not possible to copy loops!";
+      assert(false);
+      return void; -- to keep the compiler happy
+   end;
+end;
+
+------------------------------------------------------------------- 
+class AM_BREAK_STMT < $AM_STMT is
+   -- Exit the innermost loop. while!, until! and break! get 
+   -- transformed into this.
+   include AM_STMT;
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_RETURN_STMT < $AM_STMT is
+   -- Return statement.
+   include AM_STMT;
+   
+   attr val:$AM_EXPR;		-- The return value, if any.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(val) then r.val:=val.copy; end;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_YIELD_STMT < $AM_STMT is
+   -- Yield statement.
+   include AM_STMT;
+   
+   attr ret:INT;		-- -1 for quit or the index of the
+      -- branch to take next. 
+   attr val:$AM_EXPR;		-- The return value, if any.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(val) then r.val:=val.copy; end;
+      r.ret:=ret;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_CASE_STMT < $AM_STMT is
+   -- Multi-way branch statement.
+   include AM_STMT;
+   
+   attr test:$AM_EXPR;		-- Expression to test.
+   attr tgts:FLIST{FLIST{$AM_CONST}}; -- The target values. Each entry is
+      -- an array of the targets for the corresponding statement list.
+   attr stmts:FLIST{$AM_STMT};	-- The statement lists.
+   attr else_stmts:$AM_STMT;	-- The else statements.
+   attr no_else:BOOL;		-- True if there is no "else" part.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(test) then r.test:=test.copy; end;
+      r.tgts:=tgts;
+      r.stmts:=#;
+      loop
+	 x::=stmts.elt!;
+         if ~void(x) then x:=x.copy; end;
+	 r.stmts:=r.stmts.push(void);
+      end;
+      if ~void(else_stmts) then r.else_stmts:=else_stmts.copy; end;
+      r.no_else:=no_else;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------   
+class AM_TYPECASE_STMT < $AM_STMT is
+   -- Typecase statement.
+   include AM_STMT;
+   
+   attr test:AM_LOCAL_EXPR;	-- Local variable to test.
+   attr tgts:FLIST{$TP};	-- The target types.
+   attr stmts:FLIST{$AM_STMT};	-- The statement lists.
+   attr else_stmts:$AM_STMT;	-- The else statements, also void stmts if there
+   attr has_void_stmts:BOOL;	-- True if has void stmts.
+   attr no_else:BOOL;		-- True if there is no "else" part.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      r.test:=test; -- local variables are not copied
+      r.tgts:=tgts;
+      r.stmts:=#;
+      loop
+	 x::=stmts.elt!;
+	 if ~void(x) then x:=x.copy; end;
+         r.stmts:=r.stmts.push(x);
+      end;
+      if ~void(else_stmts) then r.else_stmts:=else_stmts.copy; end;
+      r.no_else:=no_else;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------   
+class AM_PRE_STMT < $AM_STMT is
+   -- Statement representing a precondition.
+   include AM_STMT;
+   
+   attr tp:$TP;			-- The type which this is from.
+   attr test:$AM_EXPR;		-- Expression to test.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      r.tp:=tp;
+      if ~void(test) then r.test:=test.copy; end;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------   
+class AM_POST_STMT < $AM_STMT is
+   -- Statement representing a postcondition.   
+   include AM_STMT;
+   
+   attr tp:$TP;			-- The type which this is from.   
+   attr test:$AM_EXPR;		-- Expression to test.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      r.tp:=tp;
+      if ~void(test) then r.test:=test.copy; end;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------   
+class AM_INITIAL_STMT < $AM_STMT is
+   -- Statement with initial code for a postcondition.
+   include AM_STMT;
+   
+   attr tp:$TP;			-- The type which this is from.   
+   attr stmts:$AM_STMT;		-- Statements to execute.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      r.tp:=tp;
+      if ~void(stmts) then r.stmts:=stmts.copy; end;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------   
+class AM_INVARIANT_STMT < $AM_STMT is
+   -- Statement representing an invariant check. (If present, this
+   -- type must define "invariant:BOOL").
+   include AM_STMT;
+   
+   attr sig:SIG;		-- Signature of the invariant.   
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      r.sig:=sig;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------   
+class AM_ASSERT_STMT < $AM_STMT is
+   -- Assert statement.
+   include AM_STMT;
+   
+   attr tp:$TP;			-- The type which this is from.      
+   attr test:$AM_EXPR;		-- Expression to test.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(test) then r.test:=test.copy; end;
+      r.tp:=tp;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_PROTECT_STMT < $AM_STMT is
+   -- Protect statement.
+   include AM_STMT;
+   
+   attr body:$AM_STMT;		-- The body of the protect.
+   attr tgts:FLIST{$TP};	-- The target types for the "whens".
+   attr stmts:FLIST{$AM_STMT};	-- The statement lists.
+   attr else_stmts:$AM_STMT;	-- The else statements.
+   attr no_else:BOOL;		-- True if there is no "else" part.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(body) then r.body:=body.copy; end;
+      r.tgts:=tgts;
+      r.stmts:=#;
+      loop
+	 x::=stmts.elt!;
+	 if ~void(x) then x:=x.copy; end;
+         r.stmts:=r.stmts.push(x);
+      end;
+      if ~void(else_stmts) then r.else_stmts:=else_stmts.copy; end;
+      r.no_else:=no_else;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------   
+class AM_RAISE_STMT < $AM_STMT is
+   -- Raise statement.
+   include AM_STMT;
+   
+   attr val:$AM_EXPR;		-- The exception object.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(val) then r.val:=val.copy; end;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_EXPR_STMT < $AM_STMT is 
+   -- An expression used for side-effect.
+   include AM_STMT;
+   
+   attr expr:$AM_EXPR;		-- The expression to evaluate.
+  
+   --pSather
+   attr at:$AM_EXPR;
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(expr) then r.expr:=expr.copy; end;
+      if ~void(at) then r.at:=at.copy; end;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------      
+--class AM_PAR_BEGIN_STMT < $AM_STMT is 
+--   -- pSather
+--   include AM_STMT;
+--   
+--   attr locals:FLIST{AM_LOCAL_EXPR};  -- locals declared after "par".
+--   
+-- attr stack:AM_LOCAL_EXPR;
+-- attr stackname: IDENT;
+-- attr stacktypes : FLIST{$TP};
+--   attr before_locals:FLIST{AM_LOCAL_EXPR};  -- locals declared before "par".
+--   attr surrounding_par:AM_PAR_BEGIN_STMT;
+--   attr par_ob:AM_LOCAL_EXPR;
+--   attr active_locals_size:INT;
+--end;
+--   
+--class AM_PAR_END_STMT < $AM_STMT is
+--  --pSather
+--  include AM_STMT;
+--end;
+
+-------------------------------------------------------------------      
+
+class AM_SYNC_STMT < $AM_STMT is
+  include AM_STMT;
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------      
+-- as "simple" version of a fork statement that was not transformed 
+-- syntactically into attach
+class AM_FORK_STMT < $AM_STMT is
+   include AM_STMT;
+   
+   attr body:$AM_STMT;   -- the body of the fork
+   attr at:$AM_EXPR;
+   
+   attr par_stmt:AM_PAR_STMT;  -- a syntactically enclosing par
+   
+   copy:SAME is
+      if void(self) then return void; end;
+      #OUT+"it is not possible to copy fork statements!";
+      assert(false);
+      return void; -- to keep the compiler happy
+   end;
+end;
+
+-------------------------------------------------------------------  
+-- as "simple" version of par statement that was not transformed 
+-- syntactically into attach
+class AM_PAR_STMT < $AM_STMT is
+   include AM_STMT;
+   
+   attr body:$AM_STMT;  -- the body of "simple" par stmt
+   
+   copy:SAME is
+      if void(self) then return void; end;
+      #OUT+"it is not possible to copy par statements!";
+      assert(false);
+      return void; -- to keep the compiler happy
+   end;   
+end;
+
+-------------------------------------------------------------------      
+class AM_ATTACH_STMT < $AM_STMT is 
+  -- pSather
+   
+  include AM_STMT;
+
+  attr rout:SIG;
+  attr helper:AM_LOCAL_EXPR;
+  attr gate:AM_LOCAL_EXPR;
+  attr at:$AM_EXPR;
+
+
+   copy:SAME is
+      if void(self) then return void; end;
+      #OUT+"it is not possible to copy attach statements!";
+      assert(false);
+      return void; -- to keep the compiler happy
+   end;
+end;
+
+-------------------------------------------------------------------      
+class AM_LOCK_STMT < $AM_STMT is 
+   -- pSather
+   
+   include AM_STMT;
+   
+   attr guards:FLIST{$AM_EXPR};  -- The guards
+   attr locks:FLIST{ARRAY{$AM_EXPR}}; -- The locks to obtain
+   attr stmts:FLIST{$AM_STMT};  -- The statement lists for the branches
+   attr else_stmts:$AM_STMT;    -- The else statements.
+   attr manual_unlock:BOOL;	-- if this is true, all statments that
+			        -- exit the lock statment have to unlock
+				-- it manually with a special macro defined
+				-- in pSather.h. The optimizer may set it to true
+				-- in some special cirumstances (for example there
+				-- cannot be any raise statements)
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=new;
+      loop r.guards:=r.guards.push(guards.elt!.copy); end;
+      loop r.stmts:=r.stmts.push(stmts.elt!.copy); end;
+      loop 
+	 e::=locks.elt!;
+         n:ARRAY{$AM_EXPR}:=#(e.size);
+	 loop n.set!(e.elt!); end;
+	 r.locks:=r.locks.push(n); 
+      end;
+      r.else_stmts:=else_stmts.copy;
+      return r;
+   end;
+end;
+   
+-------------------------------------------------------------------      
+class AM_UNLOCK_STMT < $AM_STMT is 
+   -- pSather
+   include AM_STMT;
+   
+   attr lock_ob:$AM_EXPR;          -- The lock to release.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(lock_ob) then r.lock_ob:=lock_ob.copy; end;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------      
+class AM_WITH_NEAR_STMT < $AM_STMT is 
+   -- pSather
+   
+   include AM_STMT;
+   
+   attr objects:ARRAY{$AM_EXPR};  -- The identifiers to be near.
+   attr near_part:$AM_STMT;     -- The body of the 'then'-part.
+   attr else_part:$AM_STMT;     -- The body of the 'else'-part.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      r.objects:=#(objects.size);
+      loop
+	 x::=objects.elt!;
+	 if ~void(x) then x:=x.copy; end;
+         r.objects.set!(x);
+      end;
+      r.near_part:=near_part.copy;
+      r.else_part:=else_part.copy;
+      return r;
+   end;
+end;
+
+-------------------------------------------------------------------      
+class AM_PREFETCH_STMT < $AM_STMT is
+   -- Similar to an assign statement, but the function call
+   -- returns immediatly. The value is only available after waiting
+   -- for it with an AM_WAITFOR. 
+   -- This works currently only if src an AM_ATTR_EXPR
+   include AM_STMT;
+   
+   attr prefetch:AM_LOCAL_EXPR;  -- prefetch variable
+   attr dest:$AM_EXPR;		-- The destination expression.
+      -- This must be AM_LOCAL_EXPR, AM_SHARED_EXPR, AM_ATTR_EXPR,
+      -- or AM_ARR_EXPR. 
+   attr comment:STR;
+
+   attr src:$AM_EXPR;		-- The source expression.
+
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      if ~void(next) then r.next:=next.copy; end;
+      if ~void(dest) then r.dest:=dest.copy; end;
+      if ~void(src) then r.src:=src.copy; end;
+      if ~void(prefetch) then r.prefetch:=prefetch; end;
+      return r;
+   end;
+   
+end;
+
+-------------------------------------------------------------------
+class AM_WAITFOR_STMT < $AM_STMT is
+   -- waits until the prefetch has finished
+   include AM_STMT;
+
+   attr prefetch:AM_LOCAL_EXPR;
+   attr src:$AM_EXPR; -- a reference to the same expression in AM_PREFETCH_STMT
+   attr dest:$AM_EXPR; -- a reference to the same expression in AM_PREFETCH_STMT
+   copy:SAME is
+      if void(self) then return void; end;
+      r::=#SAME(source);
+      r.prefetch:=prefetch;
+      r.src:=src;
+      r.dest:=dest;
+      return r;
+   end;
+end;
+   
+-- vim:sw=3:nosmartindent

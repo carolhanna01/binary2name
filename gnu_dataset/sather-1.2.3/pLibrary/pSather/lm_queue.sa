@@ -1,0 +1,193 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- This class handles aging of a thread handle and contains a part of the
+-- locking policy. All thread handles related to a single conjunctive lock
+-- request, which are enqueued in different queues refer to the same object
+-- of this class.
+-- .get_older is called whenever a thread handle is checked to get
+-- his locks and cannot get them. If get_older returns true, the thread
+-- blocks other threads waiting for the same lock(s). The return value false
+-- leads to skipping the thread handle and checking the next one(s) in the
+-- queue(s). It is assumed that per event get_older is called only once for
+-- all handles of a conjuntion. These handles point to the same object of
+-- this class.
+
+class LM_THREAD_HANDLE_EXTENSION is
+   attr linked_locks:ARRAY{ARRAY{LM_LOCK_HANDLE}};  -- All locks of the state-
+                                        -- ment. Is void, if only one lock.
+   attr when_clause:INT;                -- Row in linked_locks.
+   attr clause_write_back:LM_REF_C_INT; -- Write back the index of the when
+                                        -- clause to this object, when acquired
+                                        -- lock. It is void for non-disjunctive
+                                        -- lock statements.
+   attr handles:INT;                    -- Number of handles pointing to self.
+   private attr age:INT;                -- The age of the handle(s).
+   private attr blockings:INT;          -- A counter used by .get_older.
+   readonly attr obsolete:BOOL;         -- Set if request is to be deleted.
+   private shared do_not_block:BOOL;    -- Set if deadlock prevention is active.
+
+   create:SAME is return new; end;    -- All INTs are initialized to 0.
+
+   get_older:BOOL pre ~void(self) and handles > 0 is
+      -- The following policy is applied:
+      -- For all <handles> calls the age is incremented by one.
+      -- The policy is first to return false (don't block) for n ages and then
+      -- to return true (block) for the next n ages. This is repeated
+      -- infinitely until the thread has acquired its locks with n beeing
+      -- increased by one for each iteration. The initial value of n is 1.
+      -- n is represented by attribute .age, so .age is not the real age of
+      -- the thread handle. The real age is age*age + age + blockings.
+
+      -- Obsolete entries never block.
+      if obsolete or do_not_block then return false; end;
+      -- Increase .age, if .blocking equals .age.
+      if age = blockings then age := age + 1; blockings := -age; end;
+      -- For each value of age blocking is counted from -age to age.
+      blockings := blockings + 1;
+      -- Return .age times true and .age times false.
+      if blockings > 0 then return true; else return false; end;
+   end;
+
+   mark_obsolete is obsolete := true; end;
+   never_block is do_not_block := true; end;
+   allow_blocking is do_not_block := false; end;
+end;
+
+-- This class is used to keep information about blocked threads and to enqueue it.
+immutable class LM_THREAD_HANDLE is
+   attr tid:THREAD_ID;                   -- ID of blocked thread.
+   attr ll_lock:LL_LOCK;                 -- The low level lock it is blocked by.
+   attr this_lock:$LOCK;                 -- The lock for which this handle is used.
+   attr ext:LM_THREAD_HANDLE_EXTENSION;  -- Further information for conjunctions.
+   attr lock_index:INT;                  -- Index of this conjunctive entry.
+
+   create(the_tid:THREAD_ID,the_ll_lock:LL_LOCK,the_this_lock:$LOCK):SAME is
+      return tid(the_tid).ll_lock(the_ll_lock).this_lock(the_this_lock);
+   end;
+end;
+
+class LM_THREAD_HANDLE_QUEUE < $QUEUE{LM_THREAD_HANDLE} is
+   -- Adds iterator ind! and some methods to to A_QUEUE{T}.
+   -- This class can easily be changed to a parametrized class by adding {T}
+   -- to the class name and replacing all LM_THREAD_HANDLE by T.
+   include A_QUEUE{LM_THREAD_HANDLE};
+   private attr cursor:INT;   -- A cursor running over all indices of the queue.
+   attr not_blocked:BOOL;
+   private attr do_not_increase_cursor:BOOL;
+
+   aget(index:INT):LM_THREAD_HANDLE pre ~void(self) and has_ind(index) is
+      return buf[index]; end;
+
+   aset(index:INT,val:LM_THREAD_HANDLE)  pre ~void(self) and has_ind(index) is
+      buf[index] := val;
+   end;
+
+   has_ind(i:INT):BOOL is
+      if tail >= head then
+         if (i >= tail or i < head) then return false; end;
+      else
+         if (i >= tail and i < head) then return false; end;
+         if (i >= buf.size or i < 0) then return false; end;
+      end;
+      return true;
+   end;
+
+   ind!: INT pre ~void(self) is
+      -- Return the indices of the elements in the queue in their
+      -- normal order without changing the queue. Starts with the head
+      -- of the queue and works downward.
+      -- Since the internal indices are yielded, they do not necessarily
+      -- start with 0.
+      i ::= head;
+      loop until!(i = tail);
+         yield(i);
+         i := (i + 1).mod(buf.size);
+      end;
+   end;
+
+   ind!(once from:INT): INT pre ~void(self) is
+      -- Like ind!, but starts at index .from.
+      if ~has_ind(from) then quit end;
+      i ::= from;
+      loop until!(i = tail);
+         yield(i);
+         i := (i + 1).mod(buf.size);
+      end;
+   end;
+
+   cursor!: INT pre ~void(self) and (has_ind(cursor) or cursor = tail) is
+      -- Return the indices of the elements in the queue in their
+      -- normal order without changing the queue. Starts with the entry with
+      -- index .cursor and works towards .tail. The cursor is increased
+      -- at each step.
+      -- At the begin of each iteration the flag .do_not_increase_cursor is reset.
+      do_not_increase_cursor := false;
+      loop until!(cursor = tail);
+         --#OUT + (" Thread "+THREAD_ID::me.str+" queue " + SYS::id(self) +
+         --        ": Cursor at " + cursor + ".\n");
+         yield(cursor);
+         -- Meanwhile the cursor might have become equal to tail (see
+         -- method delete(index:INT).
+         if cursor = tail then break! end;
+         if do_not_increase_cursor then do_not_increase_cursor := false;
+         else cursor := (cursor + 1).mod(buf.size); end;
+         --#OUT + (" Thread "+THREAD_ID::me.str+" queue " + SYS::id(self) +
+         --        ": Cursor increased to " + cursor + ".\n");
+      end;
+   end;
+
+   initialize_for_scanning pre ~void(self) is
+      cursor := head;
+      not_blocked := is_empty;
+   end;
+
+   increase_cursor pre ~void(self) is
+      if cursor /= tail then cursor := (cursor + 1).mod(buf.size); end;
+   end;
+
+   delete(index:INT) pre ~void(self) and has_ind(index) is
+      -- Shift all elements prior to .indexs by one position towards the tail
+      -- and set .head appropriately.
+      --#OUT+(" Thread "+THREAD_ID::me.str+" delete entry "+index+".\n");
+      -- If the entry with index .cursor is moved, .cursor is moved 
+      -- correspondingly. If the cursor equals .index, it is set to the next
+      -- entry or to tail, respectively, and is not increased at the next call
+      -- of an active iterator .cusor!.
+
+      if cursor = index then
+         cursor := (cursor+1).mod(buf.size);
+         do_not_increase_cursor := true;
+      end;
+      -- The most common index to be deleted is the head.
+      -- This simple case can be treated fast.
+      if index = head then 
+	 head := cursor; 
+	 return; end;
+      -- OK, this is the general case.
+      loop
+         previous ::= index - 1;
+         if previous < 0 then previous := buf.size - 1; end;
+         buf[index] := buf[previous];
+	 --Move the cursor, if necessary.
+	 if cursor = previous then cursor := index; end;
+         until!(previous = head);
+         index := previous;
+      end;
+      head := index;
+      --#OUT+(" Thread "+THREAD_ID::me.str+" head:"+head+" cursor:"+cursor+
+      --    " tail:"+tail+".\n");
+   end; -- delete(index:INT)
+
+   scanned_completely pre ~void(self) is not_blocked := true; end;
+end;

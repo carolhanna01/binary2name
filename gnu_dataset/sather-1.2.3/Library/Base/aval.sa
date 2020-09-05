@@ -1,0 +1,107 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- aval.sa: Built-in value arrays, only for inclusion.
+
+-------------------------------------------------------------------
+immutable class AVAL{T} is
+   -- Built-in value arrays of elements of type T. Only exists for
+   -- inclusion by other value types. They must redefine `asize' to
+   -- get a non-trivial array portion. Array indices start at 0 and
+   -- go up to "asize-1". Together with BOOL this is the
+   -- fundamental class for the construction of objects. All feature 
+   -- names begin with "a" to minimize name conflicts when included.
+   
+   const asize:INT:=0;
+      -- The number of elements of type T in self. Must be redefined as 
+      -- a constant in the including class. The compiler will generate
+      -- a standard constant, plus a #define with the name of
+      -- the class and _ASIZE appended (ex: AVALINT_ASIZE)
+      -- Apart from this special macro this constant is not 
+      -- special to the compiler
+
+   aget(ind:INT):T 
+      -- The element of self with index `ind'. Built-in.
+      pre ind.is_bet(0,asize-1) is 
+	builtin AVAL_AGET; end;
+
+   aset(ind:INT,val:T):SAME 
+      -- Return a copy of self with the component with index `ind' set 
+      -- to `val'. Built-in. 
+      pre ind.is_bet(0,asize-1) is 
+         builtin AVAL_ASET; end;
+
+   aelt!:T is
+      -- Yield each element of self in order. Built-in.
+      builtin AVAL_AELTB; end;
+
+   aelt!(once beg:INT):T
+      -- Yield each element of self starting at `beg'. Built-in.
+      pre beg.is_bet(0,asize-1) is
+         builtin AVAL_AELT_BEGB;
+      end;
+   
+   aelt!(once beg,once num:INT):T
+      -- Yield `num' successive elements of self starting at
+      -- index `beg'. Built-in.
+      pre beg.is_bet(0,asize-1) and num.is_bet(0,asize-beg) is
+         builtin AVAL_AELT_BEG_NUMB; end;
+
+   private is_legal_aelts_arg(beg,num,step:INT):BOOL is
+      -- True if the arguments are legal values for `aelts'.
+      return beg.is_bet(0,asize-1) and
+         ((step>0 and num.is_bet(0,(asize-beg+step-1)/step)) or
+          (step<0 and num.is_bet(0,(beg-step)/-step))) end;
+   
+   aelt!(once beg,once num,once step:INT):T
+      -- Yield `num' elements of self starting at `beg' and stepping
+      -- by `step' which must not be zero. Built-in.
+      pre is_legal_aelts_arg(beg,num,step) is
+      builtin AVAL_AELT_BEG_NUM_STEPB; end;
+   
+   acopy_from(beg:INT,src:SAME):SAME 
+      -- Return a copy of self modified by copying elements from `src'
+      -- into locations with indices starting at `beg'. Built-in.
+      pre beg.is_bet(0,asize-1) is
+      -- r::=self; 
+      -- loop r:=r.aset(beg.upto!(asize-1),src.aelt!) end;
+      -- return r end;
+      builtin AVAL_ACOPY; end;
+   
+   acopy_from(beg,num:INT,src:SAME):SAME
+      -- Return a copy of self modified by copying `num' elements from 
+      -- `src' into locations with indices starting at `beg'. Built-in.   
+      pre beg.is_bet(0,asize-1) and num.is_bet(0,asize-beg) is
+      -- r::=self; 
+      -- loop r:=r.aset(beg.upto!(beg+num-1),src.aelt!) end;
+      -- return r end;      
+      builtin AVAL_ACOPY_BEG_NUM; end;
+   
+   acopy_from(beg,num,srcbeg:INT,src:SAME):SAME
+      -- Return a copy of self modified by copying `num' elements from 
+      -- `src' starting at index `srcbeg' into locations with indices 
+      -- starting at `beg'. Built-in.      
+      pre beg.is_bet(0,asize-1) and num.is_bet(0,asize-beg)
+         and num<src.asize-srcbeg is   
+      -- r::=self; 
+      -- loop r:=r.aset(beg.upto!(beg+num-1),src.aelt!(srcbeg)) end;
+      -- return r end;            
+      builtin AVAL_ACOPY_BEG_NUM_SRCBEG; end;
+   
+   aind!:INT is
+      -- Yield the indices of self in order. Built-in.
+      builtin AVAL_AINDB; end;
+
+end; -- class AVAL{T}
+
+-------------------------------------------------------------------

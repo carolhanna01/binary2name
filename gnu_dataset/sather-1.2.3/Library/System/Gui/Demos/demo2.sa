@@ -1,0 +1,204 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class DEMO2 is
+   -- Another demo of widgets. It started out as a direct mapped cache
+   -- simulation written by David S. But it was hacked on when testing
+   -- out other features. Now it is just a wierd thing. Don't blame
+   -- David for the strangeness.
+   -- Sizes are in words.
+   include GUI_UTIL;
+    
+   init is
+      xmax::=3000;
+      init_interface(3000,5_000);
+      init_hardware(1024);
+      startup.command(bind(run_sim(xmax)));
+   end;
+   
+   shared xsize,ysize:INT;
+   shared canvas:TK_RASTER;
+   shared textout:TK_TEXT;
+   shared startup: TK_BUTTON;
+   shared red,green,blue:TK_RASTER_ENV;
+   shared back_tag, fore_tag:TK_CANVAS_TAG;
+    
+   const line_size:INT:=8;
+   shared size:INT;
+   shared lines:INT;
+   shared tags:ARRAY{INT};
+   shared fill_times:ARRAY{INT};
+   shared xcomp,ycomp:FLT;
+   shared time:INT;
+    
+   run_sim(xmax: INT) is
+      #OUT+"Running simulation\n";
+      l:INT:=1000;
+      loop 
+	 t::=xmax.times!;
+	 if t.is_even then
+	    touch(RND::int(0,4_999));
+	 else
+	    touch(l);
+	    l:=l+1;
+	    if l>=1600 then l:=1000; end;
+	 end;
+      end;
+      done;
+      #OUT+"Done simulation\n";
+   end;
+    
+   private init_hardware(sz:INT) is
+      size:=sz;
+      textout+"Cache size: "+sz+" words\n";
+      lines:=sz/line_size;
+      textout+"Lines: "+lines+"\n";
+      tags:=#(lines);
+      loop tags.set!(-1); end;
+      fill_times:=#(lines);
+      loop fill_times.set!(-1); end;
+      time:=0;
+   end;
+    
+   private init_interface(xmax,ymax:INT) is
+      -- Startup up the user interface
+      startup_gui;
+	
+      xsize:=300;
+      ysize:=300;
+	
+      fc ::= TK_FRAME_CFG::std.relief_none; -- Standard frame
+      grooved ::= TK_FRAME_CFG::std.relief_groove; -- Grooved frame
+      bc ::= TK_BUTTON_CFG::std.relief_none; -- Standard button
+	
+      top ::= TK_TOPLEVEL::root_window;
+      upper::=#TK_FRAME(top,"upper",fc,TK_PACK::top_grow_horiz_n_vert);
+      lower::=#TK_FRAME(top,"lower",fc,TK_PACK::top_grow_horiz);
+      canvas:=#TK_RASTER(upper,"rast",
+			 TK_RASTER_CFG::std.width(300.0).height(300.0),
+			 TK_PACK::left_grow_vert_n_horiz);
+      canvas.auto_display := true;
+      textout:=#TK_TEXT(upper,TK_TEXT_CFG::std.char_width(40).char_height(10),
+			TK_PACK::left);
+	
+	
+      ccframe::=#TK_FRAME(lower,"ccframe",TK_FRAME_CFG::std,TK_PACK::left);
+      ccframetitle::=#TK_BUTTON(ccframe,bc.text("Cache configuration:"),
+				TK_PACK::top_grow_horiz);
+	
+      ccframeupper::=#TK_FRAME(ccframe,"ccfrmup",fc,
+			       TK_PACK::top_grow_horiz);
+      ccframelower::=#TK_FRAME(ccframe,"ccfrmlow",fc,
+			       TK_PACK::top_grow_horiz);
+      ccframeul::=#TK_FRAME(ccframeupper,grooved,
+			    TK_PACK::left_grow_vert_n_horiz);
+      ccframeur::=#TK_FRAME(ccframeupper,grooved,
+			    TK_PACK::left_grow_vert_n_horiz);
+      ccframell::=#TK_FRAME(ccframelower,grooved,
+			    TK_PACK::left_grow_vert_n_horiz);
+      ccframelr::=#TK_FRAME(ccframelower,grooved,
+			    TK_PACK::left_grow_vert_n_horiz);
+      ccpreset1::=#TK_BUTTON(ccframeul,bc.text("Pre:"),
+			     TK_PACK::top_grow_horiz);
+      ccpreset2::=#TK_BUTTON(ccframeul,bc.text("(menu)"),
+			     TK_PACK::top_grow_horiz);
+	
+      ccass1::=#TK_BUTTON(ccframeur,bc.text("Assoc:"),
+			  TK_PACK::top_grow_horiz);
+      ccass2::=#TK_BUTTON(ccframeur,bc.text("(menu)"),
+			  TK_PACK::left);
+      ccass3::=#TK_ENTRY(ccframeur,TK_ENTRY_CFG::std.relief_sunken,
+			 TK_PACK::left);
+
+      ccls1::=#TK_BUTTON(ccframell,bc.text("Line size:"),
+			 TK_PACK::top_grow_horiz);
+      ccls2::=#TK_BUTTON(ccframell,bc.text("(menu)"),
+			 TK_PACK::left);
+      ccls3::=#TK_ENTRY(ccframell,TK_ENTRY_CFG::std.relief_sunken,
+			TK_PACK::left);
+      
+      ccsz1::=#TK_BUTTON(ccframelr,bc.text("Total:"),
+			 TK_PACK::top_grow_horiz);
+      ccsz2::=#TK_ENTRY(ccframelr,#TK_ENTRY_CFG.relief_sunken,
+			TK_PACK::left);
+      ccsz3::=#TK_BUTTON(ccframelr,bc.text("(menu)"),
+			 TK_PACK::left);
+      
+      textout3::=#TK_BUTTON(lower,bc.text("Quit"),
+			    TK_PACK::left);
+      textout3.command(quit_routine);
+      startup:=#TK_BUTTON(lower,bc.text("Start"),
+			  TK_PACK::left);
+
+      xcomp:=(xmax.flt)/(xsize.flt);
+      textout+"Each X pixel represents "+xcomp+" references\n";
+      ycomp:=(ymax.flt)/(ysize.flt);
+      textout+"Each Y pixel represents "+ycomp+" words\n";
+      back_tag:=#TK_CANVAS_TAG;
+      fore_tag:=#TK_CANVAS_TAG;
+	
+      red:=canvas.create_env.foreground("red");
+      blue:=canvas.create_env.foreground("blue");
+      green:=canvas.create_env.foreground("green");
+   end;
+    
+   touch(i:INT) is
+      line::=(i/line_size).mod(lines);
+      tag::=i/size;
+      if tags[line]/=tag then
+	 -- miss
+	 -- draw_coverage(line);
+	 draw_miss(time,i);
+	 fill_times[line]:=time;
+	 tags[line]:=tag;
+      else
+	 draw_hit(time,i);
+	 -- hit
+      end;
+      time:=time+1;
+   end;
+    
+   done is
+      loop
+	 i::=lines.times!;
+	 draw_coverage(i);
+      end;
+      -- canvas.raise_tag(fore_tag,back_tag);
+   end;
+    
+   private draw_miss(time,i:INT) is
+      x::=time.flt/xcomp;
+      y::=ysize.flt-(i.flt)/ycomp;
+      red.activate;
+      canvas.draw_point(x.fltd,y.fltd);
+   end;
+    
+   private draw_hit(time,i:INT) is
+      x::=time.flt/xcomp;
+      y::=ysize.flt-(i.flt)/ycomp;
+      green.activate;
+      canvas.draw_point(x.fltd,y.fltd);
+   end;
+    
+   private draw_coverage(line:INT) is
+      if fill_times[line]/= -1 then
+	 start::=fill_times[line].flt/xcomp;
+	 finish::=(time-1).flt/xcomp;
+	 y1::=ysize.flt-((tags[line]*size+line*line_size).flt)/ycomp;
+	 y2::=y1-(line_size.flt)/ycomp;
+	 blue.activate;
+	 canvas.draw_rectangle(start.fltd,y1.fltd,finish.fltd,y2.fltd);
+      end;
+   end;
+    
+end; 

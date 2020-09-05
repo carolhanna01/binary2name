@@ -1,0 +1,47 @@
+#!/usr/bin/perl
+#----------------------------->  Perl - script  <-----------------------------#
+#- Copyright (C) 199x by International Computer Science Institute            -#
+#- This file is part of the GNU Sather package. It is free software; you may -#
+#- redistribute  and/or modify it under the terms of the  GNU General Public -#
+#- License (GPL)  as  published  by the  Free  Software  Foundation;  either -#
+#- version 3 of the license, or (at your option) any later version.          -#
+#- This  program  is distributed  in the  hope that it will  be  useful, but -#
+#- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY -#
+#- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        -#
+#- The license text is also available from:  Free Software Foundation, Inc., -#
+#- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     -#
+#------------->  Please email comments to <bug-sather@gnu.org>  <-------------#
+
+# Runs the test in the current directory. You either
+# have to pass the compiler as an argument, or it
+# will pick the first one it finds at the following
+# positions: $SATHER_HOME/Bin/sacomp  $SATHER_HOME/Compiler/sacomp
+# SATHER_HOME/Boot/sacomp
+#
+# It assumes that the SATHER_HOME variable is set
+# to the correct directory
+#
+
+require "$ENV{'SATHER_HOME'}/Test/TestPrg/PROG/exectest.prl";
+$SH=$ENV{'SATHER_HOME'};
+$CS=$ARGV[0];
+if(@ARGV==0) { 
+	if(-x "$SH/Compiler/sacomp") { 
+		$CS="$SH/Compiler/sacomp";
+		print "Using the Compiler $CS\n";
+	} elsif(-x "$SH/Bin/sacomp") { 
+		$CS="SH/Bin/sacomp";
+		print "Using the Standard Compiler $CS\n";
+	} elsif(-x "$SH/Boot/sacomp") { 
+		$CS="SH/Boot/sacomp";
+		print "Using the Boot Compiler in $CS\n";
+	} else {
+		die "I cannot find a compiler to use for this test.\n";
+	} 
+} else {
+	if(! -x $CS) {
+		die "The supplied Compiler $CS does not exist.\n";
+	} 
+} 
+&exec_test(".",$CS,'EXT',1);
+

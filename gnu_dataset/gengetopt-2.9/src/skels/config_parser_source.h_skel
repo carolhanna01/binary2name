@@ -1,0 +1,49 @@
+#define CONFIGPARSERBUFSIZE 1024
+
+int
+@parser_name@_configfile (char * const filename, struct gengetopt_args_info *args_info, int override)
+{
+  FILE* file;
+  char linebuf[CONFIGPARSERBUFSIZE];
+  int line_num = 0;
+  int len;
+  int fnum;
+  char fopt[CONFIGPARSERBUFSIZE], farg[CONFIGPARSERBUFSIZE];
+  char *stop_char;
+
+  if ((file = fopen(filename, "r")) == NULL)
+    {
+      fprintf (stderr, "%s: Error opening configuration file '%s'\n",
+               PACKAGE, filename);
+      @gen_exit@ (EXIT_FAILURE);
+    }
+
+  while ((fgets(linebuf, CONFIGPARSERBUFSIZE, file)) != NULL)
+    {
+      ++line_num;
+      len = strlen(linebuf);
+      if (len == CONFIGPARSERBUFSIZE-1)
+        {
+          fprintf (stderr, "%s: Line longer than %d characters found in configuration file '%s'\n",
+                   PACKAGE, CONFIGPARSERBUFSIZE, filename);
+          @gen_exit@ (EXIT_FAILURE);
+        }
+
+      if (linebuf[0] == '#')
+        continue; /* Line was a comment */
+    
+      /* Get the option */
+      if ((fnum = sscanf(linebuf, "%s %s", fopt, farg)) > 0)
+        {
+          @handle_single_option:method@
+
+          /* Tried all known options. This one is unknown! */
+          fprintf (stderr, "%s: Unknown option '%s' found in %s\n",
+                   PACKAGE, fopt, filename);
+          @gen_exit@ (EXIT_FAILURE);
+        }
+    } /* while */
+  fclose(file); /* No error checking on close */
+
+  return 0;
+}

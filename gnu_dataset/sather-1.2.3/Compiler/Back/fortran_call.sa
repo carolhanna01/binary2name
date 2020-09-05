@@ -1,0 +1,1088 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1996 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- author: Boris Vaysman
+-- date:   6-28-96
+
+partial class FORTRAN_CALL is
+   -- This class implements sather->fortran and fortran->sather calls
+   -- Conformance to Fortran parameter passing convention is ensured
+   -- here. sather->sather calls (regardless of whether it happens
+   -- inside or outside external FORTRAN classes use Sather parameter
+   -- passing convention and are handled elsewhere.
+   
+   -- a bunch of stubs provided by CGEN
+   
+   private stub code_c:CODE_FILE;
+   private stub runtime_error(s:STR);
+   private stub dec_local(t:$TP):STR;
+   private stub dec_local_comment(t:$TP,com:STR):STR;
+   private stub dec_local_object(t:$TP):STR;
+   private stub fortran_prepend_underscore:STR;
+   private stub fortran_append_underscore:STR;
+   private stub ndefer(s:STR);
+   private stub need_caller_copy_out(ce:$AM_CALL_EXPR): BOOL; 
+   private stub mang(ob:$OB):STR;
+   private stub emit_expr(arg:$AM_EXPR):STR;
+   private stub in; 
+   private stub move_out; 
+
+   private stub fortran_bind_func:BOOL;
+   
+   private emit_fortran_call(ext_call:AM_EXT_CALL_EXPR):STR is
+      res_arg:STR;  -- argument that holds the return value
+      res:STR;      -- return value
+      has_return:BOOL; -- generated C call has a return value
+      arg_list:ARRAY{STR}; 
+      -- a list of fortran args (could be larger than Sather arg list
+      final_arg_list:ARRAY{STR};
+      -- different from arg_list  in the presence of out/inout args. 
+      -- Need to ensure value/result semantics in the caller coder, so 
+      -- some copying will take place
+      type_list:ARRAY{STR};
+      -- a list of C typese correposnding to arg_list 
+      first_arg:INT; -- the index of the first "real" arg in 
+                     -- arg_list and type_list
+      tmp_res:STR; -- temporary holding the return value (if any)
+      need_copy:BOOL; 
+      -- true if the caller must ensure value/result semantics for 
+      -- out/inout arguments
+   
+      alternate_returns:BOOL; -- true if alternate returns possible
+      
+      -- create a list of FORTRAN arguments
+      res_arg := emit_fortran_args(ext_call, out arg_list, 
+				   out type_list, out first_arg);
+      has_return := ~void(ext_call.tp) and void(res_arg);
+      need_copy := need_caller_copy_out(ext_call);
+      alternate_returns := is_alternate_return(ext_call);
+
+      -- handle out/inout args if necessary
+      -- The caller must ensure the value/result sematics as we can't
+      -- change the external code
+      if need_copy then
+	 final_arg_list:=fortran_caller_copy_in(ext_call, first_arg, arg_list);
+      else
+	 final_arg_list := arg_list;
+      end;
+      
+      extern:STR:="extern ";
+      if has_return then 
+	 -- C function returns something
+	 extern:=extern.append(mang(ext_call.tp)," ");
+      else 
+	 -- if alternate returns possible, the function has to return an int
+	 if alternate_returns then
+	    extern:=extern.append("int ");	    
+	 else
+	    extern:=extern.append("void ");
+	 end;
+      end;
+      
+      res := bind_fortran_name(ext_call.nm.str);
+      
+      extern := extern.append(res, "(");
+      res:=res.append("(");
+
+      -- first, handle the return value properly
+      if first_arg > 0 then
+	 -- there is a return value
+	 if is_fortran_scalar_type(ext_call.tp) then
+	    res:=res.append("&",final_arg_list[0]);
+	 else
+	    res:=res.append(final_arg_list[0]);
+	 end;
+	 extern:=extern.append(type_list[0]);
+	 if final_arg_list.size > 1 then
+	    res  := res+",";
+	    extern := extern.append(",");
+	 end;
+	 
+	 if first_arg>1 then
+	    -- return type must be a F_CHARACTER of some flavor
+	    res :=  res.append(final_arg_list[1]);
+	    extern:=extern.append(type_list[1]);
+	    if final_arg_list.size > 2 then
+	       res  := res+",";
+	       extern := extern.append(",");
+	    end;
+	 end;	 
+      end;
+
+      -- handle arguments
+      arg_pos ::= first_arg;
+      loop 
+	 i::=1.upto!(ext_call.size-1);
+	 if is_fortran_scalar_type(ext_call[i].expr.tp) then
+	    res := res+"&";
+	 end;
+	 res:=res.append(final_arg_list[arg_pos]);
+	 extern:=extern.append(type_list[arg_pos]);
+	 if arg_pos<final_arg_list.size-1 then
+	    extern:=extern.append(", ");
+	    res:=res.append(", ");
+	 end;
+	 arg_pos := arg_pos + 1;
+      end;
+      
+      -- handle the remaining shadow args, if any
+      loop
+	 while!(arg_pos < final_arg_list.size);
+	 res:=res.append(final_arg_list[arg_pos]);
+	 extern:=extern.append(type_list[arg_pos]);
+	 if arg_pos<final_arg_list.size-1 then
+	    extern:=extern.append(", ");
+	    res:=res.append(", ");
+	 end; 
+	 arg_pos := arg_pos + 1;;
+      end;
+      
+      extern:=extern.append(");\n");
+      res := res.append(")");      
+      -- do not emit prototypes for features in runtime. They should
+      -- be in the system header files.
+      if ~ext_call.ext_tp.is_builtin then
+	 code_c.uses_extern(extern);
+      end;
+      
+      alt_ret:STR;
+      if alternate_returns then
+	 alt_ret:=dec_local_comment(TP_BUILTIN::int, 
+				  "Temporary for alternate returns");
+      end;
+	 
+      if need_copy then 
+	 -- The return value could be passed back as an argument in C
+	 if has_return then
+	    tmp_ret::=dec_local(ext_call.tp);
+	    ndefer(tmp_ret.append("=",res,";"));
+	    res := tmp_ret;
+	 else
+	    if alternate_returns then
+	       ndefer(alt_ret.append("=",res,";"));
+	    else
+	       ndefer(res+";");
+	    end;
+	    if ~void(ext_call.fun.ret) then
+	       res := res_arg;
+	    else
+	       -- nothing to return
+	       res := void;
+	    end;
+	 end;
+	 fortran_caller_copy_out(ext_call, first_arg,arg_list, final_arg_list);
+      else
+	 -- no copy out 
+	 if ~has_return then
+	    if ~void(ext_call.fun.ret) then
+	       -- need to return something
+	       ndefer(res+";");
+	       res := res_arg;
+	    else
+	       -- may still have to return something for alternate returns
+	       if alternate_returns then
+		  ndefer(alt_ret.append("=",res,";"));
+		  res := void;
+	       end;
+	    end;
+	 end;
+      end;
+      
+      if alternate_returns then
+	 process_alternate_returns(ext_call,final_arg_list,first_arg,alt_ret);
+      end;
+      return res;
+   end;
+   -------------------------------------------------------------------------- 
+   
+   bind_fortran_name(name:STR):STR is
+      res:STR;
+      res := fortran_prepend_underscore.append(name,
+					       fortran_append_underscore);
+      
+      if fortran_bind_func then
+	 res := BIND_FORTRAN::bind_name(res);
+      end;
+      return res;
+   end;
+   -------------------------------------------------------------------------- 
+      
+   private emit_fortran_args(ext_call:AM_EXT_CALL_EXPR, out arg_list:ARRAY{STR}, 
+		     out type_list:ARRAY{STR}, out first_arg:INT ):STR is
+      -- first _arg is the index of the first "real" argument (not the
+      -- shadow argument due to the exotic retun type
+      
+      -- At this point, all arguments must have F_* types. The front/middle
+      -- ends should take care of this (reporting an errror if this is not
+      -- the case)
+      
+      -- Here the oddities of "high performance" fortran parameter passing
+      -- convention are taken care of.
+      -- "Translation" in the following applies both to the routine definitions
+      -- and calls as the case may be.
+      
+      -- 1) Return value.
+      --      i) A Sather routine returning F_INTEGER, F_LOGICAL, F_REAL or
+      --      F_DOUBLE types is translated to a C function returning a 
+      --      a "corresponding" C type (see System/Common/fortran.h for
+      --      the definition of this correspondence)
+      --
+      --      ii) A Sather routine returning F_COMPLEX of F_DOUBLE_COMPLEX
+      --      types is translated into a C routine with an additional 
+      --      initial argument that points to the place where the return
+      --      value is to be stored:
+      --      F_COMPLEX foo;   --->   void foo(F_COMPLEX *ret_val);
+      --
+      --      iii) A Sather routine returning F_CHARACTER or F_STRING
+      --      types is translated to C routine with two extra initial 
+      --      parameters: an address of a string and its length:
+      --      F_CHARACTER foo;-->void foo(F_CHARACTER ret_val, F_LENGTH length)
+      --
+      -- 2) Parameter Passing
+      --     All parameters are passed by reference. In addition, for every
+      --     F_CHARACTER or F_CHARACTER_* parameter, an extra parameter of
+      --     type F_LENGTH is appended to the end of the parameter list.
+      --     foo(F_INTEGER i, F_REAL f)      -->  foo((F_INTEGER *) &i, &f)
+      --     foo(F_CHARACTER c, F_INTEGER i) --> 
+      --            foo((F_CHARACTER*) &c, (F_INTEGER *) &i, (F_LENGTH) c_length)
+      --
+      
+      -- first, find out the number of arguments in the resulting call:
+      -- F_COMPLEX return type adds one argument, F_CHARACTER return types
+      -- add two arguments, F_CHARACTER parameter types add two arguments. 
+      -- The rest of Sather arguments mapped one-to-one to the resulting call
+      --
+      -- There is still a matter of alternate returns, but this ugly stuff 
+      -- is handled outside
+      
+      res:STR;
+      num_args, num_character_args:INT; 
+      num_args := compute_num_args(ext_call, out num_character_args);
+      arg_list := #ARRAY{STR}(num_args);
+      type_list := #ARRAY{STR}(num_args);
+      
+      -- handle return types
+      arg_pos:INT := 0;
+      if ~void(ext_call.tp) then
+	 case ext_call.tp
+	 when TP_BUILTIN::f_complex, TP_BUILTIN::f_double_complex then	    
+	    arg_list[arg_pos] := dec_local_object(ext_call.tp);
+	    type_list[arg_pos] := fortran_type_for_arg(ext_call.tp);
+	    res := arg_list[arg_pos];
+	    arg_pos := arg_pos + 1;
+	 when TP_BUILTIN::f_character then
+	    arg_list[arg_pos] := dec_local(ext_call.tp);
+	    type_list[arg_pos] := fortran_type_for_arg(ext_call.tp);	    
+	    res := arg_list[arg_pos];	    
+	    arg_pos := arg_pos + 1;
+	    arg_list[arg_pos] := "1L";  -- Standard CHARACTER*1 type
+	    type_list[arg_pos] := "F_LENGTH";
+	    arg_pos := arg_pos + 1;
+	 when TP_BUILTIN::f_string then
+	    -- do we need to allocate space here?
+	    tmp ::= dec_local(ext_call.tp);
+	    ndefer(tmp+"=ZALLOC(sizeof(F_STRING_struct));");
+	    -- the return string cannot be larger then F_CHARACTER_RETURN_SIZE
+	    -- To change this, we need to allow fixed length string 
+	    -- types F_CHARACTER_N. This will probably need to happen in the
+	    -- future
+	    ndefer(tmp+"->size=F_CHARACTER_RETURN_SIZE;");
+	    ndefer(tmp+"->address=(F_CHARACTER *)ZALLOC(F_CHARACTER_RETURN_SIZE);");
+	    arg_list[arg_pos] := tmp+"->address";
+	    type_list[arg_pos] := fortran_type_for_arg(ext_call.tp);	    
+	    res := tmp;	    
+	    arg_pos := arg_pos + 1;
+	    arg_list[arg_pos] := tmp+"->size"; 
+	    type_list[arg_pos] := "F_LENGTH";
+	    arg_pos := arg_pos + 1;	    
+	 else
+	 end;
+      end;
+      
+      first_arg := arg_pos;
+      
+      -- Handle parameters
+      -- First, find the index of the first character length argument
+      string_length_index:INT := num_args - num_character_args;
+      
+      if ext_call.asize>1 then
+	 loop i::=1.upto!(ext_call.asize-1);
+	    arg_str ::= emit_fortran_call_arg(ext_call[i]);
+	    tp ::= ext_call[i].expr.tp;
+	    type_list[arg_pos] := fortran_type_for_arg(tp);
+	    case tp
+	    when TP_BUILTIN::f_character then
+	       arg_list[arg_pos] := arg_str;
+	       arg_list[string_length_index] := "1L"; -- CHARACTER*1
+	       type_list[string_length_index] := "F_LENGTH";
+	       string_length_index := string_length_index + 1;
+	    when TP_BUILTIN::f_string then
+	       -- this needs to be fixed too
+	       arg_list[arg_pos] := arg_str + "->address";
+	       arg_list[string_length_index] := arg_str+"->size"; 
+	       type_list[string_length_index] := "F_LENGTH";
+	       string_length_index := string_length_index + 1;	       
+	    else
+	       arg_list[arg_pos] := arg_str;
+	    end;
+	    arg_pos := arg_pos + 1;
+	 end;
+      end;
+      return res;
+   end;
+--------------------------------------------------------------------------
+
+   private compute_num_args(ext_call:AM_EXT_CALL_EXPR, out num_character_args:INT):INT is
+      num_args:INT := 0;
+      num_character_args := 0;
+      
+      -- look at the return value first
+      if ~void(ext_call.tp) then
+	 case ext_call.tp
+	 when TP_BUILTIN::f_character then num_args := num_args + 2;
+	 when TP_BUILTIN::f_string then num_args := num_args + 2;
+	 when TP_BUILTIN::f_complex then num_args := num_args + 1;
+	 when TP_BUILTIN::f_double_complex then num_args := num_args + 1;
+	 else
+	    -- no shadow args for everything else
+	 end;
+      end;
+      
+      -- look at the arguments 
+      loop
+	 i::=1.upto!(ext_call.size-1);
+	 tp::= ext_call[i].expr.tp;
+	 case tp
+	 when TP_BUILTIN::f_character, TP_BUILTIN::f_string then  
+	    num_args := num_args + 2;
+	    num_character_args := num_character_args + 1;
+	 else
+	    num_args := num_args + 1;
+	 end;
+      end;
+      return num_args;
+   end;
+--------------------------------------------------------------------------
+   
+   private emit_fortran_call_arg(a:AM_CALL_ARG):STR is
+      res:STR;
+      se: STR;
+      
+      se := emit_expr(a.expr);
+      aexpr ::= a.expr;
+      amode ::= a.mode;
+      atp ::= aexpr.tp;
+      
+      case amode 
+      when MODES::in_mode then
+	 typecase aexpr
+	 when AM_LOCAL_EXPR then
+	       res := se;
+	 else
+	    if is_fortran_scalar_type(atp) or atp = TP_BUILTIN::f_handler then
+	       -- handle "immutable" types
+	       -- force to local to take a reference
+	       tmp ::= dec_local(aexpr.tp);
+	       ndefer(tmp.append(" = ", se, ";"));
+	       res := tmp;
+	    else
+	       -- arrays go here
+	       res := se;
+	    end;
+	 end;
+      when MODES::out_mode, MODES::inout_mode then
+	 -- Do not do anything special for now
+	 typecase aexpr
+	 when AM_LOCAL_EXPR then
+	       res := se;
+	 else
+	    if is_fortran_scalar_type(atp) or atp=TP_BUILTIN::f_handler then
+	       -- handle "immutable" types
+	       -- force to local to take a reference
+	       tmp ::= dec_local(atp);
+	       ndefer(tmp.append(" = ", se, ";"));
+	       res := se;
+	    else
+	       res := se;
+	    end;
+	 end;
+      end; -- "once" should not find its way here
+      return res;
+   end;	 
+
+   --------------------------------------------------------------------------
+   
+   fortran_type_for_arg(tp:$TP):STR is
+      -- return the C type for the protype of the argument with tp Sather type
+      case tp 
+      when TP_BUILTIN::f_integer, TP_BUILTIN::f_logical, TP_BUILTIN::f_real,
+	       TP_BUILTIN::f_double, TP_BUILTIN::f_character,
+	       TP_BUILTIN::f_complex, TP_BUILTIN::f_double_complex
+      then
+	 return mang(tp)+'*';
+      when TP_BUILTIN::f_string then
+	 return mang(TP_BUILTIN::f_character)+"*";
+      when TP_BUILTIN::f_handler then
+	 return mang(TP_BUILTIN::f_handler);
+      else
+	 -- must be an array or F_ROUT: already reference
+	 return mang(tp);
+      end;
+   end;
+   --------------------------------------------------------------------------
+
+   private fortran_caller_copy_in(ext_call:AM_EXT_CALL_EXPR, first_arg:INT,
+			  arg_list:ARRAY{STR}):ARRAY{STR} is
+      -- copy evaluatged out/inout args to temporaries to ensure
+      -- value/result semantics (We can't do this in the callee
+      -- as we have to no access to its code (external)
+      final_arg_list:ARRAY{STR}:=#(arg_list.size);
+      
+      -- copy the return stuff
+      loop
+	 i::=0.upto!(first_arg-1);
+	 final_arg_list[i] := arg_list[i];
+      end;
+
+      arg_pos ::= first_arg;
+      
+      if ext_call.asize>1 then
+	 loop i::=1.upto!(ext_call.size-1);
+	    if ext_call[i].mode.is_out_inout then
+	       tmp::=dec_local_comment(ext_call[i].expr.tp, "Temporary for "+arg_list[arg_pos]);
+	       ndefer(tmp.append("=",arg_list[arg_pos],";"));
+	       final_arg_list[arg_pos] := tmp;
+	    else
+	       -- nothing special
+	       final_arg_list[arg_pos] := arg_list[arg_pos];
+	    end;
+	    arg_pos := arg_pos + 1;
+	 end;
+	 -- copy the additional string length args, if any
+	 loop
+	    while!(arg_pos<arg_list.size);
+	    final_arg_list[arg_pos] := arg_list[arg_pos];
+	    arg_pos := arg_pos + 1;
+	 end;
+      end;
+      return final_arg_list;
+   end;
+
+   is_fortran_scalar_type(tp:$TP):BOOL is 
+      case tp
+      when TP_BUILTIN::f_character, TP_BUILTIN::f_integer,
+	       TP_BUILTIN::f_logical, TP_BUILTIN::f_real,
+	       TP_BUILTIN::f_double, TP_BUILTIN::f_complex,
+	       TP_BUILTIN::f_double_complex
+      then
+	 return true;
+      else
+	 return false;
+      end;
+   end;
+   
+   private fortran_caller_copy_out(ext_call:AM_EXT_CALL_EXPR, first_arg:INT,
+			  arg_list:ARRAY{STR}, final_arg_list:ARRAY{STR}) is
+      -- Copy things back to the arguments after the call to ensure
+      -- value/result semantics
+
+      arg_pos::=first_arg;
+      loop 
+	 i::=1.upto!(ext_call.size-1);
+	 if ext_call[i].mode.is_out_inout then
+	    -- do copy out
+	    ndefer(arg_list[arg_pos].append("=", final_arg_list[arg_pos],";"));
+	 end;
+	 arg_pos := arg_pos + 1;
+      end;
+   end;
+   --------------------------------------------------------------------------
+   
+   private is_alternate_return(ext_call:AM_EXT_CALL_EXPR):BOOL is
+      -- returns true if alternate returns are possible in the 
+      -- FORTRAN procedure we are trying to call.
+      -- Just need to see if F_HANDLER type is present among
+      -- argument types
+      loop
+	 ca::=ext_call.elt!(1); -- skip self
+	 case ca.expr.tp
+	 when TP_BUILTIN::f_handler then return true;
+	 else
+	 end;
+      end;
+      return false;
+   end;
+   
+   private process_alternate_returns(ext_call:AM_EXT_CALL_EXPR, 
+			     final_arg_list:ARRAY{STR}, first_arg:INT, 
+			     alt_ret:STR) is
+      ndefer("switch(".append(alt_ret,"){"));
+      case_num:INT:=1;
+      arg_pos:INT := first_arg;
+      in;
+      loop
+	 i::=1.upto!(ext_call.size-1);
+	 ca::=ext_call[i];
+	 if ca.expr.tp = TP_BUILTIN::f_handler then
+	    invoke_handler:STR := 
+	       "F_HANDLERINVOKE_HANDLER(".append(final_arg_list[arg_pos],")");
+	    ndefer("case ".append(case_num.str,": ", invoke_handler, "; break;"));
+	    case_num := case_num + 1;
+	 end;
+	 arg_pos := arg_pos + 1;
+      end;
+      move_out;
+      ndefer("}");
+   end;
+
+   
+end;  -- FORTRAN_CALL
+
+--------------------------------------------------------------------------
+partial class FORTRAN_ROUTINE is
+   stub ndefer(s:STR);   
+   stub func_name_comment:STR;
+   stub saw_outer_return:BOOL;
+   stub saw_outer_return(v:BOOL);
+   stub mangler:MANGLE;
+   private stub mang(ob:$OB):STR;   
+   private stub mang(ob,ns:$OB):STR;
+   private stub dec_local_for_arg(a:AM_FORMAL_ARG, sig:SIG, s:STR): STR;
+   stub debug:BOOL;
+   stub pretty:BOOL;
+   stub func_tables:BOOL;
+   stub fortran_type_for_arg(tp:$TP):STR; 
+   private stub comment(f:CODE_FILE,com:STR);
+   stub is_fortran_scalar_type(tp:$TP):BOOL;
+   private stub fortran_prepend_underscore:STR;
+   private stub fortran_append_underscore:STR;   
+   private stub fortran_bind_func:BOOL;
+   private stub bind_fortran_name(name:STR):STR;
+   private stub manual_unlock:BOOL;
+   private stub pop_exceptions(n:INT);
+   private stub current_am_rout_def:AM_ROUT_DEF;
+   private stub emit_expr(arg:$AM_EXPR):STR;
+   private stub current_sig:SIG;
+   private stub ex_nesting:INT;   
+   
+   stub func_name_suffix:STR;	-- name used as suffix for functions that 
+                                -- expect some
+			        -- arguments to be near (pSather only)
+   
+   private attr current_fortran_arg_list:ARRAY{STR};
+   
+   private emit_fortran_prologue(f:AM_ROUT_DEF) pre ~void(f.sig) is
+      -- emit a prologue for a Sather function that is to conform to
+      -- Fortran parameter passing convention (these could be called
+      -- from Fortran
+
+      res_arg:STR;  -- arg that holds the return value (if any)
+      arg_list:ARRAY{STR}; 
+      -- a list of fortran args (could be larger than Sather arg list)
+      final_arg_list:ARRAY{STR};
+      -- different from arg_list  in the presence of out/inout args. 
+      -- Need to ensure value/result semantics in the caller coder, so 
+      -- some copying will take place
+      type_list:ARRAY{STR};
+      -- a list of C typese correposnding to arg_list 
+      num_args:INT; -- the number of "real" args including fortran generated
+      num_character_args:INT; -- the number of character args
+      has_return:BOOL; -- generated C call has a return value
+      first_arg:INT;
+      
+      saw_outer_return:=false;
+      sig:SIG:=f.sig;
+      mangler.force_mangle(f[0].expr,"self",sig);
+
+
+      
+      newline; newline;
+      code_c+"\n#undef IS_ITER\n#define IS_ITER 0\n";
+
+      comment(code_c,"Definition of "+sig.str+func_name_comment);
+      code_c+'\n';
+
+      rout_index:STR;
+      if func_tables then
+	 rout_index:=PRINT_OB::register(f.sig);
+      end; 
+      if debug then
+	 code_c+"\n#line "
+	       +f.source.line_num_in+" \""+f.source.file_in+"\"\n";
+	 last_lineno:=f.source.line_num_in;
+      elsif pretty then
+	 code_c+"\n/* #line "
+	       +f.source.line_num_in+" \""+f.source.file_in+"\" */\n";
+	 last_lineno:=f.source.line_num_in;
+      end;
+
+      
+      res_arg := generate_fortran_args(f, out arg_list,
+				       out type_list, out first_arg);
+      has_return := ~void(f.sig.ret) and void(res_arg);
+      
+      -- skip the out/inout handling for the moment
+      final_arg_list := arg_list;
+      current_fortran_arg_list := final_arg_list;
+      
+      if has_return  then  -- generated C returns something
+	 code_c+mang(sig.ret)+' ';
+      else 
+	 code_c+"void ";
+      end;
+      
+      -- The class name is omitted: there is no way we can call something
+      -- like CLASS_func from Fortran as everything is converted to lowercase
+      name:STR := bind_fortran_name(sig.name.str);
+      
+      mangler.force_mangle(sig, name, void);
+      
+      -- the suffix is used to distinguish different versions of the same
+      -- functions (they expect different arguments to be near)
+      code_c+mang(sig)+func_name_suffix+'(';
+
+      code_c.uses_sig(sig);
+      -- out/inout args
+      out_args:BOOL:=false;
+      
+      loop 
+	 arg_str ::= final_arg_list.elt!;
+	 type_str::= type_list.elt!; 
+	 code_c+", ".separate!(type_str+' '+arg_str);
+      end;
+      
+      if func_tables then -- function frame
+	 code_c+", struct _func_frame *prev_func_frame";
+      end;
+      
+	
+      code_c+") {";
+      in;
+
+      -- assemble string arguments into F_CHARACTER or F_STRING types
+      -- need to do that as Sather understands F_CHARACTER*, but Fortran
+      -- splits theses things into two parts: a pointer a string and length
+      -- which are not always neighbors on the stack.
+      -- Skip the returned strings or complex/double complex things here - 
+      -- they are handled in the epilogue
+      arg_pos::=first_arg;
+      string_length_pos::=first_arg+f.size-1;
+      loop
+	 i::=1.upto!(f.size-1);
+	 case f[i].expr.tp
+	 when TP_BUILTIN::f_character then
+	    local::=dec_local_for_arg(f[i],sig,"*"+arg_list[arg_pos]);
+	    string_length_pos := string_length_pos + 1;		  
+	 when TP_BUILTIN::f_string then
+	    local::=dec_local_for_arg(f[i],sig,default_init(f[i].expr.tp));
+	    ndefer(mang(f[i].expr,sig).append("->address=",
+					      arg_list[arg_pos],";"));
+	    ndefer(mang(f[i].expr,sig).append("->size=",
+					      arg_list[string_length_pos],";"));
+	    string_length_pos := string_length_pos + 1;
+	 else
+	    -- mangle scalar types and intialize them by dereferencing a 
+	    -- pointer obtained from Fortran
+	    if is_fortran_scalar_type(f[i].expr.tp) then
+	       --local::=dec_local_for_arg(f[i],sig,"*"+arg_list[arg_pos]);
+	       mangler.force_mangle(f[i].expr,"(*"+arg_list[arg_pos]+")", sig);
+	    end;
+	 end;
+	 arg_pos := arg_pos + 1;
+      end;
+      
+
+      
+            -- If PO is on, generate function frame
+      if func_tables then
+	 -- ndefer("void *_local_frame[]={");
+	 -- because of a bug in GCC the above way to define local_frame compiles,
+	 -- but produces buggy code. So we have to count the number of
+	 -- elements first;
+	 ll:FLIST{STR}:=#;
+	 cn::=0;
+	 loop
+	    k::="(void *)&"+mang(f.elt!.expr,sig);
+	    if f.is_external and 1.up!=1 then k:="NULL"; end;
+	    ll:=ll.push(k);
+	    cn:=cn+1;
+	 end;
+	 loop l::=f.locals.elt!;
+	    if ~void(l.name) and l/=f.rres then
+	       l.needs_init:=true;
+	       ll:=ll.push("(void *)&"+mang(l,sig));
+	       cn:=cn+1;
+	    end;
+	 end;
+	 -- Had to rewrite the following to avoid automatic
+	 -- struct and array initialization: native SGI and alpha compilers
+	 -- can't handle this, although it appears to be ANSI
+	 -- Now do field by field assignments
+	 -- Boris, 8/21/96
+	 ndefer("void *_local_frame["+cn+"];");
+	 ndefer("struct _func_frame FF;");
+	 
+	 loop
+	    i::=0.upto!(cn-1);
+	    defer("_local_frame[".append(i.str,"]=",ll.elt!,";"));
+	 end;
+	 defer("FF.func=".append(rout_index,";"));
+	 if f.is_external or sig.is_forked then
+	    defer("FF.prev=NULL;");
+	 else
+	    defer("FF.prev=prev_func_frame;");
+	 end;
+	 defer("FF.args=_local_frame;");
+      end;
+
+
+      -- We cannot do the following above before doing the -PO
+      -- stuff. We want the rest to be done before, so
+      -- that those locals are initialized BEFORE the function
+      -- frame. This is not critical for iters, as their frame
+      -- is initialized to zero anyway (because its allocated
+      -- on the heap).
+
+      -- now emit local declarations (if an iter, they are on the
+      -- frame and don't need to be declared).
+      if ~f.is_iter and ~void(f.locals) then  
+	 loop 
+	    lv:AM_LOCAL_EXPR:=f.locals.elt!;
+	    assert ~void(lv) and ~void(lv.tp);
+	    code_c.uses_tp(lv.tp); --here
+	    newline;
+	    if lv.is_volatile then code_c+"volatile "; end;
+	    if lv.needs_init or lv.tp.is_immutable then
+	       def:STR:=default_init(lv.tp);
+	       code_c+mang(lv.tp)+' '+mang(lv,sig)+" = "+def+';';
+	    else
+	       code_c+mang(lv.tp)+' '+mang(lv,sig)+';';
+	    end;
+	 end;
+      end;
+
+      if sig.is_forked then	-- unbox the self
+	 newline;
+	 code_c+mang(f[0].expr.tp)+" self;";
+	 ndefer( "self = " + cast(sig.tp,TP_BUILTIN::dollar_ob,"self_to_be",false)+';');
+      end;
+      
+      current_arg_list := arg_list;
+   end;
+      
+   
+--------------------------------------------------------------------------
+
+   private compute_num_args(rout_def:AM_ROUT_DEF, out num_character_args:INT):INT is
+      num_args:INT := 0;
+      num_character_args := 0;
+      sig:SIG := rout_def.sig;
+      
+      -- look at the return value first
+      if ~void(sig.ret) then
+	 case sig.ret
+	 when TP_BUILTIN::f_character then num_args := num_args + 2;
+	 when TP_BUILTIN::f_string then num_args := num_args + 2;
+	 when TP_BUILTIN::f_complex then num_args := num_args + 1;
+	 when TP_BUILTIN::f_double_complex then num_args := num_args + 1;
+	 else
+	    -- no shadow args for everything else
+	 end;
+      end;
+      
+      -- look at the arguments 
+      loop
+	 tp::= sig.args.elt!.tp;
+	 case tp
+	 when TP_BUILTIN::f_character, TP_BUILTIN::f_string then  
+	    num_args := num_args + 2;
+	    num_character_args := num_character_args + 1;
+	 else
+	    num_args := num_args + 1;
+	 end;
+      end;
+      return num_args;
+   end;   
+   
+    -------------------------------------------------------------------------- 
+   
+   private generate_fortran_args(rout_def:AM_ROUT_DEF, out arg_list:ARRAY{STR}, 
+		     out type_list:ARRAY{STR}, out first_arg:INT ):STR is
+      -- first _arg is the index of the first "real" argument (not the
+      -- shadow argument due to the exotic retun type
+      
+      -- At this point, all arguments must have F_* types. The front/middle
+      -- ends should take care of this (reporting an errror if this is not
+      -- the case)
+      
+      -- Here the oddities of "high performance" fortran parameter passing
+      -- convention are taken care of.
+      -- "Translation" in the following applies both to the routine definitions
+      -- and calls as the case may be.
+      
+      -- 1) Return value.
+      --      i) A Sather routine returning F_INTEGER, F_LOGICAL, F_REAL or
+      --      F_DOUBLE types is translated to a C function returning a 
+      --      a "corresponding" C type (see System/Common/fortran.h for
+      --      the definition of this correspondence)
+      --
+      --      ii) A Sather routine returning F_COMPLEX of F_DOUBLE_COMPLEX
+      --      types is translated into a C routine with an additional 
+      --      initial argument that points to the place where the return
+      --      value is to be stored:
+      --      F_COMPLEX foo;   --->   void foo(F_COMPLEX *ret_val);
+      --
+      --      iii) A Sather routine returning F_CHARACTER or F_CHARACTER_*
+      --      types is translated to C routine with two extra initial 
+      --      parameters: an address of a string and its length:
+      --      F_CHARACTER foo;-->void foo(F_CHARACTER ret_val, F_LENGTH length)
+      --
+      -- 2) Parameter Passing
+      --     All parameters are passed by reference. In addition, for every
+      --     F_CHARACTER or F_CHARACTER_* parameter, an extra parameter of
+      --     type F_LENGTH is appended to the end of the parameter list.
+      --     foo(F_INTEGER i, F_REAL f)      -->  foo((F_INTEGER *) &i)
+      --     foo(F_CHARACTER c, F_INTEGER i) --> 
+      --            foo((F_CHARACTER) c, (F_INTEGER *) &i, (F_LENGTH) c_length)
+      --
+      
+      -- first, find out the number of arguments in the resulting call:
+      -- F_COMPLEX return type adds one argument, F_CHARACTER return types
+      -- add two arguments, F_CHARACTER parameter types add two arguments. 
+      -- The rest of Sather arguments mapped one-to-one to the resulting call
+      --
+      -- There is still a matter of alternate returns, but this ugly stuff 
+      -- is handled outside
+      
+      res:STR;
+      num_args, num_character_args:INT; 
+      num_args := compute_num_args(rout_def, out num_character_args);
+      arg_list := #ARRAY{STR}(num_args);
+      type_list := #ARRAY{STR}(num_args);
+      sig:SIG := rout_def.sig;
+      
+      -- handle return types
+      arg_pos:INT := 0;
+      if ~void(sig.ret) then
+	 case sig.ret
+	 when TP_BUILTIN::f_complex, TP_BUILTIN::f_double_complex then	    
+	    arg_list[arg_pos] := mangler.genother(sig);
+	    type_list[arg_pos] := fortran_type_for_arg(sig.ret);
+	    res := arg_list[arg_pos];
+	    arg_pos := arg_pos + 1;
+	 when TP_BUILTIN::f_character then
+	    arg_list[arg_pos] := mangler.genother(sig);
+	    type_list[arg_pos] := fortran_type_for_arg(sig.ret);	    
+	    res := arg_list[arg_pos];	    
+	    arg_pos := arg_pos + 1;
+	    arg_list[arg_pos] := mangler.genother(sig);
+	    type_list[arg_pos] := "F_LENGTH";
+	    arg_pos := arg_pos + 1;
+	 when TP_BUILTIN::f_string then
+	    -- do we need to allocate space here?
+	    arg_list[arg_pos] := mangler.genother(sig);
+	    type_list[arg_pos] := fortran_type_for_arg(sig.ret);	    
+	    res := arg_list[arg_pos];	    
+	    arg_pos := arg_pos + 1;
+	    arg_list[arg_pos] := mangler.genother(sig);
+	    type_list[arg_pos] := "F_LENGTH";
+	    arg_pos := arg_pos + 1;	    
+	 else
+	 end;
+      end;
+      
+      first_arg := arg_pos;
+      
+      -- Handle parameters
+      -- First, find the index of the first character length argument
+      string_length_index:INT := num_args - num_character_args;
+      
+      if sig.args.size>0 then
+	 loop i::=1.upto!(rout_def.size-1);
+	    arg::=rout_def[i];
+	    arg_name:STR;
+	    le::=arg.expr;
+	    typecase le
+	    when AM_LOCAL_EXPR then
+	       arg_name:=le.name.str;
+	    end;
+	    tp ::= rout_def[i].expr.tp;
+	    type_list[arg_pos] := fortran_type_for_arg(tp);
+	    -- do not mangle F_CHARACTER types and out/inout args
+	    -- at this point yet. Later on, special locals will be
+	    -- created to play their role.
+	    case tp
+	    when TP_BUILTIN::f_character then
+	       arg_list[arg_pos] := mangler.genother(sig);
+	       arg_list[string_length_index] := mangler.genother(sig);
+	       type_list[string_length_index] := "F_LENGTH";
+	       string_length_index := string_length_index + 1;
+	    when TP_BUILTIN::f_string then
+	       -- this needs to be fixed too
+	       arg_list[arg_pos] := mangler.genother(sig);
+	       arg_list[string_length_index] := mangler.genother(sig);
+	       type_list[string_length_index] := "F_LENGTH";
+	       string_length_index := string_length_index + 1;	       
+	    else
+	       -- do not mangle scalar types yet
+	       if is_fortran_scalar_type(tp) then
+		  arg_list[arg_pos] := mangler.genother(sig);
+	       else
+		  arg_list[arg_pos] := mang(rout_def[i].expr,sig);
+	       end;
+	    end;
+	    arg_pos := arg_pos + 1;
+	 end;
+      end;
+      return res;
+   end;
+   --------------------------------------------------------------------------  
+
+   private generate_fortran_arg_types(sig:SIG):STR is
+      -- generate ',' separate list for types for prototypes
+      res:STR;
+
+      num_character_args:INT; 
+      
+      -- handle return types
+      if ~void(sig.ret) then
+	 case sig.ret
+	 when TP_BUILTIN::f_complex, TP_BUILTIN::f_double_complex then	    
+	    res := fortran_type_for_arg(sig.ret);
+	    if sig.args.size>0 then
+	       res := res + ",";
+	    end;
+	 when TP_BUILTIN::f_character then
+	    res := fortran_type_for_arg(sig.ret)+",F_LENGTH";
+	    if sig.args.size>0 then
+	       res := res + ",";
+	    end;	    
+	 when TP_BUILTIN::f_string then
+	    res := fortran_type_for_arg(sig.ret)+",F_LENGTH";
+	    if sig.args.size>0 then
+	       res := res + ",";
+	    end;	    
+	 else
+	 end;
+      end;
+      
+      -- Handle parameters
+      
+      loop tp::=sig.args.elt!.tp;
+	 res := res+",".separate!(fortran_type_for_arg(tp));
+	 if tp = TP_BUILTIN::f_character or tp = TP_BUILTIN::f_string
+	 then
+	    num_character_args := num_character_args + 1;
+	 end;
+      end;
+      
+      loop
+	 i::=1.upto!(num_character_args);
+	 res := res+",F_LENGTH";
+      end;
+      return res;
+   end;
+   --------------------------------------------------------------------------  
+   
+   fortran_func_dec(sig:SIG):STR is
+      -- returns an ANSI C prototype for a function conforming to
+      -- to a Fortran parameter passing convention (for fortran funcs
+      -- with bodies in external Fortran classes)
+      res:STR;
+      has_return:BOOL;
+      
+      if void(sig.ret) then
+	 has_return := false;
+      else
+	 case sig.ret
+	 when TP_BUILTIN::f_complex, TP_BUILTIN::f_double_complex,
+		  TP_BUILTIN::f_character, TP_BUILTIN::f_string then
+	    -- return value moved to the first arg poistion
+	    has_return := false;
+	 else
+	    has_return := true;
+	 end;
+      end;
+      
+      if has_return then
+	 res := res.append(mang(sig.ret), " ");
+      else
+	 res := res.append("void ");
+      end;
+      
+      res := res+bind_fortran_name(sig.name.str);
+      res := res.append(func_name_suffix,"(",generate_fortran_arg_types(sig),");");
+      return res;
+   end;
+   
+   private emit_fortran_return_stmt(arg:AM_RETURN_STMT) is
+      -- emit return stmt for a function that supports fortran parameter
+      -- passing convention. This may involve setting up some of the arguments
+      -- instead of returning things in registers to conform to what Fortran
+      -- expects
+      if manual_unlock then ndefer("LOCK_UNLOCK_NOW;"); end;
+      pop_exceptions(ex_nesting);
+
+      -- no need to copy anything out as fortran doesn't support value/result
+      -- and things called from Fortran should behave excatly as if they were
+      -- Fortran things
+      if ~void(current_am_rout_def.specul_prefetch) then
+	 ndefer("PREFETCH_SPECUL_WAIT("+emit_expr(current_am_rout_def.specul_prefetch)+");");
+      end;
+      if ~void(arg.val) then
+	 s1::=emit_expr(arg.val);
+	 if ~set_return_arg(current_am_rout_def, s1) then
+	    ndefer("return ".append(cast(current_sig.ret,arg.val.tp,s1,false),";"));
+	 end;
+      else
+	 assert void(current_sig.ret);
+	 ndefer("return;");
+      end;
+      if indent=1 then 
+	 saw_outer_return:=true; 
+      end;
+   end;
+   
+   private set_return_arg(rout_def:AM_ROUT_DEF, ret_val:STR):BOOL is
+      -- if the return value is returned on the stack, emit the
+      -- necessary code and return "true"
+      -- otherwise, do nothing and return "false"
+      sig:SIG := rout_def.sig;
+      
+      if void(sig.ret) then
+	 return false;
+      else
+	 case sig.ret
+	 when TP_BUILTIN::f_complex, TP_BUILTIN::f_double_complex then
+	    ndefer("*".append(current_fortran_arg_list[0],"=",ret_val,";"));
+	    return true;
+	 when TP_BUILTIN::f_character then
+	    ndefer("*".append(current_fortran_arg_list[0],"=",ret_val,";"));
+	    ndefer(current_fortran_arg_list[1].append("=","1L;"));
+	    return true;
+	 when TP_BUILTIN::f_string then
+	    ndefer(
+	       "F_STRING_COPY_TO(".append(current_fortran_arg_list[0],
+		    ",",ret_val, "->address,",ret_val,"->size);"));
+	    ndefer(current_fortran_arg_list[1].append("=",
+						      ret_val,"->size;"));
+	    return true;
+	 else
+	 end;
+      end;
+      return false;
+   end;
+   
+end; -- FORTRAN_PROLOGUE
+
+

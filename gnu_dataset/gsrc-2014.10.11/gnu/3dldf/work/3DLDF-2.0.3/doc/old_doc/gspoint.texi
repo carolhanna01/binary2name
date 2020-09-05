@@ -1,0 +1,204 @@
+@c gspoint.texi
+  
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+
+@node Points, Transforming Points, Using 3DLDF, Top
+@chapter Points
+
+@menu
+* Declaring and Initializing Points::  
+* Setting and Assigning to Points::  
+@end menu
+ 
+@node Declaring and Initializing Points, Setting and Assigning to Points, Points, Points
+@section Declaring and Initializing Points
+
+@tindex Point
+The most basic drawable object in 3DLDF is @code{class Point}.  It is
+analogous to @code{pair} in Metafont.  For example, in Metafont one
+can define a @code{pair} using the ``z'' syntax as
+follows:
+
+@example
+z0 = (1cm, 1cm);
+@end example
+
+@noindent
+There are other ways of defining @code{pairs} in Metafont (and
+MetaPost), but this is the usual way.  
+
+
+
+In 3DLDF, a Point is declared and initialized as follows:
+
+@example
+Point pt0(1, 2, 3);
+@end example
+
+This simple example demonstrates several differences between Metafont
+and 3DLDF.  First of all, there is no analog in 3DLDF to Metafont's
+``z'' syntax.  
+If I want to have @code{Points} called ``@code{pt0}'', ``@code{pt1}'',
+``@code{pt2}'', etc., then I must declare each of them to be a
+@code{Point}:
+
+@example
+Point pt0(10, 15, 2);
+Point pt1(13, 41, 5.5);
+Point pt2(62.9, 7.02, 8);
+@end example
+
+Alternatively, I could declare an array of @code{Points}:
+
+@example
+Point pt[3];
+@end example
+
+@noindent
+Now I can refer to @code{pt[0]}, @code{pt[1]}, and @code{pt[2]}.
+
+
+@noindent
+@vindex Point::measurement_units
+@vindex measurement_units (Point)
+@cindex measurement units
+@cindex units of measurement
+@cindex input routine
+In the Metafont example, the x and y-coordinates of the @code{pair z0}
+are specified using the unit of measurement, in this case, centimeters.
+This is currently not possible in 3DLDF.  The current unit of
+measurement is stored in the static variable @code{Point::measurement_units},
+which is a @code{string}.  Its default value is @code{"cm"} for
+``centimeters''.  
+At present, it is best to stick with one unit of measurement for a
+drawing.  
+After I've defined an input routine, 3DLDF should handle
+units of measurement in the same way that Metafont does.
+
+@vindex Point::world_coordinates
+@vindex Point::user_coordinates
+@vindex Point::view_coordinates
+@vindex Point::projective_coordinates
+@vindex world_coordinates (Point)
+@vindex user_coordinates (Point)
+@vindex view_coordinates (Point)
+@vindex projective_coordinates (Point)
+Another difference is that the @code{Points} @code{pt0}, @code{pt1}, and
+@code{pt2} have three coordinates, x, y, and z, whereas @code{z0} has
+only two, x and y.  Actually, the difference goes deeper than this.  In
+Metafont, a @code{pair} has two parts, @code{xpart} and @code{ypart},
+which can be examined by the user.  In 3DLDF, a @code{Point} contains
+the following sets of coordinates:
+
+@example
+world_coordinates
+user_coordinates
+view_coordinates
+projective_coordinates
+@end example
+
+@noindent
+These are sets of 3-dimensional @dfn{homogeneous} coordinates, which
+means that they contain four coordinates: x, y, z, and w.  Homogeneous
+coordinates are used in the affine and perspective transformations
+(@pxref{Transforms}). 
+
+Currently, only @code{world_coordinates} and
+@code{projective_coordinates} are used in 3DLDF.
+The @code{world_coordinates} refer to the position of a @code{Point} in
+3DLDF's basic, unchanging coordinate system.  
+The @code{projective_coordinates} are the coordinates of the
+two-dimensional projection of the @code{Point} onto a plane.
+This projection is what is ultimately printed out or displayed on the
+computer screen.  Please note, that when the coordinates of a
+@code{Point} are referred to in this manual, the
+@code{world_coordinates} are meant, unless otherwise stated.
+
+@code{Points} can be declared and their values can be set in different
+ways.  
+
+@example
+Point pt0;
+Point pt1(1);
+Point pt2(2.3, 52);
+Point pt3(4.5, 7, 13.205);
+@end example
+
+
+@code{pt0} is declared without any arguments, i.e., using the default
+constructor, so the values of its x, y, and 
+z-coordinates are all 0.
+
+@code{pt1} is declared and initialized with one argument for the x-coordinate, 
+so its y and z-coordinates are initialized with the values of
+@code{CURR_Y} and @code{CURR_Z} respectively.
+The latter are static constant data members
+of class @code{Point}, whose values are 0 by default.  They can be reset
+by the user, who should 
+make sure that they have sensible values.
+
+@code{pt2} is declared and initialized with two arguments for its x and
+y-coordinates, so its z-coordinate is initialized to the value of
+@code{CURR_Z}.  Finally, @code{pt3} has an argument for each of its
+coordinates.
+
+Please note that @code{pt0} is constructed using a the default
+constructor, whereas the other @code{Points} are constructed using a
+constructor with one required argument (for the x-coordinate), and two
+optional arguments (for the y and z-coordinates).  The default
+constructor always sets all the coordinates to 0, irrespective of the
+values of @code{CURR_Y} and @code{CURR_Z}.
+
+@node Setting and Assigning to Points,  , Declaring and Initializing Points, Points
+@section Setting and Assigning to Points
+
+@findex Point::operator=
+@findex operator= (for Points)
+@findex Point::set
+@findex set (for Points)
+It is possible to change the value of the coordinates of @code{Points}
+by using the @dfn{assignment operator} @code{=}
+(@code{Point::operator=()}) or the function @code{Point::set()} 
+(with appropriate arguments): 
+
+@example
+Point pt0(2, 3.3, 7);
+Point pt1;
+pt1 = pt0;
+pt0.set(34, 99, 107.5);
+pt0.show("pt0:");
+@print{} pt0: (34, 99, 107.5)
+pt1.show("pt1:");
+@print{} pt1: (2, 3.3, 7)
+@end example
+
+In this example, @code{pt0} is initialized with the coordinates @code{(2, 3.3, 7)},
+and @code{pt1} with the coordinates @code{(0, 0, 0)}.  
+@code{pt1 = pt0} causes @code{pt1} to have the same coordinates as
+@code{pt0}, then the coordinates of @code{pt0} are changed to @code{(34,
+99, 107.5)}. This doesn't affect @code{pt1}, whose coordinates remain 
+@code{(2, 3.3, 7)}. 
+
+Another way of declaring and initializing @code{Points} is by using the
+@dfn{copy constructor}:  
+
+@example
+Point pt0(1, 3.5, 19);
+Point pt1(pt0);
+Point pt2 = pt0;
+Point pt3;
+pt3 = pt0;
+@end example
+
+In this example, @code{pt1} and @code{pt2} are both declared and
+initialized using the copy constructor;  @code{Point pt2 = pt0} does not
+invoke the assignment operator.  @code{pt3}, on the other hand, is
+declared using the default constructor, and not initialized.  In the
+following line, @code{pt3 = pt0} does invoke the assignment operator,
+thus resetting the coordinate values of @code{pt3} to those of
+@code{pt0}.   
+

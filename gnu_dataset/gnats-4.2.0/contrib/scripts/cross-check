@@ -1,0 +1,116 @@
+#!/bin/ksh
+#
+# cross-check
+#
+# This program performs cross checks between the category, responsible,
+# and submitters files.  It will not make changes to these files.
+#
+
+#
+# First, insure that the categories file holds valid directories
+#
+
+errors=0
+
+echo Checking for valid directories for each category.
+echo 
+
+GNATS_ROOT=~gnats
+cd $GNATS_ROOT/gnats-adm
+for files in `egrep -v '#' categories|cut -d":" -f1 | egrep -v "^\$"`
+do
+   if [ ! -d $GNATS_ROOT/$files ]
+   then
+      echo $files is not a valid category.  There is no corresponding
+      echo directory in $GNATS_ROOT.
+      let errors=1
+      echo
+   fi
+done
+
+#
+# Second, insure that the responsible party in all of the files matches.
+#
+
+tmp1=`mktemp`
+tmp2=`mktemp`
+tmp3=`mktemp`
+tmp4=`mktemp`
+
+egrep -v '#' categories|cut -d":" -f3 | egrep -v "^\$" | sort -u >$tmp1
+egrep -v '#' responsible|cut -d":" -f3 | egrep -v "^\$" | sort -u >$tmp2
+egrep -v '#' submitters|cut -d":" -f5 | egrep -v "^\$" | sort -u >$tmp3
+
+
+# Insure that there are no submitters in the categories file that aren't
+# in the responsible file.
+
+echo Cross checking responsible parties between the categories file,
+echo and the responsible file.
+echo
+
+diff $tmp1 $tmp2 | egrep '^<' | cut -c3- | egrep -v 'gnats-admin' > $tmp4
+results=`cat $tmp4 | wc -l`
+
+if (( results ))
+then
+   echo The following responsible parties are in the categories file,
+   echo but have no corresponding entry in the 'responsible' file.
+   cat $tmp4
+   let errors=1
+   echo
+fi
+
+# Perform the same check against the submitters file.
+
+echo Cross checking responsible parties between the categories file,
+echo and the submitters file.
+echo
+
+diff $tmp3 $tmp1 | egrep '^<' | cut -c3- | egrep -v 'gnats-admin' > $tmp4
+results=`cat $tmp4 | wc -l`
+
+if (( results ))
+then
+   echo The following responsible parties are in the categories file,
+   echo but have no corresponding entry in the 'responsible' file.
+   cat $tmp4
+   let errors=1
+   echo
+fi
+
+
+# Now look at ALL of the responsible parties, and verify that they are
+# either valid users, or a mail alias.
+
+echo Finally, checking all responsible parties to insure that they are
+echo either a valid userid, or an e-mail alias.
+echo
+
+for id in `cat $tmp2`
+do
+   homedir=~$id
+   eval homedir=$homedir
+   if [ ! -d $homedir ]
+   then
+      alias=`praliases $id | egrep -v 'No such key'`
+      if [ "$alias" = "" ]
+      then
+         echo $id is in the responsible file, but it is not an ID or alias.
+         let errors=1
+      fi
+   fi
+done 
+
+echo 
+echo Checking complete. \\c
+
+if [ $errors -ne 0 ]
+then
+   echo Errors were found.
+else
+   echo No errors were found.
+fi
+
+
+rm $tmp1 $tmp2 $tmp3 $tmp4

@@ -1,0 +1,35 @@
+#------------------------------------------------------------------------------
+# diffusion_2.model
+#
+# Approximation of a 1D diffusion by a series of compartments
+#
+# Copyright (c) 2017 Free Software Foundation, Inc.
+#------------------------------------------------------------------------------
+
+States  = {Q[1-21]};
+
+Outputs = {mass_balance};
+
+# Model Parameters
+k_forward  = 0.1; # beware, depend on space discretization
+k_backward = 0.1; # beware, depend on space discretization
+
+Dynamics { 
+
+  dt(Q[1])    = -k_forward * (Q[i] - 0)      - k_backward * (0    - Q[i+1]);
+
+  dt(Q[2-20]) = -k_forward * (Q[i] - Q[i-1]) - k_backward * (Q[i] - Q[i+1]);
+
+  dt(Q[21])   = -k_forward * (0    - Q[i-1]) - k_backward * (Q[i] - 0);
+
+}
+
+CalcOutputs {
+
+  mass_balance = Q_1  + Q_2  + Q_3  + Q_4  + Q_5  + Q_6  + Q_7  + Q_8  + Q_9  +
+                 Q_10 + Q_11 + Q_12 + Q_13 + Q_14 + Q_15 + Q_16 + Q_17 + Q_18 +
+                 Q_19 + Q_20 + Q_21;
+
+}
+
+End.

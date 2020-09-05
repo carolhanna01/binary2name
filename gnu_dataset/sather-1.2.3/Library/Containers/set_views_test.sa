@@ -1,0 +1,68 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Test for the set class
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class SET_VIEWS_TEST is
+   -- Test of the set view classes. 
+   -- Note: These classes currently won't work under pSather, so this
+   -- test must not be called from TEST_OBLIG, only from TEST_LIB
+   
+   
+   -- Tests for the other views still need to be written
+
+   shared int_views:STD_SET_VIEWS{INT}; -- 
+   
+   main is
+      test_filter_view;
+      test_union_view;
+   end;
+
+   test_filter_view is
+      -- Tests of the filter set views. Construct the sets required
+      -- by the testing classes by applying filters to larger sets
+      
+      elts:ARRAY{INT} := |0,1,2,3,4,5,6,7,8,9,10,11,12|;
+      filter1:ROUT{INT}:BOOL:= bind(_.is_even);
+      preset1 ::= #SET{INT}(|0,1,2,3,4,5,6,7|);
+      set0 ::= #SET{INT};
+      set1 ::= STD_SET_VIEWS{INT}::filter_view(preset1,filter1);
+      preset2 ::= #SET{INT}(|1,2,3,4,5,6,7,8,9,10,11,12|);
+      filter2:ROUT{INT}:BOOL := bind(_.is_lt(11));
+      set2 ::= STD_SET_VIEWS{INT}::filter_view(preset2,filter2);
+      SET_TEST{INT}::test_set_readonly(set0,set1,set2,elts);
+   end;
+   
+   
+   test_union_view is
+      -- Tests of the union set views i.e. the union of two sets represented
+      -- as a view. Construct the sets required by the test classes out of
+      -- the union of existing sets
+      
+      elts:ARRAY{INT} := |0,1,2,3,4,5,6,7,8,9,10,11,12|;
+      set0 ::= #SET{INT};
+      preset1a ::= #SET{INT}(|0,2|);
+      preset1b ::= #SET{INT}(|2,4,6|);
+      set1 ::= STD_SET_VIEWS{INT}::union_view(preset1a,preset1b);
+      preset2a ::= #SET{INT}(|1,2,3,4,5,8,9|);
+      preset2b ::= #SET{INT}(|6,7,9,10|);
+      set2 ::= STD_SET_VIEWS{INT}::union_view(preset2a,preset2b);
+      SET_TEST{INT}::test_set_readonly(set0,set1,set2,elts);
+   end;
+
+end;
+
+
+
+     

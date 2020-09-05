@@ -1,0 +1,746 @@
+%% bldelem5.txt
+%% Created by Laurence D. Finston (LDF) Thu Jul  5 14:11:31 CEST 2012
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing. 
+%%%% Copyright (C) 2012, 2013 The Free Software Foundation
+   
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version. 
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details. 
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html. 
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de.
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for the maintainer of 
+%%%% GNU 3DLDF to send announcements to users. 
+%%%% To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+
+
+
+%% * (1)
+
+\input eplain
+\input epsf 
+\nopagenumbers
+
+%% * (1)
+
+%% Copied from `rotate.tex'.  Not sure where it comes from, but it's certainly
+%% Free Software.  LDF 2012.06.15.
+
+%
+%   These macros allow you to rotate or flip a \TeX\ box.  Very useful for
+%   sideways tables or upsidedown answers.
+%
+%   To use, create a box containing the information you want to rotate.
+%   (An hbox or vbox will do.)  Now call \rotr\boxnum to rotate the
+%   material and create a new box with the appropriate (flipped) dimensions.
+%   \rotr rotates right, \rotl rotates left, \rotu turns upside down, and
+%   \rotf flips.  These boxes may contain other rotated boxes.
+%
+\newdimen\rotdimen
+\def\vspec#1{\special{ps:#1}}%  passes #1 verbatim to the output
+\def\rotstart#1{\vspec{gsave currentpoint currentpoint translate
+   #1 neg exch neg exch translate}}% #1 can be any origin-fixing transformation
+\def\rotfinish{\vspec{currentpoint grestore moveto}}% gets back in synch
+%
+%   First, the rotation right. The reference point of the rotated box
+%   is the lower right corner of the original box.
+%
+\def\rotr#1{\rotdimen=\ht#1\advance\rotdimen by\dp#1%
+   \hbox to\rotdimen{\hskip\ht#1\vbox to\wd#1{\rotstart{90 rotate}%
+   \box#1\vss}\hss}\rotfinish}
+%
+%   Next, the rotation left. The reference point of the rotated box
+%   is the upper left corner of the original box.
+%
+\def\rotl#1{\rotdimen=\ht#1\advance\rotdimen by\dp#1%
+   \hbox to\rotdimen{\vbox to\wd#1{\vskip\wd#1\rotstart{270 rotate}%
+   \box#1\vss}\hss}\rotfinish}%
+%
+%   Upside down is simple. The reference point of the rotated box
+%   is the upper right corner of the original box. (The box's height
+%   should be the current font's xheight, \fontdimen5\font,
+%   if you want that xheight to be at the baseline after rotation.)
+%
+\def\rotu#1{\rotdimen=\ht#1\advance\rotdimen by\dp#1%
+   \hbox to\wd#1{\hskip\wd#1\vbox to\rotdimen{\vskip\rotdimen
+   \rotstart{-1 dup scale}\box#1\vss}\hss}\rotfinish}%
+%
+%   And flipped end for end is pretty ysae too. We retain the baseline.
+%
+\def\rotf#1{\hbox to\wd#1{\hskip\wd#1\rotstart{-1 1 scale}%
+   \box#1\hss}\rotfinish}%
+
+%% * (1)
+
+%% !! START HERE: LDF 2012.06.18.  Add code for generating output in Letter
+%% format (8.5 x 11in) in Makefile.am.  Also, change Makefile in
+%% [...]/web/SRC_CODE/.  Change models.html.  Fix the formatting.
+
+
+\pageno=1
+
+\def\DINAFOUR{DINAFOURPORTRAIT}
+\def\LETTER{LETTER}
+
+\ifx\FMT\DINAFOUR
+\message{Format is defined, DIN A4}
+\input fmtdina4.txt
+\else\ifx\FMT\LETTER
+\message{Format is defined, LETTER}
+\input fmt8511.txt
+\else
+\message{Format is not defined.  Defining as A4 Portrait}
+\special{papersize=210mm, 297mm}
+\hsize=210mm
+\vsize=297mm
+\fi\fi
+
+%% Saved for reference.  LDF 2012.06.18.
+
+%% Uncomment for A4 portrait
+%% \special{papersize=210mm, 297mm}
+%% \hsize=210mm
+%% \vsize=297mm
+
+%% Uncomment for A4 landscape.
+%% \special{papersize=297mm, 210mm}
+%% \hsize=297mm
+%% \vsize=210mm
+
+%% Uncomment for DIN A3 portrait.
+%% \special{papersize=297mm, 420mm} %% DIN A3 Portrait
+%% \vsize=420mm
+%% \hsize=297mm
+
+%% Uncomment for A3 landscape.
+%\special{papersize=420mm, 297mm} %% DIN A3 Landscape
+%\vsize=297mm
+%\hsize=420mm
+
+%% \advance\voffset by -1in
+%% \advance\voffset by 1.25cm
+%% \advance\hoffset by -1in
+%% \advance\hoffset by 1cm
+
+
+
+\parindent=0pt
+
+\font\small=cmr8
+
+%% *** (3) 
+
+%% Created:        July 5, 2012
+%% Last updated:   September 15, 2012
+
+\iftrue % \iffalse
+\pageno=-1
+%\pageno=0
+\vbox to \vsize{%
+\vskip.5cm
+\centerline{Building Elements 5}
+\vskip\baselineskip
+\centerline{Laurence D. Finston}
+\vskip\baselineskip
+\centerline{Created:  July 5, 2012}
+\vskip\baselineskip
+\centerline{Last updated:  September 15, 2012}
+\vskip2cm
+\iftrue % \iffalse
+{\small
+\hsize=.75\hsize
+\hskip1cm
+\vbox{\vskip2\baselineskip
+This document is part of GNU 3DLDF, a package for three-dimensional
+drawing.
+\vskip\baselineskip
+
+Copyright {\copyright} 2012, 2013 The Free Software Foundation
+\vskip\baselineskip
+
+GNU 3DLDF is free software; you can redistribute it and/or modify 
+it under the terms of the GNU General Public License as published by 
+the Free Software Foundation; either version 3 of the License, or 
+(at your option) any later version. 
+\vskip\baselineskip
+
+GNU 3DLDF is distributed in the hope that it will be useful, 
+but WITHOUT ANY WARRANTY; without even the implied warranty of 
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+GNU General Public License for more details. 
+\vskip\baselineskip
+
+You should have received a copy of the GNU General Public License 
+along with GNU 3DLDF; if not, write to the Free Software 
+Foundation, Inc.,\hfil\break
+51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA}}
+\fi
+\vss}
+\vfil\eject
+\fi
+
+\pageno=1
+
+\parindent=0pt
+
+\def\epsfsize#1#2{#1}
+
+
+\font\small=cmr8
+\font\smalltt=cmtt8
+\font\large=cmr12
+\font\largebx=cmbx12
+\font\Large=cmr17
+\font\huge=cmr17 scaled \magstep1
+
+%% *** (3) 
+
+\advance\hsize by 1cm
+\advance\vsize by -1in
+
+\headline={\hfil Building Elements 5\hfil
+           Copyright {\copyright} 2012, 2013 The Free Software Foundation\hfil
+           Author:  Laurence D. Finston\hfil\kern1.5cm}
+
+
+\footline={\hfil \folio\hfil}
+
+\pageno=-1
+
+\begingroup
+\advance\baselineskip by .5\baselineskip
+\advance\hsize by -3cm
+\singlecolumn
+\line{\hbox to .5\hsize{\hfil{\largebx Contents}\hfil}\hfil}
+\doublecolumns
+\readtocfile
+\vfil\eject
+\singlecolumn
+%%
+\pageno=1
+\writetocentry{chapter}{Instructions}
+\line{\hbox to .5\hsize{\hfil{\largebx Instructions}\hfil}\hfil}
+%%
+%% Instructions here
+%%
+\vfil\eject
+\singlecolumn
+\endgroup
+
+\vfil\eject
+
+%% ** (2) Macros
+
+%% *** (3) xhairs
+
+\newbox\crosshairbox
+
+\begingroup
+\offinterlineskip
+\setbox0=\hbox{\vrule width 1cm height .125mm depth .125mm}
+\setbox1=\hbox{\hskip.5cm\vrule width .25mm height .5cm depth .5cm}
+\global\setbox\crosshairbox=\vbox to 0pt{\hbox to 0pt{\copy0\hss}\vskip-.5cm\hbox to 0pt{\copy1\hss}\vss}
+\endgroup
+
+%% The argument should be a number.  If it's 0, the middle crosshairs are left out.  Otherwise,
+%% they're printed.
+%% !! TODO:  Refine this macro.  For example, I could add arguments for exact placement.
+%% LDF 2012.06.17.
+
+\def\xhairs#1{\begingroup
+\offinterlineskip
+\hbox to 0pt{\vbox to 0pt{\vskip.5cm\copy\crosshairbox\vss}\hss}%
+\hbox to 0pt{\hskip\hsize\hskip-.75cm\vbox to 0pt{\vskip.5cm\copy\crosshairbox\vss}\hss}%
+\ifnum#1=0
+\else
+\hbox to 0pt{\vbox to 0pt{\vskip.5\vsize\copy\crosshairbox\vss}\hss}%
+\hbox to 0pt{\hskip\hsize\hskip-.75cm\vbox to 0pt{\vskip.5\vsize\copy\crosshairbox\vss}\hss}%
+\fi
+\hbox to 0pt{\vbox to 0pt{\vskip\vsize\vskip.25cm\copy\crosshairbox\vss}\hss}%
+\hbox to 0pt{\hskip\hsize\hskip-.75cm\vbox to 0pt{\vskip\vsize\vskip.25cm\copy\crosshairbox\vss}\hss}%
+\endgroup}
+
+%% ** (2) Page 2
+
+\vbox to \vsize{%\xhairs{0}%
+\writetocentry{chapter}{Rectangular Right Prisms}%
+\vskip.75cm
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 1 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.1}}%
+\line{\copy0\hfil\epsffile{bldelem5.2}\hfil\epsffile{bldelem5.3}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.4}\hfil}
+\vskip\baselineskip
+%%
+%% 1 x 1.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.5}}%
+\line{\copy0\hfil\epsffile{bldelem5.6}\hfil\epsffile{bldelem5.7}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.8}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 1.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.9}}%
+\line{\copy0\hfil\epsffile{bldelem5.10}\hfil\epsffile{bldelem5.11}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.12}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 1.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.13}}%
+\line{\copy0\hfil\epsffile{bldelem5.14}\hfil\epsffile{bldelem5.15}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.16}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 2 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.17}}%
+\line{\copy0\hfil\epsffile{bldelem5.18}\hfil\epsffile{bldelem5.19}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.20}\hfil}
+\vskip\baselineskip
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 3
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 2.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.21}}%
+\line{\copy0\hfil\epsffile{bldelem5.22}\hfil\epsffile{bldelem5.23}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.24}\hfil}
+\vskip\baselineskip
+%%
+%% 1 x 2.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.25}}%
+\line{\copy0\hfil\epsffile{bldelem5.26}\hfil\epsffile{bldelem5.27}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.28}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 2.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.29}}%
+\line{\copy0\hfil\epsffile{bldelem5.30}\hfil\epsffile{bldelem5.31}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.32}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 3 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.33}}%
+\line{\copy0\hfil\epsffile{bldelem5.34}\hfil\epsffile{bldelem5.35}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.36}\hfil}
+%%
+\vss}
+
+\vfil\eject
+
+
+%% ** (2) Page 4
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 3.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.37}}%
+\line{\copy0\hfil\epsffile{bldelem5.38}\hfil\epsffile{bldelem5.39}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.40}\hfil}
+\vskip\baselineskip
+%%
+%% 1 x 3.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.41}}%
+\line{\copy0\hfil\epsffile{bldelem5.42}\hfil\epsffile{bldelem5.43}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.44}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 3.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.45}}%
+\line{\copy0\hfil\epsffile{bldelem5.46}\hfil\epsffile{bldelem5.47}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.48}\hfil}
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 5
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 4 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.49}}%
+\line{\copy0\hfil\epsffile{bldelem5.50}\hfil\epsffile{bldelem5.51}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.52}\hfil}
+\vskip\baselineskip
+%%
+%% 1 x 4.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.53}}%
+\line{\copy0\hfil\epsffile{bldelem5.54}\hfil\epsffile{bldelem5.55}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.56}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 4.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.57}}%
+\line{\copy0\hfil\epsffile{bldelem5.58}\hfil\epsffile{bldelem5.59}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.60}\hfil}
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 6
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 4.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.61}}%
+\line{\copy0\hfil\epsffile{bldelem5.62}\hfil\epsffile{bldelem5.63}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.64}\hfil}
+\vskip\baselineskip
+%%
+%% 1 x 5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.65}}%
+\line{\copy0\hfil\epsffile{bldelem5.66}\hfil\epsffile{bldelem5.67}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.68}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 5.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.69}}%
+\line{\copy0\hfil\epsffile{bldelem5.70}\hfil\epsffile{bldelem5.71}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.72}\hfil}
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 7
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 5.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.73}}%
+\line{\copy0\hfil\epsffile{bldelem5.74}\hfil\epsffile{bldelem5.75}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.76}\hfil}
+\vskip\baselineskip
+%%
+%% 1 x 5.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.77}}%
+\line{\copy0\hfil\epsffile{bldelem5.78}\hfil\epsffile{bldelem5.79}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.80}\hfil}
+\vskip\baselineskip
+%%
+%%
+%% 1 x 6 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.81}}%
+\line{\copy0\hfil\epsffile{bldelem5.82}\hfil\epsffile{bldelem5.83}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.84}\hfil}
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 8
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 6.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.85}}%
+\line{\copy0\hfil\epsffile{bldelem5.86}\hfil\epsffile{bldelem5.87}}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.88}\hfil}\vskip\baselineskip
+%%
+%% 1 x 6.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.89}}%
+\line{\copy0\hfil\epsffile{bldelem5.90}\hfil\epsffile{bldelem5.91}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.92}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 9
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 6.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.93}}%
+\line{\copy0\hfil\epsffile{bldelem5.94}\hfil\epsffile{bldelem5.95}}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.96}\hfil}\vskip\baselineskip
+%%
+%% 1 x 7 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.97}}%
+\line{\copy0\hfil\epsffile{bldelem5.98}\hfil\epsffile{bldelem5.99}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.100}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 10
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 7.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.101}}%
+\line{\copy0\hfil\epsffile{bldelem5.102}\hfil\epsffile{bldelem5.103}}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.104}\hfil}\vskip\baselineskip
+%%
+%% 1 x 7.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.105}}%
+\line{\copy0\hfil\epsffile{bldelem5.106}\hfil\epsffile{bldelem5.107}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.108}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 11
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 7.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.109}}%
+\line{\copy0\hfil\epsffile{bldelem5.110}\hfil\epsffile{bldelem5.111}}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.112}\hfil}\vskip\baselineskip
+%%
+%% 1 x 8 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.113}}%
+\line{\copy0\hfil\epsffile{bldelem5.114}\hfil\epsffile{bldelem5.115}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.116}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 12
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 8.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.117}}%
+\line{\copy0\hfil\epsffile{bldelem5.118}\hfil\epsffile{bldelem5.119}}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.120}\hfil}\vskip\baselineskip
+%%
+%% 1 x 8.5 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.121}}%
+\line{\copy0\hfil\epsffile{bldelem5.122}\hfil\epsffile{bldelem5.123}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.124}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+%% ** (2) Page 13
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 8.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.125}}%
+\line{\copy0\hfil\epsffile{bldelem5.126}\hfil\epsffile{bldelem5.127}}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.128}\hfil}\vskip\baselineskip
+%%
+%% 1 x 9 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.129}}%
+\line{\copy0\hfil\epsffile{bldelem5.130}\hfil\epsffile{bldelem5.131}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.132}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+
+%% ** (2) Page 14
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 9.25 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.133}}%
+\line{\copy0\hfil\epsffile{bldelem5.134}\hfil\epsffile{bldelem5.135}}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.136}\hfil}\vskip\baselineskip
+%%
+%% 1 x 9.5 x  1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.137}}%
+\line{\copy0\hfil\epsffile{bldelem5.138}\hfil\epsffile{bldelem5.139}}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.140}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+
+%% ** (2) Page 15
+
+\vbox to \vsize{%\xhairs{0}%
+\centerline{Rectangular Right Prisms}\vskip\baselineskip
+%%
+%% 1 x 9.75 x 1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.141}}%
+\setbox1=\hbox{\epsffile{bldelem5.143}}%
+\line{\copy0\hfil\epsffile{bldelem5.142}\hfil\hfil\rotl1\hfil}
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.144}\hfil}\vskip\baselineskip
+%%
+%% 1 x 10 x  1
+%%
+\setbox0=\hbox{\epsffile{bldelem5.145}}%
+\setbox1=\hbox{\epsffile{bldelem5.147}}%
+\line{\copy0\hfil\epsffile{bldelem5.146}\hfil\rotl1\hfil}%
+\vskip-.75cm
+\line{\hskip.75\wd0\epsffile{bldelem5.148}\hfil}%
+%%
+\vss}
+
+\vfil\eject
+
+
+
+
+
+
+
+
+
+
+
+
+
+%% *** (3) End here
+
+\bye
+
+
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:TeX
+%% eval:(local-set-key [C-kp-add] 'vc-diff) 
+%% eval:(local-set-key "\"" 'self-insert-command)
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% abbrev-mode:t
+%% eval:(set-register ?c "bldelem5.ldf")
+%% eval:(set-register ?, "bldelem5.lmc")
+%% eval:(set-register ?. "bldelem5.txt")
+%% outline-regexp:"%% [*\f]+"
+%% End:
+

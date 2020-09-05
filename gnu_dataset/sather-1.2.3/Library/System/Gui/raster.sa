@@ -1,0 +1,391 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Matthias Ernst <tisi@beutlin.desy.de>
+
+class TK_RASTER_CFG < $TK_WIDGET_CFG is
+   -- Raster configuration widget. Allows the setting of the
+   -- height, width etc.
+   -- 
+   include TK_WIDGET_CFG_INCL
+	 height->height,
+	 width->width,
+	 relief_none->relief_none,relief_raised->relief_raised,
+	 relief_sunken->relief_sunken,
+	 relief_flat->relief_flat,relief_ridge->relief_ridge,
+	 relief_groove->relief_groove,
+	 borderwidth->borderwidth,
+	 background->background
+   -- cursor->cursor,
+	 ;
+    
+   double_buffer(b: BOOL) is
+      -- config("dbl", b.str)
+      if b then 
+	 config("dbl", "true")
+      else
+	 config("dbl", "false")
+      end;
+   end;
+    
+   double_buffer(b: BOOL): SAME is double_buffer(b); return self end;
+    
+end; -- class TK_RASTER_CFG
+-------------------------------------------------------------------
+class TK_RASTER < $TK_WIDGET is
+   -- Raster Widget. This is meant for fast, pixel-level drawing. It
+   -- has a direct interface to C using arrays of FLTD, and currently
+   -- will only work with the SingleProcessGui (the arrays would have
+   -- to be converted into strings to make use of the current socket
+   -- interface, thus loosing all the speed benefits). For more elaborate
+   -- drawing, where speed is not a big issue, consider using the
+   -- TK_CANVAS widget: it supports treating drawn elements as objects
+   -- and manipulating them in various ways.
+   -- 
+   -- Implementation of Drawing: contrary to all other widgets, these
+   -- directly call the C functions for the sake of efficiency 
+   -- 
+   -- Implementation of Refresh: Don't know if this is intended by the
+   -- authors (...)  the C functions __don't__ redisplay the widget so
+   -- one may set widget.auto_display to true then this is done after
+   -- every drawing call or one may 'manually' call widget.display
+   -- This required one patch to the raster sources
+   -- 
+   -- Implementation of Coordination Transforms: These do have
+   -- problems or I misinterpret their intended functionality
+   -- -----------------------------------------------------------
+    
+   include TK_WIDGET_INCL{TK_RASTER_CFG} create->private widget_create;
+    
+   private attr c_raster: EXT_OB;
+   -- a pointer to this widget's tkRaster structure
+    
+   private const tk_widget_type: STR := "raster";
+    
+   private attr callbacks: TK_WIDGET_CALLBACKS{ROUT{TK_RASTER_CB}};
+   -- all defined callbacks
+    
+   attr auto_display: BOOL;
+   -- if true, the raster is redrawn after every operation
+    
+   private auto_display is
+      if auto_display then display;  end;
+   end;
+    
+   create(parent: $TK_WIDGET, np: STR, cf: TK_RASTER_CFG, pack: TK_PACK)
+	 : SAME
+   is
+      res ::= widget_create(parent, np, cf, pack);
+      res.callbacks := #;
+      assert ~void(GUI_APP_END::tcl_tk);
+      assert ~void(GUI_APP_END::tcl_tk.interpreter);
+      res.c_raster := C_RASTER::raster_give_raster(GUI_APP_END::tcl_tk.interpreter, 
+						   res.path_name);
+      -- obtain raster pointer
+      res.current_env := #(res, 0);
+      -- default drawing environment
+      return res;
+   end;
+    
+   ---------------------------------------
+   -- Drawing environments
+   ---------------------------------------
+   readonly attr current_env: TK_RASTER_ENV;
+   -- denotes the current environment
+    
+   create_env: TK_RASTER_ENV is
+      -- Create a new drawing environment (similar to a GC)
+      new_index: INT := #(GUI_APP_END::eval(widget_name + " envcreate"));
+      return #(self, new_index);
+   end;
+    
+   set_env(env: TK_RASTER_ENV)  pre SYS::ob_eq(env.raster, self)
+   -- precondition checks if this environment is ours ?
+   -- you may as well use env.activate
+   -- with the effect that the precondition will never be broken
+   is
+      GUI_APP_END::eval(widget_name + " envset " + env.index);
+   end;
+    
+   -- Drawing commands
+   clear is
+      C_RASTER::raster_clear(c_raster);
+      auto_display;
+   end;
+    
+   draw_lines(coords: ARRAY{FLTD})  pre coords.size.is_even  is
+      -- Draw directly using an array of coods
+      C_RASTER::raster_draw_lines(c_raster, coords, coords.size/2);
+      auto_display;
+   end;
+    
+   draw_point(x, y: FLTD) is	
+      -- the raster inconsistently defines x, y as integers
+      C_RASTER::raster_draw_point(c_raster, x, y);
+      auto_display;
+   end;
+    
+   draw_points(coords: ARRAY{FLTD})  pre coords.size.is_even is
+      C_RASTER::raster_draw_points(c_raster, coords, coords.size/2);
+      auto_display;
+   end;
+    
+   draw_rectangle(x0, y0, x1, y1: FLTD) is
+      C_RASTER::raster_draw_rectangle(c_raster, x0, y0, x1, y1);
+      auto_display;
+   end;
+    
+   fill_polygon(coords: ARRAY{FLTD})  pre coords.size.is_even  is
+      C_RASTER::raster_fill_polygon(c_raster, coords, coords.size/2);
+      auto_display;
+   end;
+    
+   fill_rectangle(x0, y0, x1, y1: FLTD) is
+      C_RASTER::raster_fill_rectangle(c_raster, x0, y0, x1, y1);
+      auto_display;
+   end;
+    
+   -- Coordinate transformation
+   set_world(wx0, wy0, wx1, wy1: FLTD) is
+      C_RASTER::raster_set_world(c_raster, wx0, wy0, wx1, wy1);
+   end;
+    
+   world_to_raster(wx, wy: FLTD, out rx, out ry: FLTD) is
+      C_RASTER::raster_world_to_raster(c_raster, wx, wy, out rx, out ry);
+   end;
+    
+   raster_to_world(rx, ry: FLTD, out wx, out wy: FLTD) is
+      C_RASTER::raster_raster_to_world(c_raster, rx, ry, out wx, out wy);
+   end;
+    
+   display is
+      C_RASTER::raster_display(c_raster);
+   end;
+    
+   -- bindings
+   bind_action(event: $TK_EVENT,action:ROUT{TK_RASTER_CB}) is
+      -- Bind an event "event" to the action bound routine "action"
+      action_id ::= callbacks.register(action,"entryaction");
+      eval("bind",widget_name,event.str,
+	   quote("sather "+widget_name+" "+action_id+" %b %x %y"));
+   end;
+    
+   act_on(id: INT, args: ARRAY{STR}) is
+      if args.size /= 4 then
+	 raise "Bad arguments to callback. Num args="+args.size
+	       +" "+args.str+"\n";
+      end;
+      deb("Raster callback: " + id + " " + args.str);
+      TK_RASTER_CB ::= callback_info(args);
+      rout ::= callbacks.get_action(id);
+      if ~void(rout) then  rout.call(TK_RASTER_CB); end;
+   end;
+    
+   callback_info(args: ARRAY{STR}): TK_RASTER_CB is
+      -- Create a callback out of the "args". This is used
+      -- internally by the gui mechanism 
+      button ::= #INT(args[1]);
+      x_r    ::= #FLTD(args[2]);
+      y_r    ::= #FLTD(args[3]);
+      x_w, y_w: FLTD;
+      raster_to_world(x_r, y_r, out x_w, out y_w);
+      return #TK_RASTER_CB(button, x_w, y_w);
+   end;
+    
+end; -- class TK_RASTER
+-------------------------------------------------------------------
+class TK_RASTER_ENV is
+   -- A raster drawing environment, essentially a graphics context.  
+   -- Similar in some ways to a configuration, but provides drawing
+   -- defaults. Every option is realized as a function
+   -- <option_name>(new_value), both with no return value or self, to
+   -- enable option chaining. Options taking magic strings as options
+   -- are realized as sets of option_value procedures i.e. to enable
+   -- solid linestyle call 'linestyle_solid' this applies to capstyle,
+   -- fillstyle, function, linestyle and joinstyle.  disadvantage:
+   -- bloated interface
+   -- 
+   -- Usage:
+   --   env.background("yellow").foreground("blue").linewidth(10);
+    
+   readonly attr raster: TK_RASTER; -- the associated raster
+   readonly attr index: INT;	-- the env index 
+    
+   create(raster: TK_RASTER, index: INT): SAME is
+      env ::= new;
+      env.raster := raster;
+      env.index  := index;
+	
+      return env;
+   end;
+    
+   -------------------------------------------------------------------
+   private configure(option, val: STR) is
+      GUI_APP_END::eval(raster.widget_name + " envconfigure " + index
+			+ " " + option + " " + val);
+   end;
+    
+   activate is
+      raster.set_env(self);
+   end;
+    
+   -------------------------------------------------------------------
+   background(val: STR) is configure("-background", val) end;
+   background(val: STR): SAME is background(val); return self; end;
+    
+   bg(val: STR) is background(val) end;
+   bg(val: STR): SAME is return background(val) end;
+   -------------------------------------------------------------------
+   private capstyle(val: STR) is configure("-capstyle", val); end;
+    
+   capstyle_round is capstyle("round"); end;
+   capstyle_round: SAME is capstyle_round ; return self; end;
+    
+   capstyle_projecting is capstyle("projecting"); end;
+   capstyle_projecting: SAME is capstyle_projecting ; return self; end;
+    
+   capstyle_butt is capstyle("butt"); end;
+   capstyle_butt: SAME is capstyle_butt ; return self; end;
+    
+   -------------------------------------------------------------------
+   private fillstyle(val: STR) is configure("-fillstyle", val); end;
+    
+   fillstyle_solid is fillstyle("solid"); end;
+   fillstyle_solid: SAME is fillstyle_solid; return self end;
+    
+   fillstyle_stippled is fillstyle("stippled"); end;
+   fillstyle_stippled: SAME is fillstyle_stippled; return self end;
+    
+   fillstyle_opaquestippled is fillstyle("opaquestippled"); end;
+   fillstyle_opaquestippled: SAME is fillstyle_opaquestippled; return self end;
+   -------------------------------------------------------------------
+   foreground(val: STR) is configure("-foreground", val); end;
+   foreground(val: STR): SAME is foreground(val); return self; end;
+    
+   fg(val: STR) is foreground(val) end;
+   fg(val: STR): SAME is return foreground(val) end;
+    
+   -------------------------------------------------------------------
+   -- this is a bit heavy --- 15 possible vals
+   private function(val: STR) is configure("-function", val); end;
+
+   function_clear is function("clear"); end;
+   function_clear: SAME is function_clear ; return self ; end  ;
+    
+   function_and is function("and"); end;
+   function_and: SAME is function_and ; return self ; end  ;
+    
+   function_andreverse is function("andreverse"); end;
+   function_andreverse: SAME is function_andreverse ; return self ; end  ;
+    
+   function_copy is function("copy"); end;
+   function_copy: SAME is function_copy ; return self ; end  ;
+    
+   function_andinverted is function("andinverted"); end;
+   function_andinverted: SAME is function_andinverted ; return self ; end  ;
+    
+   function_noop is function("noop"); end;
+   function_noop: SAME is function_noop ; return self ; end  ;
+    
+   function_xor is function("xor"); end;
+   function_xor: SAME is function_xor ; return self ; end  ;
+    
+   function_or is function("or"); end;
+   function_or: SAME is function_or ; return self ; end  ;
+    
+   function_nor is function("nor"); end;
+   function_nor: SAME is function_nor ; return self ; end  ;
+    
+   function_equiv is function("equiv"); end;
+   function_equiv: SAME is function_equiv ; return self ; end  ;
+
+   function_invert is function("invert"); end;
+   function_invert: SAME is function_invert ; return self ; end  ;
+    
+   function_orreverse is function("orreverse"); end;
+   function_orreverse: SAME is function_orreverse ; return self ; end  ;
+    
+   function_copyinverted is function("copyinverted"); end;
+   function_copyinverted: SAME is function_copyinverted ; return self ; end  ;
+    
+   function_nand is function("nand"); end;
+   function_nand: SAME is function_nand ; return self ; end  ;
+    
+   function_set is function("set"); end;
+   function_set: SAME is function_set ; return self ; end  ;
+    
+   -------------------------------------------------------------------
+   private linestyle(val: STR) is configure("-linestyle", val); end;
+    
+   linestyle_solid is linestyle("solid"); end;
+   linestyle_solid: SAME is linestyle_solid ; return self ; end  ;
+    
+   linestyle_doubledash is linestyle("doubledash"); end;
+   linestyle_doubledash: SAME is linestyle_doubledash ; return self ; end  ;
+    
+   linestyle_onoffdash is linestyle("onoffdash"); end;
+   linestyle_onoffdash: SAME is linestyle_onoffdash ; return self ; end  ;
+   -------------------------------------------------------------------
+    
+   linewidth(val: INT) is configure("-linewidth", val.str); end;
+   linewidth(val: INT): SAME is linewidth(val); return self; end;
+    
+   -------------------------------------------------------------------
+    
+   private joinstyle(val: STR) is configure("joinstyle", val); end;
+    
+   joinstyle_bevel is joinstyle("bevel"); end;
+   joinstyle_bevel: SAME is joinstyle_bevel ; return self ; end  ;
+    
+   joinstyle_miter is joinstyle("miter"); end;
+   joinstyle_miter: SAME is joinstyle_miter ; return self ; end  ;
+    
+   joinstyle_round is joinstyle("round"); end;
+   joinstyle_round: SAME is joinstyle_round ; return self ; end  ;
+    
+   --   stipple(val: STR) is configure("-stipple", val); end;
+   --   stipple(val: STR): SAME is stipple(val); return self; end;
+    
+    
+end; -- class TK_RASTER_ENV
+-------------------------------------------------------------------
+immutable class TK_RASTER_CB is
+   attr button: INT;
+   attr x, y: FLTD;		-- in world coordinates
+    
+   create(b: INT, w_x, w_y: FLTD): SAME is
+      return button(b).x(w_x).y(w_y);
+   end;
+end;
+-------------------------------------------------------------------
+external class C_RASTER is
+   -- tkRaster.c Sather/C glue
+   raster_give_raster(interp: EXT_OB, path: STR): EXT_OB;
+    
+   raster_clear(c_raster: EXT_OB);
+   raster_draw_lines(c_raster: EXT_OB, coords: ARRAY{FLTD}, npoints: INT);
+   raster_draw_point(c_raster: EXT_OB, x: FLTD, y: FLTD);
+   raster_draw_points(c_raster: EXT_OB, coords: ARRAY{FLTD}, npoints: INT);
+   raster_draw_rectangle(c_raster: EXT_OB, x0, y0, x1, y1: FLTD);
+   raster_fill_polygon(c_raster: EXT_OB, coords: ARRAY{FLTD}, npoints: INT);
+   raster_fill_rectangle(c_raster: EXT_OB, x0, y0, x1, y1: FLTD);
+   raster_set_world(c_raster: EXT_OB, wx0, wy0, wx1, wy1: FLTD);
+   raster_world_to_raster(c_raster: EXT_OB, wx, wy, out rx, out ry: FLTD);
+   raster_raster_to_world(c_raster: EXT_OB, rx, ry, out wx, out wy: FLTD);     
+   raster_display(c_raster: EXT_OB);
+end; -- class C_RASTER
+-------------------------------------------------------------------
+
+
+
+

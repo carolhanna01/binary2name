@@ -1,0 +1,564 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE mrml [
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+       \paragraph{Basic structure:}
+       {\em
+       Messages are sent as MRML texts.
+       In  order to make it easy for the server to know who connects,
+       each message is assigned the id of its session as an attribute.
+       }
+
+     \begin{center}
+      Author of this file: 
+      Wolfgang Mueller with lots of suggestions and \\
+                                   corrections from \\
+      David Squire, Arjen P. de Vries and Christoph Giess \\
+     \end{center}
+     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+<!ELEMENT mrml (begin-transaction?,(
+
+                get-configuration
+                |configuration-description
+
+                |get-sessions
+                |session-list
+
+                |open-session
+                |rename-session
+                |close-session
+                |delete-session
+
+                |get-collections
+                |collection-list
+
+                |get-algorithms
+                |algorithm-list
+
+                |get-property-sheet
+                |property-sheet
+
+                |configure-session
+
+                |query-step
+                |query-result
+
+                |user-data
+
+                |error
+
+                |cui-configuration
+                )?,
+               end-transaction?) >
+<!ATTLIST mrml session-id     CDATA #IMPLIED
+               transaction-id CDATA #IMPLIED>
+
+
+<!-- ++++++++++++++++++++++++++++++
+
+
+
+\requesttitle{get-configuration}
+
+This is the message an MRML client sends to the server on connection.
+The message \mrmltag{get-configuration} gives information about the basic server configuration.
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT get-configuration EMPTY>
+
+<!-- ++++++++++++++++++++++++++++++
+
+
+\responsetitle{configuration-description}
+
+The \mrmltag{get-configuration} message is anwered by  a  message which
+is supposed to hold a description about anything which is nonstandard \MRML.
+
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT configuration-description (error?)>
+
+
+<!-- ++++++++++++++++++++++++++++++ 
+
+     \requesttitle{get-sessions}
+
+     The \mrmltag{get-sessions} message permits the user to request
+     exsisting sessions for a given user. It is sent by the client
+     directly after after the \mrmltag{configuration-description} has
+     been delivered, and prior to any other activity. 
+
+     Authentification happens before any other activity to give the 
+     server the possibility to customise any other information sent
+     to the user. For example, it might be sensible to send different
+     property sheets to different classes of users, or to render some
+     parts of the database only visible to the own work group.
+     
+     +++++++++++++++++++++++++++++ -->
+<!ELEMENT get-sessions EMPTY
+>
+<!ATTLIST get-sessions user-name CDATA #REQUIRED
+                       password  CDATA "guest"
+>
+
+<!-- ++++++++++++++++++++++++++++++
+
+     \responsetitle{session-list}
+     
+     A session is described by its \mrmltag{session-id}. 
+     We also send over a more human-readable name
+
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT session-list   (session+|error)
+>
+<!ELEMENT session       (error?)
+>
+<!ATTLIST session       session-id          CDATA #REQUIRED
+                        session-name        CDATA "Default session"
+>
+          
+<!--  ++++++++++++++++++++++++++++++
+
+     \requesttitle{get-collections}
+
+     gets a list of collections on the server.
+
+     ++++++++++++++++++++++++++++++  -->
+<!ELEMENT get-collections        EMPTY
+>
+
+<!--  ++++++++++++++++++++++++++++++ 
+  
+     \requesttitle{collection-list}
+
+     a list of collections on the server.
+
+     a collection is described by a list of the
+     of the query paradigms which can be used
+     for querying it, as well as an ID and its
+     human-readable name.
+
+     This means, you do not have to index all collections using all
+     the methods you want to propose to the server.
+
+     ++++++++++++++++++++++++++++++  -->
+<!ELEMENT collection-list         (collection*|error)
+>
+<!ELEMENT collection             (query-paradigm-list?|error)
+>
+<!ATTLIST collection  collection-id                       CDATA #REQUIRED
+                      collection-name                     CDATA #REQUIRED
+
+                      cui-base-dir                        CDATA #IMPLIED
+
+                      cui-in-memory                       CDATA #IMPLIED
+
+                      cui-hierarchy-file-location         CDATA #IMPLIED
+
+                      cui-distance-matrix-location        CDATA #IMPLIED
+  
+                      cui-generate-inverted-file          CDATA #IMPLIED
+                      cui-offset-file-location            CDATA #IMPLIED
+                      cui-inverted-file-location          CDATA #IMPLIED
+                      cui-feature-description-location    CDATA #IMPLIED
+                      cui-feature-file-location           CDATA #IMPLIED
+
+                      cui-algorithm-id-list-id            CDATA #IMPLIED
+
+                      cui-sql-database-name               CDATA #IMPLIED
+                      cui-sql-host                        CDATA #IMPLIED
+                      cui-sql-username                    CDATA #IMPLIED
+                      cui-sql-password                    CDATA #IMPLIED
+>
+                      
+<!-- ++++++++++++++++++++++++++++++
+
+     \tagtitle{query-paradigm}
+     arises both in algorithms and collections:
+     this describes the kind of query which can
+     be performed with this algorithm/collection 
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT query-paradigm-list         (query-paradigm*|error)
+>
+
+<!ELEMENT query-paradigm  (error?)
+>
+<!ATTLIST query-paradigm  query-paradigm-id CDATA #REQUIRED
+>
+                      
+<!-- ++++++++++++++++++++++++++++++
+
+     \requesttitle{get-algorithms}
+
+     gets a list of algorithms usable for one collection  
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT get-algorithms EMPTY
+>
+<!ATTLIST get-algorithms collection-id     CDATA #IMPLIED
+                         query-paradigm-id CDATA #IMPLIED
+
+>
+
+<!-- ++++++++++++++++++++++++++++++ 
+
+     \responsetitle{algorithm-list}
+
+     returns a list of algorithms for a given collection on the server 
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT algorithm-list         (algorithm*|error)
+>
+
+<!-- ++++++++++++++++++++++++++++++ 
+
+     \tagtitle{algorithm}
+     An algorithm can contain 
+     other algorithms,
+     optionally a property sheet,
+     optionally a query paradigm list
+     optionally an "allows-children" specification
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT algorithm             ((algorithm*,property-sheet?,query-paradigm-list?,allows-children?)|error)
+>
+<!ATTLIST algorithm  algorithm-id      CDATA #REQUIRED
+                     algorithm-type    CDATA #REQUIRED
+                     collectiom-id     CDATA #REQUIRED
+                     algorithm-name    CDATA #REQUIRED
+
+                     cui-weight        CDATA #IMPLIED
+                     cui-weighting-function       
+                                        CDATA #IMPLIED
+
+                     cui-base-type     CDATA #IMPLIED
+
+                     cui-block-color-histogram      CDATA #IMPLIED
+                     cui-block-texture-histogram    CDATA #IMPLIED
+                     cui-block-color-blocks         CDATA #IMPLIED
+                     cui-block-texture-blocks       CDATA #IMPLIED
+
+                     cui-pr-time-cutoff-point        CDATA #IMPLIED
+                     cui-pr-percentage-of-features   CDATA #IMPLIED
+                     cui-pr-score-board-reduced-at   CDATA #IMPLIED
+                     cui-pr-score-board-reduced-to   CDATA #IMPLIED
+
+                     cui-pr-modulo                   CDATA #IMPLIED
+                     cui-pr-modulo-class             CDATA #IMPLIED
+
+                     cui-property-sheet-id           CDATA #IMPLIED
+>
+
+<!-- ++++++++++++++++++++++++++++++ 
+
+     \tagtitle{allows-children}
+     This tag specifies for an algorithm what kind of algorithms
+     can be children of this algorithm. no specification $\Rightarrow$ allows no
+     children.
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT allows-children ((query-paradigm-list?)|error)>
+                      
+<!-- ++++++++++++++++++++++++++++++ 
+
+     \requesttitle{get-property-sheet}
+     get the property sheet for an algorithm
+
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT get-property-sheet EMPTY
+>
+<!ATTLIST get-property-sheet algorithm-id  ID #REQUIRED
+>
+
+<!-- ++++++++++++++++++++++++++++++ 
+
+     \requesttitle{begin-transaction}
+     begins a transaction 
+
+     ++++++++++++++++++++++++++++++ -->
+<!ATTLIST begin-transaction transaction-id ID #REQUIRED
+>
+<!-- ++++++++++++++++++++++++++++++ 
+
+     \requesttitle{end-transaction}
+     ends a transaction 
+
+     ++++++++++++++++++++++++++++++ -->
+<!ATTLIST end-transaction transaction-id ID #REQUIRED
+>
+
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     \requesttitle{configure-session}
+     configures the session by giving an algorithm     
+
+     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++-->
+<!ELEMENT configure-session (algorithm)
+>
+
+
+
+<!-- ++++++++++++++++++++++++++++++
+
+       \tagtitle{property-sheet}
+
+       \textbf{Basic idea}: \parbox[t]{5cm}{send a property sheet together with a specification
+                                            what should be the XML output coming back.
+                                            Useful for configuring your database.}
+     ++++++++++++++++++++++++++++++ -->
+<!ELEMENT property-sheet ((property-sheet)*|error)
+>
+<!ATTLIST property-sheet  property-sheet-id   ID                        #REQUIRED
+                          property-sheet-type (
+                                                multi-set
+
+                                                |subset
+                                                |set-element 
+                                                |boolean
+                                                |numeric
+                                                |textual
+                                                |panel
+
+                                                |clone
+                                                |reference)                  #REQUIRED
+                       
+                    caption  CDATA                     #IMPLIED
+                     
+                    visibility (popup|visible|invisible)         "visible"  
+
+                    send-type  (element
+                               | attribute
+                               | attribute-name
+                               | attribute-value
+                               | children
+                               | none)                 #REQUIRED
+                    send-name  CDATA                    #IMPLIED
+                    send-value CDATA                    #IMPLIED
+
+                    min-subset-size CDATA                #IMPLIED
+                    max-subset-size CDATA                #IMPLIED
+
+                    from CDATA                         #IMPLIED
+                    step CDATA                         #IMPLIED
+                    to   CDATA                         #IMPLIED
+
+                    auto-id            (yes|no)          #IMPLIED
+                    auto-id-name       CDATA             "id"
+
+                    defaultstate  CDATA                #IMPLIED
+
+>
+
+
+
+    
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     \textbf{Beginning and renaming sessions}
+
+     We want to give the user the possibility to save the current
+     state into "sessions". This might be useful in the case that 
+     a user has several classes of goals which s/he knows in advance.
+
+     The user can request a new session.
+     S/he can also request a name change for a session.
+     
+     Ending sessions is implicit:
+     we cannot afford being dependent on the user ending
+     his/her session in a "nice" way, so we do not 
+     tempt programmers to do so 
+
+     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+ <!-- Interface side -->
+  <!-- send the desired feedback method together with 
+       a name for the session -->
+
+<!ELEMENT open-session     EMPTY
+>
+<!ATTLIST open-session     user-name     CDATA #REQUIRED 
+                           password      CDATA #IMPLIED
+                           session-id    CDATA #IMPLIED 
+                           session-name  CDATA #IMPLIED
+>
+
+<!ELEMENT rename-session     EMPTY
+>
+<!ATTLIST rename-session     session-id    CDATA #IMPLIED 
+                             session-name  CDATA #IMPLIED
+>
+
+<!ELEMENT delete-session     EMPTY
+>
+<!ATTLIST delete-session session-id    CDATA #REQUIRED
+>
+
+<!ELEMENT close-session     EMPTY
+>
+<!ATTLIST close-session session-id    CDATA #REQUIRED
+>
+
+<!ELEMENT acknowledge-session-op EMPTY
+>
+<!ATTLIST acknowledge-session-op session-id      CDATA #REQUIRED
+>
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     \textbf{Simple user commands (for logging purposes)}
+
+     (like e.g. back or forward 
+         in the command history)
+     (at present the only commands)
+    ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+<!ELEMENT user-data  EMPTY
+>
+<!ATTLIST user-data command (history-backward|history-forward) "backward"
+          steps     CDATA                              #IMPLIED
+>
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     \requesttitle{query-step}
+
+     At present we provide only query by example, and search for random
+     images (done, if one sends an empty \mrmltag{query-step} tag)
+
+
+     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+<!ELEMENT query-step   ((user-relevance-element-list|cui-text-query|cui-hierarchy-up|get-segment-by-url-list)*)
+>
+<!ATTLIST query-step   query-step-id        CDATA #IMPLIED
+
+                           result-size    CDATA #IMPLIED
+                           result-cutoff  CDATA #IMPLIED
+
+                           query-type     (query|at-random) "query"
+
+                           algorithm-id   CDATA #IMPLIED
+
+>
+<!ELEMENT cui-hierarchy-up EMPTY
+>
+
+<!ELEMENT get-segment-by-url-list (get-segment-by-url+)>
+<!ELEMENT get-segment-by-url EMPTY>
+<!ATTLIST get-segment-by-url image-location CDATA #REQUIRED
+								thumbnail-location CDATA #REQUIRED
+>
+
+
+
+
+<!-- \tagtitle{user-relevance-element-list}
+
+     List of URLs with user given relevances 
+     Our way of specifying a QBE for images.
+
+     relevances vary from 0 to 1
+     -->
+<!ELEMENT user-relevance-element-list    
+                                       (user-relevance-element+)
+>
+
+<!ELEMENT user-relevance-element (user-segmented-element-list?)
+>
+<!ATTLIST user-relevance-element 
+                                 user-relevance CDATA #REQUIRED
+                                 image-location CDATA #REQUIRED
+>
+
+<!ELEMENT user-segmented-element-list (user-segment-element+)>
+<!ELEMENT user-segmented-element EMPTY>
+<!ATTLIST user-segmented-element segmenet-id CDATA #REQUIRED
+								user-relevence CDATA #REQUIRED
+>
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     \responsetitle{query-result}
+
+     each result image can be accompanied by the user given relevance,
+     as well as the similarity calculated by the program, based on the
+     feature space.
+
+     calculated similarities vary from 0 to 1
+
+     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!ELEMENT query-result  ((query-resultelement-list*,query-result*)|error)>
+
+    <!ELEMENT query-result-element-list ((query-result-element|error)+)>
+    <!ELEMENT query-result-element ((error?)|
+							 (query-result-element-segment-list?))>
+    <!ATTLIST query-result-element calculated-similarity      CDATA #REQUIRED
+                             thumbnail-location              CDATA #REQUIRED
+                             image-location                  CDATA #REQUIRED
+							 >
+
+	<!ELEMENT query-result-element-segment-list (query-result-element-segment+)>
+	<!ELEMENT query-result-element-segment (box|poly)*>
+	<!ATTLIST query-result-element-segment segment-id CDATA #REQUIRED
+								calculated-similarity	CDATA #REQUIRED>
+	<!ELEMENT box (Coords)>
+	<!ELEMENT poly (Coords)>
+	<!ELEMENT Coords (#PCDATA)>
+	<!ATTLIST Coords dim CDATA #REQUIRED>
+
+
+<!-- ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+     Error messages.
+
+     ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <!ELEMENT error EMPTY>
+    <!ATTLIST error message CDATA #REQUIRED>
+
+
+
+<!-- ==HIDE ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+     GIFT internal additions:
+     
+
+
+     DELETE STARTING FROM HERE FOR PUBLISHING MRML
+
+
+          ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+<!ELEMENT cui-configuration          (cui-property-list,cui-algorithmlist,collectionlist)>
+<!ELEMENT cui-algorithm-id-list-list (cui-algorithm-id-list*)>
+
+<!ELEMENT cui-algorithm-id-list      (cui-algorithm-id*)>
+<!ATTLIST cui-algorithm-id-list cui-algorithm-id-list-id CDATA #IMPLIED>
+
+<!ELEMENT cui-algorithm-id         EMPTY>
+<!ATTLIST cui-algorithm-id
+          cui-algorithm-id CDATA #IMPLIED>
+<!ELEMENT cui-property-list       (cui-property-item*)>
+<!ELEMENT cui-property-item       (property)>
+<!ATTLIST cui-property-item       
+          cui-property-item-id CDATA #REQUIRED>
+
+<!ELEMENT cui-time-stamp       EMPTY>
+<!ATTLIST cui-time-stamp
+          calendar-time        CDATA #REQUIRED>
+
+<!-- \tagtitle{cui-text-query}
+        query using a number of keywords in a string
+     -->
+<!ELEMENT cui-text-query EMPTY>
+
+<!ATTLIST cui-text-query 
+          query-string CDATA #IMPLIED>
+
+<!-- ==HIDE just for compatibility -->
+<!ELEMENT cui-ihandshake              EMPTY>
+<!ELEMENT cui-shandshake              EMPTY>
+<!ELEMENT cui-random-images           EMPTY>
+
+]>

@@ -1,0 +1,252 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@tiramisu.ICSI.Berkeley.EDU>
+
+class ARRAYS_TEST is
+   -- Test of ARRAY{T}::insertion_sort_range and ::quicksort range.
+   include TEST;
+   main is
+      class_name("ARRAY{FLTD} and ARRAY{INT}");
+
+      a ::= #ARRAY{INT}(5);
+      a[0] := 0; a[1] := 1; a[2] := 2; a[3]:=3; a[4]:=4;
+      test("size",a.size,"5");
+      test("aset and aget",a[2].str,"2");
+      res::=""; loop res := res+" "+a.elt!; end;
+      test("elt!",res," 0 1 2 3 4");
+      res:=""; loop res := res+" "+a.elt!(1); end;
+      test("elt!(beg)",res," 1 2 3 4");
+      res:=""; loop res := res+" "+a.elt!(1,2); end;
+      test("elt!(1,2)",res," 1 2");
+      res:=""; loop res := res+" "+a.elt!(1,2,2); end;
+      test("elt!(1,2,2)",res," 1 3");
+      res:=""; loop res := res+" "+a.ind!; end;
+      test("ind!",res," 0 1 2 3 4");
+      res:=""; loop res := res+" "+a.ind1!; end;
+      test("ind1!",res," 0 1 2 3 4");
+
+      v:ARRAY{INT}:=void;
+      test("void.size",v.size,"0");
+      res:=""; loop res := res+"-"+v.elt!; end;
+      test("elt!",res,"");
+      res:=""; loop res := res+"-"+v.ind!; end;
+      test("void.ind!",res,"");
+      res:=""; loop res := res+"-"+v.elt!; end;
+      test("void.elt!",res,"");
+      res:=""; loop res:=res+"-";v.set!(9);res:=res+"-"; end;
+      test("void.set!",res,"-");
+      v.copy(v); -- will crash if it does not work
+      if void(v) then test("void.copy(void)","-","-");
+      else test("void.copy(void)","-","+"); end;
+
+      b ::=#ARRAY{INT}(a.asize);  
+      
+      b.copy(a);
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("copy",res," 0 1 2 3 4");
+
+      b.copy(v);
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("copy(void)",res," 0 1 2 3 4");
+      
+      c ::= #ARRAY{INT}(3);
+      c.copy(a);
+      res:=""; loop res := res+" "+c.elt!; end;
+      test("copy",res," 0 1 2");
+      
+      loop b.set!(1); end;
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("set!",res," 1 1 1 1 1");
+      
+      b.copy(a);
+      loop b.set!(3,1); end;
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("set!(3,1)",res," 0 1 2 1 1");
+      
+      b.copy(a);
+      loop b.set!(2,2,7); end;
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("set!(2,2,7)",res," 0 1 7 7 4");
+
+      b.copy(a);
+      loop b.set!(1,2,2,9); end;
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("set!(1,2,2,9)",res," 0 9 2 9 4");
+      
+      b.copy(1,a);
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("copy(1)",res," 0 0 1 2 3");
+
+      b.copy(1,v);
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("copy(1,void)",res," 0 0 1 2 3");
+      
+      b.clear;
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("clear",res," 0 0 0 0 0");
+      
+      b.copy(2,2,a);
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("copy(2,2)",res," 0 0 0 1 0");
+
+      b.copy(2,2,2,a);
+      res:=""; loop res := res+" "+b.elt!; end;
+      test("copy(2,2)",res," 0 0 2 3 0");
+
+      f::=#ARRAY{FLTD}(20); ok::=0;
+      loop 100.times!; loop f.set!(RND::uniform) end;
+	 f.insertion_sort_range(0,f.size-1);
+	 if f.is_sorted then ok:=ok+1 end end;
+      test("No. of times insertion_sort_range was ok",ok.str,"100");
+
+      f:=#ARRAY{FLTD}(50); ok:=0;
+      loop 100.times!; loop f.set!(RND::uniform) end;
+	 f.quicksort_range(0,f.asize-1);
+	 if f.is_sorted then ok:=ok+1 end end;
+      test("No. of times quicksort_range was ok",ok.str,"100");
+
+      finish;
+   end;
+end;
+-------------------------------------------------------------------
+class ARR_SORT_TEST is
+   -- Actually test it out in its incarnation in ARRAY
+   include TEST;
+   
+   shared isorter: ARR_SORT_ALG{INT,ARRAY{INT}};
+   shared fsorter: ARR_SORT_ALG{FLTD,ARRAY{FLTD}};
+   
+   main is
+      class_name("ARR SORT TESTS");
+      a1:ARRAY{INT} := |1,2,3,4,5,6|;
+      test("is_sorted",isorter.is_sorted(a1),true);
+      a2:ARRAY{INT} := |1,2,3,4,6,5|;
+
+      test("is_sorted",isorter.is_sorted(a2),false);
+      test("is_sorted",isorter.is_sorted(a2,0,4),true);
+      test("is_sorted",isorter.is_sorted(a2,0,5),false);
+      a::=#ARRAY{FLTD}(20); 
+      fail::=0;
+      loop 
+	 50.times!; 
+	 loop a.set!(RND::uniform) end;
+	 fsorter.insertion_sort(a,0,a.size-1);
+	 if ~fsorter.is_sorted(a) then fail:=fail+1 end 
+      end;
+      test("No. of times insertion_sort fails",fail,0);
+      b ::= #ARRAY{FLTD}(100);
+      ind ::= b.inds;
+      loop 
+	 50.times!; 
+	 loop b.set!(RND::uniform) end;
+	 fsorter.insertion_sort(b,ind,0,b.size-1);
+	 if ~fsorter.is_sorted(b,ind,0,b.size-1) then fail:=fail+1 end 
+      end;
+      test("No. of times indirect insertion_sort  fails",fail,0);
+      
+      c::=#ARRAY{FLTD}(100); fail:=0;
+      loop 
+	 100.times!;
+	 loop c.set!(RND::uniform) end;
+	 fsorter.quicksort(c,0,c.size-1);
+	 if ~fsorter.is_sorted(c) then fail:=fail+1 end 
+      end;
+      test("No. of times quick sort fails",fail,0);
+      finish;
+   end;
+
+end;
+-------------------------------------------------------------------
+class ARR_ALG_TEST is
+   -- Tests of other array algorithms
+   include TEST;
+
+   shared ipermute: ARR_PERMUTE_ALG{INT,ARRAY{INT}};
+   shared isort: ARR_SORT_ALG{INT,ARRAY{INT}};
+   shared iselect: ARR_SELECT_ALG{INT,ARRAY{INT}};
+   shared isearch: ARR_SEARCH_ALG{INT,ARRAY{INT}};
+   shared ialg: ARR_ALG{INT,ARRAY{INT}};
+   shared imember: ELT_ALG{INT,ARRAY{INT}};
+   
+   main is
+      -- Tests for permutation etc.
+      class_name("A_ALGetc.");
+      l: ARRAY{INT} := |5,4,5,4,3,6,100|;
+      l2: ARRAY{INT} := |4,5,5,4,100,6,3|;
+      l3: ARRAY{INT} := |4,4,5,4,100,6,3|;
+      l4: ARRAY{INT} := |4,100,5,4,100,6,3|;
+      l5: ARRAY{INT} := |100,6,3,5,5,4|;
+      test("perm 1",is_permutation(l,l2),true);
+      test("perm 2",is_permutation(l,l3),false);
+      test("perm 3",is_permutation(l,l4),false);
+      test("perm 4",is_permutation(l,l5),false);
+      lp: ARRAY{INT} :=  |5,4,5,4,3,6,9|;
+      map: ARRAY{INT} := |3,2,1,5,6,4,0|;
+      should: ARRAY{INT} := |9,5,4,5,6,4,3|;
+      does: ARRAY{INT} := #(7);
+      ipermute.permute_into(lp,map,does);
+      -- #PERMUTE_ALG{INT}(lp).permute_into(map,does);
+      test("permute", does.str,should.str);
+      m1: ARRAY{INT} := |2,3,5|;
+      m2: ARRAY{INT} :=  |3,4,7,8,8|;
+      mshould: ARRAY{INT} := |2,3,3,4, 5, 7,8,8|;
+      mdoes: ARRAY{INT} := #(8);
+      isort.merge_sort(mdoes,m1,m2);
+      test("Merge",mdoes.str,mshould.str);
+      mmedianshould: ARRAY{INT} := |2,3,3,4, 5, 6,7,8,8|;
+      test("Median",iselect.median_modifying(mmedianshould),5);
+      -- munsorted: ARRAY{INT} := |9,8,6,5,4,3,2,8,7|;
+      -- Sorted = 2,3,4,5, 6, 7,8,8,9
+      -- test("Unsortd Median",iselect.medianmunsorted.median,6);
+      ipermute.shuffle(mshould);
+      unchecked_test("shuffle",mshould.str,"");
+      test("perm 5, shuffle",is_permutation(mshould,mdoes),true);
+      isort.sort(mshould);
+      test("binary search",isearch.binary_search(mshould,7),5);
+      test("index_of",isearch.index_of(mshould,7),5);
+      test("index_if",isearch.index_if(mshould,bind(_.is_eq(7))),5);
+      test("count",ialg.count(mshould,3),2);
+      -- test("count_if",ialg.count_if(mshould,bind(_:INT.is_eq(3))),2);
+      res: ARRAY{INT};
+      res := m1.copy; res.map((bind(_.times(3))));
+      mapres:ARRAY{INT} := |6,9,15|; -- untested?
+      test("some",imember.some(m1,bind(_.is_eq(3))),true);
+      test("some",imember.some(m1,bind(_.is_eq(15))),false);
+      test("every",imember.every(m1,bind(_.is_eq(3))),false);
+      test("every",imember.every(m1,bind(_.is_lt(15))),true);
+      test("notany",imember.notany(m1,bind(_.is_eq(3))),false);
+      test("notany",imember.notany(m1,bind(_.is_eq(15))),true);
+      test("notevery",imember.notevery(m1,bind(_.is_eq(3))),true);
+      test("notevery",imember.notevery(m1,bind(_.is_lt(15))),false);
+      test("reduce",ialg.reduce(m1,bind(_.times(_)),1),30);
+      res := m1.copy; res.scan(bind(_.times(_)));
+      scanres: ARRAY{INT} := |2,6,30|;
+      test("scan",res.str,scanres.str);
+      m1new: ARRAY{INT} := |4,7,9|;
+      res := m1.copy; res.copy(m1new);
+      test("to",res.str,m1new.str);
+      a2: ARRAY{INT} := |1,2,3,5,5|;
+      a1: ARRAY{INT} := |1,2,3,4,5|;
+      test("mismatch",ialg.mismatch(a1,a2),3);
+      finish;
+   end;
+
+   is_permutation(p1,p2: ARRAY{INT}): BOOL is
+      l1 ::= p1.copy; isort.sort(p1);
+      l2 ::= p2.copy; isort.sort(p2);
+      return ipermute.sorted_is_permutation(p1,p2);
+   end;
+
+end;
+-------------------------------------------------------------------

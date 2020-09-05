@@ -1,0 +1,215 @@
+<html lang="en">
+<head>
+<title>Points and Lines - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Point-Reference.html#Point-Reference" title="Point Reference">
+<link rel="prev" href="Vector-Operations.html#Vector-Operations" title="Vector Operations">
+<link rel="next" href="Point-Intersections.html#Point-Intersections" title="Point Intersections">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Points-and-Lines"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Point-Intersections.html#Point-Intersections">Point Intersections</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Vector-Operations.html#Vector-Operations">Vector Operations</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Point-Reference.html#Point-Reference">Point Reference</a>
+<hr>
+</div>
+
+<h3 class="section">22.16 Points and Lines</h3>
+
+<div class="defun">
+&mdash; <code>const</code> function: Line <b>get_line</b> (<var>const Point&amp; p</var>)<var><a name="index-get_005fline-433"></a></var><br>
+<blockquote><p>Returns the <code>Line</code> <var>l</var> corresponding to the line from <code>*this</code> to
+<var>p</var>.  <var>l</var>.<code>position</code> will be <code>*this</code>, and
+<var>l</var>.<code>direction</code> will be <var>p</var> - <code>*this</code>. 
+See <a href="Line-Reference.html#Line-Reference">Line Reference</a>. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> function: real <b>slope</b> (<var>Point p, </var>[<var>char m = 'x', </var>[<var>char n = 'y'</var>]])<var><a name="index-slope-434"></a></var><br>
+<blockquote><p>Returns a <code>real</code> number representing the slope of the <em>trace</em>
+of the line defined by
+<code>*this</code> and <var>p</var> on the plane indicated by the arguments <var>m</var>
+and <var>n</var>.
+
+     <pre class="example">          Point p0(3, 4, 5);
+          Point p1(2, 7, 12);
+          real r = p0.slope(p1, 'x', 'y');
+          &rArr; r == -3
+          r = p0.slope(p1, 'x', 'z');
+          &rArr; r == -7
+          r = p0.slope(p1, 'z', 'y');
+          &rArr; r == 0.428571
+</pre>
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Function: bool_real <b>is_on_segment</b> (<var>Point p0, Point p1</var>)<var><a name="index-is_005fon_005fsegment-435"></a></var><br>
+&mdash; <code>const</code> function: bool_real <b>is_on_segment</b> (<var>const Point&amp; p0, const Point&amp; p1</var>)<var><a name="index-is_005fon_005fsegment-436"></a></var><br>
+<blockquote><p>These functions return a <code>bool_real</code>, where the <code>bool</code> part is
+<code>true</code>, if
+the <code>Point</code> lies on the line segment between <var>p0</var> and <var>p1</var>,
+otherwise <code>false</code>.  If the <code>Point</code> lies on the line segment, the
+<code>real</code> part is a value
+r such that
+0 &lt;= r &lt;= 1
+indicating how far the <code>Point</code> is along the way from
+<var>p0</var> to <var>p1</var>.  For example, if the <code>Point</code> is half of the way
+from <var>p0</var> to <var>p1</var>, r will be .5.  If the <code>Point</code>
+does not lie on the line
+segment, but on the <em>line</em> passing through <var>p0</var> and <var>p1</var>,
+r will be &lt;0 or &gt;1.
+
+        <p>If the <code>Point</code> doesn't lie on the line passing through <var>p0</var> and
+<var>p1</var>,
+r will be <code>INVALID_REAL</code>.
+
+     <pre class="example">          Point p0(-1, -2, 1);
+          Point p1(3, 2, 5);
+          Point p2(p0.mediate(p1, .75));
+          Point p3(p0.mediate(p1, 1.5));
+          Point p4(p2);
+          p4.shift(-2, 1, -1);
+          bool_real br = p2.is_on_segment(p0, p1);
+          cout &lt;&lt; br.first;
+          -| 1
+          cout &lt;&lt; br.second;
+          -| 0.75
+          bool_real br = p3.is_on_segment(p0, p1);
+          cout &lt;&lt; br.first;
+          -| 0
+          cout &lt;&lt; br.second;
+          -| 1.5
+          bool_real br = p4.is_on_segment(p0, p1);
+          cout &lt;&lt; br.first;
+          -| 0
+          cout &lt;&lt; br.second;
+          -| 3.40282e+38
+          cout &lt;&lt; (br.second == INVALID_REAL)
+          -| 1
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF91.png"
+alt="[Figure 91. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 91. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> function: bool_real <b>is_on_line</b> (<var>const Point&amp; p0, const Point&amp; p1</var>)<var><a name="index-is_005fon_005fline-437"></a></var><br>
+<blockquote><p>Returns a <code>bool_real</code> where the <code>bool</code> part is <code>true</code>, if
+the <code>Point</code> lies on the line passing through <var>p0</var> and <var>p1</var>,
+otherwise <code>false</code>.  If the <code>Point</code> lies on the line, the
+<code>real</code> part is a value r indicating how how far the <code>Point</code>
+is along the way from <var>p0</var> to <var>p1</var>, otherwise
+<code>INVALID_REAL</code>.  The following
+values of r are possible for a call to <code>P.is_on_line(A, B)</code>,
+where the <code>Point</code> P lies on the line
+AB:
+
+     <pre class="display">          P == A &mdash;&gt; r== 0.
+          
+          P == B &mdash;&gt; r== 1.
+          
+          P lies on the opposite side of A from B &mdash;&gt; r &lt; 0.
+          
+          P lies between A and B &mdash;&gt; 0 &lt;  r &lt; 1.
+          
+          P lies on the opposite side of A from B &mdash;&gt; r &gt; 1
+</pre>
+        <pre class="example">          Point A(-1, -2);
+          Point B(2, 3);
+          Point C(B.mediate(A, 1.25));
+          bool_real br = C.is_on_line(A, B);
+          Point D(A.mediate(B));
+          br = D.is_on_line(A, B);
+          Point E(A.mediate(B, 1.25));
+          br = E.is_on_line(A, B);
+          Point F(D);
+          F.shift(-1, 1);
+          br = F.is_on_line(A, B);
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF92.png"
+alt="[Figure 92. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 92. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> function: Point <b>mediate</b> (<var>Point p, </var>[<var>const real r = .5</var>])<var><a name="index-mediate-438"></a></var><br>
+<blockquote><p>Returns a <code>Point</code> <var>r</var> of the way from <code>*this</code> to <var>p</var>.
+
+     <pre class="example">          Point p0(-1, 0, -1);
+          Point p1(10, 0, 10);
+          Point p2(5, 5, 5);
+          Point p3 = p0.mediate(p1, 1.5);
+          p3.show("p3:");
+          -| p3: (15.5, 0, 15.5)
+          Point p4 = p0.mediate(p2, 1/3.0);
+          p4.show("p4:");
+          -| p4: (1, 1.66667, 1)
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF93.png"
+alt="[Figure 93. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 93. 
+<br>
+</p>
+
+        </blockquote></div>
+
+   </body></html>
+

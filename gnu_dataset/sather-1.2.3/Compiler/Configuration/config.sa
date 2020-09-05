@@ -1,0 +1,685 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- supertype for all entries in the configuration file.
+-- Currently three different entries are known, CONFIG_FUNC
+-- for builtin functions, CONFIG_ITER for builtin iters and
+-- CONFIG_DEF for all other entries.
+abstract class $CONFIG < $STR is
+   name:STR;
+   str:STR;
+end;
+
+class CONFIG_ROUT < $CONFIG is
+   readonly attr name:STR;
+   readonly attr volatile:BOOL;
+   readonly attr fragile:BOOL;
+   readonly attr no_pre:BOOL;
+   readonly attr no_post:BOOL;
+   readonly attr does_import:BOOL;
+   readonly attr does_export:BOOL;
+   readonly attr block:BOOL;
+   readonly attr arith:BOOL;
+   readonly attr use_index:BOOL;
+   readonly attr attr_access:ARRAY{INT};
+   readonly attr near_depends_on:ARRAY{INT};
+   readonly attr is_near:BOOL;
+
+   readonly attr raises:ARRAY{STR};
+   readonly attr raises_any:BOOL;
+   raises_none:BOOL is return void(raises) and ~raises_any; end;
+
+   readonly attr reads:ARRAY{STR};
+   readonly attr reads_any:BOOL;
+   reads_none:BOOL is return void(reads) and ~reads_any; end;
+
+   readonly attr writes:ARRAY{STR};
+   readonly attr writes_any:BOOL;
+   writes_none:BOOL is return void(writes) and ~writes_any; end;
+
+   no_side_effects:BOOL is -- does not check for the arith flag.
+      return writes_none and reads_none and raises_none and
+             ~fragile and ~block and ~does_import and ~does_export
+	     and ~volatile;
+   end;
+
+   readonly attr declare,f_declare:ARRAY{STR};
+   readonly attr var,f_var:ARRAY{STR};
+
+   -- this attribute is only used for routines
+   readonly attr exec,f_exec:ARRAY{STR};
+
+   -- the following attributes are only used for iters
+   readonly attr init,f_init:ARRAY{STR};
+   readonly attr iter,f_iter:ARRAY{STR};
+   readonly attr temp,f_temp:ARRAY{STR};
+   readonly attr break,f_break:ARRAY{STR};
+
+   create:SAME is return new; end;
+
+   private get_attr(e:FLIST{STR}):ARRAY{STR} is
+      r::=#ARRAY{STR}(e.size-1);
+      loop  
+         i::=r.ind!;
+      	 r[i]:=e[i+1];
+      end;
+      return r;
+   end;
+
+   private get_attr_int(e:FLIST{STR}):ARRAY{INT} is
+      r::=#ARRAY{INT}(e.size-1);
+      loop  
+         i::=r.ind!;
+      	 r[i]:=#INT(e[i+1]);
+      end;
+      return r;
+   end;
+
+   is_rout(exprs:FLIST{FLIST{STR}}):BOOL is
+      loop 
+	 a::=exprs.elt![0];
+         if a="exec" or a="reads" or a="writes" then return true; end; 
+      end;
+      return false;
+   end;
+
+   is_iter(exprs:FLIST{FLIST{STR}}):BOOL is
+      loop 
+         a::=exprs.elt![0];
+         if a="iter" or a="break" then return true; end; 
+      end;
+      return false;
+   end;
+
+   is_iter:BOOL is
+      return ~void(iter) or ~void(break);
+   end;
+
+   is_rout:BOOL is
+      return ~void(exec);
+   end;
+
+   private pastr(e:ARRAY{STR}):STR is
+      r::="";
+      loop r:=r+" "+e.elt!.pretty; end;
+      return r;
+   end;
+
+   private pastr(e:ARRAY{INT}):STR is
+      r::="";
+      loop r:=r+" "+e.elt!.str; end;
+      return r;
+   end;
+
+   str:STR is
+      r::=name+":\n";
+      if volatile then r:=r+"\tvolatile,\n"; end;
+      if fragile then r:=r+"\tfragile,\n"; end;
+      if no_pre then r:=r+"\tno_pre,\n"; end;
+      if no_post then r:=r+"\tno_post,\n"; end;
+      if block then r:=r+"\tblock,\n"; end;
+      if arith then r:=r+"\tarith,\n"; end;
+      if does_import then r:=r+"\timport,\n"; end;
+      if does_export then r:=r+"\texport,\n"; end;
+      if raises_any then r:=r+"\traises_any,\n"; end;
+      if reads_any then r:=r+"\treads_any,\n"; end;
+      if writes_any then r:=r+"\twrites_any,\n"; end;
+      if is_near then r:=r+"\tis_near,\n"; end;
+      if ~void(attr_access) then r:=r+"\tattr access"+pastr(attr_access)+",\n"; end;
+      if ~void(near_depends_on) then r:=r+"\tattr near_depends_on"+pastr(near_depends_on)+",\n"; end;
+      if ~void(raises) then r:=r+"\traises"+pastr(raises)+",\n"; end;
+      if ~void(reads) then r:=r+"\treads"+pastr(reads)+",\n"; end;
+      if ~void(writes) then r:=r+"\twrites"+pastr(writes)+",\n"; end;
+      if ~void(var) then r:=r+"\tvar"+pastr(var)+",\n"; end;
+      if ~void(declare) then r:=r+"\tdeclare"+pastr(declare)+",\n"; end;
+      if ~void(exec) then r:=r+"\texec"+pastr(exec)+";\n"; end;
+      if ~void(init) then r:=r+"\tinit"+pastr(init)+",\n"; end;
+      if ~void(temp) then r:=r+"\ttemp"+pastr(temp)+",\n"; end;
+      if ~void(break) then r:=r+"\tbreak"+pastr(break)+",\n"; end;
+      if ~void(iter) then r:=r+"\titer"+pastr(iter)+",\n"; end;
+      return r;
+   end;
+
+   create(id:STR,exprs:FLIST{FLIST{STR}}):SAME is
+      r::=new;
+      r.name:=id;
+      loop
+         e::=exprs.elt!;
+	 l::=e[0];
+	 if l="volatile" and e.size=1 then r.volatile:=true;
+	 elsif l="fragile" and e.size=1 then r.fragile:=true;
+	 elsif l="no_pre" and e.size=1 then r.no_pre:=true;
+	 elsif l="no_post" and e.size=1 then r.no_post:=true;
+	 elsif l="import" and e.size=1 then r.does_import:=true;
+	 elsif l="export" and e.size=1 then r.does_export:=true;
+	 elsif l="block" and e.size=1 then r.block:=true;
+	 elsif l="arith" and e.size=1 then r.arith:=true;
+	 elsif l="raises_any" and e.size=1 then r.raises_any:=true;
+	 elsif l="reads_any" and e.size=1 then r.reads_any:=true;
+	 elsif l="writes_any" and e.size=1 then r.writes_any:=true;
+	 elsif l="raises" then r.raises:=get_attr(e);
+	 elsif l="reads" then r.reads:=get_attr(e);
+	 elsif l="writes" then r.writes:=get_attr(e);
+	 elsif l="attr_access" then r.attr_access:=get_attr_int(e);
+	 elsif l="near_depends_on" then r.near_depends_on:=get_attr_int(e);
+	 elsif l="is_near" and e.size=1 then r.is_near:=true;
+	 elsif l="declare" then r.declare:=get_attr(e);
+	 elsif l="var" then r.var:=get_attr(e);
+	 elsif l="exec" then r.exec:=get_attr(e);
+	 elsif l="init" then r.init:=get_attr(e);
+	 elsif l="temp" then r.temp:=get_attr(e);
+	 elsif l="break" then r.break:=get_attr(e);
+	 elsif l="iter" then r.iter:=get_attr(e);
+	 elsif l="f_declare" then r.f_declare:=get_attr(e);
+	 elsif l="f_var" then r.f_var:=get_attr(e);
+	 elsif l="f_exec" then r.f_exec:=get_attr(e);
+	 elsif l="f_init" then r.f_init:=get_attr(e);
+	 elsif l="f_temp" then r.f_temp:=get_attr(e);
+	 elsif l="f_break" then r.f_break:=get_attr(e);
+	 elsif l="f_iter" then r.f_iter:=get_attr(e);
+	 else
+	    #OUT+"CONFIG:The definition '"+l+"' is not legal for a builtin routine/iter\n";
+	    UNIX::exit(-1);
+	 end;
+      end;
+      if ~void(r.break) then 
+         r.use_index:=true;
+      else
+         if ~void(r.init) then
+	    loop
+	       if r.init.elt!.search("$#")>=0 then
+	          r.use_index:=true;
+		  break!;
+	       end;
+	    end;
+	 end;
+         if ~r.use_index and ~void(r.iter) then
+	    loop
+	       if r.iter.elt!.search("$#")>=0 then
+	          r.use_index:=true;
+		  break!;
+	       end;
+	    end;
+	 end;
+         if ~void(r.f_init) then
+	    loop
+	       if r.f_init.elt!.search("$#")>=0 then
+	          r.use_index:=true;
+		  break!;
+	       end;
+	    end;
+	 end;
+         if ~r.use_index and ~void(r.f_iter) then
+	    loop
+	       if r.f_iter.elt!.search("$#")>=0 then
+	          r.use_index:=true;
+		  break!;
+	       end;
+	    end;
+	 end;
+      end;
+      if void(r.f_iter) then r.f_iter:=r.iter; end;
+      if void(r.f_break) then r.f_break:=r.break; end;
+      if void(r.f_var) then r.f_var:=r.var; end;
+      if void(r.f_exec) then r.f_exec:=r.exec; end;
+      if void(r.f_declare) then r.f_declare:=r.declare; end;
+      if void(r.f_temp) then r.f_temp:=r.temp; end;
+      if void(r.f_init) then r.f_init:=r.init; end;
+      return r;
+   end;
+end;
+
+
+-- used for all definitions in the config file with the exception
+-- of iters and functions.
+class CONFIG_DEF < $CONFIG is
+   readonly attr name:STR;
+   readonly attr expr:ARRAY{ARRAY{STR}};
+   create(n:STR):SAME is
+      r::=new;
+      r.name:=n;
+      return r;
+   end;
+
+   create(n:STR,e:FLIST{FLIST{STR}}):SAME is
+      r::=create(n);
+      r.expr:=#(e.size);
+      loop 
+         i::=r.expr.ind!;
+	 r.expr[i]:=#(e[i].size);
+	 loop r.expr[i].set!(e[i].elt!); end;
+      end;
+      return r;
+   end;
+
+   aget(i:INT):ARRAY{STR} is return expr[i]; end;
+   elt!:ARRAY{STR} is loop yield expr.elt!; end; end;
+   size:INT is return expr.size; end;
+
+   str:STR is
+      r::=name+":\n";
+      first::=true;
+      loop 
+	 l::=expr.elt!;
+	 if ~first then r:=r+",\n"; else first:=false; end;
+	 r:=r+'\t'+l[0].pretty;
+	 if l.size>1 then
+	    loop
+	       r:=r+' '+l[1.upto!(l.size-1)].pretty;
+	    end;
+	 end;
+      end;
+      return r+";\n";
+   end;
+end;
+
+class CONFIG_SCANNER is
+   private attr fstr:FSTR;
+   private attr next:INT;
+   private attr file:STR;
+   private attr line:INT;
+
+   create(filename:STR):SAME is
+      f::=BFILE::open_for_read(filename);
+      if f.error then
+         #OUT+"cannot open the config file "+filename+" for reading\n";
+	 UNIX::exit(-1);
+      end;
+      r::=new;
+      r.fstr:=f.fstr;
+      r.file:=filename;
+      f.close;
+      return r;
+   end;
+
+   private eof:BOOL is return next>=fstr.size; end;
+
+   private is_comment:BOOL is
+      return ~eof and fstr[next]='-' and next+1<fstr.asize and fstr[next+1]='-';
+   end;
+
+   private skip_comment is
+      if is_comment then
+         loop while!(~eof and fstr[next]/='\n');
+	    next:=next+1;
+	 end;
+	 next:=next+1;
+	 line:=line+1;
+      end;
+   end;
+
+   private is_white_space:BOOL is
+      return ~eof and (fstr[next]=' ' or fstr[next]='\t' or fstr[next]='\n' or fstr[next]='\r');
+   end;
+
+   private skip_white_space is
+      loop
+	 loop while!(is_white_space);
+	    if fstr[next]='\n' then line:=line+1;end;
+	    next:=next+1;
+	 end;
+	 if is_comment then skip_comment;
+	 else break!;
+	 end;
+      end;
+   end;
+
+   private get_uid!:STR is 
+      loop
+	 skip_white_space;
+	 if eof then quit; end;
+	 start::=next;
+	 if is_uletter or fstr[next]='_' then
+	    loop
+	       while!(is_uletter or is_digit or fstr[next]='_');
+	       next:=next+1;
+	    end;
+	 end;
+	 if fstr[next]/=':' or next=start then
+	    #OUT+file+":"+line+":error, expected an UID followed by a \':\'\n";
+	    UNIX::exit(-1);
+	 end;
+	 uid::=fstr.substring(start,next-start).str;
+	 next:=next+1;
+	 yield uid;
+      end;
+   end;
+
+   private is_digit:BOOL is
+      return ~eof and fstr[next]>='0' and fstr[next]<='9';
+   end;
+   private is_uletter:BOOL is
+      return ~eof and fstr[next]>='A' and fstr[next]<='Z';
+   end;
+   private is_letter:BOOL is
+      return ~eof and is_uletter or (fstr[next]>='a' and fstr[next]<='z');
+   end;
+   private is_string:BOOL is return fstr[next]='"'; end;
+
+   private get_digit:STR is
+      start::=next;
+      next:=next+1; -- first character has already been tested;
+      loop
+         while!(is_digit);
+	 next:=next+1;
+      end;
+      r::=fstr.substring(start,next-start).str;
+      return r;
+   end;
+
+   private get_string:STR is -- return a string, removes '"' and converts
+   			     -- any special characters
+      start::=next;
+      next:=next+1;
+      loop
+         while!(~eof and (fstr[next]/='"' or fstr[next-1]='\\'));
+	 if fstr[next]='\n' then
+	    #OUT+file+":"+line+": runaway string\n";
+	    UNIX::exit(-1);
+	 end;
+	 next:=next+1;
+      end;
+      if eof or fstr[next]/='"' then
+	 #OUT+file+":"+line+": runaway string\n";
+	 UNIX::exit(-1);
+      end;
+      next:=next+1;
+      r::=fstr.substring(start,next-start).str;
+      if r="\"\"" then return "";
+      else return r.as_literal;
+      end;
+   end;
+
+   private get_id:STR is
+      start::=next;
+      if is_letter then
+         loop
+	    while!(is_letter or is_digit or fstr[next]='_');
+	    next:=next+1;
+	 end;
+      end;
+      return fstr.substring(start,next-start).str;
+   end;
+
+   private get_expr:FLIST{STR} is
+      skip_white_space;
+      r:FLIST{STR};
+      if fstr[next]=';' then 
+         return void;
+      elsif fstr[next]='+' or fstr[next]='-' or is_digit then
+	 r:=r.push(get_digit);
+      elsif is_string then 
+	 r:=r.push(get_string);
+      else
+	 r:=r.push(get_id);
+	 skip_white_space;
+	 if fstr[next]/=',' and fstr[next]/=';' then
+	    loop
+	       if fstr[next]='+' or fstr[next]='-' or is_digit then
+		  r:=r.push(get_digit);
+	       elsif is_string then 
+		  r:=r.push(get_string);
+	       else
+		  r:=r.push(get_id);
+	       end;
+	       skip_white_space;
+	       if fstr[next]=',' or fstr[next]=';' then break!; end;
+	    end;
+	 end;
+      end;
+      skip_white_space;
+      if fstr[next]=',' then
+         next:=next+1;
+      elsif fstr[next]/=';' then
+         #OUT+file+":"+line+":expected a ',' or a ';', but got a "+fstr[next]+"\n";
+	 UNIX::exit (1);
+      end;
+      return r;
+   end;
+
+   private get_expr!:FLIST{STR} is
+      r:STR;
+      loop
+	 skip_white_space;
+	 if fstr[next]=';' then 
+	    next:=next+1;
+	    quit;
+	 end;
+	 yield get_expr;
+      end;
+      next:=next+1;
+      skip_white_space;
+   end;
+
+   get_def!:$CONFIG is
+      next:=0;
+      line:=1;
+      loop
+         id::=get_uid!;
+	 exprs:FLIST{FLIST{STR}};
+	 exprs:=void;
+	 loop
+	    exprs:=exprs.push(get_expr!);
+	 end;
+	 if CONFIG_ROUT::is_iter(exprs) then yield #CONFIG_ROUT(id,exprs);
+	 elsif CONFIG_ROUT::is_rout(exprs) then yield #CONFIG_ROUT(id,exprs);
+	 else yield #CONFIG_DEF(id,exprs); end;
+      end;
+   end;
+end;
+
+
+-- reads the CONFIG file and stores it in RAM for easy and
+-- fast retrieval.
+class CONFIG_TBL < $STR is
+   private attr tbl:FMAP{STR,$CONFIG};
+
+   private check_for_strings(s:STR) is
+      r::=get(s);
+      if void(r) then 
+         #OUT+s+" is missing in the config file (should be some string[s])\n";
+	 UNIX::exit(1);
+      end;
+      typecase r when CONFIG_DEF then
+         if r.size=0 then
+	    #OUT+s+" should be defined as some strings in the CONFIG file.\n";
+	    #OUT+"it is defined as\n"+r.str;
+	    UNIX::exit(-1);
+	 end;
+	 loop
+	    i::=0.upto!(r.size-1);
+	    if r[i].size/=1 then
+	       #OUT+s+" should be defined as some strings in the CONFIG file.\n";
+	       #OUT+"it is defined as\n"+r.str;
+	       UNIX::exit(-1);
+	    end;
+	 end;
+      else
+	 #OUT+s+" should be defined as some string[s] in the CONFIG file.\n";
+	 #OUT+"it is defined as\n"+r.str;
+	 UNIX::exit(-1);
+      end;
+   end;
+
+   private check_for_string(s:STR,n:INT) is
+      r::=get(s);
+      if void(r) then 
+         #OUT+s+" is missing in the config file (should be "+n+" string[s])\n";
+	 UNIX::exit(1);
+      end;
+      typecase r when CONFIG_DEF then
+         if r.size/=n then
+	    #OUT+s+" should be defined as "+n+" strings in the CONFIG file.\n";
+	    #OUT+"it is defined as\n"+r.str;
+	    UNIX::exit(-1);
+	 end;
+	 loop
+	    i::=0.upto!(n-1);
+	    if r[i].size/=1 then
+	       #OUT+s+" should be defined as "+n+" strings in the CONFIG file.\n";
+	       #OUT+"it is defined as\n"+r.str;
+	       UNIX::exit(-1);
+	    end;
+	 end;
+      else
+	 #OUT+s+" should be defined as "+n+" string[s] in the CONFIG file.\n";
+	 #OUT+"it is defined as\n"+r.str;
+	 UNIX::exit(-1);
+      end;
+   end;
+
+   private check_for_bool(s:STR) is
+      r::=get(s);
+      if void(r) then 
+         #OUT+s+" is missing in the config file (should be true or false)\n";
+	 UNIX::exit(1);
+      end;
+      typecase r when CONFIG_DEF then
+         if r.size/=1 or r[0].size/=1 or (r[0][0]/="true" and r[0][0]/="false") then
+	    #OUT+s+" should be defined as 'true' or 'false' in the CONFIG file.\n";
+	    #OUT+"it is defined as\n"+r.str;
+	    UNIX::exit(-1);
+	 end;
+      else
+	 #OUT+s+" should be defined as 'true' or 'false' in the CONFIG file.\n";
+	 #OUT+"it is defined as\n"+r.str;
+	 UNIX::exit(-1);
+      end;
+   end;
+
+   private check_for_int(s:STR) is
+      r::=get(s);
+      if void(r) then 
+         #OUT+s+" is missing in the config file (should be an INT)\n";
+	 UNIX::exit(1);
+      end;
+      typecase r when CONFIG_DEF then
+         if r.size/=1 or r[0].size/=1 then
+	    #OUT+s+" should be defined as an INT in the CONFIG file.\n";
+	    #OUT+"it is defined as\n"+r.str;
+	    UNIX::exit(1);
+	 end;
+	 a::=r[0][0];
+         loop
+	    i::=0.upto!(a.size-1);
+	    if ~((i=0 and (a[i]='+' or a[i]='-')) or (a[i]>='0' and a[i]<='9')) then
+	       #OUT+s+" should be defined as an INT in the CONFIG file.\n";
+	       #OUT+"it is defined as\n"+r.str;
+	       UNIX::exit(1);
+	    end;
+	 end;
+      else
+	 #OUT+s+" should be defined as an INT in the CONFIG file.\n";
+	 #OUT+"it is defined as\n"+r.str;
+	 UNIX::exit(-1);
+      end;
+   end;
+
+   private defined(s:STR):BOOL is return ~void(get(s)); end;
+
+   private check is
+      check_for_string("C_COMPILER",1);
+      check_for_string("MAKE_COMMAND",1);
+      check_for_string("OBJECT_EXT",1);
+      check_for_string("LIB_EXT",1);
+      check_for_string("C_EXT",1);
+      check_for_string("SHELL_SEP",1);
+      check_for_string("EXEC_OPTION",1);
+      check_for_string("CC_DEBUG_FLAG",2);
+      check_for_string("CC_OPTIMIZE_FLAG",2);
+      check_for_string("MAKE_VERBOSE_FLAG",2);
+      check_for_string("CC_PROLIX_FLAG",2);
+      check_for_string("LINK_OPTIONS",1);
+      check_for_string("GC_LINK",1);
+      check_for_strings("BUILTIN_CLASSES");
+      check_for_strings("REFERENCE_FREE");
+      check_for_strings("PLATFORMS");
+      check_for_strings("DEFAULT_PLATFORM");
+      check_for_bool("NULL_SEGFAULTS");
+      check_for_bool("SEPARATE_POINTERS");
+      check_for_bool("THREADS");
+      check_for_bool("DISTRIBUTED");
+      check_for_bool("ZONES");
+      check_for_bool("TRACE");
+      check_for_string("LIBRARY",2);
+      check_for_strings("ATOMIC_CLASSES");
+      check_for_int("POLLING");
+   end;
+
+   create:SAME is return new; end;
+
+   create(filename:STR):SAME is
+      r::=new;
+      r.read(filename);
+      return r;
+   end;
+
+   read(filename:STR) is
+      s::=#CONFIG_SCANNER(filename);
+      loop
+         e::=s.get_def!;
+	 tbl:=tbl.insert(e.name,e);
+      end;
+      check;
+   end;
+
+   get(s:STR):$CONFIG is
+      return tbl.get(s);
+   end;
+
+   get_rout(s:STR):CONFIG_ROUT is
+      r::=tbl.get(s);
+      typecase r when CONFIG_ROUT then 
+         return r;
+      else return void;
+      end;
+   end;
+
+   get_def(s:STR):CONFIG_DEF is
+      r::=tbl.get(s);
+      typecase r when CONFIG_DEF then return r;
+      else return void;
+      end;
+   end;
+
+   get_str(s:STR,i:INT):STR is
+      r::=get_def(s);
+      if void(r) or i>=r.size then return ""; end;
+      return r[i][0];
+   end;
+
+   get_bool(s:STR):BOOL is
+      r::=get_def(s);
+      return ~void(r) and r[0][0]="true";
+   end;
+
+   str:STR is 
+      r::="";
+      loop r:=r+tbl.targets!; end;
+      return r;
+   end;
+end;
+
+class TEST_CONFIG is
+   main is
+      t::=#CONFIG_TBL("CONFIG");      
+      #OUT+t.str+"\n";
+      #OUT+"\n";
+      #OUT+t.get("MAKE");
+      #OUT+t.get_def("PSATHER_FLAG");
+      #OUT+t.get_rout("INT_UPTO");
+      #OUT+t.get_rout("INT_PLUS");
+      #OUT+t.get_rout("xxx");
+   end;
+end;
+-- vim:sw=3:nosmartindent

@@ -1,0 +1,172 @@
+--------------------------->  GNU Sather - module  <---------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+(*
+
+The matrix and vector classes were originally developed by S.
+Omohundro.  Later, however, Matt Kennel put a tremendous effort into
+defining new abstractions and links into the BLAS libraries.  These
+are his notes on the fundamental numerical matrix classes for Sather.
+
+First issue to clarify: what is the difference between a "matrix" and
+a "two-dimensional array"?
+
+A: A matrix is a finite-dimensional linear operator over a given
+coordinate system (the vector space).  As such it pretty much only
+makes sense to have matrices whose elements are ring elements, that
+is, can add, subtract and multiply, have additive and and
+multiplicative identities, as well as additive inverses.
+
+ At this stage, I'm going to require in addition that the matrix
+elements also be _field elements_, requiring that they have
+multiplicative inverses and hence division.  The only fields that I
+can really see right now being relevant are the real and complex
+numbers, each implemented as single precision or double precision
+floating point.  Maybe quaternions would be useful for somebody, but
+one must keep in mind that quaternions are not Abelian (commutative)
+and so care would have to be taken to define proper order of
+operations.
+
+ Matrices are often _implemented_ in terms of two-dimensional arrays
+of numbers, but this is not fundamental.  Indeed in realistic
+numerical problems it may make sense to implement matrices in terms of
+only that small subset of non-zero elements {sparse matrices} or,
+perhaps as a combination of principal components and significant
+eigenvectors or whatever.  In linear algebra computations there are
+often "factorizations" of matrices: M -> L*U.  A structure consisting
+of "L*U" is a good representation for a matrix just as well as a dense
+2-d array of numbers.
+
+ Still, the initial goal for the matrix classes is to provide convenient
+access to standard computational routines for single and double precision
+real and complex matrices.
+ 
+ The Basic matrix classes only include routines for generic dense
+rectangular matrices, and no sophisticated linear algebra algorithms.
+    
+ By contrast the Fancy matrix classes will include linear algebra
+computations such as solving systems of linear equations,
+eigenproblems, and various kinds of matrix decompositions on dense and
+special sparse matrices.
+
+ The Basic matrix class will only assume and require the presence of
+BLAS and not LAPACK.  Furthermore, it will NOT provide all of the BLAS
+functionality, just those parts relevant to operations on general
+dense matrices and vectors.  The Fancy matrix classes will extend the
+basic matrix classes by adding most of of the BLAS functionality and
+some reasonable subset of LAPACK.  The extent of this depends on how
+much gets done by me and other volunteers.
+ 
+ The Basic matrix classes are, in fact, implemented as a
+two-dimensional array of numbers.  We choose the *column-major* layout
+in memory, following Fortran convention, so as to aid interfacing with
+the huge corpus of Fortran numerical routines.  Most other langauges,
+e.g. C use row-major arrays by default.  The rather feeble
+``built-in'' 2-d arrays in C++ add nothing beyond those in C. C++
+matrix classes use a wide variety of representations, but no matrix
+class is yet standard.
+
+ The goal of the Sather Basic Matrix Class is to provide a standard
+single matrix class design as good as the best C++ classes, with a
+standard high-performance implementation as good as the best C++
+classes.
+
+ Any successful program library requires a thoughtful design.  It
+should provide enough diversity in functionality to support a wide
+range of applications, and yet the library should be as simple as
+possible.  Better to have a few key mechanisms instead of a profusion
+of similar, but not identical mechanisms.  Finally, it should provide
+maximum performance.
+ 
+ The tension between these three is eternal and fundamental.  Its
+resolution requires creativity and experience.
+ 
+ Fortunately, the computational world has extensive experience with
+linear algebra, and thus the difficult intellectual classifications
+have already been done.
+
+ In particular, the Basic Linear Algebra Subroutines (BLAS) are the
+standard "core" algorithms for contemporary "standard" numerical
+subroutines.
+ 
+ In particular, the famous LINPACK and EISPACK, now superseded by
+LAPACK, use BLAS routines.
+ 
+ BLAS routines sometimes come written in assembly expertly tuned for
+high performance on various platforms.  Even without this, there are
+free C and Fortran sources for the BLAS.  {LAPACK and BLAS are
+available for download on the Internet from NETLIB, the de facto
+standard repository for computational software.  You can use FTP or
+the WWW and connect to "netlib.att.com" or "netlib.ornl.gov".}
+ 
+ Thus the standard implementation of Sather's matrix classes will rely
+on BLAS routines to for the computational gruntwork.  The fuller
+matrix classes will use BLAS and LAPACK to provide easy-to-use
+interfaces to a variety of sophisticated high-performance numerical
+algorithms.
+ 
+ Out of the three factors mentioned above, the BLAS routines have been
+developed mostly for performance.  Their algorithmic interfaces to the
+human programmer are not particularly friendly.  The Sather Basic
+matrix classes are intended to provide a convenient front-end with
+idiomatic Sather functionality to traditional Fortran routines without
+substantially sacrificing performance.  In choosing member routines, I
+put a higher priority on providing many explicit variations of
+operations for the sake of having the least overhead instead of
+accepting some run-time penalty in favor of having a tighter and
+smaller class interface.
+
+ This is similar to the goal of the LAPACK++ library for C++.  I think
+this is the best C++ matrix class library, and I will keep it in mind
+while designing the Sather library, though I do not intend to copy it
+slavishly.  In particular LAPACK++ pretty much requires LAPACK as well
+as BLAS; I hope to have a basic subset which does not LAPACK to
+compile.  The LAPACK++ library accesses individual elements through
+double indirection; its matrix classes contain a pointer to
+dynamically allocated raw storage.  That allows 'matrix references'
+that denote subsets of existing matrices (3rd through 5th row, 2nd
+through 9th column of A) to be the same class as the matrix class
+itself simplifying the interface at some performance cost.  I choose
+not to pursue this design for the sake of performance.  As is natural
+for Sather, the heap storage for the matrix will be contained "in" the
+object itself via an inheritance path to AREF{T}.  At some point
+'matrix reference' classes may be written if there is a need.
+ 
+ The Sather compiler itself has optimization technology capable of
+making naive executable code for numerical kernels that is much faster
+than naive C++ and C, though handtuned C can achieve somewhat better
+results.  
+ 
+ However, for today's microprocessors, kernels hand tuned for a
+particular architecture and cache can perform far better than even
+fairly careful, portable C. Most users will be better served by front
+ends to those fast and reliable algorithms in BLAS and LAPACK rather
+than new development in Sather.
+ 
+ Other sorts of algorithms, e.g. minimizations, ODE integrations,
+genetic algorithms and the like would benefit more from the modern
+data structuring and object-orientation facilities of Sather, and hence
+native rewrites would be more rewarding.  I hope somebody tries to
+work on these, as I don't have the time or expertise.
+
+*)
+
+abs_mat.sa  -has abs_mat.sa $MAT
+mat.sa  -has mat.sa MAT NUMERIC_MAT
+matd.sa -has matd.sa MATD
+matcpx.sa -has matcpx.sa MATCPX MATCPXD
+abs_vec.sa -has abs_vec.sa $VEC
+vec.sa  -has vec.sa VEC VEC_LENGTH_MIXIN 
+vecd.sa -has vecd.sa VECD
+veccpx.sa -has veccpx.sa VECCPX_LENGTH_MIXIN VECCPX VECCPXD
+test_matvec.sa -has test_matvec.sa MATVEC_TEST

@@ -1,0 +1,133 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>Mifluz: Cache tuning</title>
+
+<meta name="description" content="Mifluz: Cache tuning">
+<meta name="keywords" content="Mifluz: Cache tuning">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Concept-Index.html#Concept-Index" rel="index" title="Concept Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html#Top" rel="up" title="Top">
+<link href="Key-Specification.html#Key-Specification" rel="next" title="Key Specification">
+<link href="Data-Storage-Spec.html#Data-Storage-Spec" rel="previous" title="Data Storage Spec">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Cache-tuning"></a>
+<div class="header">
+<p>
+Next: <a href="Key-Specification.html#Key-Specification" accesskey="n" rel="next">Key Specification</a>, Previous: <a href="Data-Storage-Spec.html#Data-Storage-Spec" accesskey="p" rel="previous">Data Storage Spec</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Cache-tuning-1"></a>
+<h2 class="chapter">6 Cache tuning</h2>
+
+<p>The cache memory used by <code>mifluz</code> has a tremendous impact on
+performance.  It is set by the <strong>wordlist_cache_size</strong> attribute
+(see WordList(3) and mifluz(3)).  It holds pages from the inverted index
+in memory (uncompressed if the file is compressed) to reduce disk
+access. Pages migrate from disk to memory using a LRU.
+</p>
+<p>Each page in the cache is really a node of the B-Tree used to store the inverted
+index entries. The internal pages are intermediate nodes that <code>mifluz</code> must
+traverse each time a key is searched. It is therefore very important to keep them in memory. 
+Fortunately they only count for 1% of the total size of the index, at most. 
+The size of the cache must at least include enough space for the internal pages.
+</p>
+<p>The other factors that must be taken into account in sizing the cache are highly dependant
+on the application. A typical case is insertion of many random words in the index.
+In this case two factors are of special importance:
+</p>
+<dl compact="compact">
+<dt>&lsquo;<samp>repartition of unique words</samp>&rsquo;</dt>
+<dd><p>When filling an inverted index it is very likely that the dictionary of
+unique words occuring in the index is limited. Let&rsquo;s say you have 1 000 000
+unique words in a 100 000 000 occurrences index. Now assume that 90 000 000
+occurrences are only using 20 000 unique words, that is 90% of the index is
+filled with 2% of the complete vocabulary. If you are in this situation,
+the indexing process will spend 90% of its time updating 20 000 pages.
+If you can afford 20 000 * pagesize bytes of cache, you will have the
+maximum insertion rate. 
+</p>
+<p>The general rule is : estimate or calculate how many unique words fill
+90% of your index. Multiply this number by the pagesize and increase your
+cache by that amount. 
+See <strong>wordlist_page_size</strong> attribute in WordList(3) or mifluz(3). 
+</p>
+</dd>
+<dt>&lsquo;<samp>order of numbers following the key</samp>&rsquo;</dt>
+<dd><p>The cache calculation above is fine as long as the words inserted are associated
+with increasing numbers in the key. If the numbers following the word in the
+key are random, the cache efficiency will be reduced. Where possible the application
+should therefore make sure that when inserting two identical words, the first is
+followed by a number that is lower than the second. In other words, insert
+</p>
+<div class="example">
+<pre class="example">foo 100
+foo 103
+</pre></div>
+
+<p>rather than
+</p>
+<div class="example">
+<pre class="example">foo 103
+foo 100
+</pre></div>
+
+</dd>
+</dl>
+
+<p>This hint must not be considered in isolation but with careful analysis of the
+distribution of the key components (word and numbers). For instance it does
+not matter much if a random key follows the word as long as the range
+of values of the number is small.
+</p>
+<p>The conclusion is that the cache size should be at least 1% of the total index
+size (uncompressed) plus a number of bytes that depends on the usage pattern.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Key-Specification.html#Key-Specification" accesskey="n" rel="next">Key Specification</a>, Previous: <a href="Data-Storage-Spec.html#Data-Storage-Spec" accesskey="p" rel="previous">Data Storage Spec</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

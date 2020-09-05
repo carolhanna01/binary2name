@@ -1,0 +1,257 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- This class can manage exactly one lock. If the lock is used in combination
+-- with other ones, a $LM_COMBINED_LOCK_MANAGER has to take over.
+class LM_SINGLE_LOCK_MANAGER < $LM_SINGLE_LOCK_MANAGER is
+   private attr ll_mutex:SPINLOCK;          -- Controls access to self.
+   readonly attr lm_is_locked:BOOL;         -- Keeps the state of ll_lock.
+   -- List of managed locks and their queues.
+   readonly attr managed_locks:ARRAY{$LOCK};
+   readonly attr managed_queues:ARRAY{LM_THREAD_HANDLE_QUEUE};
+   private attr managed_queue:LM_THREAD_HANDLE_QUEUE;     -- Just a shortcut.
+
+   private attr holding_threads_counter:INT; -- Number of threads holding locks.
+   -- The total number requests waiting for locks.
+   private attr waiting_requests_counter:INT;
+   
+   attr taken_over:BOOL;     -- True, if managers has been taken over.
+   private attr take_over_thread:THREAD_ID;
+   const thread_id_nil:THREAD_ID:=THREAD_ID::nil;
+
+   create(lck:$LOCK) is
+      -- This manager links with one lock only.
+      ret ::= new;
+      ret.single_lock_lm_init(lck);
+   end; -- create(lck:$LOCK):SAME
+   
+   private single_lock_lm_init(lck:$LOCK) is
+      lm_init;
+      -- Create the array managed_locks.
+      managed_locks := |lck|;
+      -- Set the locks manager references to the new manager.
+      lck.set_manager(self);
+      -- If necessary, create and initialize lock's queue.
+      if void(lck.queue) then lck.init_queue; end;
+      -- Create the array managed_queues.
+      managed_queues := |lck.queue|;
+      managed_queue := lck.queue;
+   end; -- single_lock_lm_init(lck:$LOCK)
+
+   lm_init is 
+      ll_mutex := #;
+      take_over_thread := thread_id_nil;
+   end;
+
+   try:BOOL is
+      if ll_mutex.try then
+	 lm_is_locked := true;
+	 return true;
+      else
+	 return false;
+      end;
+   end;
+
+   lck is
+      ll_mutex.lck; lm_is_locked := true;
+   end;
+
+   release is
+      lm_is_locked := false; ll_mutex.unlck;
+   end;
+
+   controls(these_locks:EXT_OB,size:INT):BOOL pre lm_is_locked is
+      -- .these_locks is a pointer to a C array of $LOCK references.
+      -- Test if all locks of array .these_locks are managed by self.
+      -- Return false, if one of the locks is mot managed by self.
+      -- Since this manager only controls one lock, the check is easy:
+      if size > 1 then return false; end;
+      if SYS::ob_eq(self,LM_LOCK_C_ARRAY::get(these_locks,0).manager) then
+	 return true;
+      end;
+      return false;
+   end; -- controls(these_locks:EXT_OB,size:INT):BOOL
+
+   number_of_threads_holding_locks:INT is return holding_threads_counter; end;
+
+   acquire_single_lock(this_lock:$LOCK) pre lm_is_locked is
+      -- Get the thread ID.
+      tid ::= THREAD_ID::me;
+      -- Is there a queue of threads waiting for this lock or is there a non-empty
+      -- queue that has been scanned to the end during the last check?
+      -- This if statement is not necessary for the single lock manager
+      -- but for complex lock statements.
+      if this_lock.queue.not_blocked then
+         -- Check, if the lock can be acquired.
+	 if this_lock.acquirable(tid) then
+            -- Acquire the lock.
+	    this_lock.acquire(tid);
+	    --Adjust the lock counter.
+	    holding_threads_counter := holding_threads_counter + 1;
+            -- Release the lock manager.
+	    release;
+	    return;
+	 end;
+      end;
+      -- The request has to be enqueued.
+      -- Create a low level lock and lock it.
+      sleeper ::= #LL_LOCK;	-- This call uses malloc.
+      sleeper.lck;
+      -- Enqueue the request.
+      this_lock.queue.enq(#LM_THREAD_HANDLE(tid,sleeper,this_lock));
+      -- Inform the lock about the request.
+      this_lock.request(tid);
+      -- Adjust the counter of waiting requests.
+      waiting_requests_counter := waiting_requests_counter + 1;
+      -- Release the lock manager.
+      release;
+      -- Wait until the low level lock becomes unlocked.
+      sleeper.lck;
+      -- Continue thread execution.
+   end; -- acquire_single_lock(this_lock:$LOCK)
+
+   try_single_lock(this_lock:$LOCK):C_INT pre lm_is_locked is
+      -- Get the thread ID.
+      tid ::= THREAD_ID::me;
+      -- Is there a queue of threads waiting for this lock or is there a non-empty
+      -- queue that has been scanned to the end during the last check?
+      -- This if statement is not necessary for the single lock manager
+      -- but for complex lock statements.
+      if this_lock.queue.not_blocked then
+         -- Check, if the lock can be acquired.
+	 if this_lock.acquirable(tid) then
+            -- Acquire the lock.
+	    this_lock.acquire(tid);
+	    --Adjust the lock counter.
+	    holding_threads_counter := holding_threads_counter + 1;
+            -- Release the lock manager.
+	    release;
+	    return #C_INT(1);
+	 end;
+      end;
+      -- Release the lock manager.
+      release;
+      -- Choose the else clause.
+      return #C_INT(0);
+   end; -- try_single_lock(this_lock:$LOCK):C_INT
+
+   release_single_lock(this_lock:$LOCK) pre lm_is_locked is
+      -- Release the lock.
+      this_lock.release(THREAD_ID::me);
+      --Adjust the lock counter.
+      holding_threads_counter := holding_threads_counter - 1;
+      -- Check if some waiting threads can acquire their locks.
+      if managed_queue.is_empty then release; return; end;
+      managed_queue.initialize_for_scanning;
+      -- Loop over all thread handles. Since a lock may be held by more than
+      -- one thread, the loop isn't stopped when a thread gets the lock.
+      loop ind ::= managed_queue.cursor!;
+	 if this_lock.acquirable(managed_queue[ind].tid) then
+	    get_lock(managed_queue,ind,true); end;
+      end;
+      managed_queue.scanned_completely;
+      -- Release the lock manager.
+      release;      
+   end; -- release_lock(this_single_lock:$LOCK)
+
+   unlock_single_lock(this_lock:$LOCK) pre lm_is_locked is
+      release_single_lock(this_lock);
+   end;
+
+   private get_lock(queue:LM_THREAD_HANDLE_QUEUE,index:INT, do_unlock:BOOL) is
+      -- Try if the queue is acquirable for thread .index of .queue. If yes,
+      -- Acquire the lock for thread .index of .queue, cancel the reservation
+      -- and remove the entry from the queue. The lock must be acquirable.
+      -- Unlock the low level lock if .do_unlock is true.
+      -- Abbreviation:
+      thl ::= queue[index];
+      thl.this_lock.acquire(thl.tid);
+      -- Cancel the request.
+      thl.this_lock.cancel_request(thl.tid);
+      -- Unlock the corresponding low level lock.
+      if do_unlock then
+         --Adjust the counter of holding threads.
+         holding_threads_counter := holding_threads_counter + 1;
+	 thl.ll_lock.unlck;
+      end;
+      -- Delete the thread handle from the queue.
+      queue.delete(index);
+      -- Adjust the counter of waiting requests.
+      waiting_requests_counter := waiting_requests_counter - 1;
+   end; -- private get_lock(queue,index,do_unlock)
+end; -- class LM_SINGLE_LOCK_MANAGER
+
+-- This class can manage a set of locks, but only as far as no conjunction or
+-- disjunction appears. If one of the locks is used in combination
+-- with other ones, a $LM_COMBINED_LOCK_MANAGER has to take over.
+-- This class is necessary for locks that are dependent of each other,
+-- e.g. a LM_MULTIPLE_LOCK_MANAGER manages all locks of a gate.
+class LM_MULTIPLE_LOCK_MANAGER < $LM_SINGLE_LOCK_MANAGER is
+   include LM_SINGLE_LOCK_MANAGER create->,managed_queue->;
+   -- List of managed locks and their queues.
+   readonly attr managed_locks:ARRAY{$LOCK};
+   readonly attr managed_queues:ARRAY{LM_THREAD_HANDLE_QUEUE};
+
+   -- This creation method does not return a reference.
+   create(locks:ARRAY{$LOCK}) is
+      -- This manager links with one lock only.
+      ret ::= new;
+      ret.lm_init;
+      -- Use .locks for .managed_locks.
+      ret.managed_locks := locks;
+      -- Create the arrays managed_queues.
+      ret.managed_queues := #(locks.asize);
+      -- Loop over all locks to be managed.
+      loop index ::= locks.ind!;
+	 lck ::= locks[index];
+	 -- Set the lock's manager reference to the new manager.
+	 lck.set_manager(ret);
+	 -- If necessary, create and initialize lock's queue.
+	 if void(lck.queue) then lck.init_queue; end;
+	 -- Add the lock's queue to the list of managed queues.
+         ret.managed_queues[index] := lck.queue;
+      end;
+   end; -- create(locks:ARRAY{$LOCK})
+
+   -- Overriding the "single" version.
+   release_single_lock(this_lock:$LOCK) pre lm_is_locked is
+      -- Release the lock.
+      this_lock.release(THREAD_ID::me);
+      --Adjust the lock counter.
+      holding_threads_counter := holding_threads_counter - 1;
+      -- Check if some waiting threads can acquire their locks.
+      check_all_locks;
+      -- Release the lock manager.
+      release;      
+   end; -- release_lock(this_single_lock:$LOCK)
+
+   private check_all_locks is
+      -- This kmanager controls only one independent locks. Thus, the queues
+      -- are checked independently of each other.
+      -- Loop over all queues.
+      loop queue ::= managed_queues.elt!;
+         -- Loop over all thread handles. Since a lock may be held by more than
+         -- one thread, the loop isn't stopped when a thread gets the lock.
+	 queue.initialize_for_scanning;
+         loop index ::= queue.cursor!;
+	    if queue[index].this_lock.acquirable(queue[index].tid) then
+	       get_lock(queue,index,true); end;
+         end;
+	 queue.scanned_completely;
+      end;
+--      if waiting_requests_counter > 0 and holding_threads_counter < 1 then
+--	 #OUT + "LM_MULTIPLE_LOCK_MANAGER: Deadlock detected.\n";
+--	 UNIX::exit(654);
+--      end;
+   end; -- check_all_locks
+end; -- class LM_MULTIPLE_LOCK_MANAGER

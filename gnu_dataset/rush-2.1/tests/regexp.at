@@ -1,0 +1,113 @@
+# This file is part of GNU Rush. 
+# Copyright (C) 2019 Sergey Poznyakoff
+#
+# GNU Rush is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# GNU Rush is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Rush.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([regexp options])
+AT_KEYWORDS([match regexp])
+
+AT_RUSH_TEST([
+rush 2.0
+rule
+  match \$command ~ "fo+\$"
+],
+[cmdline,argv],
+[ls foo],
+[0],
+[{
+    "cmdline":"ls foo",
+    "argv":[[
+        "ls",
+        "foo"
+    ]]
+}
+],
+[])
+
+AT_RUSH_TEST([
+rush 2.0
+rule
+  match \$command !~ "fo+\$"
+],
+[cmdline,argv],
+
+[ls foo],
+[1],
+[],
+[rush: Error: no matching rule for "ls foo", user $MY_USER
+],
+
+[ls bar],
+[0],
+[{
+    "cmdline":"ls bar",
+    "argv":[[
+        "ls",
+        "bar"
+    ]]
+}
+],
+[])
+
+AT_RUSH_TEST([
+rush 2.0
+global
+  regexp basic
+rule
+  match \$command ~ "fo+\$"
+],
+[cmdline,argv],
+
+[ls foo],
+[1],
+[],
+[rush: Error: no matching rule for "ls foo", user $MY_USER
+],
+
+[ls fo+],
+[0],
+[{
+    "cmdline":"ls fo+",
+    "argv":[[
+        "ls",
+        "fo+"
+    ]]
+}
+],
+[])
+
+AT_RUSH_TEST([
+rush 2.0
+global
+  regexp basic ignore-case
+rule
+  match \$command ~ "fo+\$"
+],
+[cmdline,argv],
+
+[ls Fo+],
+[0],
+[{
+    "cmdline":"ls Fo+",
+    "argv":[[
+        "ls",
+        "Fo+"
+    ]]
+}
+],
+[])
+
+
+AT_CLEANUP
+

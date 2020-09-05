@@ -1,0 +1,453 @@
+
+'''
+''' Part of the ht://Dig package   <http://www.htdig.org/>
+''' Copyright (c) 1999, 2000, 2001 The ht://Dig Group
+''' For copyright details, see the file COPYING in your distribution
+''' or the GNU General Public License version 2 or later
+''' <http://www.gnu.org/copyleft/gpl.html>
+''' 
+''' 
+.TH WordList 3 local
+.SH NAME
+WordList \-
+
+abstract class to manage and use an inverted index file.
+
+
+.SH SYNOPSIS
+.nf
+.ft CW
+
+#include <mifluz.h>
+
+WordContext context;
+
+WordList* words = context->List();
+
+delete words;
+.ft R
+.fi
+
+.SH DESCRIPTION
+
+WordList is the
+.I mifluz
+equivalent of a database handler. Each
+WordList object is bound to an inverted index file and implements the
+operations to create it, fill it with word occurrences and search 
+for an entry matching a given criterion.
+
+WordList is an abstract class and cannot be instanciated. 
+The
+.B List
+method of the class WordContext will create 
+an instance using the appropriate derived class, either WordListOne
+or WordListMulti. Refer to the corresponding manual pages for
+more information on their specific semantic.
+
+When doing bulk insertions, mifluz creates temporary files that
+contain the entries to be inserted in the index. Those files are
+typically named
+.I indexC00000000
+. The maximum size of the 
+temporary file is
+.B wordlist_cache_size
+/ 2. When the maximum
+size of the temporary file is reached, mifluz creates another temporary
+file named
+.I indexC00000001
+. The process continues until mifluz
+created 50 temporary file. At this point it merges all temporary files
+into one that replaces the first
+.I indexC00000000
+. Then it continues
+to create temporary file again and keeps following this algorithm until
+the bulk insertion is finished. When the bulk insertion is finished,
+mifluz has one big file named
+.I indexC00000000
+that contains
+all the entries to be inserted in the index. mifluz inserts all the
+entries from
+.I indexC00000000
+into the index and delete the 
+temporary file when done. The insertion will be fast since all the
+entries in
+.I indexC00000000
+are already sorted. 
+
+The parameter
+.B wordlist_cache_max
+can be used to prevent the
+temporary files to grow indefinitely. If the total cumulated size of
+the
+.I indexC*
+files grow beyond this parameter, they are merged
+into the main index and deleted. For instance setting this parameter
+value to 500Mb garanties that the total size of the
+.I indexC*
+files will not grow above 500Mb.
+
+
+.SH CONFIGURATION
+For more information on the configuration attributes and a complete list of attributes, see the mifluz(3) manual page.
+.TP
+.B  wordlist_extend {true|false} (default false)
+If
+.B true
+maintain reference count of unique 
+words. The
+.B Noccurrence
+method gives access to this count.
+.TP
+.B  wordlist_verbose <number> (default 0)
+Set the verbosity level of the WordList class.
+
+
+1 walk logic
+
+
+2 walk logic details
+
+
+3 walk logic lots of details
+.TP
+.B  wordlist_page_size <bytes> (default 8192)
+Berkeley DB page size (see Berkeley DB documentation)
+.TP
+.B  wordlist_cache_size <bytes> (default 500K)
+Berkeley DB cache size (see Berkeley DB documentation)
+Cache makes a huge difference in performance. It must be at least 2%
+of the expected total data size. Note that if compression is activated
+the data size is eight times larger than the actual file size. In this
+case the cache must be scaled to 2% of the data size, not 2% 
+of the file size. See
+.B Cache tuning
+in the mifluz guide for
+more hints.
+See WordList(3) for the rationale behind cache file handling.
+.TP
+.B  wordlist_cache_max <bytes> (default 0)
+Maximum size of the cumulated cache files generated when doing bulk
+insertion with the
+.B BatchStart()
+function. When this limit is
+reached, the cache files are all merged into the inverted index. 
+The value 0 means infinite size allowed.
+See WordList(3) for the rationale behind cache file handling.
+.TP
+.B  wordlist_cache_inserts {true|false} (default false)
+If true all
+.B Insert
+calls are cached in memory. When the 
+WordList object is closed or a different access method is called
+the cached entries are flushed in the inverted index.
+.TP
+.B  wordlist_compress {true|false} (default false)
+Activate compression of the index. The resulting index is eight times
+smaller than the uncompressed index.
+.PP
+
+.SH METHODS
+.TP
+.B   inline WordContext* GetContext() 
+Return a pointer to the WordContext object used to create
+this instance.
+.TP
+.B   inline const WordContext* GetContext() const 
+Return a pointer to the WordContext object used to create
+this instance as a const.
+.TP
+.B   virtual inline int Override(const WordReference& wordRef) 
+Insert
+.B wordRef
+in index. If the
+.I Key()
+part of
+the
+.B wordRef
+exists in the index, override it.
+Returns OK on success, NOTOK on error.
+.TP
+.B   virtual int Exists(const WordReference& wordRef) 
+Returns OK if
+.B wordRef
+exists in the index, NOTOK otherwise.
+.TP
+.B   inline int Exists(const String& word) 
+Returns OK if
+.B word
+exists in the index, NOTOK otherwise.
+.TP
+.B   virtual int WalkDelete(const WordReference& wordRef) 
+Delete all entries in the index whose key matches the
+.I Key()
+part of
+.B wordRef
+, using the
+.I Walk
+method.
+Returns the number of entries successfully deleted.
+.TP
+.B   virtual int Delete(const WordReference& wordRef) 
+Delete the entry in the index that exactly matches the
+.I Key()
+part of
+.B wordRef.
+Returns OK if deletion is successfull, NOTOK otherwise.
+.TP
+.B   virtual int Open(const String& filename, int mode) 
+Open inverted index
+.B filename.
+.B mode
+may be
+.I O_RDONLY
+or
+.I O_RDWR.
+If mode is
+.I O_RDWR
+it can be or'ed with
+.I O_TRUNC
+to reset
+the content of an existing inverted index.
+Return OK on success, NOTOK otherwise.
+.TP
+.B   virtual int Close() 
+Close inverted index.
+Return OK on success, NOTOK otherwise.
+.TP
+.B   virtual unsigned int Size() const 
+Return the size of the index in pages.
+.TP
+.B   virtual int Pagesize() const 
+Return the page size
+.TP
+.B   virtual WordDict *Dict() 
+Return a pointer to the inverted index dictionnary.
+.TP
+.B   const String& Filename() const 
+Return the filename given to the last call to Open.
+.TP
+.B   int Flags() const 
+Return the mode given to the last call to Open.
+.TP
+.B   inline List *Find(const WordReference& wordRef) 
+Returns the list of word occurrences exactly matching the
+.I Key()
+part of
+.B wordRef.
+The
+.I List
+returned
+contains pointers to
+.I WordReference
+objects. It is
+the responsibility of the caller to free the list. See List.h
+header for usage.
+.TP
+.B   inline List *FindWord(const String& word) 
+Returns the list of word occurrences exactly matching the
+.B word.
+The
+.I List
+returned
+contains pointers to
+.I WordReference
+objects. It is
+the responsibility of the caller to free the list. See List.h
+header for usage.
+.TP
+.B   virtual List *operator [] (const WordReference& wordRef) 
+Alias to the
+.B Find
+method.
+.TP
+.B   inline List *operator [] (const String& word) 
+Alias to the
+.B FindWord
+method.
+.TP
+.B   virtual List *Prefix (const WordReference& prefix) 
+Returns the list of word occurrences matching the
+.I Key()
+part of
+.B wordRef.
+In the
+.I Key()
+, the string
+(accessed with
+.I GetWord()
+) matches any string that begins
+with it. The
+.I List
+returned contains pointers to
+.I WordReference
+objects. It is the responsibility of the
+caller to free the list.
+.TP
+.B   inline List *Prefix (const String& prefix) 
+Returns the list of word occurrences matching the
+.B word.
+In the
+.I Key()
+, the string (accessed with
+.I GetWord()
+) matches any string that begins with it. The
+.I List
+returned contains pointers to
+.I WordReference
+objects. It is the responsibility of the caller to free the
+list.
+.TP
+.B   virtual List *Words() 
+Returns a list of all unique words contained in the inverted
+index. The
+.I List
+returned contains pointers to
+.I String
+objects. It is the responsibility of the caller
+to free the list. See List.h header for usage.
+.TP
+.B   virtual List *WordRefs() 
+Returns a list of all entries contained in the
+inverted index. The
+.I List
+returned contains pointers to
+.I WordReference
+objects. It is the responsibility of
+the caller to free the list. See List.h header for usage.
+.TP
+.B   virtual WordCursor *Cursor(wordlist_walk_callback_t callback, Object *callback_data) 
+Create a cursor that searches all the occurrences in the
+inverted index and call
+.B ncallback
+with
+.B ncallback_data
+for every match.
+.TP
+.B   virtual WordCursor *Cursor(const WordKey &searchKey, int action = HTDIG_WORDLIST_WALKER) 
+Create a cursor that searches all the occurrences in the
+inverted index and that match
+.B nsearchKey.
+If
+.B naction
+is set to HTDIG_WORDLIST_WALKER calls
+.B searchKey.callback
+with
+.B searchKey.callback_data
+for every match. If
+.B naction
+is set to
+HTDIG_WORDLIST_COLLECT push each match in
+.B searchKey.collectRes
+data member as a
+.B WordReference
+object. It is the responsibility
+of the caller to free the
+.B searchKey.collectRes
+list.
+.TP
+.B   virtual WordCursor *Cursor(const WordKey &searchKey, wordlist_walk_callback_t callback, Object * callback_data) 
+Create a cursor that searches all the occurrences in the
+inverted index and that match
+.B nsearchKey
+and calls
+.B ncallback
+with
+.B ncallback_data
+for every match.
+.TP
+.B   virtual WordKey Key(const String& bufferin) 
+Create a WordKey object and return it. The
+.B bufferin
+argument
+is used to initialize the key, as in the WordKey::Set method. 
+The first component of
+.B bufferin
+must be a word that is translated
+to the corresponding numerical id using the WordDict::Serial
+method.
+.TP
+.B   virtual WordReference Word(const String& bufferin, int exists = 0) 
+Create a WordReference object and return it. The
+.B bufferin
+argument is used to initialize the structure,
+as in the WordReference::Set method.  The first component of
+.B bufferin
+must be a word that is translated to the
+corresponding numerical id using the WordDict::Serial method.
+If the
+.B exists
+argument is set to 1, the method 
+WordDict::SerialExists is used instead, that is no serial is
+assigned to the word if it does not already have one.
+Before translation the word is normalized using the
+WordType::Normalize method. The word is saved using the
+WordReference::SetWord method.
+.TP
+.B   virtual WordReference WordExists(const String& bufferin) 
+Alias for Word(bufferin, 1).
+.TP
+.B   virtual void BatchStart()
+Accelerate bulk insertions in the inverted index. All 
+insertion done with the
+.B Override
+method are batched
+instead of being updating the inverted index immediately.
+No update of the inverted index file is done before the
+.B BatchEnd
+method is called.
+.TP
+.B   virtual void BatchEnd()
+Terminate a bulk insertion started with a call to the
+.B BatchStart
+method. When all insertions are done
+the
+.B AllRef
+method is called to restore statistics.
+.TP
+.B   virtual int Noccurrence(const String& key, unsigned int& noccurrence) const 
+Return in
+.B noccurrence
+the number of occurrences of the
+string contained in the
+.I GetWord()
+part of
+.B key.
+Returns OK on success, NOTOK otherwise.
+.TP
+.B   virtual int Write(FILE* f) 
+Write on file descriptor
+.B f
+an ASCII description of the
+index. Each line of the file contains a
+.I WordReference
+ASCII description.
+Return OK on success, NOTOK otherwise.
+.TP
+.B   virtual int WriteDict(FILE* f) 
+Write on file descriptor
+.B f
+the complete dictionnary 
+with statistics.
+Return OK on success, NOTOK otherwise.
+.TP
+.B   virtual int Read(FILE* f) 
+Read
+.I WordReference
+ASCII descriptions from
+.B f
+,
+returns the number of inserted WordReference or < 0 if an error
+occurs. Invalid descriptions are ignored as well as empty
+lines.
+.PP
+
+.SH AUTHORS
+Loic Dachary loic@gnu.org
+
+The Ht://Dig group http://dev.htdig.org/
+
+
+.SH SEE ALSO
+htdb_dump(1), htdb_stat(1), htdb_load(1), mifluzdump(1), mifluzload(1), mifluzsearch(1), mifluzdict(1), WordContext(3), WordDict(3), WordListOne(3), WordKey(3), WordKeyInfo(3), WordType(3), WordDBInfo(3), WordRecordInfo(3), WordRecord(3), WordReference(3), WordCursor(3), WordCursorOne(3), WordMonitor(3), Configuration(3), mifluz(3)
+

@@ -1,0 +1,783 @@
+;;; Excercise the XDR language compiler.              -*- Scheme -*-
+;;;
+;;; GNU Guile-RPC --- A Scheme implementation of ONC RPC.
+;;; Copyright (C) 2008, 2010, 2012, 2014  Free Software Foundation, Inc.
+;;;
+;;; This file is part of GNU Guile-RPC.
+;;;
+;;; GNU Guile-RPC is free software; you can redistribute it and/or modify it
+;;; under the terms of the GNU Lesser General Public License as published by
+;;; the Free Software Foundation; either version 3 of the License, or (at
+;;; your option) any later version.
+;;;
+;;; GNU Guile-RPC is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+(define-module (tests compiler)
+  :use-module (rpc compiler)
+  :use-module ((rpc compiler parser)
+               #:select (*parser-options* location-line location-column))
+
+  :use-module (rpc xdr types)
+  :use-module (rpc xdr)
+
+  :use-module (rnrs bytevectors)
+  :use-module (rnrs io ports)
+
+  :use-module (srfi srfi-1)
+  :use-module (srfi srfi-13)
+  :use-module (srfi srfi-34)
+  :use-module (srfi srfi-39)
+  :use-module (srfi srfi-64))
+
+
+;;;
+;;; Tools.
+;;;
+
+(define (xdr-text . body)
+  (open-input-string (string-join body (string #\newline))))
+
+(define (xdr-encodable? type value)
+  ;; Return true if was able to succesfully encode/decode VALUE in TYPE.
+  (let* ((size (xdr-type-size type value))
+         (bv   (make-bytevector size)))
+    (xdr-encode! bv 0 type value)
+    (equal? (xdr-decode type (open-bytevector-input-port bv))
+            value)))
+
+(define (every? pred . args)
+  (not (not (apply every pred args))))
+
+(define (valid-xdr-types? types value-alist)
+  (define (failed name value)
+    (format (current-error-port) "~a: failed to encode `~A'~%"
+            name value)
+    #f)
+
+  (and (every? (lambda (value-alist)
+                 (let ((type-name (car value-alist)))
+                   (assoc type-name types)))
+               value-alist)
+       (every? (lambda (name+type)
+                 (let* ((name   (car name+type))
+                        (type   (cdr name+type))
+                        (values (assoc name value-alist)))
+                   (and (pair? values)
+                        (every? (lambda (value)
+                                  (let ((ok? (xdr-encodable? type value)))
+                                    (or ok? (failed name value))))
+                                (cdr values)))))
+               types)))
+
+(define (matches? pattern sexp)
+  ;; Return true if SEXP matches PATTERN.  PATTERN is a regular S-exp, with
+  ;; `_' as the match-all thing.
+  (let loop ((pattern pattern)
+             (sexp    sexp))
+    (cond ((eq? pattern '_) #t)
+          ((list? pattern)
+           (and (list? sexp)
+                (or (and (pair? pattern) (pair? sexp)
+                         (loop (car pattern) (car sexp))
+                         (loop (cdr pattern) (cdr sexp)))
+                    (and (null? pattern) (null? sexp)))))
+          (else
+           (equal? pattern sexp)))))
+
+
+;;;
+;;; Compiler.
+;;;
+
+(test-begin "xdr-compiler")
+
+
+;;;
+;;; Code generation compiler back-end.
+;;;
+
+(test-equal "simple types & constants"
+            '((define the-constant 2)
+              (define the-struct
+                (make-xdr-struct-type (list xdr-integer xdr-float)))
+              (define the-enum
+                (make-xdr-enumeration 'the-enum
+                                      `((one . 1)
+                                        (two . ,the-constant)))))
+
+            (rpc-language->scheme-client
+             (xdr-text "const the_constant = 2;"
+                       "struct the_struct { int x; float y; };"
+                       "typedef enum { one = 1, two = the_constant } "
+                       "        the_enum;")
+             #t #t))
+
+(test-equal "unions"
+            '((define foo
+                xdr-integer)
+              (define the-enum
+                (make-xdr-enumeration 'the-enum
+                                      `((zero . 0)
+                                        (one  . 1)
+                                        (two  . 2))))
+              (define the-union
+                (make-xdr-union-type xdr-integer
+                                     `((0 . ,foo)
+                                       (1 . ,foo)
+                                       (2 . ,xdr-float))
+                                     #f))
+              (define the-union-with-default
+                (make-xdr-union-type the-enum
+                                     `((zero . ,foo)
+                                       (one  . ,foo)
+                                       (two  . ,xdr-void))
+                                     the-enum)))
+
+            (rpc-language->scheme-client
+             (xdr-text "typedef int foo;"
+                       "enum the_enum { zero = 0, one = 1, two = 2 };"
+                       "union the_union switch (int discr) {"
+                       "  case 0: case 1: foo   the_foo;"
+                       "  case 2:         float the_float;"
+                       "};"
+                       "union the_union_with_default switch (the_enum e) {"
+                       "  case zero: case one: foo      the_foo;"
+                       "  case two:            void;"
+                       "  default:             the_enum chbouib;"
+                       "};")
+             #t #t))
+
+(test-eq    "union with anonymous types"
+            #t
+
+            (matches?
+             '((define foo
+                 (make-xdr-union-type
+                  (make-xdr-enumeration _ `((a . 0) (b . 1)))
+                  `((a . ,(make-xdr-struct-type (list xdr-integer
+                                                      xdr-double))))
+                  xdr-integer)))
+
+             (rpc-language->scheme-client
+              (xdr-text "union foo"
+                        "  switch (enum { a = 0, b = 1 } d) {"
+                        "    case a:  struct { int x; double y; } chbouib;"
+                        "    default: int bar;"
+                        "  };")
+              #t #t)))
+
+(test-eq    "arrays of anonymous types"
+            #t
+
+            (matches?
+             '((define foo
+                 (make-xdr-struct-type
+                  (make-list 10
+                             (make-xdr-struct-type
+                              (list (make-xdr-struct-type (list xdr-integer
+                                                                xdr-double))
+                                    xdr-double)))))
+               (define bar
+                 (make-xdr-vector-type
+                  (make-xdr-union-type xdr-integer
+                                       `((0 . ,xdr-boolean))
+                                       (make-xdr-struct-type
+                                        (make-list 10
+                                                   (make-xdr-enumeration
+                                                    _ `((a . 0))))))
+                  #f)))
+
+             (rpc-language->scheme-client
+              (xdr-text "typedef struct {"
+                        "  struct { int x; double y; } x; double y;"
+                        "} foo[10];"
+                        "typedef union switch (int d) {"
+                        "  case 0:  bool b;"
+                        "  default: enum { a = 0 } a[10];"
+                        "} bar<>;")
+              #t #t)))
+
+(test-equal "optional data unions"
+            '((define the-union
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,xdr-integer)
+                                       (FALSE . ,xdr-void))
+                                     #f)))
+
+            (rpc-language->scheme-client
+             (xdr-text "typedef int *the_union;")
+             #t #t))
+
+(test-equal "fixed-length arrays"
+            '((define the-array
+                (make-xdr-struct-type (make-list 10 xdr-integer)))
+              (define the-opaque-array
+                (make-xdr-fixed-length-opaque-array 8)))
+
+            (rpc-language->scheme-client
+             (xdr-text "typedef int the_array[10];"
+                       "typedef opaque the_opaque_array[010];")
+             #t #t))
+
+(test-equal "variable-length arrays"
+            '((define the-array
+                (make-xdr-vector-type xdr-float 10))
+              (define the-opaque-array
+                (make-xdr-variable-length-opaque-array #f)))
+
+            (rpc-language->scheme-client
+             (xdr-text "typedef float the_array<10>;"
+                       "typedef opaque the_opaque_array<>;")
+             #t #t))
+
+(test-equal "constant as array size"
+            '((define LEN 10)
+              (define foo (make-xdr-string LEN))
+              (define bar (make-xdr-vector-type xdr-integer LEN))
+              (define chbouib (make-xdr-struct-type (make-list LEN xdr-double))))
+
+            (rpc-language->scheme-client
+             (xdr-text "const LEN = 10;"
+                       "typedef string foo<LEN>;"
+                       "typedef int bar<LEN>;"
+                       "typedef double chbouib[LEN];")
+             #t #t))
+
+(test-equal "struct with array and string members"
+            '((define MAX 10)
+              (define s
+                (make-xdr-struct-type
+                 (list (make-xdr-string MAX)
+                       (make-xdr-fixed-length-opaque-array 9)
+                       (make-xdr-vector-type xdr-integer 8)))))
+
+            (rpc-language->scheme-client
+             (xdr-text "const MAX = 10;"
+                       "struct s { string foo<MAX>; opaque bar[9];"
+                       "           int chbouib<8>; };")
+             #t #t))
+
+(test-equal "unknown type"
+            '(1 13 "foo")
+
+            (guard (c ((compiler-unknown-type-error? c)
+                       (let ((name (compiler-unknown-type-error:type-name c))
+                             (loc  (compiler-error:location c)))
+                         (list (location-line loc) (location-column loc)
+                               name))))
+               (rpc-language->scheme-client
+                (xdr-text "typedef foo bar;")
+                #t #t)
+               #f))
+
+(test-equal "unknown constant"
+            '(1 9 "MAX")
+
+            (guard (c ((compiler-unknown-constant-error? c)
+                       (let ((name
+                              (compiler-unknown-constant-error:constant-name
+                               c))
+                             (loc (compiler-error:location c)))
+                         (list (location-line loc) (location-column loc)
+                               name))))
+              (rpc-language->scheme-client
+               (xdr-text "typedef opaque chbouib<MAX>;")
+               #t #t)))
+
+(test-equal "union with struct and array members"
+            '((define u
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,(make-xdr-struct-type
+                                                  (list xdr-integer
+                                                        xdr-double)))
+                                       (FALSE . ,(make-xdr-vector-type
+                                                  xdr-integer 10)))
+                                     #f)))
+
+            (rpc-language->scheme-client
+             (xdr-text "union u switch (bool b) {"
+                       "  case TRUE: struct { int x; double y; } foo;"
+                       "  case FALSE: int bar<10>;"
+                       "};")
+             #t #t))
+
+(test-equal "recursive types"
+            '((define list-of-ints
+                (make-xdr-struct-type
+                 (list xdr-integer
+                       (make-xdr-union-type xdr-boolean
+                                            `((TRUE
+                                               . ,(lambda () list-of-ints))
+                                              (FALSE . ,xdr-void))
+                                            #f))))
+              (define another-list
+                (make-xdr-struct-type
+                 (list xdr-integer
+                       (make-xdr-vector-type (lambda () another-list) 1)))))
+
+            (rpc-language->scheme-client
+             (xdr-text "struct list_of_ints { int x; list_of_ints *next; };"
+                       "struct another_list {"
+                       "  int x; another_list next<1>;"
+                       "};")
+             #t #t))
+
+(test-equal "mutually recursive types"
+            '((define mountbody
+                (make-xdr-struct-type
+                 (list xdr-integer (lambda () mountlist))))
+              (define mountlist
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,(lambda () mountbody))
+                                       (FALSE . ,xdr-void))
+                                     #f)))
+
+            (parameterize ((*parser-options* '(allow-struct-type-specifier)))
+              (rpc-language->scheme-client
+               ;; Example adapted from Sun's `mount.x'.
+               (xdr-text "typedef struct mountbody *mountlist;"
+                         "struct mountbody {"
+                         "  int x;"
+                         "  mountlist next;"
+                         "};")
+               #t #t)))
+
+(test-equal "4 mutually recursive types"
+            '((define d
+                (make-xdr-struct-type (list xdr-integer (lambda () c))))
+              (define c
+                (make-xdr-struct-type (list xdr-integer (lambda () b))))
+              (define b
+                (make-xdr-struct-type (list xdr-integer (lambda () a))))
+              (define a
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,(lambda () d))
+                                       (FALSE . ,xdr-void))
+                                     #f)))
+
+            (rpc-language->scheme-client
+             (xdr-text "typedef d *a;"
+                       "struct b { int x; a list; };"
+                       "struct c { int x; b list; };"
+                       "struct d { int x; c list; };")
+             #t #t))
+
+(test-equal "complex mutually recursive types"
+            '((define exportnode
+                (make-xdr-struct-type
+                 (list (make-xdr-string 10)
+                       (lambda () groups)
+                       (lambda () exports))))
+              (define groupnode
+                (make-xdr-struct-type
+                 (list (make-xdr-string 10) (lambda () groups))))
+              (define exports
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,(lambda () exportnode))
+                                       (FALSE . ,xdr-void))
+                                     #f))
+              (define groups
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,(lambda () groupnode))
+                                       (FALSE . ,xdr-void))
+                                     #f)))
+
+            (parameterize ((*parser-options* '(allow-struct-type-specifier)))
+              (rpc-language->scheme-client
+               ;; Example adapted from Sun's `mount.x'.
+               (xdr-text "typedef struct groupnode *groups;"
+                         "struct groupnode {"
+                         "  string gr_name<10>;"
+                         "  groups gr_next;"
+                         "};"
+
+                         "typedef struct exportnode *exports;"
+                         "struct exportnode {"
+                         "  string ex_dir<10>;"
+                         "  groups ex_groups;"
+                         "  exports ex_next;"
+                         "};")
+               #t #t)))
+
+(test-equal "forward type refs"
+            '((define foo
+                (make-xdr-struct-type (list xdr-integer xdr-double)))
+              (define bar
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,foo)
+                                       (FALSE . ,xdr-void))
+                                     #f)))
+
+            (rpc-language->scheme-client
+             (xdr-text "typedef foo *bar;"
+                       "struct foo { int x; double y; };")
+             #t #t))
+
+(test-equal "duplicate identifier"
+            '("chbouib" (2 13) (1 7))
+
+            (guard (c ((compiler-duplicate-identifier-error? c)
+                       (let ((loc  (compiler-error:location c))
+                             (name (compiler-duplicate-identifier-error:name
+                                    c))
+                             (ploc
+                              (compiler-duplicate-identifier-error:previous-location
+                               c)))
+                         (list name
+                               (list (location-line loc)
+                                     (location-column loc))
+                               (list (location-line ploc)
+                                     (location-column ploc))))))
+              (rpc-language->scheme-client
+               (xdr-text "const chbouib = 7;"
+                         "typedef int chbouib;")
+               #t #t)))
+
+(test-equal "duplicate identifier with program"
+            '("chbouib" (2 9) (1 13))
+
+            (guard (c ((compiler-duplicate-identifier-error? c)
+                       (let ((loc  (compiler-error:location c))
+                             (name (compiler-duplicate-identifier-error:name
+                                    c))
+                             (ploc
+                              (compiler-duplicate-identifier-error:previous-location
+                               c)))
+                         (list name
+                               (list (location-line loc)
+                                     (location-column loc))
+                               (list (location-line ploc)
+                                     (location-column ploc))))))
+              (rpc-language->scheme-client
+               (xdr-text "typedef int chbouib;"
+                         "program chbouib {"
+                         "  version v {"
+                         "    int foo (int) = 0;"
+                         "  } = 0;"
+                         "} = 0;")
+               #t #t)))
+
+(test-equal "client RPC programs"
+            '((define foo-t xdr-integer)
+              (define prog-hello
+                (make-synchronous-rpc-call 77 0 0
+                                           xdr-void xdr-integer))
+              (define prog-greetings-world
+                (make-synchronous-rpc-call 77 0 1
+                                           (make-xdr-struct-type
+                                            (list
+                                             foo-t
+                                             (make-xdr-struct-type
+                                              (list xdr-integer
+                                                    xdr-integer))))
+                                           xdr-boolean)))
+
+            (rpc-language->scheme-client
+             (xdr-text "typedef int foo_t;"
+                       "program prog {"
+                       "  version zero {"
+                       "    int hello (void) = 0;"
+                       "    bool greetings_world (foo_t,"
+                       "                          struct { int x; int y;}) = 1;"
+                       "  } = 0;"
+                       "} = 77;")
+             #t #t))
+
+(test-equal "client RPC programs with string parameter"
+            '((define prog-hello
+                (make-synchronous-rpc-call 77 0 0
+                                           xdr-string
+                                           xdr-integer)))
+
+            (parameterize ((*parser-options*
+                            '(allow-string-param-type-specifier)))
+              (rpc-language->scheme-client
+               (xdr-text "program prog {"
+                         "  version zero {"
+                         "    int hello (string) = 0;"
+                         "  } = 0;"
+                         "} = 77;")
+               #t #f)))
+
+(test-equal "client RPC program with forward type ref"
+            '((define foo-t xdr-integer)
+              (define prog-hello
+                (make-synchronous-rpc-call 77 0 0
+                                           xdr-void xdr-integer))
+              (define prog-greetings-world
+                (make-synchronous-rpc-call 77 0 1
+                                           (make-xdr-struct-type
+                                            (list
+                                             foo-t
+                                             (make-xdr-struct-type
+                                              (list xdr-integer
+                                                    xdr-integer))))
+                                           xdr-boolean)))
+
+            (rpc-language->scheme-client
+             (xdr-text "program prog {"
+                       "  version zero {"
+                       "    int hello (void) = 0;"
+                       "    bool greetings_world (foo_t,"
+                       "                          struct { int x; int y;}) = 1;"
+                       "  } = 0;"
+                       "} = 77;"
+                       "typedef int foo_t;")
+             #t #t))
+
+(test-equal "client RPC program with mutually recursive type refs"
+
+            ;; The difficulty here is that `exports' and `groups' are
+            ;; mutually recursive (so they are added as forward type
+            ;; references), and the RPC program depends on one of them (so
+            ;; it's also a forward type reference).
+
+            '((define exportnode
+                (make-xdr-struct-type
+                 (list (make-xdr-string 10)
+                       (lambda () groups)
+                       (lambda () exports))))
+              (define groupnode
+                (make-xdr-struct-type
+                 (list (make-xdr-string 10) (lambda () groups))))
+              (define exports
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,(lambda () exportnode))
+                                       (FALSE . ,xdr-void))
+                                     #f))
+              (define groups
+                (make-xdr-union-type xdr-boolean
+                                     `((TRUE  . ,(lambda () groupnode))
+                                       (FALSE . ,xdr-void))
+                                     #f))
+
+              (define MOUNTPROG-MOUNTPROC-EXPORT
+                (make-synchronous-rpc-call 100005 1 5
+                                           xdr-void exports)))
+
+            (parameterize ((*parser-options* '(allow-struct-type-specifier)))
+              (rpc-language->scheme-client
+               ;; Example adapted from Sun's `mount.x'.
+               (xdr-text "typedef struct groupnode *groups;"
+                         "struct groupnode {"
+                         "  string gr_name<10>;"
+                         "  groups gr_next;"
+                         "};"
+
+                         "typedef struct exportnode *exports;"
+                         "struct exportnode {"
+                         "  string ex_dir<10>;"
+                         "  groups ex_groups;"
+                         "  exports ex_next;"
+                         "};"
+
+                         "program MOUNTPROG {"
+                         "  version MOUNTVERS {"
+                         "    exports MOUNTPROC_EXPORT(void)  = 5;"
+                         "  } = 1;"
+                         "} = 100005;")
+               #t #t)))
+
+
+;;;
+;;; Run-time compiler back-end.
+;;;
+
+;; Note: We can't compare XDR type objects with `equal?' because they contain
+;; closures.  Thus we perform only some basic checks.
+
+(test-eq    "simple types & constants [run-time]"
+            #t
+
+            (let ((types
+                   (rpc-language->xdr-types
+                    (xdr-text "const the_constant = 2;"
+                              "struct the_struct { int x; float y; };"
+                              "typedef enum { one = 1, two = the_constant } "
+                              "        the_enum;"))))
+              (valid-xdr-types? types
+                                '(("the_struct" (42 3.0) (-1 0.0))
+                                  ("the_enum"   one two)))))
+
+(test-eq    "unions [run-time]"
+            #t
+
+            (let ((types
+                   (rpc-language->xdr-types
+                    (xdr-text "typedef int foo;"
+                              "enum the_enum { zero = 0, one = 1, two = 2 };"
+                              "union the_union switch (int discr) {"
+                              "  case 0: case 1: foo   the_foo;"
+                              "  case 2:         float the_float;"
+                              "};"
+                              "union the_union_with_default switch (the_enum e) {"
+                              "  case one:            foo      the_foo;"
+                              "  case two:            void;"
+                              "  default:             the_enum chbouib;"
+                              "};"))))
+              (valid-xdr-types? types
+                                `(("foo"        -1 0 1 2 3 4)
+                                  ("the_enum"   zero one two)
+                                  ("the_union"  (0 . 1) (1 . -2) (2 . 0.0))
+                                  ("the_union_with_default"
+                                   (one . 1) (two . ,%void)
+                                   (zero . one) (zero . two))))))
+
+(test-eq    "fixed-length arrays [run-time]"
+            #t
+
+            (let ((types
+                   (rpc-language->xdr-types
+                    (xdr-text "typedef int the_array[10];"
+                              "typedef opaque the_opaque_array[010];"))))
+              (valid-xdr-types? types
+                                `(("the_array"         ,(iota 10))
+                                  ("the_opaque_array"  ,(iota 8))))))
+
+(test-eq    "variable-length arrays [run-time]"
+            #t
+
+            (let ((types
+                   (rpc-language->xdr-types
+                    (xdr-text "typedef float the_array<10>;"
+                              "typedef opaque the_opaque_array<>;")))
+                  (fiota
+                   (lambda (max)
+                     (list->vector (map exact->inexact (iota max))))))
+              (valid-xdr-types? types
+                                `(("the_array"  #(1.0 2.0)
+                                                ,(fiota 10))
+                                  ("the_opaque_array"
+                                                ,(list->vector (iota 7))
+                                                ,(list->vector (iota
+                                                                236)))))))
+
+(test-eq    "recursive types [run-time]"
+            #t
+
+            (let ((types
+                   (rpc-language->xdr-types
+                    (xdr-text "struct list_of_ints {"
+                              "  int x; list_of_ints *next;"
+                              "};"
+                              "struct another_list {"
+                              "  int x; another_list next<1>;"
+                              "};"))))
+              (valid-xdr-types? types
+                                `(("list_of_ints"
+                                   (1 (TRUE  . (2 (TRUE  . (3 (FALSE . ,%void))))))
+                                   (1 (TRUE  . (2 (FALSE . ,%void))))
+                                   (1 (FALSE . ,%void)))
+                                  ("another_list"
+                                   (1 #((2 #((3 #())))))
+                                   (1 #((2 #())))
+                                   (1 #()))))))
+
+(test-equal "mutually recursive types [run-time]"
+            #t
+
+            (parameterize ((*parser-options* '(allow-struct-type-specifier)))
+              (let ((types
+                     (rpc-language->xdr-types
+                      ;; Example adapted from Sun's `mount.x'.
+                      (xdr-text "typedef struct mountbody *mountlist;"
+                                "struct mountbody {"
+                                "  int x;"
+                                "  mountlist next;"
+                                "};"))))
+                (valid-xdr-types? types
+                                  `(("mountbody"
+                                     (1 (TRUE  . (2 (TRUE  . (3 (FALSE . ,%void))))))
+                                     (1 (TRUE  . (2 (FALSE . ,%void))))
+                                     (1 (FALSE . ,%void)))
+                                    ("mountlist"
+                                     (TRUE  . (2 (TRUE  . (3 (FALSE . ,%void)))))
+                                     (TRUE  . (2 (FALSE . ,%void)))
+                                     (FALSE . ,%void)))))))
+
+(test-equal "4 mutually recursive types [run-time]"
+            #t
+
+            (let ((types
+                   (rpc-language->xdr-types
+                    (xdr-text "typedef d *a;"
+                              "struct b { int x; a list; };"
+                              "struct c { int x; b list; };"
+                              "struct d { int x; c list; };"))))
+              (valid-xdr-types? types
+                                `(("a"
+                                   (TRUE  . (1 (2 (3 (TRUE  . (4 (5 (6 (FALSE . ,%void)))))))))
+                                   (TRUE  . (1 (2 (3 (FALSE . ,%void)))))
+                                   (FALSE . ,%void))
+                                  ("b"
+                                   (1 (TRUE  . (2 (3 (4 (TRUE  . (5 (6 (7 (FALSE . ,%void))))))))))
+                                   (1 (TRUE  . (2 (3 (4 (FALSE . ,%void))))))
+                                   (1 (FALSE . ,%void)))
+                                  ("c"
+                                   (1 (2 (TRUE  . (3 (4 (5 (TRUE  . (6 (7 (8 (FALSE . ,%void)))))))))))
+                                   (1 (2 (TRUE  . (3 (4 (5 (FALSE . ,%void)))))))
+                                   (1 (2 (FALSE . ,%void))))
+                                  ("d"
+                                   (1 (2 (3 (TRUE  . (4 (5 (6 (TRUE  . (7 (8 (9 (FALSE . ,%void))))))))))))
+                                   (1 (2 (3 (TRUE  . (4 (5 (6 (FALSE . ,%void))))))))
+                                   (1 (2 (3 (FALSE . ,%void)))))))))
+
+(test-equal "complex mutually recursive types [run-time]"
+            #t
+
+            (let ((types
+                   (parameterize ((*parser-options* '(allow-struct-type-specifier)))
+                     (rpc-language->xdr-types
+                      ;; Example adapted from Sun's `mount.x'.
+                      (xdr-text "typedef struct groupnode *groups;"
+                                "struct groupnode {"
+                                "  string gr_name<10>;"
+                                "  groups gr_next;"
+                                "};"
+
+                                "typedef struct exportnode *exports;"
+                                "struct exportnode {"
+                                "  string ex_dir<10>;"
+                                "  groups ex_groups;"
+                                "  exports ex_next;"
+                                "};"))))
+                  (| (lambda (str)
+                       (list->vector (map char->integer
+                                          (string->list str))))))
+              (valid-xdr-types? types
+                                `(("groups"
+                                   (TRUE  . (,(| "gr_name") (TRUE . (,(| "gr_name") (FALSE . ,%void)))))
+                                   (TRUE  . (,(| "gr_name") (FALSE . ,%void)))
+                                   (FALSE . ,%void))
+                                  ("groupnode"
+                                   (,(| "gr_name") (TRUE . (,(| "gr_name") (FALSE . ,%void))))
+                                   (,(| "gr_name") (FALSE . ,%void)))
+                                  ("exports"
+                                   (TRUE
+                                    . (,(| "ex_dir")
+                                       (TRUE . (,(| "gr_name") (FALSE . ,%void))) ;; groups
+                                       (TRUE . (,(| "ex_dir")                     ;; ex_next
+                                                (TRUE . (,(| "gr_name") (FALSE . ,%void)))
+                                                (FALSE . ,%void)))))
+                                   (TRUE . (,(| "ex_dir") (FALSE . ,%void)
+                                            (FALSE . ,%void)))
+                                   (FALSE . ,%void)
+                                   )
+                                  ("exportnode"
+                                   (,(| "ex_dir")
+                                    (TRUE . (,(| "gr_name") (FALSE . ,%void))) ;; groups
+                                    (TRUE . (,(| "ex_dir")                     ;; ex_next
+                                             (TRUE . (,(| "gr_name") (FALSE . ,%void)))
+                                             (FALSE . ,%void))))
+                                   (,(| "ex_dir") (FALSE . ,%void) (FALSE . ,%void)))
+                                  ))))
+
+(test-end "xdr-compiler")
+
+(exit (= (test-runner-fail-count (test-runner-current)) 0))

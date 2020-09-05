@@ -1,0 +1,286 @@
+<html lang="en">
+<head>
+<title>Pictures - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="prev" href="Solid-Figures.html#Solid-Figures" title="Solid Figures">
+<link rel="next" href="Intersections.html#Intersections" title="Intersections">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Pictures"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Intersections.html#Intersections">Intersections</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Solid-Figures.html#Solid-Figures">Solid Figures</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="index.html#Top">Top</a>
+<hr>
+</div>
+
+<h2 class="chapter">9 Pictures</h2>
+
+<p><a name="index-Picture-68"></a>Applying drawing and filling operations to the drawable objects described
+in the previous chapters isn't enough to produce output.  These
+operations merely modify the <code>Picture</code> object that was passed to
+them as an argument (<code>current_picture</code>, by default).
+
+   <p><code>Pictures</code> in 3DLDF are quite different from <code>pictures</code> in
+MetaPost. 
+When a drawing or filling operation is applied to an object <var>O</var>, a
+copy of <var>O</var>, <var>C</var>, is allocated on the free store, a pointer to
+<code>Shape</code> <var>S</var> is pointed at <var>C</var>, and <var>S</var> is pushed onto
+the <code>vector&lt;Shape*&gt; shapes</code> on the <code>Picture</code> <var>P</var>, which
+was passed as an argument to the drawing or filling command.  The
+arguments for the pen,
+dash pattern, <code>Color</code>, and any others, are used to set the
+corresponding data members of <var>C</var> (not <var>O</var>).
+
+   <p><a name="index-output-file-69"></a><a name="index-out_005fstream-70"></a>In order to actually
+cause MetaPost code to be written to the output file, it is necessary
+to invoke <var>P</var>.<code>output()</code>.  Now, the appropriate version of
+<code>output()</code> is applied to each of the objects pointed to
+by a pointer on <var>P</var>.<code>shapes</code>.  <code>output()</code> is a pure
+virtual function in <code>Shape</code>, so all classes derived from
+<code>Shape</code> must have an <code>output()</code> function.  So, if
+<code>shapes[0]</code> points to a <code>Path</code>,
+<code>Path::output()</code> is called, if
+<code>shapes[1]</code> points to a <code>Point</code>,
+<code>Point::output()</code> is called, and if <code>shapes[2]</code> points to an
+object of a type derived from <code>Solid</code>, <code>Solid::output()</code> is
+called. 
+<code>Point</code>, <code>Path</code>, and <code>Solid</code> are namely the only classes
+derived from <code>Shape</code> for which a version of <code>output()</code> is defined.  All
+other <code>Shapes</code> are derived from one of these classes. 
+These <code>output()</code>
+functions then write the MetaPost code to the
+output file through the output file stream <code>out_stream</code>.
+
+<pre class="example">     beginfig(1);
+     default_focus.set(0, 0, -10, 0, 0, 10, 10);
+     Circle c(origin, 3, 90);
+     c.draw();
+     c.shift(1.5);
+     c.draw();
+     current_picture.output();
+     endfig(1);
+</pre>
+   <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF50.png"
+alt="[Figure 50. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 50. 
+<br>
+</p>
+
+   <p>The C++
+ code for [the previous figure]
+ starts with the command
+<code>beginfig(1)</code> and ends with the command
+<code>endfig(1)</code>. 
+They simply write &ldquo;<code>beginfig(&lt;arg&gt;
+)</code>&rdquo; and
+&ldquo;<code>endfig()</code>&rdquo; to
+<a name="index-out_005fstream-71"></a><code>out_stream</code>,
+<a name="index-output-files-72"></a>The optional
+<code>unsigned int</code> argument to <code>endfig()</code> is not written to
+<code>out_stream</code>, it's merely
+&ldquo;syntactic sugar&rdquo; for the user. 
+<!-- !! TO DO:  Try to find the place in the @TeX{}book, where Knuth -->
+<!-- explains what ``syntactic sugar'' is. -->
+
+   <p>In MetaPost, the <code>endfig</code> command causes output and then clears
+<code>currentpicture</code>.  This is not the case in 3DLDF, where
+<code>Picture::output()</code> and <code>Picture::clear()</code> must
+be invoked explicitly:
+
+<pre class="example">     beginfig(1);
+     Point p0;
+     Point p1(1, 2, 3);
+     p0.draw(p1);
+     current_picture.output();
+     endfig(1);
+     
+     beginfig(2);
+     current_picture.clear();
+     Circle C(origin, 3);
+     C.fill();
+     current_picture.output();
+     endfig(2);
+</pre>
+   <p>In [next figure]
+, two <code>Pictures</code> are used within a single figure.
+
+<pre class="example">     beginfig(1);
+     Picture my_picture;
+     default_focus.set(0, 0, -10, 0, 0, 10, 10);
+     Circle c(origin, 3, 90);
+     c.draw(my_picture);
+     my_picture.output();
+     c.shift(1.5);
+     c.fill(light_gray);
+     current_picture.output();
+     endfig(1);
+</pre>
+   <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF51.png"
+alt="[Figure 51. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 51. 
+<br>
+</p>
+
+   <p>Multiple objects, or complex objects made up of sub-objects, can be
+stored in a <code>Picture</code>, so that operations can be applied to them
+as a group:
+
+<pre class="example">     default_focus.set(7, 5, -10, 7, 5, 10, 10);
+     Cuboid c0(origin, 5, 5, 5);
+     c0.shift(0, 0, 3);
+     c0.draw();
+     Circle z0(c0.get_rectangle_center(0), 2.5, 90, 0, 0, 64);
+     z0.draw();
+     Circle z1(z0);
+     z1.shift(0, 0, -1);
+     z1.draw();
+     int i;
+     int j = z0.get_size();
+     for (i = 0; i &lt; 8; ++i)
+         z0.get_point(i * j/8).draw(z1.get_point(i * j/8));
+     Cuboid c1(c0.get_rectangle_center(4), 5, 3, 3);
+     c1.shift(0, 2.5);
+     c1.draw();
+     Rectangle r0 = *c1.get_rectangle_ptr(3);
+     Point p[10];
+     for (i = 0; i &lt; 4; ++i)
+       p[i] = r0.get_point(i);
+     p[4] = r0.get_mid_point(0);
+     p[5] = r0.get_mid_point(2);
+     p[6] = p[4].mediate(p[5], 2/3.0);
+     Circle z2(p[6], 2, 90, 90, 0, 16);
+     z2.draw();
+     Circle z3 = z2;
+     z3.shift(3);
+     z3.draw();
+     j = z2.get_size();
+     for (i = 0; i &lt; 8; ++i)
+         z2.get_point(i * j/8).draw(z3.get_point(i * j/8));
+     p[7] = c0.get_rectangle_center(2);
+     p[7].shift(-4);
+     p[8] = c0.get_rectangle_center(3);
+     p[8].shift(4);
+     current_picture.output();
+     current_picture.rotate(45, 45);
+     current_picture.shift(10, 0, 3);
+     current_picture.output();
+</pre>
+   <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF52.png"
+alt="[Figure 52. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 52. 
+<br>
+</p>
+
+   <p>Let's say the complex object in [the previous figure]
+ represents a
+furnace.  From the point of view of 3DLDF, however, it's not an object
+at all, and the drawing consists of a collection of unrelated
+<code>Cuboids</code>, <code>Circles</code>, <code>Rectangles</code>, and <code>Paths</code>. 
+If we hadn't put it into a <code>Picture</code>, we could still have rotated
+and shifted it, but only by applying the operations to each of the
+sub-objects individually.
+
+   <p>One consequence of the way <code>Pictures</code> are output in 3DLDF is, that
+the following code will not work:
+
+<pre class="example">     beginfig(1);
+     Point p(1, 2);
+     Point q(1, 3);
+     out_stream &lt;&lt; "pickup pencircle scaled .5mm;" &lt;&lt; endl;
+     origin.draw(p);
+     out_stream &lt;&lt; "pickup pensquare xscaled .3mm rotated 30;" &lt;&lt; endl;
+     origin.draw(q);
+     current_picture.output();
+     endfig();
+</pre>
+   <p>This is the MetaPost code that results:
+
+<pre class="example">     beginfig(1);
+     pickup pencircle scaled .5mm;
+     pickup pensquare xscaled .3mm rotated 30;
+     draw (0.000000cm, -3.000000cm) -- (1.000000cm, -1.000000cm);
+     draw (0.000000cm, -3.000000cm) -- (1.000000cm, 0.000000cm);
+     endfig;
+</pre>
+   <p>It's perfectly legitimate to write
+<a name="index-raw-MetaPost-code-73"></a>raw MetaPost code to <code>out_stream</code>, as in lines 4 and 6 of this
+example.  However, the <code>draw()</code> commands do not cause any output to
+<code>out_stream</code>.  The MetaPost drawing commands are written to
+<code>out_stream</code> when <code>current_picture.output()</code> is called. 
+Therefore, the <code>pickup</code> commands are &ldquo;bunched up&rdquo; before the
+drawing commands. 
+In this example,
+setting <code>currentpen</code> to <code>pencircle scaled .5mm</code> has no effect,
+because it is immediately reset to
+<code>pensquare xscaled .3mm rotated 30</code> in the MetaPost code, before
+the <code>draw</code> commands. 
+It is not possible to change <code>currentpen</code> in this way within a
+<code>Picture</code>. 
+Since the <code>draw()</code> commands in the 3DLDF
+code didn't specify a <var>pen</var> argument,
+<code>currentpen</code> with its final value is used for both of the MetaPost
+<code>draw</code> commands.  For any given invocation of
+<code>Picture::output()</code>, there can only be one value of
+<code>currentpen</code>.  All other pens must be passed as arguments to the
+drawing commands.
+
+<ul class="menu">
+<li><a accesskey="1" href="Projections.html#Projections">Projections</a>
+<li><a accesskey="2" href="Focuses-Getstart.html#Focuses-Getstart">Focuses Getstart</a>
+<li><a accesskey="3" href="Surface-Hiding.html#Surface-Hiding">Surface Hiding</a>
+</ul>
+
+   </body></html>
+

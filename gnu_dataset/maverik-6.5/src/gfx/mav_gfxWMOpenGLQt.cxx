@@ -1,0 +1,878 @@
+/*
+   GNU Maverik - a system for managing display and interaction in
+              Virtual Environment applications.
+   Copyright (C) 2008  Advanced Interfaces Group
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+   The authors can be contacted via:
+   www   - http://aig.cs.man.ac.uk
+   email - maverik@aig.cs.man.ac.uk
+   mail  - Advanced Interfaces Group, Room 2.94, Kilburn Building, 
+        University of Manchester, Manchester, M13 9PL, UK
+*/
+// These are the only bits of Maverik we need. Keep interface to window
+// manager as light as possible to make its easy for other implementation
+
+#ifdef MAVAPI
+#undef MAVAPI
+#endif
+#if defined(WIN32) && !defined(__CYGWIN__) 
+#ifdef LIBMAVERIK_EXPORTS
+#define MAVAPI __declspec(dllexport) 
+#else
+#define MAVAPI __declspec(dllimport) 
+#endif
+#else
+#define MAVAPI 
+#endif
+
+#include "qdesktopwidget.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+MAVAPI void mav_gfxWindowOpen(int id, int x, int y, int w, int h, char *name,
+							  char *disp, int wmp, int sb, int qb, int ms,
+							  int ab, int stenb, int desta, int *wret, int *hret);
+MAVAPI void mav_gfxWindowClose(int id);
+MAVAPI void mav_gfxWindowSet(int id);
+MAVAPI void mav_gfxWindowBuffersSwap(void);
+MAVAPI void mav_gfxWindowResGet(int *x, int *y);
+MAVAPI int  mav_gfxWindowEventGet(int *info);
+MAVAPI int  mav_gfxWindowEventPeek(void);
+MAVAPI int  mav_gfxWindowPointerGet(int id, int *x, int *y, int *rx, int *ry, int *buts);
+MAVAPI void mav_gfxWindowPointerSet(int win, int x, int y);
+MAVAPI int  mav_gfxWindowKeyGet(int key);
+MAVAPI int  mav_gfxWindowFontSet(char *s, int font, int *width);
+MAVAPI void mav_gfxWindowStringDisplay(char *s, int font);
+MAVAPI void mav_moduleNew(char *fn(void));
+MAVAPI int  mav_gfxModuleInit(void);
+MAVAPI char *mav_gfxModuleID(void);
+MAVAPI void mav_gfx3DfxModeSet(int fullscreen);
+MAVAPI int  mav_gfx3DfxBoardSet(int bd);
+
+MAVAPI int  mav_windowDeleteID(int id);
+typedef void (*MAV_frameFn)(void *);
+void mav_frameFn4Add(MAV_frameFn fn, void *);
+#ifdef __cplusplus
+}
+#endif
+
+
+//Added by qt3to4:
+#include <QCloseEvent>
+#include <QMouseEvent>
+#include <QKeyEvent>
+#include <QEvent>
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <QApplication>
+#include <QList>
+#include <QCursor>
+#include <QGLWidget>
+/*old
+#include <qapplication.h>
+#include <qlist.h>
+#include <qcursor.h>
+#include <qgl.h>
+*/
+#define MAX_WINS  10 // Make sure the same or greater than equivalent in mav_kernel.h
+#define MAX_FONTS 10 // Same as above
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int mav_opt_bindTextures;
+extern int mav_opt_shareContexts;
+extern int mav_opt_maxTextures;
+extern char *mav_gfx_vendor;
+extern char *mav_gfx_renderer;
+extern char *mav_gfx_version;
+#if defined(GL_VERSION_1_1) || defined(GL_EXT_texture_object)
+extern GLuint *mavlib_bindTextureIndex;
+#endif
+#ifdef __cplusplus
+}
+#endif
+
+
+
+// Mouse and modifier button state
+
+#define _leftButton  0x01
+#define _midButton   0x02
+#define _rightButton 0x04
+#define _shiftModifier 0x01
+#define _ctrlModifier  0x02
+#define _altModifier   0x04
+
+
+
+// Classes for event storage
+
+class MAVLIB_qtEvent {
+public:
+  MAVLIB_qtEvent() {};
+  ~MAVLIB_qtEvent() {};
+  int rv;
+  int info[10];
+};
+
+
+
+// A new Qt widget class that inherits from QGLWidget
+
+class MAVLIB_qtGLWidget;
+
+typedef struct {
+  MAVLIB_qtGLWidget *win;
+  QWidget *parent;
+} MAVLIB_winhand;
+
+class MAVLIB_qtGLWidget : public QGLWidget
+{
+	Q_OBJECT;
+}
+public:
+
+  MAVLIB_qtGLWidget(const QGLFormat &, QWidget *, const char *);
+  MAVLIB_qtGLWidget(const QGLFormat &, QWidget *, const char *, MAVLIB_qtGLWidget *);
+  ~MAVLIB_qtGLWidget();
+
+  static MAVLIB_winhand winhand[MAX_WINS];
+  static int currwin;
+  static QList<MAVLIB_qtEvent> *eventList;
+  static int mouseButtons;
+  static int keyModifiers;
+
+protected:
+
+  virtual void initializeGL();
+  virtual void paintGL();
+  virtual void resizeGL(int width, int height);
+  virtual void mousePressEvent(QMouseEvent *);
+  virtual void mouseReleaseEvent(QMouseEvent *);
+  virtual void keyPressEvent(QKeyEvent *);
+  virtual void keyReleaseEvent(QKeyEvent *);
+  virtual void enterEvent(QEvent *);
+  virtual void leaveEvent(QEvent *);
+  virtual void closeEvent(QCloseEvent *);
+
+private:
+  void dealWithButton(QMouseEvent *event, int pressrel);
+  void dealWithKey(QKeyEvent *event, int pressrel);
+  void addEvent(int rv, int *info);
+};
+
+int MAVLIB_qtGLWidget::mouseButtons=0;
+int MAVLIB_qtGLWidget::keyModifiers=0;
+int MAVLIB_qtGLWidget::currwin=0;
+MAVLIB_winhand MAVLIB_qtGLWidget::winhand[MAX_WINS];
+QList<MAVLIB_qtEvent> *MAVLIB_qtGLWidget::eventList= NULL;
+
+
+
+// Constructors
+
+MAVLIB_qtGLWidget::MAVLIB_qtGLWidget(const QGLFormat &f, QWidget *parent, const char *name) : QGLWidget(f, parent, name)
+{
+  // Switch off auto buffer swap
+  this->setAutoBufferSwap(FALSE);
+
+  // Set keyboard focus policy
+  this->setFocusPolicy(Qt::ClickFocus);
+
+  // Set window boarder caption
+  this->setWindowTitle(tr(name));
+  //this->setCaption(name);
+}
+
+MAVLIB_qtGLWidget::MAVLIB_qtGLWidget(const QGLFormat &f, QWidget *parent, const char *name, MAVLIB_qtGLWidget *share) : QGLWidget(f, parent, name, share)
+{
+  // Switch off auto buffer swap
+  this->setAutoBufferSwap(FALSE);
+
+  // Set window boarder caption
+  this->setWindowTitle (tr(name));
+}
+
+
+
+// Destructor
+
+MAVLIB_qtGLWidget::~MAVLIB_qtGLWidget()
+{
+}
+
+
+
+// OpenGL initialisation
+
+void MAVLIB_qtGLWidget::initializeGL()
+{
+}
+
+
+
+// Expose event
+
+void MAVLIB_qtGLWidget::paintGL()
+{
+  // Add an expose event
+  this->addEvent(6, NULL);
+}
+
+
+
+// Resize/configure event
+
+void MAVLIB_qtGLWidget::resizeGL(int width, int height)
+{
+  int info[10];
+
+  info[1]= width;
+  info[2]= height;
+
+  // Add a configure event
+  this->addEvent(3, info);
+}
+
+
+
+// Mouse button press method
+
+void MAVLIB_qtGLWidget::mousePressEvent(QMouseEvent* event)
+{
+  // Remember the button state
+  if (event->button()&Qt::LeftButton) MAVLIB_qtGLWidget::mouseButtons |= _leftButton;
+  else if (event->button()&Qt::MidButton) MAVLIB_qtGLWidget::mouseButtons |= _midButton;
+  else if (event->button()&Qt::RightButton) MAVLIB_qtGLWidget::mouseButtons |= _rightButton;
+
+  // Add a press event
+  this->dealWithButton(event, 0);
+
+//#if (QT_VERSION>=300)
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 4, 0))
+  // Tell Qt to accept this event
+  event->accept();
+#endif
+}
+
+
+
+// Mouse button release method
+
+void MAVLIB_qtGLWidget::mouseReleaseEvent(QMouseEvent* event)
+{
+  // Remember the button state
+  if (event->button()&Qt::LeftButton) MAVLIB_qtGLWidget::mouseButtons &= ~_leftButton;
+  else if (event->button()&Qt::MidButton) MAVLIB_qtGLWidget::mouseButtons &= ~_midButton;
+  else if (event->button()&Qt::RightButton) MAVLIB_qtGLWidget::mouseButtons &= ~_rightButton;
+
+  // Add a release event
+  this->dealWithButton(event, 1);
+
+//#if (QT_VERSION>=300)
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 4, 0))
+  // Tell Qt to accept this event
+  event->accept();
+#endif
+}
+
+
+
+// Key press method
+
+void MAVLIB_qtGLWidget::keyPressEvent(QKeyEvent* event)
+{
+  // Is this an auto-repeat event?
+  if (event->isAutoRepeat() == FALSE) {
+    // Modifier?
+    if (event->key() == Qt::Key_Shift) MAVLIB_qtGLWidget::keyModifiers |= _shiftModifier;
+    else if (event->key() == Qt::Key_Control) MAVLIB_qtGLWidget::keyModifiers |= _ctrlModifier;
+    else if (event->key() == Qt::Key_Alt) MAVLIB_qtGLWidget::keyModifiers |= _altModifier;
+
+    // Add a press event
+    this->dealWithKey(event, 0);
+  }
+
+//#if (QT_VERSION>=300)
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 4, 0))
+  // Tell Qt to accept this event
+  event->accept();
+#endif
+}
+
+
+
+// Key release method
+
+void MAVLIB_qtGLWidget::keyReleaseEvent(QKeyEvent* event)
+{
+  // Modifier?
+  if (event->key() == Qt::Key_Shift) MAVLIB_qtGLWidget::keyModifiers &= ~_shiftModifier;
+  else if (event->key() == Qt::Key_Control) MAVLIB_qtGLWidget::keyModifiers &= ~_ctrlModifier;
+  else if (event->key() == Qt::Key_Alt) MAVLIB_qtGLWidget::keyModifiers &= ~_altModifier;
+
+  // Add a release event
+  this->dealWithKey(event, 1);
+
+//#if (QT_VERSION>=300)
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 4, 0))
+  // Tell Qt to accept this event
+  event->accept();
+#endif
+}
+
+
+
+// Mouse enter event
+
+void MAVLIB_qtGLWidget::enterEvent(QEvent *e)
+{
+  int info[2];
+
+  info[1]=0;
+
+  // Add a crossing event
+  this->addEvent(5, info);
+}
+
+
+
+// Mouse leave event
+
+void MAVLIB_qtGLWidget::leaveEvent(QEvent *e)
+{
+  int info[2];
+
+  info[1]=1;
+
+  // Add a crossing event
+  this->addEvent(5, info);
+}
+
+
+
+// Close event
+
+void MAVLIB_qtGLWidget::closeEvent(QCloseEvent *e)
+{
+  // Find the window the event occurred in
+  int win= -1;
+  for (int i=0; i<MAX_WINS; i++)
+    if (MAVLIB_qtGLWidget::winhand[i].win && MAVLIB_qtGLWidget::winhand[i].win==this) win= i;
+
+  mav_windowDeleteID(win);
+}
+
+
+
+// Deal with a button event
+
+void MAVLIB_qtGLWidget::dealWithButton(QMouseEvent *event, int pressrel)
+{
+  int info[10];
+
+  // Store positions
+  info[1]= event->x();
+  info[2]= event->y();
+  info[3]= event->globalX();
+  info[4]= event->globalY();
+  info[5]= pressrel;
+
+  // Which button
+  if (event->button() & Qt::LeftButton) info[6]= 1;
+  else if (event->button() & Qt::MidButton) info[6]= 2;
+  else if (event->button() & Qt::RightButton) info[6]= 3;
+
+  // Any modifier keys?
+  if (event->modifiers() & Qt::ShiftModifier) info[7]= 1;
+  else info[7]= 0;
+
+  if (event->modifiers() & Qt::ControlModifier) info[8]= 1;
+  else info[8]= 0;
+
+  if (event->modifiers() & Qt::AltModifier) info[9]= 1;
+  else info[9]= 0;
+
+  // Add the event to the list
+  this->addEvent(2, info);
+}
+
+
+
+// Deal with a key event
+
+void MAVLIB_qtGLWidget::dealWithKey(QKeyEvent *event, int pressrel)
+{
+  int i,info[10];
+
+  // Fetch window id
+  int win= -1;
+  for (i=0; i<MAX_WINS; i++)
+    if (MAVLIB_qtGLWidget::winhand[i].win && MAVLIB_qtGLWidget::winhand[i].win==this) {
+      win= i;
+      break;
+    }
+
+  if (win==-1) {
+    fprintf(stderr, "Error: failed to lookup widget %p\n", this);
+    exit(0);
+  }
+
+  // Get current mouse positions
+  mav_gfxWindowPointerGet(win, &info[1], &info[2], &info[3], &info[4], NULL);
+
+  // Store press/release
+  info[5]= pressrel;
+
+  // Find keycode
+  switch (event->key()) {
+    case Qt::Key_F1: info[6]= 300; break;
+    case Qt::Key_F2: info[6]= 301; break;
+    case Qt::Key_F3: info[6]= 302; break;
+    case Qt::Key_F4: info[6]= 303; break;
+    case Qt::Key_F5: info[6]= 304; break;
+    case Qt::Key_F6: info[6]= 305; break;
+    case Qt::Key_F7: info[6]= 306; break;
+    case Qt::Key_F8: info[6]= 307; break;
+    case Qt::Key_F9: info[6]= 308; break;
+    case Qt::Key_F10: info[6]= 309; break;
+    case Qt::Key_F11: info[6]= 310; break;
+    case Qt::Key_F12: info[6]= 311; break;
+    case Qt::Key_Up: info[6]= 312; break;
+    case Qt::Key_Down: info[6]= 313; break;
+    case Qt::Key_Left: info[6]= 314; break;
+    case Qt::Key_Right: info[6]= 315; break;
+    case Qt::Key_PageUp: info[6]= 316; break;
+    case Qt::Key_PageDown: info[6]= 317; break;
+    case Qt::Key_Shift: info[6]= 318; break;
+    case Qt::Key_Alt: info[6]= 320; break;
+    case Qt::Key_Meta: info[6]= 322; break;
+    case Qt::Key_Home: info[6]= 324; break;
+    case Qt::Key_End: info[6]= 325; break;
+    case Qt::Key_Insert: info[6]= 326; break;
+    case Qt::Key_Control: info[6]= 327; break;
+    case Qt::Key_CapsLock: info[6]= 329; break;
+    default:
+      info[6]= event->key();
+      if (info[6]>=65 && info[6]<=97 && !MAVLIB_qtGLWidget::keyModifiers&_shiftModifier) info[6]+=32;
+      break;
+  }
+
+  // modifiers?
+  if (MAVLIB_qtGLWidget::keyModifiers&_shiftModifier) info[7]= 1;
+  else info[7]= 0;
+
+  if (MAVLIB_qtGLWidget::keyModifiers&_ctrlModifier) info[8]= 1;
+  else info[8]= 0;
+
+  if (MAVLIB_qtGLWidget::keyModifiers&_altModifier) info[9]= 1;
+  else info[9]= 0;
+
+  // Add event
+  this->addEvent(1, info);
+}
+
+
+
+// Add events to the internal list
+
+void MAVLIB_qtGLWidget::addEvent(int rv, int *info)
+{
+  int i;
+
+  // Make a new event
+  MAVLIB_qtEvent *ev= new MAVLIB_qtEvent;
+
+  // Copy info
+  ev->rv= rv;
+  if (info) for (i=0; i<10; i++) ev->info[i]= info[i];
+
+  // Find the window the event occurred in
+  ev->info[0]= -1;
+  for (i=0; i<MAX_WINS; i++)
+    if (MAVLIB_qtGLWidget::winhand[i].win && MAVLIB_qtGLWidget::winhand[i].win==this) ev->info[0]= i;
+
+  if (ev->info[0] == -1) {
+    fprintf(stderr, "Error: failed to lookup widget %p\n", this);
+    exit(1);
+  }
+
+  // Tag to end of list
+  MAVLIB_qtGLWidget::eventList->append(ev);
+}
+
+
+
+// Routines to initialise the graphics module
+
+char *mav_gfxModuleID(void)
+{
+  return "Graphics (OpenGL and Qt)";
+}
+
+void mavlib_qtUpdate(void *ignored)
+{
+  // called once per frame to to Qt processing
+  if (qApp) qApp->processEvents(0);
+}
+
+int mav_gfxModuleInit(void)
+{
+  int i;
+
+  // Add the new module
+  mav_moduleNew(mav_gfxModuleID);  
+
+  // Initialise data structure
+  for (i=0; i<MAX_WINS; i++) MAVLIB_qtGLWidget::winhand[i].win= (MAVLIB_qtGLWidget *) NULL;
+
+  // frame fn to update Qt
+  mav_frameFn4Add(mavlib_qtUpdate, NULL);
+
+  return 1;
+}
+
+
+
+// Routine to set the current window
+
+void mav_gfxWindowSet(int i)
+{
+  // Make this window current
+  MAVLIB_qtGLWidget::winhand[i].win->makeCurrent();
+  MAVLIB_qtGLWidget::currwin= i;
+}
+
+
+
+// Routine to swap the buffers of the current window
+
+void mav_gfxWindowBuffersSwap(void)
+{
+  // Swapbuggers
+  MAVLIB_qtGLWidget::winhand[MAVLIB_qtGLWidget::currwin].win->swapBuffers();
+}
+
+
+
+// Routine to return the position of the mouse in a window and root coords
+
+int mav_gfxWindowPointerGet(int win, int *x, int *y, int *rx, int *ry, int *buts) 
+{
+  int rv= 1;
+
+  if (win>0 && win<MAX_WINS && MAVLIB_qtGLWidget::winhand[win].win) 
+  {
+    // fetch cursor for this window
+    QCursor curs= MAVLIB_qtGLWidget::winhand[win].win->cursor();
+
+    // fetch screen coordinates
+    QPoint sc= curs.pos();
+    *rx= sc.x();
+    *ry= sc.y();
+
+    // map into widget coordinates
+    QPoint wc= MAVLIB_qtGLWidget::winhand[win].win->mapFromGlobal(sc);
+    *x= wc.x();
+    *y= wc.y();
+
+    // fetch last known button state
+    if (buts) {
+      if (MAVLIB_qtGLWidget::mouseButtons & _leftButton) // left button
+	buts[0]= 0; // pressed
+      else
+	buts[0]= 1; // released
+
+      if (MAVLIB_qtGLWidget::mouseButtons & _midButton) // mid button
+	buts[1]= 0; // pressed
+      else
+	buts[1]= 1; // released
+      
+      if (MAVLIB_qtGLWidget::mouseButtons & _rightButton) // right button
+	buts[2]= 0; // pressed
+      else
+	buts[2]= 1; // released
+    }
+  }
+  else
+  {
+    rv= 0;
+  }
+
+  return rv;
+}
+
+
+
+// Routine to close a window
+
+void mav_gfxWindowClose(int id)
+{
+  // kill the widget
+  delete MAVLIB_qtGLWidget::winhand[id].win;
+
+  MAVLIB_qtGLWidget::winhand[id].win= (MAVLIB_qtGLWidget *) NULL;
+  MAVLIB_qtGLWidget::winhand[id].parent= (QWidget *) NULL;
+}
+
+
+
+// Routine to get the resolution of the display
+
+void mav_gfxWindowResGet(int *xres, int *yres)
+{
+  // have we got an a QApplication?
+  if (qApp == NULL) {
+    *xres= 1280;
+    *yres= 1024;
+    return;
+  }
+
+  // fetch the desktop widget
+//#if (QT_VERSION>=300)
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 4, 0))
+  QDesktopWidget* d= qApp->desktop();
+#else
+  QWidget* d= qApp->desktop();
+#endif
+
+  // return desktop size
+	if (d->isVirtualDesktop()) {
+  		QRect r = d->screenGeometry();
+  	    *xres = r.width();
+  	    *yres = r.height();
+	}
+}
+
+
+
+// Routine to read a 2D raster font and store as an OpenGL display list
+
+GLuint mavlib_fontBase[MAX_FONTS];
+int mavlib_qtFontWarn=0;
+
+int mav_gfxWindowFontSet(char *s, int i, int *width)
+{
+  // TODO
+  if (!mavlib_qtFontWarn) {
+    mavlib_qtFontWarn=1;
+    fprintf(stderr, "mav_gfxWindowFontSet() not implemented yet\n");
+  }
+
+  return 0;
+}
+
+
+
+// Routine to display a string in a 2D raster font 
+
+int mavlib_qtStringWarn=0;
+
+void mav_gfxWindowStringDisplay(char *s, int font)
+{
+  // TODO
+  if (!mavlib_qtStringWarn) {
+    mavlib_qtStringWarn=1;
+    fprintf(stderr, "mav_gfxWindowStringDisplay() not implemented yet\n");
+  }
+}
+
+
+
+#ifdef WIN32
+/* Returns the width of the text in the given font - summing individual chars does not work */
+
+extern "C" int mav_gfxWindowStringLength(int win, char *s, int font)
+{
+  return 0;
+}
+#endif
+
+
+
+// Routine to set the mouses position
+
+void mav_gfxWindowPointerSet(int win, int x, int y)
+{
+  // fetch the window cursor
+  QCursor cur= MAVLIB_qtGLWidget::winhand[win].win->cursor();
+
+  // map from widget into screen coordinates
+  QPoint pt= MAVLIB_qtGLWidget::winhand[win].win->mapToGlobal(QPoint(x,y));
+
+  // set its position
+  cur.setPos(pt);
+
+  // set the cursor back to the window
+  MAVLIB_qtGLWidget::winhand[win].win->setCursor(cur);
+}
+
+
+
+// Routine to return the state of a key
+int mav_gfxWindowKeyGet(int key)
+{
+  // TODO
+  fprintf(stderr, "Warning: cant get a key under Qt\n");
+  return 1;
+}
+
+
+
+// Get next event returning data in info array
+
+int mav_gfxWindowEventGet(int *info)
+{
+  int i, rv;
+
+  if (!MAVLIB_qtGLWidget::eventList) return 0;
+
+  // empty list?
+  if (MAVLIB_qtGLWidget::eventList->count()==0) return 0;
+
+  // fetch the first item
+  MAVLIB_qtEvent ev= MAVLIB_qtGLWidget::eventList->first();
+
+  // Copy data
+  for (i=0; i<10; i++) info[i]= ev.info[i];
+  rv= ev.rv + (ev.info[0]<<8);
+
+  // remove the event from the list
+  MAVLIB_qtGLWidget::eventList->removeLast(ev);
+
+  return rv;
+}
+
+
+
+// Check if any events are outstanding
+
+int mav_gfxWindowEventPeek(void)
+{
+  if (!MAVLIB_qtGLWidget::eventList) return 0;
+
+  // empty list?
+  if (MAVLIB_qtGLWidget::eventList->count()==0) return 0;
+
+  // fetch the first item
+  MAVLIB_qtEvent ev= MAVLIB_qtGLWidget::eventList->takeFirst();
+
+  // return stuff
+  return ev.rv + (ev.info[0]<<8);
+}
+
+
+
+// Routines specific to Voodoo
+
+void mav_gfx3DfxModeSet(int fullscreen)
+{
+}
+
+int mav_gfx3DfxBoardSet(int bd)
+{
+  int rv=0;
+  return rv;
+}
+
+
+
+// Routine to open a window and an OpenGL context
+
+void mav_gfxWindowOpen(int id, int x, int y, int width, int height,
+					   char *nm, char *disp, int wmplacement, int sb,
+					   int qb, int ms, int ab, int stenb, int desta,
+					   int *wret, int *hret)
+{
+  // Cast to fetch the parent widget 
+  QWidget *parent= (QWidget *) disp;
+
+  //  Ensure Qt is running if no parent widget specified
+  if (!parent && !qApp) {
+    int argc= 0;
+    char **argv= NULL;
+    new QApplication(argc, argv);
+  }
+
+  // initialise event list (now we are sure qt has been initialized)
+  if (!MAVLIB_qtGLWidget::eventList) {
+    MAVLIB_qtGLWidget::eventList= new QList<MAVLIB_qtEvent>;
+    MAVLIB_qtGLWidget::eventList->clear();
+    MAVLIB_qtGLWidget::eventList->setAutoDelete(TRUE);
+  }
+
+  // Initialise a QGLFormat
+  QGLFormat f;
+  f.setDoubleBuffer(sb?FALSE:TRUE);
+  f.setDepth(TRUE);
+  f.setRgba(TRUE);
+  f.setAlpha(desta?TRUE:FALSE);
+  f.setAccum(ab?TRUE:FALSE);
+  f.setStencil(stenb?TRUE:FALSE);
+
+  // make a new MAVLIB_qtGLWidget
+  if (id==1 || !mav_opt_shareContexts)
+    MAVLIB_qtGLWidget::winhand[id].win= new MAVLIB_qtGLWidget(f, parent, (const char *) nm);
+  else
+    MAVLIB_qtGLWidget::winhand[id].win= new MAVLIB_qtGLWidget(f, parent, (const char *) nm, MAVLIB_qtGLWidget::winhand[1].win);
+
+  // built a valid context?
+  if (MAVLIB_qtGLWidget::winhand[id].win->isValid()==FALSE) {
+    fprintf(stderr, "Error: couldn't get an RGB");
+    if (desta) fprintf(stderr, "A");
+    if (!sb) fprintf(stderr, ", double-buffered");
+    if (ms) fprintf(stderr, ", multi-sampled");
+    if (ab) fprintf(stderr, ", acculmation-buffered");
+    if (stenb) fprintf(stderr, ", stencil-buffered");
+    if (qb) fprintf(stderr, ", quad-buffered");
+    fprintf (stderr, " visual\n");
+    exit(1);
+  }
+
+  // set window size
+  MAVLIB_qtGLWidget::winhand[id].win->resize(width, height);
+  *wret= width;
+  *hret= height;
+
+  // Set to active window
+  mav_gfxWindowSet(id);
+
+  // Get graphics vendor info
+  if (!mav_gfx_vendor) mav_gfx_vendor= (char *) glGetString(GL_VENDOR);
+  if (!mav_gfx_renderer) mav_gfx_renderer= (char *) glGetString(GL_RENDERER);
+  if (!mav_gfx_version) mav_gfx_version= (char *) glGetString(GL_VERSION);  
+
+  // build a list of testure names if binding is required
+  if (id == 1 && mav_opt_bindTextures) {
+#if defined(GL_VERSION_1_1) || defined(GL_EXT_texture_object)
+    mavlib_bindTextureIndex= (GLuint *) malloc(mav_opt_maxTextures*3*sizeof(GLuint));
+    if (!mavlib_bindTextureIndex) fprintf(stderr, "Warning: bind texture malloc failed, ignoring.\n");
+#ifdef GL_VERSION_1_1
+    glGenTextures(mav_opt_maxTextures*3, mavlib_bindTextureIndex);
+#else
+    glGenTexturesEXT(mav_opt_maxTextures*3, mavlib_bindTextureIndex);
+#endif
+#else
+    fprintf(stderr, "Warning: no bind texture extension, ignoring.\n");
+#endif
+  }
+
+  // show this widget
+  MAVLIB_qtGLWidget::winhand[id].win->show();
+}

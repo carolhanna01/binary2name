@@ -1,0 +1,322 @@
+# Makefile.in: -*- Text -*-  Source for configure to make a Makefile from.
+#
+# Author: Brian J. Fox (bfox@ai.mit.edu).
+#
+# This file is part of <Meta-HTML>(tm), a system for the rapid deployment
+# of Internet and Intranet applications via the use of the Meta-HTML
+# language.
+#
+#  Copyright (c) 1995, 1998, Brian J. Fox (bfox@ai.mit.edu).
+#
+# Meta-HTML is free software; you can redistribute it and/or modify
+# it under the terms of the UAI Free Software License as published
+# by Universal Access Inc.; either version 1, or (at your option) any
+# later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# UAI Free Software License for more details.
+#
+# You should have received a copy of the UAI Free Software License
+# along with this program; if you have not, you may obtain one by
+# writing to:
+#
+# Universal Access Inc.
+# 129 El Paseo Court
+# Santa Barbara, CA
+# 93101
+
+# The version number of this package.
+PACKNAME= metahtml
+PACKVER = 5.09
+
+# Items that were filled in by configure.
+VPATH	= @srcdir@
+srcdir	= @srcdir@
+DEFS	= -DMHTML_VERSION=$(PACKVER)
+INSTALL = @INSTALL@
+FIND	= @FIND@
+PLATFORM= @PLATFORM@
+EXE	= @EXE@
+WEBBASEDIR = @WEBBASEDIR@
+MODULES_DIR = @MODULES_DIR@
+MHTML_SYSTEM_TYPE = @MHTML_SYSTEM_TYPE@
+prefix	= @prefix@
+exec_prefix = @exec_prefix@
+OS_LIBS	= @OS_LIBS@
+DLLDFLAGS = @DLLDFLAGS@
+
+# The real locations of programs.
+RANLIB	= @RANLIB@
+AR	= ar
+MKDIR	= mkdir
+TAR	= tar
+LN	= ln
+CP	= cp
+RM	= rm -f
+MV	= mv
+BASH_SHELL = @BASH_SHELL@
+bindir	= $(exec_prefix)/bin
+libdir	= $(exec_prefix)/lib
+docdir	= $(WEBBASEDIR)
+
+# You should not compile with anything other than GCC.
+# It is possible to compile with a fully ANSI compliant compiler that
+# isn't GCC, but it isn't recommended.
+
+CC		= gcc $(GCC_WARN)
+# GCC_WARN	= -Wall -Wstrict-prototypes -Wshadow
+# PROFILE_FLAGS	= -pg
+# DEBUG_FLAGS	= -g $(PROFILE_FLAGS)
+OPTIMIZE_FLAGS	= -O69 -finline-functions
+INCLUDE_FLAGS	= @EXTRAINC@
+CFLAGS		= $(OPTIMIZE_FLAGS) $(DEBUG_FLAGS) $(INCLUDE_FLAGS)
+LDFLAGS		= $(STATIC) $(DEBUG_FLAGS) $(DLLDFLAGS)
+
+PROGDEFS	= AR='$(AR)' RANLIB='$(RANLIB)' LN='$(LN)' CP='$(CP)' \
+		  RM='$(RM)' CC='$(CC)'
+
+OTHERDEFS	= TOPDIR=$(srcdir) MHTML_VERSION=$(PACKVER) EXE=$(EXE)
+
+PCFLAGS		= $(PROGDEFS) CFLAGS='$(CFLAGS)' LDFLAGS='$(LDFLAGS)' \
+		  DEBUG_FLAGS='$(DEBUG_FLAGS)' $(OTHERDEFS) \
+		  PROFILE_FLAGS='$(PROFILE_FLAGS)' \
+		  OPTIMIZE_FLAGS='$(OPTIMIZE_FLAGS)'
+
+LIBUTILS	= libutils/libutils.a
+LIBMHTML	= libmhtml/libmhtml.a
+LIBSERVER	= libserver/libserver.a
+
+SUBDIRS		= libutils libmhtml libserver engine mhc server mdb \
+		  dbutils $(MODULES_DIR) doc sessions utilities 
+
+SUBDIR_TARGETS  = engine mhc server mdb sessions dbutils utilities \
+		  $(MODULES_DIR) doc
+
+TARGETS		= $(LIBUTILS) $(LIBMHTML) $(LIBSERVER) engine mhc \
+		  server mdb sessions dbutils utilities \
+		  $(MODULES_DIR) doc build-download
+
+ALLMAKEFILES = Makefile mhc/Makefile server/Makefile engine/Makefile \
+	       mdb/Makefile mdb/readline/Makefile sessions/Makefile \
+	       dbutils/Makefile libmhtml/Makefile libutils/Makefile \
+	       libutils/compat/Makefile libserver/Makefile \
+	       modules/Makefile utilities/Makefile
+
+all:	$(TARGETS)
+	@if [ ! -s libmhtml/bootstrap.lib ]; then \
+	  echo ""; \
+	  echo " -- BOOTSTRAPPING code can now be built!"; echo ""; \
+	  echo " -- Rebuilding to compile libmhtml/bootstrap.lib."; \
+	  echo ""; \
+	  $(MAKE); \
+	fi
+	@echo ""
+	@echo "Meta-HTML $(PACKVER) is built sucessfully for $(PLATFORM)"
+	@echo " -- Use \"make install\" to install the binaries and modules."
+	@echo ""
+
+debug: FORCE
+	$(MAKE) OPTIMIZE_FLAGS= DEBUG_FLAGS=-g
+
+purify: FORCE
+	$(MAKE) CC='purify $(CC)' OPTIMIZE_FLAGS= DEBUG_FLAGS=-g
+
+all++: FORCE
+	$(MAKE) CC=g++ bindir=$(prefix)/bin++ libdir=$(prefix)/lib++ all
+
+debug++: FORCE
+	$(MAKE) CC=g++ bindir=$(prefix)/bin++ libdir=$(prefix)/lib++ \
+	DEBUG_FLAGS=-g OPTIMIZE_FLAGS=
+
+install++: FORCE
+	$(MAKE) CC=g++ bindir=$(prefix)/bin++ libdir=$(prefix)/lib++ install
+
+$(TARGETS): $(ALLMAKEFILES)
+
+$(LIBUTILS): FORCE
+	(cd libutils; $(MAKE) $(PCFLAGS))
+
+$(LIBMHTML): FORCE
+	(cd libmhtml; $(MAKE) $(PCFLAGS))
+
+$(LIBSERVER): FORCE
+	(cd libserver; $(MAKE) $(PCFLAGS))
+
+$(SUBDIR_TARGETS): $(LIBUTILS) $(LIBMHTML)
+
+$(SUBDIR_TARGETS): FORCE
+	(cd $@; $(MAKE) $(PCFLAGS))
+
+doc: dbutils $(MODULES_DIR)
+
+static: clean-executables build-download
+	$(MAKE) clean-executables
+	$(MAKE) STATIC=--static
+
+build-download: build-download.in Makefile
+	cat build-download.in | \
+	sed -e 's%@VERSION@%$(PACKVER)%' \
+	    -e 's%@BUILD_PLATFORM@%$(PLATFORM)%' \
+	    -e 's%@BASH@%$(BASH_SHELL)%' >build-download
+	chmod a+x build-download
+
+clean-executables: FORCE
+	for dir in mhc server engine mdb sessions ; do \
+	   (cd $$dir; $(MAKE) clean-executables); \
+	done
+
+install: $(TARGETS) install_force
+
+install_force: FORCE
+	if [ ! -d $(bindir) ]; then mkdir $(bindir); fi
+	if [ ! -d $(libdir) ]; then mkdir $(libdir); fi
+	(cd mhc; $(MAKE) install bindir=$(bindir) libdir=$(libdir))
+	(cd engine; $(MAKE) install bindir=$(bindir) libdir=$(libdir))
+	(cd server; $(MAKE) install bindir=$(bindir) libdir=$(libdir))
+	(cd mdb; $(MAKE) install bindir=$(bindir) libdir=$(libdir))
+	(cd sessions; $(MAKE) install bindir=$(bindir) libdir=$(libdir))
+	(cd dbutils; $(MAKE) install bindir=$(bindir) libdir=$(libdir))
+	(cd utilities; $(MAKE) install bindir=$(bindir) libdir=$(libdir))
+	if [ "$(MODULES_DIR)" ]; then \
+	  (cd $(MODULES_DIR); \
+	  $(MAKE) install bindir=$(bindir) libdir=$(libdir)); \
+	fi
+	@echo "To install the server or the engine, type \`./install-site'"
+
+install-docs:
+	(cd doc; $(MAKE) install docdir=$(docdir))
+
+clean:  FORCE
+	for dir in $(SUBDIRS); do \
+	  (cd $$dir; $(MAKE) $@ ); \
+	done
+
+distclean realclean: clean
+	for dir in $(SUBDIRS); do \
+	  (cd $$dir; $(MAKE) $@ ); \
+	done
+	(cd tagsets; $(RM) -f *.lib)
+	(cd applications; $(MAKE) $@ )
+	$(RM) -rf downloads =* build-download
+	$(FIND) . -name "temp" -exec $(RM) -rf \{\} \;
+	$(FIND) . -name "CVS" -exec $(RM) -rf \{\} \;
+	$(FIND) . -name "*~" -exec $(RM) \{\} \;
+	$(FIND) . -name "*gz" -exec $(RM) \{\} \;
+	$(FIND) . -name "foo\.*" -exec $(RM) \{\} \;
+	$(FIND) . -name "bar\.*" -exec $(RM) \{\} \;
+	$(FIND) . -name "baz\.*" -exec $(RM) \{\} \;
+	$(FIND) . -name "core" -exec $(RM) \{\} \;
+	$(FIND) . -name "core.*" -exec $(RM) \{\} \;
+	$(FIND) . -name "*.core*" -exec $(RM) \{\} \;
+	$(FIND) . -name "*.LCK*" -exec $(RM) \{\} \;
+	$(FIND) ./release -name "*.db" -exec $(RM) \{\} \;
+	$(FIND) . -name "*DISTFILES" -exec $(RM) \{\} \;
+	$(RM) -f config.cache config.status config.h *.log Makefile TAGS
+
+tags TAGS: FORCE
+	etags --defines --typedefs --output TAGS */*.c */*/*.c
+
+Makefile: Makefile.in config.status
+	./config.status
+
+mhc/Makefile: mhc/Makefile.in config.status
+	./config.status
+
+modules/Makefile: modules/Makefile.in config.status
+	./config.status
+
+utilities/Makefile: utilities/Makefile.in config.status
+	./config.status
+
+utilities/imagemap/Makefile: utilities/imagemap/Makefile.in config.status
+	./config.status
+
+dbutils/Makefile: dbutils/Makefile.in config.status
+	./config.status
+
+sessions/Makefile: sessions/Makefile.in config.status
+	./config.status
+
+libutils/Makefile: libutils/Makefile.in config.status
+	./config.status
+
+libmhtml/Makefile: libmhtml/Makefile.in config.status
+	./config.status
+
+libserver/Makefile: libserver/Makefile.in config.status
+	./config.status
+
+server/Makefile: server/Makefile.in config.status
+	./config.status
+
+engine/Makefile: engine/Makefile.in config.status
+	./config.status
+
+mdb/Makefile: mdb/Makefile.in config.status
+	./config.status
+
+mdb/readline/Makefile: mdb/readline/Makefile.in config.status
+	./config.status
+
+config.status: configure
+	./config.status --recheck
+
+DISTNAME = $(PACKNAME)-$(PACKVER)
+
+dist: DISTFILES
+	(cd doc; $(MAKE) dist)
+	$(RM) -rf $(DISTNAME)
+	$(MKDIR) $(DISTNAME)
+	for d in `find . -type d ! -name "CVS" -print`; do \
+	  if [ "$$d" != "./$(DISTNAME)" -a "$$d" != "." ]; then \
+	    echo "Making directory $(DISTNAME)/$$d"; \
+	    mkdir $(DISTNAME)/$$d; \
+	  fi; \
+	done
+	for f in `cat DISTFILES`; do \
+	   $(LN) $(srcdir)/$$f $(DISTNAME)/$$f || \
+		{ echo copying $$f; cp -rp $(srcdir)/$$f $(DISTNAME)/$$f ; } \
+	done
+	-(cd $(DISTNAME); $(MAKE) -f ../Makefile distclean)
+	$(TAR) chvf - $(DISTNAME) | gzip >$(DISTNAME).tar.gz
+	$(RM) -rf $(DISTNAME)
+
+# Gets rid of most of the unwanted files.  Verify manually (if necessary)
+# that this produces a list of all the files desired in the distribution. 
+DISTFILES: FORCE
+	$(RM) -rf $(DISTNAME)
+	(cd $(srcdir); find . ! -type d -print) \
+	| sed  '/\/RCS\//d; \
+	        /\/CVS\//d; \
+		/\/EMACS-BACKUPS\//d; \
+		/\/downloads\//d; \
+		/\.tar.*/d; \
+		/\#*#$$/d; \
+		/~$$/d; /\.o$$/d; /\/.*\.a$$/d; \
+		/\/\.gdb_history$$/d; \
+		/\/\.gdbinit$$/d; \
+		/\/\.mdb_init$$/d; \
+		/\/\.ps$$/d; \
+		/\/\.dvi$$/d; \
+		/\/.*\.BAK$$/d; \
+		/\/TAGS$$/d; \
+		/\/core$$/d; /\/[a-z]*\.core$$/d; /\/core\.[a-z]*$$/d; \
+		/\/a.out$$/d; \
+		/\/=/d; \
+		/\/conftest\.c$$/d; \
+		/\/DISTFILES$$/d; \
+		/\.toc$$/d; \
+		/\.aux$$/d; /\.log$$/d; \
+		/\.cps$$/d; /\.cp$$/d; \
+		/\.fns$$/d; /\.fn$$/d; \
+		/\.tps$$/d; /\.tp$$/d; \
+		/\.vrs$$/d; /\.vr$$/d; \
+		/\.pgs$$/d; /\.pg$$/d; \
+		/\.kys$$/d; /\.ky$$/d; \
+		s/^.\///; /^\.$$/d;' \
+	| sort | uniq > DISTFILES
+
+FORCE:
+

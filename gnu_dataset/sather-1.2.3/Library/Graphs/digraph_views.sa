@@ -1,0 +1,162 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@icsi.berkeley.edu>
+
+class STD_DIGRAPH_VIEWS{NTP} is
+   -- An algorithm like class that provides various views of a digrahp
+   
+   node_view(g:$RO_DIGRAPH{NTP}):SET_VIEW{NTP} is
+      elt_gen:ITER:NTP := bind(g.node!);
+      has_rout:ROUT{NTP}:BOOL := bind(g.has_node(_));
+      size_rout:ROUT:INT := bind(g.n_nodes);
+      return #SET_VIEW{NTP}(elt_gen,has_rout,size_rout);
+   end;
+   
+   edge_view(g:$RO_DIGRAPH{NTP}):SET_VIEW{DIEDGE{NTP}} is
+      elt_gen:ITER:DIEDGE{NTP} := bind(g.edge!);
+      has_rout:ROUT{DIEDGE{NTP}}:BOOL := bind(g.has_edge(_));
+      size_rout:ROUT:INT := bind(g.n_edges);
+      return #SET_VIEW{DIEDGE{NTP}}(elt_gen,has_rout,size_rout);
+   end;
+
+   incoming_node_view(g:$RO_DIGRAPH{NTP},n:NTP):SET_VIEW{NTP} is
+      -- View of all the nodes 'src' that have edges from (src,n)
+      elt_gen:ITER:NTP := bind(g.incoming!(n));
+      has_rout:ROUT{NTP}:BOOL := bind(has_edge(g,_,n));
+      size_rout:ROUT:INT := bind(g.n_incoming(n));
+      return #SET_VIEW{NTP}(elt_gen,has_rout,size_rout);
+   end;
+   
+   outgoing_node_view(g:$RO_DIGRAPH{NTP},n:NTP):SET_VIEW{NTP} is
+      -- View of all the nodes 'src' that have edges from (n,src)
+      elt_gen:ITER:NTP := bind(g.outgoing!(n));
+      has_rout:ROUT{NTP}:BOOL := bind(has_edge(g,n,_));
+      size_rout:ROUT:INT := bind(g.n_outgoing(n));
+      return #SET_VIEW{NTP}(elt_gen,has_rout,size_rout);
+   end;
+   
+   reverse_edge_view(g:$RO_DIGRAPH{NTP}):DIGRAPH_VIEW{NTP} is
+      node_iter:ITER:NTP := bind(g.node!);
+      edge_iter:ITER:DIEDGE{NTP} := bind(reverse_edge!(g));
+      incoming_iter:ITER{once NTP}:NTP := bind(g.outgoing!(_));
+      outgoing_iter:ITER{once NTP}:NTP := bind(g.incoming!(_));
+      res ::= #DIGRAPH_VIEW{NTP}(node_iter,edge_iter,
+				 incoming_iter,outgoing_iter);
+      res.has_node_rout := bind(g.has_node(_));
+      res.has_edge_rout := bind(has_reverse_edge(g,_));
+      res.n_edges_rout := bind(g.n_edges);
+      res.n_outgoing_rout := bind(g.n_incoming(_));
+      res.n_incoming_rout := bind(g.n_outgoing(_));
+      return res;
+   end;
+   
+   private reverse_edge!(g:$RO_DIGRAPH{NTP}):DIEDGE{NTP} is
+      loop e ::= g.edge!; yield #DIEDGE{NTP}(e.second,e.first); end;
+   end;
+   
+   private has_reverse_edge(g:$RO_DIGRAPH{NTP},e:DIEDGE{NTP}):BOOL is
+      return g.has_edge(#DIEDGE{NTP}(e.second,e.first));
+   end;
+   
+   private has_edge(g:$RO_DIGRAPH{NTP},n1,n2:NTP):BOOL is
+      return g.has_edge(#DIEDGE{NTP}(n1,n2));
+   end;
+end;
+-------------------------------------------------------------------
+class DIGRAPH_VIEW{NTP} < $RO_DIGRAPH{NTP} is
+   -- A digraph view constructed from several closures
+   include RO_DIGRAPH_INCL{NTP};
+   
+   -- Essential closures
+   private attr node_iter:ITER:NTP;
+   private attr edge_iter:ITER:DIEDGE{NTP};
+   private attr incoming_iter:ITER{once NTP}:NTP;
+   private attr outgoing_iter:ITER{once NTP}:NTP;
+   
+   -- The following closures may be computed from other
+   -- closures
+   attr has_node_rout:ROUT{NTP}:BOOL;
+   attr has_edge_rout:ROUT{DIEDGE{NTP}}:BOOL;
+   attr n_edges_rout:ROUT:INT;
+   attr n_nodes_rout:ROUT:INT;
+   attr n_incoming_rout:ROUT{NTP}:INT;
+   attr n_outgoing_rout:ROUT{NTP}:INT;
+
+   create(n:ITER:NTP,e:ITER:DIEDGE{NTP},inc,outg:ITER{once NTP}:NTP):SAME is
+      res ::= new;
+      res.node_iter := n; res.edge_iter := e;
+      res.incoming_iter := inc; res.outgoing_iter := outg;
+      return res;
+   end;
+
+   node!:NTP is loop yield node_iter.call! end; end;
+   
+   edge!:DIEDGE{NTP} is loop yield edge_iter.call!; end; end;
+   
+   incoming!(once n:NTP):NTP is loop yield incoming_iter.call!(n) end; end;
+   
+   outgoing!(once n:NTP):NTP is loop yield outgoing_iter.call!(n) end; end;
+   
+   has_node(n:NTP):BOOL is 
+      if void(has_node_rout) then
+	 loop e ::= node_iter.call!; 
+	    if ELT_EQ{NTP}::elt_eq(n,e) then return true; end; 
+	 end;
+	 return false
+      else return has_node_rout.call(n); end;
+   end;
+	
+   has_edge(n:DIEDGE{NTP}):BOOL is 
+      if void(has_edge_rout) then
+	 loop e ::= edge_iter.call!; 
+	    if ELT_EQ{DIEDGE{NTP}}::elt_eq(n,e) then return true; end; 
+	 end;
+	 return false
+      else return has_edge_rout.call(n); end;
+   end;
+   
+   n_nodes:INT is
+      if void(n_nodes_rout) then
+	 res ::= 0;
+	 loop e ::= node_iter.call!; res := res + 1; end;
+	 return res;
+      else return n_nodes_rout.call;  end;
+   end;
+   
+   n_edges:INT is
+      if void(n_edges_rout) then
+	 res ::= 0;
+	 loop e ::= edge_iter.call!; res := res + 1; end;
+	 return res;
+      else return n_edges_rout.call;  end;
+   end;
+   
+   n_incoming(n:NTP):INT is
+      if void(n_incoming_rout) then
+	 res ::= 0;
+	 loop e ::= incoming_iter.call!(n); res := res + 1; end;
+	 return res;
+      else return n_incoming_rout.call(n);  end;
+   end;
+   
+   n_outgoing(n:NTP):INT is
+      if void(n_outgoing_rout) then
+	 res ::= 0;
+	 loop e ::= outgoing_iter.call!(n); res := res + 1; end;
+	 return res;
+      else return n_outgoing_rout.call(n);  end;
+   end;
+   
+end;
+-------------------------------------------------------------------

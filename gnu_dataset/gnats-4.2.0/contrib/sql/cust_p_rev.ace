@@ -1,0 +1,74 @@
+
+database engdb end
+
+{xxx customize here xxx}
+define 
+  param [1] cust_id char(16)
+  variable  javg    interval day(4) to day
+  variable  jmax    interval day(4) to day
+  variable  jmin    interval day(4) to day
+end
+
+output
+  page length 66
+  top margin 5
+  bottom margin 3
+  left margin 0
+
+{xxx customize here xxx}
+{report to "/s1/users/smlieu/chron/bugs/reports/cust.infx"}
+
+end
+
+select severity,
+       count(*) icount, 
+       avg(age) iavg, 
+       max(age) imax, 
+       min(age) imin,
+       sevstr
+  from gnats, severitycode
+{xxx customize here xxx}
+  where
+      customer = $cust_id and
+      gnatsstate < 3 and
+      gnatsclass < 4 and
+      severity < 3 and
+      severity = sevnum
+  group by severity, sevstr
+  order by severity, sevstr
+end
+
+format
+  page header
+
+{xxx customize here xxx}
+    print column 1, "*** AGE OF OPEN AND ANALYZED PROBLEM REPORTS ",
+          column 60, "Page", pageno
+    print column 1, "*** FOR ", cust_id clipped, " as of ", date
+    skip 2 lines
+
+    print 
+          column 28, "Average",
+          column 38, "Maximum",
+          column 48, "Minimum"
+    print 
+          column  3, "Severity", 
+          column 19, "Total", 
+          column 28, " (days)",
+          column 38, " (days)",
+          column 48, " (days)" 
+    skip 1 line
+
+on every row 
+  let javg = iavg + interval (12) hour to hour
+  let jmax = imax + interval (12) hour to hour
+  let jmin = imin + interval (12) hour to hour
+  print 
+        column  3, sevstr clipped,
+        column 15, icount using "###,###",
+        column 30, javg,
+        column 40, jmax,
+        column 50, jmin
+    skip 1 line
+
+end

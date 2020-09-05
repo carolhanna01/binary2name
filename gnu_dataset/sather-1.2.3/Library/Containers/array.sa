@@ -1,0 +1,689 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- array.sa: One-dimensional arrays, including sorting, searching, etc.
+-- minor modification to the median algorithm
+-------------------------------------------------------------------
+class ARRAY{T} < $ARR{T} is
+   -- One-dimensional arrays of elements of type T, including sorting, 
+   -- searching, etc. Array indices start at 0 and go to `asize-1'. 
+   -- Most features here work when self is void. The intent is that
+   -- a void array behave just like a zero-sized array. Thus self may 
+   -- be void on operations which don't try to directly access specific 
+   -- elements since any such access would be out of range.
+   include COMPARE{T};
+   
+   private include AREF{T} 
+	 aget->aget, aset->aset, asize->asize, array_ptr->array_ptr;
+   -- Make these public.
+   -- Note that self may not be void for these routines
+   
+   create: SAME is return #SAME(0) end;
+   
+   create(n:INT):SAME pre n>=0 is 
+      -- Create a new array of size `n' all of whose elements are void.
+      return new(n) 
+   end;
+
+   create(a: ARRAY{T}): SAME is
+      res ::= #SAME(a.size);
+      loop res.set!(a.elt!) end;
+      return res;
+   end;
+
+   create_from(e: $ELT{T}): SAME is
+      -- Create an array out of the elements of "e"
+      -- Expensive - first converts into an FLIST to determine the
+      -- number of elements and then converts the FLIST into an array.
+      -- Another possibility would be to iterate twice through the elements
+      -- in "e", but iterating through "e" might be an even more expensive
+      -- operation. It might also not be possible to iterate through "e"
+      -- more than once, depending on the nature of "e"
+      fl ::= #FLIST{T};
+      loop fl := fl.push(e.elt!) end;
+      res ::= #SAME(fl.size);
+      loop res.set!(fl.elt!) end;
+      return res;
+   end;
+   
+   size:INT is			
+      -- The number of elements in the array. Self may be void.
+      -- if void(self) then return 0 else return asize end end;
+      builtin ARRAY_SIZE; 
+   end;
+
+   is_empty:BOOL is
+      -- Return true if there are no elements in the array
+      return size = 0;
+   end;
+   
+   clear is
+      -- Set each array element to void. Built-in. Self may be void.
+      -- if ~void(self) then aclear end end;
+      builtin ARRAY_CLEAR; 
+   end;
+
+   equals(a: $CONTAINER{T}): BOOL is
+      -- Return true if 'a' is of the same type as 'self' and
+      -- contains the same elements in the same order
+      typecase a
+      when SAME then
+	 if a.size /= size then return false end;
+	 loop if ~elt_eq(elt!,a.elt!) then return false; end; end;
+	 return true;
+      else return false end;
+   end;
+      
+   elt!:T is
+      -- Yield each element of self in order. Self may be void.
+      -- if ~void(self) then loop yield aelt! end end end;
+      builtin ARRAY_ELTB; 
+   end;
+
+   elt!(once beg:INT):T pre ~void(self) and beg.is_bet(0,asize-1) is
+      -- Yield each element of self starting at `beg'. Self may 
+      -- not be void.
+      -- loop yield aelt!(beg) end end;
+      builtin ARRAY_ELT_BEGB; 
+   end;
+   
+   elt!(once beg, once num:INT):T
+      pre ~void(self)and beg.is_bet(0,size-1) and num.is_bet(0,size-beg) is
+      -- Yield `num' successive elements of self starting at
+      -- index `beg'. Self may not be void.
+      -- loop yield aelt!(beg,num) end end;      
+      builtin ARRAY_ELT_BEG_NUMB; 
+   end;
+   
+   elt!(once beg, once num, once step:INT):T
+      pre ~void(self) and is_legal_aelts_arg(beg,num,step) is
+      -- Yield `num' elements of self starting at `beg' and stepping
+      -- by `step' which must not be zero. Self may not be void.
+      -- loop yield aelt!(beg,num,step) end end;            
+      builtin ARRAY_ELT_BEG_NUM_STEPB; 
+   end;
+   
+   set!(val:T) is
+      -- Set successive elements of self to the values of `val'.       
+      -- Self may be void.
+      -- if ~void(self) then 
+      --	 loop aset!(val); yield end end end;      
+      builtin ARRAY_SETB; 
+   end;
+
+   set!(once beg:INT,val:T) pre ~void(self) and beg.is_bet(0,size-1) is
+      -- Set successive elements starting at `beg' to the values of
+      -- `val'. Self may not be void.
+      -- loop aset!(beg,val); yield end end;
+      builtin ARRAY_SET_BEGB; 
+   end;
+   
+   set!(once beg,once num:INT,val:T) 
+      pre ~void(self) and  beg.is_bet(0,size-1) and num.is_bet(0,size-beg) is
+      -- Set `num' successive elements of self starting at `beg'
+      -- to the values of `val'. Self may not be void.
+      -- loop aset!(beg,num,val); yield end end;
+      builtin ARRAY_SET_BEG_NUMB; 
+   end;
+   
+   set!(once beg,once num,once step:INT,val:T)
+      pre ~void(self) and is_legal_aelts_arg(beg,num,step) is
+      -- Set `num' elements of self starting at `beg' stepping 
+      -- by `step' to the values of val. `step' must not be zero. 
+      -- Self may not be void.
+      -- loop aset!(beg,num,step,val); yield end end;
+      builtin ARRAY_SET_BEG_NUM_STEPB; 
+   end;
+
+   resize(n:INT):SAME pre ~void(self) is
+      -- Allocate a new array and copy whatever will fit of the
+      -- old portion.  Returns the new array.
+      res::=#SAME(n);
+      loop res.set!(elt!); end;
+      return res;
+   end;
+
+   copy:SAME is
+      -- A copy of self.
+      if void(self) then return void; end;
+      r::=create(size); 
+      r.copy(self); 
+      return r;
+   end;
+   
+   copy(src:SAME) is
+      -- Copy as many elements from `src' to self as will fit.
+      -- Both self and `src' may be void.
+      -- if ~void(self) and ~void(src) then acopy(src) end end;
+      builtin ARRAY_COPY; 
+   end;
+   
+   copy(beg:INT,src:SAME)
+      pre ~void(self) and (beg.is_bet(0,size-1) or src.size=0) is
+      -- Copy as many elements from `src' to self as will fit when
+      -- starting at index `beg' of self. Self may not be void but
+      -- `src' may be void.
+      -- if ~void(src) then acopy(beg,src) end end;
+      builtin ARRAY_COPY_BEG; 
+   end;
+   
+   copy(beg,num:INT, src:SAME) 
+      pre ~void(self) and ~void(src) and beg.is_bet(0,size-1) and 
+	    num.is_bet(0,size-beg) and num<=src.size is
+      -- Copy `num' elements from `src' to self starting at index
+      -- `beg' of self. Neither self nor `src' may be void.
+      -- acopy(beg,num,src) end;
+      builtin ARRAY_COPY_BEG_NUM; 
+   end;
+   
+   copy(beg,num,srcbeg:INT,src:SAME) 
+      pre ~void(self) and ~void(src) and beg.is_bet(0,size-1) and 
+	  num.is_bet(0,size-beg) and num<=src.size-srcbeg is   
+      -- Copy `num' elements from `src' to self starting at index
+      -- `beg' of self and index `srcbeg' of `src'. Meither self nor 
+      -- `src' may be void.
+      -- acopy(beg,num,srcbeg,src) end;      
+      builtin ARRAY_COPY_BEG_NUM_SRCBEG; 
+   end;
+   
+   ind!:INT is
+      -- Yield the indices of self in order. Self may be void.
+      -- if ~void(self) then loop yield aind! end end end;
+      builtin ARRAY_INDB; 
+   end;
+
+   ind1!:INT is
+      -- Yield the indices of self in order. Self may be void.
+      -- this is provided for consistency with ARRAY2 and ARRAY3
+      -- if ~void(self) then loop yield aind! end end end;
+      builtin ARRAY_INDB; 
+   end;
+   
+   subarr(beg,num:INT):SAME 
+      pre ~void(self) and beg.is_bet(0,size-1) and
+          num.is_bet(0,size-beg) is
+      -- A new array with `num' entries copied from self 
+      -- starting at `beg'. Self may not be void.
+      r::=new(num); r.copy(0,num,beg,self); return r 
+   end;
+
+   to_reverse is
+      -- Reverse the order of the elements in self. Self may be 
+      -- void.
+      if ~void(self) then
+	 loop i::=(size/2).times!; 
+	    u::=size-i-1; t::=[i]; [i]:=[u]; [u]:=t 
+	 end 
+      end 
+   end;
+   
+   reverse:SAME is
+      -- A copy of self with the elements in reverse order.
+      -- Self may be void.
+      if void(self) then return void
+      else r::=new(size);
+	 loop r.set!(asize-1, asize, -1, elt!) end;
+	 return r 
+      end 
+   end;
+
+   to(src:SAME) pre src.size=size is 
+      -- Make self be a copy of `src'. Both may be void.
+      loop set!(src.elt!) end 
+   end;
+
+   to_val(v:T) is
+      -- Set each element of self to `v'. Self may be void.
+      loop set!(v) end 
+   end;      
+
+   append(a:SAME):SAME is
+      -- A new array consisting of self followed by `a'. Both may be void.
+      if void(self) then return a.copy
+      elsif void(a) then return copy
+      else r::=new(size+a.size); r.copy(self); r.copy(size,a); 
+	 return r 
+      end 
+   end;
+
+   append(a1,a2:SAME):SAME is
+      -- A new array consisting of self followed by `a1' and `a2'. 
+      -- More efficient than two appends. Any of the arrays may be void.
+      if void(self) then return a1.append(a2)
+      elsif void(a1) then return append(a2)
+      elsif void(a2) then return append(a1)
+      else r::=new(size+a1.size+a2.size); 
+	 r.copy(self); r.copy(size,a1); r.copy(size+a1.size,a2); 
+	 return r 
+      end 
+   end;
+
+   append(a1,a2,a3:SAME):SAME is
+      -- A new array consisting of self followed by `a1', `a2' 
+      -- and `a3'. More efficient than three appends. Any of them may
+      -- be void.
+      if void(self) then return a1.append(a2,a3)
+      elsif void(a1) then return append(a2,a3)
+      elsif void(a2) then return append(a1,a3)
+      elsif void(a3) then return append(a1,a2)
+      else r::=new(size+a1.size+a2.size+a3.size); 
+	 r.copy(self); r.copy(size,a1); r.copy(size+a1.size,a2);
+	 r.copy(size+a1.size+a2.size,a3); 
+	 return r 
+      end 
+   end;
+   
+   has(e: T): BOOL is return contains(e) end;
+   
+   contains(e:T):BOOL is
+      -- True if the self has an element which is `elt_eq' to `e'.
+      if void(self) then return false end;
+      loop if elt_eq(elt!,e) then return true end end;
+      return false 
+   end;
+   
+   index_of(e:T):INT is
+      -- Return the index of the leftmost element which is `elt_eq' 
+      -- to `e' or -1 if there is none. Self may be void.
+      loop r::=ind!; if elt_eq(e,[r]) then return r end end; 
+      return -1 
+   end;
+   
+   remove(e:T):SAME is
+      -- A new array without the elements which are `elt_eq' to `e'.
+      -- Self may be void.
+      if void(self) then return void 
+      else r::=create(size-count(e));
+	 loop se::=elt!; if ~elt_eq(se,e) then r.set!(se) end end;
+	 return r 
+      end 
+   end;
+   
+   remove_if(test:ROUT{T}:BOOL):SAME is
+      -- A new array without the elements that satisfy `test'.
+      -- Self may be void.
+      if void(self) then return void 
+      else r::=create(size-count_if(test));
+	 loop e::=elt!; if ~test.call(e) then r.set!(e) end end;
+	 return r 
+      end 
+   end;      
+   
+   remove_duplicates:SAME pre is_sorted is
+      -- A new array with only the first copy of duplicated elements.
+      -- Self may be void, but must be sorted on input.
+      if void(self) or self.size = 1 then
+	 return self;
+      end;
+      res  ::= new(size);  -- Same size as self for now...
+      ne   ::= 0;          -- Number of elements actually in res;
+      prev ::= [0];
+      loop curr ::= elt!(1);
+	 if ~elt_eq(prev,curr) then
+	    res[ne] := prev;
+	    ne := ne + 1;
+	 end;
+	 prev := curr;
+      end;
+      -- Bug fix from Arno: Whenever the last n elements were the same, they
+      -- were not added to the result.
+      res[ne] := [size-1];
+      ne := ne+1;
+      -- if ~elt_eq([size-2],[size-1]) then res[ne]:=[size-1];ne:=ne + 1;end;
+      return res.resize(ne);
+   end;
+
+   to_replace(o,n:T) is
+      -- Replace elements that are `elt_eq' to `o' by `n' where ever it 
+      -- occurs. Self may be void.
+      loop e::=elt!; 
+	 if elt_eq(e,o) then e:=n end; 
+	 set!(e) 
+      end 
+   end;
+
+   to_replace_if(test:ROUT{T}:BOOL, n:T) is
+      -- Replace elements that satisfy `test' by `n'.
+      -- Self may be void.
+      loop e::=elt!; 
+	 if test.call(e) then e:=n end; 
+	 set!(e) 
+      end 
+   end;
+
+   find_if(test:ROUT{T}:BOOL):T is
+      -- Return leftmost element of self which satisfies `test', 
+      -- or void if there is none. Self may be void.
+      loop r::=elt!; if test.call(r) then return r end end; 
+      return void 
+   end;
+
+   index_if(test:ROUT{T}:BOOL):INT is
+      -- Return the index of the leftmost element that satisfies `test', 
+      -- or -1 if there is none. Self may be void.
+      loop r::=ind!; if test.call([r]) then return r end end; 
+      return -1 
+   end;
+
+   count(v:T):INT is
+      -- The number of elements that are `elt_eq' to `v'.
+      -- Self may be void.
+      r::=0; loop if elt_eq(elt!,v) then r:=r+1 end end;
+      return r 
+   end;
+   
+   count_if(test:ROUT{T}:BOOL):INT is
+      -- The number of elements which satisfy `test'.
+      -- Self may be void.
+      r::=0; loop if test.call(elt!) then r:=r+1 end end;
+      return r 
+   end;
+
+   mismatch(a:SAME):INT is
+      -- The index of the first element of self which differs from 
+      -- `a'. -1 if self is a prefix of `a' or self is void.
+      if void(self) then return -1 end;
+      loop r::=ind!; if ~elt_eq([r],a.elt!) then return r end end;
+      return -1 
+   end;
+
+   search(a:SAME):INT is
+      -- The index of the leftmost subarray of self which matches `a'.
+      -- -1 if none or self is void. Uses simple algorithm which has 
+      -- good performance unless the arrays are special (eg. many 
+      -- repeated values).
+      if void(self) then return -1 end;
+      loop r::=0.upto!(size-a.size); 
+	 match::=true;
+	 loop if ~elt_eq(elt!(r),a.elt!) then match:=false; break! end end;
+	 if match=true then return r end 
+      end; 
+      return -1 
+   end;
+
+   search(beg:INT,a:SAME):INT pre ~void(self) and beg.is_bet(0,asize-1) is
+      -- The index of the leftmost subarray of self starting at `beg' or
+      -- beyond, which matches `a'. -1 if none. Uses simple algorithm 
+      -- which has good performance unless the arrays are special (eg. 
+      -- many repeated values).
+      loop r::=beg.upto!(size-a.size); 
+	 match::=true;
+	 loop if ~elt_eq(elt!(r),a.elt!) then match:=false; break! end end;
+	 if match=true then return r end end; 
+      return -1 end;
+
+   map(r:ROUT{T}:T) is
+      -- Set each element of self to the result of applying `r' to it.
+      -- Self may be void.
+      loop set!(r.call(elt!)) end 
+   end;
+   
+   reduce(r:ROUT{T,T}:T):T is
+      -- Combine all the elements of self by applying `r' from 
+      -- low indices to high. Void if self is void or size=0.
+      if size=0 then return void end; 
+      v::=[0]; loop v:=r.call(v,elt!(1,size-1)) end; return v 
+   end;
+
+   scan(r:ROUT{T,T}:T) is
+      -- Set each element in self to the result of applying `r' left to
+      -- right to the array up to the element. The first element is left
+      -- unchanged. Self may be void.
+      if ~void(self) then
+	 loop i::=1.upto!(size-1); [i]:=r.call([i-1],[i]) end 
+      end 
+   end; 
+   
+-- Routines relating to sorted arrays:   
+   
+   is_sorted:BOOL is 
+      -- True if the elements of self are in sorted order according
+      -- to `elt_lt'. Self may be void.
+      if ~void(self) then
+	 loop i::=1.upto!(asize-1);
+	    if elt_lt([i],[i-1]) then return false end end end;
+      return true 
+   end;
+   
+-- SOMEBODY TAKE A CLOSE LOOK AT THIS TO SEE IF THERE MIGHT
+-- BE A MORE EFFICIENT WAY TO CODE IT.  THE PRECONDITION IS
+-- ALSO BROKEN.
+   insertion_sort_range(l,u:INT)
+      -- pre ~void(self) and l.is_bet(0,asize-1) and u.is_bet(l,asize-1)
+      is
+      -- Stably sort the elements of self between `l' and `u'
+      -- inclusive by insertion sort. `elt_lt' defines the ordering.
+      loop
+	 i::=(l+1).upto!(u); e::=[i];
+	 loop
+	    j::=(i - 1).downto!(l-1);
+	    if (j < l) then [l]:=e; break!;
+	    elsif (elt_lt([j], e)) then [j+1]:=e; break!;
+	    else [j+1]:=[j];
+	    end;
+	 end;
+      end;
+   end;
+   
+   private const quicksort_limit:INT:=10; -- When to stop the
+   -- quicksort recursion and switch to insertion sort.
+   
+   quicksort_range(l,u:INT)
+      pre ~void(self) and l.is_bet(0,asize-1) and u.is_bet(l,asize-1) is
+      -- Use quicksort to sort the elements of self from `l' to `u'
+      -- inclusive according to `elt_lt'.
+      if u-l>quicksort_limit then
+	 r::=RND::int(l,u);
+	 t::=[r];
+	 [r]:=[l];
+	 [l]:=t;
+	 m::=l;
+	 loop i::=(l+1).upto!(u); 
+	    if elt_lt([i],t) then m:=m+1; 
+	       s::=[m];
+	       [m]:=[i];
+	       [i]:=s; 
+	    end; 
+	 end;
+	 t:=[l];
+	 [l]:=[m];
+	 [m]:=t;
+	 if l < m-1 then
+	    quicksort_range(l,m-1);
+	 end;
+	 if m+1 < u then
+	    quicksort_range(m+1,u);
+	 end;
+      else 
+	 insertion_sort_range(l,u);
+      end;
+   end;   
+   
+   sort post is_sorted is
+      -- Use quicksort to permute the elements of self so that 
+      -- it is sorted with respect to `elt_lt'. Self may be void.
+      if ~void(self) then quicksort_range(0,asize-1) end 
+   end;
+
+   sort:SAME post result.is_sorted is
+      -- Use quicksort to create a copy of self and sort the copy
+      res ::= copy;   res.sort; return res;
+   end;
+   
+   stable_sort post is_sorted is
+      -- Use insertion sort to permute the elements of self so that 
+      -- it is sorted with respect to `elt_lt'. Equal elements
+      -- retain their initial order. Self may be void.
+      if ~void(self) then insertion_sort_range(0,asize-1) end 
+   end;   
+
+   binary_search(e:T):INT pre is_sorted is
+      -- Assuming self is sorted, return the index of the element 
+      -- preceding the first element greater than `e' according to
+      -- `elt_lt'. -1 if self is void or if all elements are 
+      -- greater than `e'. 
+      if void(self) then return -1 end;
+      l::=0; u::=asize-1;
+      if ~elt_lt(e,[u]) then return u end;
+      if elt_lt(e,[l]) then return -1 end;
+      -- From now on [u] is always known to be greater than `e', and
+      -- [l] is not greater than `e'.
+      loop while!(u>l+1); j::=(u+l)/2;
+	 if elt_lt(e,[j]) then u:=j else l:=j end end;
+      return l end;
+   
+   is_sorted_by(lt:ROUT{T,T}:BOOL):BOOL is 
+      -- True if the elements of self are in sorted order using
+      -- `t' to define "less than". Self may be void.
+      if ~void(self) then
+	 loop i::=1.upto!(asize-1);
+	    if lt.call([i],[i-1]) then return false end end end;
+      return true end;
+   
+   insertion_sort_by(lt:ROUT{T,T}:BOOL) post is_sorted_by(lt) is
+      -- Stably sort the elements of self using `t' to define "less than". 
+      -- Self may be void.
+      if void(self) then return end;
+      loop
+	 i::=1.upto!(asize-1); e::=[i];
+	 loop
+	    j::=(i - 1).downto!(-1);
+	    if (j < 0) then [0]:=e; break!;
+	    elsif (lt.call([j], e)) then [j+1]:=e; break!;
+	    else [j+1]:=[j];
+	    end;
+	 end;
+      end;
+   end;
+
+   binary_search_by(e:T, lt:ROUT{T,T}:BOOL):INT pre is_sorted_by(lt) is
+      -- Assuming self is sorted by `lt', return the index of the element 
+      -- preceding the first element greater than `e'. -1 if self is void 
+      -- or if all elements are greater than `e'. 
+      if void(self) then return -1 end;
+      l::=0; u::=asize-1;
+      if ~lt.call(e,[u]) then return u end;
+      if lt.call(e,[l]) then return -1 end;
+      -- From now on [u] is always known to be greater than `e', and
+      -- [l] is not greater than `e'.
+      loop while!(u>l+1); 
+	 j::=(u+l)/2;
+	 if lt.call(e,[j]) then u:=j else l:=j end end;
+      return l 
+   end;
+   
+   merge_with_by(a:SAME, lt:ROUT{T,T}:BOOL):SAME
+      pre is_sorted_by(lt) and a.is_sorted_by(lt) 
+      post result.is_sorted_by(lt) is   
+      -- A new array with the elements of self and `a' merged together
+      -- according to `lt' which should return true if its first argument
+      -- is less than its second.
+      if void(self) then return a.copy end;
+      if void(a) then return copy end;      
+      r::=create(size+a.size); i,j:INT; w:T;
+      loop 
+	 if i=size then w:=a[j]; j:=j+1
+	 elsif j=a.size then w:=[i]; i:=i+1
+	 elsif lt.call([i],a[j]) then w:=[i]; i:=i+1
+	 else w:=a[j]; j:=j+1 end; 
+	 r.set!(w) end;
+      return r 
+   end;
+
+   select(i:INT) is
+      -- Move the elements of self so that the element with index `i' is 
+      -- not `elt_lt' any element with lower indices and no element with
+      -- a larger index is `elt_lt' it.
+      l::=0; u::=size-1;
+      loop until!(l>=u);	-- [0->l-1] <= [l->u] <= [u+1->size-1]
+	 r::=RND::int(l,u); 
+	 t::=[r]; [r]:=[l]; [l]:=t; m::=l;	 
+	 loop j::=(l+1).upto!(u);
+	    if elt_lt([i],t) then m:=m+1; 
+	       t:=[m]; [m]:=[j]; [j]:=t end end;
+	 t:=[l]; [l]:=[m]; [m]:=t; -- [l->m-1] <= [m] <= [m+1->u]
+	 if m<=i then l:=m+1 end;
+	 if m>=i then u:=m-1 end 
+      end 
+   end; 
+   
+   median:T is
+      -- The median of the elements contained in self according to the 
+      -- ordering relation `elt_lt'. Permutes the elements of self. Void 
+      -- if self is void.
+      if size=0 then return void end;
+      m::=(size-1)/2; select(m); return [m] 
+   end;
+   
+   select_by(lt:ROUT{T,T}:BOOL, i:INT) is
+      -- Move the elements of self so that the element with index `i' is 
+      -- not `lt' any element with lower indices and no element with
+      -- a larger index is `lt' it.
+      l::=0; u::=size-1;
+      loop until!(l>=u);	-- [0->l-1] <= [l->u] <= [u+1->size-1]
+	 r::=RND::int(l,u); 
+	 t::=[r]; [r]:=[l]; [l]:=t; m::=l;	 
+	 loop j::=(l+1).upto!(u);
+	    if lt.call([j],t) then m:=m+1; 
+	       t:=[m]; [m]:=[j]; [j]:=t end end;
+	 t:=[l]; [l]:=[m]; [m]:=t; -- [l->m-1] <= [m] <= [m+1->u]	 
+	 if m<=i then l:=m+1 end;
+	 if m>=i then u:=m-1 
+	 end 
+      end 
+   end;    
+
+   as_array:ARRAY{T} is
+      res ::= #ARRAY{T}(size);
+      loop res.set!(elt!) end;
+      return res;
+   end;
+   
+   str: STR is
+      -- Prints out a string version of the array of the components 
+      -- that are under $STR, and their associated indices
+      res ::= #FSTR("{");
+      i::=0;
+      loop until!(i=size);
+	 e ::= [i];
+	 if i =  0 then res := res+elt_str(e,i);
+	 else  res := res + ","+elt_str(e,i); end;
+	 i := i + 1;
+      end;
+      res := res +"}";
+      return(res.str);
+   end;
+
+   private elt_str(e: T,i: INT): STR is
+      typecase e 
+      when $STR then return e.str  else return "Unprintable:"+i.str end;
+   end;
+
+   inds: ARRAY{INT} is
+      -- Return an index array which is the same size as self and
+      -- is set to the values of the indices
+      sz: INT := size;
+      res: ARRAY{INT} := #(sz);
+      i: INT := 0;
+      loop until!(i >= sz); res[i] := ind!; i := i + 1; end;
+      return res;
+   end;
+   
+   has_ind(i: INT): BOOL is
+      -- Return true if "i" is a valid index
+      return 0<=i and i < size 
+   end;
+   
+end; -- class ARRAY{T}   
+
+

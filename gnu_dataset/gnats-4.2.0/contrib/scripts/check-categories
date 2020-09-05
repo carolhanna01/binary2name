@@ -1,0 +1,55 @@
+#!/bin/sh
+#
+# check-categories	A script to verify that all PRs are filed in the
+#			proper directories.
+#
+#
+
+GNATS_ROOT=/usr/local/lib/gnats/gnats-db
+
+# Move to the directory where all the categories lie.
+
+cd $GNATS_ROOT
+
+# Now, go into each category directory in turn, and examine *each* Pr.
+for dirs in `query-pr --list-categories| cut -d":" -f1`
+do
+   # Move to directory
+   cd $dirs
+   echo Checking $dirs
+   for files in `ls`
+   do
+   if [ "$dirs" = "pending" -a "`ls`" != "" ]
+   then
+      echo Warning!  There are pending PRs.  This must be corrected.
+   else
+      catline=`egrep '>Category' $files|line|cut -d':' -f2-|cut -c8-`
+      if [ "$catline" != "$dirs" ]
+      then
+         # Use pr-edit to check to see if this is a PR.  If not, then what 
+         # is it doing here?
+
+         echo \\n$files is not in the correct directory.  Attempting to move
+         echo to proper directory, $catline.
+         if [ -d ../$catline ]
+         then
+            mv $files ../$catline
+         else
+            echo Error!  Directory $catline does not exist.  Please correct.
+            echo $files not moved.
+         fi
+      fi
+   fi
+   done
+   cd ..
+done
+
+#
+# Now, see if there are any unresolved files in the queue.
+#
+
+unresolved=`ls gnats-queue/.gnats\* 2>/dev/null`
+if [ "$unresolved" ]
+then
+   echo There are unresolved problems in gnats-queue
+fi

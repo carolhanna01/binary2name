@@ -1,0 +1,22 @@
+;;;MoveRest
+(let ((tag "MoveRest"))
+(if (d-Directive-chord? tag)
+    (begin
+        (d-DirectiveDelete-chord tag)
+        (d-StagedDelete)))
+(if (Rest?)
+  (let* ((duration (string->number (d-GetNoteDuration)))(which (duration::lilypond->denemo duration )))
+    (d-AddNoteToChord)
+    (if (> duration 4)
+        (begin
+            (d-DirectivePut-standalone-minpixels "BeamingDisplayFix" 10)
+            (d-MoveCursorRight)
+            (d-DirectivePut-standalone-minpixels  "BeamingDisplayFix" 10)
+            (d-MoveCursorLeft)
+            (d-MoveCursorLeft)
+            (d-RefreshDisplay)))
+    (d-DirectivePut-chord-postfix tag "\\rest")
+    (d-DirectivePrioritizeTag-chord tag)
+    (d-DirectivePut-chord-graphic  tag (vector-ref Rests which))
+    (d-DirectivePut-chord-override tag (logior DENEMO_OVERRIDE_VOLUME DENEMO_OVERRIDE_GRAPHIC DENEMO_ALT_OVERRIDE))))
+(d-SetSaved #f))

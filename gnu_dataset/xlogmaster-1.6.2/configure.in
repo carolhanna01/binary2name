@@ -1,0 +1,307 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT
+AC_CONFIG_SRCDIR([src/xlogmaster.cc])
+
+XLM_MAJOR_VERSION=1
+XLM_MINOR_VERSION=6
+XLM_MICRO_VERSION=2
+XLM_VERSION=$XLM_MAJOR_VERSION.$XLM_MINOR_VERSION.$XLM_MICRO_VERSION
+
+dnl for automake:
+VERSION=$XLM_VERSION
+PACKAGE=xlogmaster
+
+dnl Initialize auomake now
+AM_INIT_AUTOMAKE($PACKAGE, $VERSION)
+AC_SUBST(XLM_VERSION)
+AC_PREFIX_DEFAULT("/usr/local")
+
+dnl checks for needed compilers
+CFLAGS=""
+if test x${CXXFLAGS+set} = xset ; then
+  :
+else
+  CXXFLAGS="-O2"
+fi
+AC_PROG_CC
+AC_PROG_CXX
+AC_PROG_RANLIB
+
+dnl now some other stuff
+AC_CONFIG_HEADERS([config.h])
+AC_CANONICAL_HOST
+AM_SANITY_CHECK
+AC_PROG_LN_S
+
+dnl  
+dnl  check for right version of the GTK+ toolkit
+dnl  
+AM_PATH_GTK(1.2.1,
+            [LIBS="$LIBS $GTK_LIBS"
+            CFLAGS="$CFLAGS $GTK_CFLAGS"],
+            AC_MSG_ERROR(Cannot find GTK+: Is gtk-config in executable path ?))
+
+
+dnl
+dnl   checks for header files & functions
+dnl   if these couldn't be found it will just cause some functions to be disabled
+dnl
+AC_CHECK_HEADERS(sys/mman.h)
+AC_CHECK_FUNCS(mlockall)
+AC_CHECK_FUNCS(putenv)
+
+
+
+dnl
+dnl   Check for existing functions in the used libraries
+dnl   if these functions couldn't be found the Xlogmaster
+dnl   will rebuild the functionality automatically with
+dnl   creating a "libimport.a" that will get linked to the
+dnl   binary...
+dnl
+
+dnl   This enables the user to force the compilation of the libimport
+AC_ARG_ENABLE(libimport, [  --enable-libimport      force compilation \
+of libimport],force_libimport="libimport forced",force_libimport="")
+if test "x$force_libimport" != "x" ; then
+	echo "forcing compilation of libimport..."
+fi
+
+
+dnl
+dnl Now do the automated checks
+dnl
+
+# Checks for header files.
+AC_PATH_X
+AC_HEADER_DIRENT
+AC_HEADER_STDC
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS([fcntl.h libintl.h malloc.h stdlib.h string.h sys/time.h unistd.h utime.h])
+                                                                                                                    
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_OFF_T
+AC_TYPE_PID_T
+AC_CHECK_MEMBERS([struct stat.st_rdev])
+AC_HEADER_TIME
+                                                                                                                    
+# Checks for library functions.
+AC_FUNC_ALLOCA
+AC_FUNC_CHOWN
+AC_FUNC_CLOSEDIR_VOID
+AC_FUNC_FORK
+AC_PROG_GCC_TRADITIONAL
+AC_FUNC_LSTAT
+AC_FUNC_LSTAT_FOLLOWS_SLASHED_SYMLINK
+AC_FUNC_MALLOC
+AC_FUNC_MEMCMP
+AC_FUNC_REALLOC
+AC_TYPE_SIGNAL
+AC_FUNC_STAT
+AC_CHECK_FUNCS([dup2 fchdir ftruncate memmove memset mkdir putenv regcomp rmdir strncasecmp])
+
+
+dnl 
+dnl   Xlogmaster specific configuration flags that can be
+dnl   influenced/set by user...
+dnl
+
+dnl  compile Xlogmaster in development mode ? (option -g activated
+dnl  and a "run" target exists)
+
+AC_ARG_ENABLE(development, [  --enable-development=[yes/no] special \
+configuration during program 
+                          development [default=no]], \
+echo "setting mode to development", enable_development=no)
+AM_CONDITIONAL(DEVELMODE, test x$enable_development != xno)
+
+
+dnl  GTKRC default choice
+
+AC_ARG_ENABLE(gtkrc, [  --enable-gtkrc=[steelblue/hell/simpsons/green]
+                          set default gtkrc (look) of the Xlogmaster 
+                          [default=steelblue]
+  --disable-gtkrc         do not install sample gtkrc-files],
+echo "setting default gtkrc to "$enable_gtkrc,
+enable_gtkrc="steelblue")
+AM_CONDITIONAL(INSTALLGTKRC, test x$enable_gtkrc != xno)
+DEFGTKRC="$enable_gtkrc".gtkrc
+AC_SUBST(DEFGTKRC)
+
+
+dnl  set name for default GTKRC the Xlogmaster will search for
+
+AC_ARG_WITH(namegtkrc, [  --with-namegtkrc=<filename> set name for \
+default gtkrc file 
+                          [default=xlogmaster.gtkrc]],,\
+with_namegtkrc="xlogmaster.gtkrc")
+AC_DEFINE_UNQUOTED(GTKRC,"$with_namegtkrc", [GTKRC Default])
+GTKRCNAME="$with_namegtkrc"
+AC_SUBST(GTKRCNAME)
+
+
+dnl  name of user specific config file the Xlogmaster will search for in
+dnl  users home directory
+
+AC_ARG_WITH(configfile, [  --with-configfile=<filename> set default configuration file 
+                          [default=.xlogmaster]],,\
+with_configfile=".xlogmaster")
+AC_DEFINE_UNQUOTED(CONFIGFILE,"$with_configfile", [User Config File])
+
+
+dnl  name of system wide config file the Xlogmaster will search for in
+dnl  the system wide configuration directory
+
+AC_ARG_WITH(sysconfigfile, [  --with-sysconfigfile=<filename> set \
+default name for system wide 
+                          configuration file [default=xlogmasterrc]],,\
+with_sysconfigfile="xlogmasterrc")
+AC_DEFINE_UNQUOTED(SYSCONFIGFILE,"$with_sysconfigfile", [System wide config file])
+
+
+dnl  wordwrapping on/off as the default
+
+AC_ARG_WITH(wordwrap, [  --with-wordwrap=[TRUE/FALSE] set default \
+wordwrapping mode [default=FALSE]],with_wordwrap=FALSE)
+if test "x$with_wordwrap" = "xyes" || test "x$with_wordwrap" = "xtrue"; then
+	with_wordwrap=TRUE
+else
+	with_wordwrap=FALSE
+fi
+AC_DEFINE_UNQUOTED(WORDWRAP,$with_wordwrap, [Wordwrap option])
+
+
+dnl define MAXTEXT 20000
+
+AC_ARG_WITH(maxtext, [  --with-maxtext=<n>     maximum text size? \
+[default=20000]],, with_maxtext=20000)
+AC_DEFINE_UNQUOTED(MAXTEXT,$with_maxtext, [Maxtext option])
+
+dnl define INTERVAL 3
+AC_ARG_WITH(interval, [  --with-interval=<n>     interval time? \
+[default=3]],, with_interval=3)
+AC_DEFINE_UNQUOTED(INTERVAL,$with_interval, [Interval time])
+
+
+dnl RDBLCK determines the read block size 
+
+AC_ARG_WITH(rdblck, [  --with-rdblck=<n>     read block size? \
+[default=3000]],, with_rdblck=3000)
+AC_DEFINE_UNQUOTED(RDBLCK,$with_rdblck, [RDBLCK read block])
+
+
+dnl  use a small icon when iconifying as the default ?
+
+AC_ARG_WITH(smallicon, [  --with-smallicon=[yes/no] use small icon \
+for iconify ? [default=no]],, with_smallicon=no)
+if test "x$with_smallicon" = "xyes" || test "x$with_smallicon" = "xYES"; then
+	with_smallicon=TRUE
+else
+	with_smallicon=FALSE
+fi
+AC_DEFINE_UNQUOTED(ICON_SMALL,$with_smallicon, [SMALL ICON])
+
+
+dnl  default number of steps to take for fading back to usual color after alert
+
+AC_ARG_WITH(fadesteps, [  --with-fadesteps=<n>     how many steps between \
+the alert color and the 
+                           normal background ? [default=50]],, \
+with_fadesteps=50)
+AC_DEFINE_UNQUOTED(XLM_FADE_STEPS,$with_fadesteps, [FADE STEPS])
+
+
+dnl  default number of seconds for fading back after alert
+
+AC_ARG_WITH(fadeseconds, [  --with-fadeseconds=<n>   how many seconds \
+to take for fading between the alert
+                           color and the normal background ? \
+[default=300]],, with_fadeseconds=300)
+AC_DEFINE_UNQUOTED(XLM_FADE_SECONDS,$with_fadeseconds, [FADE TIME])
+
+
+dnl  default color to use for alert
+
+AC_ARG_WITH(alertcolor, [  --with-alertcolor=<r-g-b>set default alert color 
+                           (GTK+ style, ***use the decimal comma !!!***)
+                           [default=1.0-0-0]],,with_alertcolor=1.0-0-0)
+AC_DEFINE_UNQUOTED(XLM_ALERT_COLOR,"$with_alertcolor", [DEFAULT COLOR])
+
+
+dnl install the sound files along with the Xlogmaster ?
+dnl Disabling this will set the Xlogmaster to default to "-silent", too !
+
+AC_ARG_WITH(soundfiles, [  --with-soundfiles=<yes/no> install \
+soundfiles ? [default=yes]
+                           this option also turns the audio \
+default on/off],,with_soundfiles=yes)
+if test "x$with_soundfiles" = "xyes" \
+|| test "x$with_soundfiles" = "xtrue"; then
+	with_soundfiles=true
+fi
+AM_CONDITIONAL(INSTALLSOUND, test "x$with_soundfiles" = "xtrue" )
+if test "x$with_soundfiles" = "xtrue"; then
+	defsound=TRUE;
+else
+	defsound=FALSE;
+fi
+AC_DEFINE_UNQUOTED(AUDIO,$defsound, [WITH SOUND])
+
+
+dnl  Install the scriptfiles along with the Xlogmaster binary ?
+AC_ARG_WITH(scriptfiles, [  --with-scriptfiles=<yes/no> install the \
+xlogmaster scripts ? [default=yes]],,with_scriptfiles=yes)
+if test "x$with_scriptfiles" = "xyes" \
+|| test "x$with_scriptfiles" = "xtrue"; then
+	with_scriptfiles=true
+fi
+AM_CONDITIONAL(INSTALLSCRIPTS, test "x$with_scriptfiles" = "xtrue" )
+
+
+dnl homedirectory for the Xlogmaster
+AC_ARG_WITH(xlogmaster-home,[  --with-xlogmaster-home=<directory> \
+set default configuration home directory 
+                           for the Xlogmaster 
+                           [default=\${prefix}/etc/xlogmaster]],,\
+with_xlogmaster_home="\${prefix}/etc/xlogmaster")
+XLM_HOME="$with_xlogmaster_home"
+AC_SUBST(XLM_HOME)
+
+
+dnl Directory for the database:
+AC_ARG_WITH(xlogmaster-db,[  --with-xlogmaster-db=<directory> set \
+directory for the entry database
+                           [default=\${prefix}/etc/xlogmaster/database]],,\
+with_xlogmaster_db="\${prefix}/etc/xlogmaster/database")
+XLM_DB=$with_xlogmaster_db
+AC_SUBST(XLM_DB)
+
+
+dnl Directory for the users private database:
+AC_ARG_WITH(user-db,[  --with-user-db=<directory> set \
+name of directory for users private entry 
+                           database, \$HOME is prepended for each user
+                           [default=.xlm-db]],,\
+with_user_db=".xlm-db")
+XLM_USER_DB=$with_user_db
+AC_SUBST(XLM_USER_DB)
+
+
+dnl Directory for the sound, script & plugin stuff:
+AC_ARG_WITH(xlogmaster-lib,[  --with-xlogmaster-lib=<directory> \
+set directory for sounds & scripts
+                           [default=\${prefix}/etc/xlogmaster]],,\
+with_xlogmaster_lib="\${prefix}/etc/xlogmaster")
+XLM_LIB=$with_xlogmaster_lib
+AC_SUBST(XLM_LIB)
+
+
+
+dnl  Makefiles to create:
+
+AC_CONFIG_FILES([\
+src/Makefile audio/Makefile output-plugins/Makefile gtkrc-samples/Makefile \
+scripts/Makefile database/Makefile doc/Makefile Makefile ])
+AC_OUTPUT
+

@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# set up
+
+PATH=.:/bin:/usr/bin:/usr/unsupported/bin:/usr/unsupported/informix/bin
+INFORMIXDIR=/usr/unsupported/informix
+DBPATH=/users/db/infx
+DBTEMP=/tmp
+
+export PATH
+export INFORMIXDIR
+export DBPATH
+export DBTEMP
+
+BUGDIR=/users/db/reports
+INFX=/usr/unsupported/informix/bin
+
+# ------------------------------------------------------------------------
+# report on 
+#   changes in bug statistics, new opens, and state changes  for week
+# ------------------------------------------------------------------------
+
+for rept in wk_delta wk_open wk_st_chng
+  do
+  FN=$BUGDIR/$rept`date +%y%m%d`
+  $INFX/sacego $rept   | sed -n '7,$p' > $FN
+  cat $FN >> $DBTEMP/tmp
+  done
+
+# ------------------------------------------------------------------------
+# report on 
+#   open bugs and open enhancement requests
+# ------------------------------------------------------------------------
+
+for rept in open enhreq 
+  do
+  cat $DBTEMP/tmp1 >> $DBTEMP/tmp
+  FN=$BUGDIR/$rept`date +%y%m%d`
+  $INFX/sacego $rept   | sed -n '7,$p' > $FN
+  cat $FN >> $DBTEMP/tmp
+  done

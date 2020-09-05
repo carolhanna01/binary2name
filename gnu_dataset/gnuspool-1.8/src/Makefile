@@ -1,0 +1,269 @@
+#
+#   Copyright 2008 Free Software Foundation, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#	Makefile for main sources
+#
+
+SHELL		=	/bin/sh
+
+prefix		=	/usr/local
+exec_prefix	=	${prefix}
+CC		=	gcc
+CCFLAGS		=	-O -g -Wall -fno-stack-protector 
+SHLIBCC		=	libtool --mode=link $(CC) $(CCFLAGS)
+LIBS		=	
+LIBCURSES	=	-lcurses
+LIBDIR		=	${exec_prefix}/lib
+LIBNET		=	
+MV		=	mv
+RM		= 	rm -f
+HDRS		=	hdrs
+PARENT		=	.
+BASE		=	..
+SHLIB		=	lib/libgnuspool_int.la
+SHLIBCURS	=	lib/libgnuspool_curs.la
+CFLAGS		=	$(CCFLAGS) -I$(HDRS) -I$(BASE)
+LDFLAGS		=
+INSTALL		=	/usr/bin/install -c
+INSTALL_DATA	=	${INSTALL} -m 644
+SPOOLUSER	=	gnuspool
+USERMODES	=	-o $(SPOOLUSER) -g root -m 4755
+NOSETMODES	=	-o $(SPOOLUSER) -g root
+SUIDROOT	=	-o root -g root -m 4755
+TTYGROUP	=	-o $(SPOOLUSER) -g tty -m 2755
+BINDIR		=	$(DESTDIR)${exec_prefix}/bin
+INTBINDIR	=	$(DESTDIR)${exec_prefix}/libexec/gnuspool
+SPOOLDIR	=	$(DESTDIR)${prefix}/var/gnuspool
+SPOOLPT		=	$(DESTDIR)${datarootdir}/gnuspool/ptrs
+SPHELPDIR	=	$(DESTDIR)${datarootdir}/gnuspool/help
+USERBINS	=	gspl-rpr gspl-pr gspl-charge gspl-pq gspl-start gspl-user \
+			gspl-ulist gspl-uchange gspl-plist gspl-qchange gspl-qlist gspl-qdel gspl-stop
+SUIDROOTBINS	=	spshed spexec spmdisp sppwchk xtnetserv
+SUIDSPBINS	=	spd spjobdump
+TTYGRPBINS	=	spwrite dosspwrite
+NOSETUBINS	=	spdinit
+SPSTARTLNKS	=	gspl-disconn gspl-nok gspl-ok gspl-pchange gspl-conn gspl-pdel gspl-pstat gspl-pinter gspl-padd gspl-phalt gspl-pstop
+SSTOPLNKS	=	gspl-suspend gspl-release
+STAGED_INSTALL	=	false
+
+PROGS=gspl-pr gspl-rpr spshed dosspwrite xtnetserv spd spdinit spwrite spmdisp gspl-user\
+	gspl-pq gspl-start gspl-stop gspl-charge gspl-ulist gspl-uchange spjobdump\
+	gspl-plist gspl-qlist gspl-qdel gspl-qchange spexec\
+	sppwchk loccgid insd gtkd termservd lpdintd apilibd remcgid
+
+# We only bother to list modules for multi-module progs
+
+SPSHED_OBJS=spshed.o sh_queue.o sh_plist.o sh_oper.o sh_misc.o sh_network.o sh_netfeed.o
+SPD_OBJS=spd.o sd_initf.o sd_bann.o sd_fctrl.o
+SPDINIT_OBJS=spdinit.o sdi_gram.o
+SPUSER_OBJS=spuser.o spu_propts.o
+SPQ_OBJS=spq.o sq_jlist.o sq_plist.o sq_view.o qopts.o wtime.o prompt.o sq_propts.o
+XTNETSERV_OBJS=xtnetserv.o xtnet_ua.o xtnet_api.o
+RSPR_OBJS=rspr.o rsp_net.o
+
+all:	$(PROGS)
+
+gspl-pr:	spr.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spr.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-rpr:	$(RSPR_OBJS) $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) $(RSPR_OBJS) $(SHLIB) $(LIBNET) $(LIBS)
+
+spshed:	$(SPSHED_OBJS) $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) $(SPSHED_OBJS) $(SHLIB) $(LIBNET) $(LIBS)
+
+spd:	$(SPD_OBJS) $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) $(SPD_OBJS) $(SHLIB) $(LIBNET) $(LIBS)
+
+spdinit: $(SPDINIT_OBJS) $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) $(SPDINIT_OBJS) $(SHLIB) $(LIBS)
+
+spmdisp: spmdisp.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spmdisp.o $(SHLIB) $(LIBS)
+
+spwrite: spwrite.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spwrite.o $(SHLIB) $(LIBS)
+
+dosspwrite:	dosspwrite.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) dosspwrite.o $(SHLIB) $(LIBNET) $(LIBS)
+
+xtnetserv:	$(XTNETSERV_OBJS) $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) $(XTNETSERV_OBJS) $(SHLIB) $(LIBNET) $(LIBS)
+
+spjobdump:	spjobdump.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spjobdump.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-user:		$(SPUSER_OBJS) $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) $(SPUSER_OBJS) $(SHLIBCURS) $(SHLIB) $(LIBCURSES) $(LIBNET) $(LIBS)
+
+gspl-pq:	$(SPQ_OBJS) $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) $(SPQ_OBJS) $(SHLIBCURS) $(SHLIB) $(LIBCURSES) $(LIBNET) $(LIBS)
+
+gspl-start:	spstart.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spstart.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-stop:		sstop.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) sstop.o $(SHLIB) $(LIBS)
+
+gspl-charge:	spcharge.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spcharge.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-plist:		splist.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) splist.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-qlist:		sqlist.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) sqlist.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-qdel:		sqdel.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) sqdel.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-qchange:	sqchange.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) sqchange.o $(SHLIB) $(LIBNET) $(LIBS)
+
+gspl-ulist:	spulist.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spulist.o $(SHLIB) $(LIBS)
+
+gspl-uchange:	spuchange.o $(SHLIB)
+	$(SHLIBCC) -o $@ $(LDFLAGS) spuchange.o $(SHLIB) $(LIBS)
+
+spexec:		spexec.o
+	$(SHLIBCC) -o $@ $(LDFLAGS) spexec.o $(SHLIB) $(LIBS)
+
+sppwchk:	sppwchk.o
+	$(SHLIBCC) -o $@ $(LDFLAGS) sppwchk.o $(SHLIB)  -lcrypt $(LIBS)
+
+termservd:
+	cd termserv;$(MAKE)
+	touch $@
+
+lpdintd:
+	cd lpdint;$(MAKE)
+	touch $@
+
+apilibd:
+	cd apilib;$(MAKE)
+	touch $@
+
+loccgid:
+	cd loccgi;$(MAKE)
+	touch $@
+
+remcgid:
+	cd remcgi;$(MAKE)
+	touch $@
+
+insd:   $(SHLIB)
+	cd ins;$(MAKE)
+	touch $@
+
+gtkd:	$(SHLIB)
+	if cd gtk;$(MAKE); then echo GTK built OK; else echo "GTK build failed - not critcal but please install recent GTK (incl devel libs)"; fi
+	touch $@
+
+# Commenting out Motif stuff
+# This should work if you have a Motif Library and #includes but Motif is not supported by GNU
+#motifd:	$(SHLIB)
+#	-cd motif;$(MAKE)
+
+$(SHLIB):
+	cd lib;$(MAKE)
+
+##################################################################################
+#
+#		INSTALL
+#
+#	NB we need to have user "$(SPOOLUSER)" set up
+#	Also need to set up initial host file
+#
+##################################################################################
+
+install: all
+	$(STAGED_INSTALL) || /usr/bin/perl $(BASE)/Checkuserinst $(SPOOLUSER) $(SPOOLDIR)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(SPOOLDIR)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(SPOOLPT)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(INTBINDIR)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(SPHELPDIR)
+	cd lib;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	libtool --mode=install $(INSTALL) $(USERMODES) $(USERBINS) $(BINDIR)
+	cd $(BINDIR);for p in $(SPSTARTLNKS); do ln -f gspl-start $$p; done
+	cd $(BINDIR);for p in $(SSTOPLNKS); do ln -f gspl-stop $$p; done
+	libtool --mode=install $(INSTALL) $(SUIDROOT) $(SUIDROOTBINS) $(INTBINDIR)
+	libtool --mode=install $(INSTALL) $(USERMODES) $(SUIDSPBINS) $(INTBINDIR)
+	libtool --mode=install $(INSTALL) $(NOSETMODES) $(NOSETUBINS) $(INTBINDIR)
+	libtool --mode=install $(INSTALL) $(TTYGROUP) $(TTYGRPBINS) $(INTBINDIR)
+	cd helpmsg;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd loccgi;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd ins;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd apilib;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd remcgi;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd termserv;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd lpdint;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	-cd gtk;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+##	-cd motif;$(MAKE) install prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	$(STAGED_INSTALL) || /usr/bin/perl $(BASE)/Checknetinst
+
+install-strip:
+	$(STAGED_INSTALL) || /usr/bin/perl $(BASE)/Checkuserinst $(SPOOLUSER) $(SPOOLDIR)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(SPOOLDIR)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(SPOOLPT)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(INTBINDIR)
+	$(INSTALL) -d -o $(SPOOLUSER) -g root -m 755 $(SPHELPDIR)
+	cd lib;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	libtool --mode=install $(INSTALL) -s $(USERMODES) $(USERBINS) $(BINDIR)
+	cd $(BINDIR);for p in $(SPSTARTLNKS); do ln -f gspl-start $$p; done
+	cd $(BINDIR);for p in $(SSTOPLNKS); do ln -f gspl-stop $$p; done
+	libtool --mode=install $(INSTALL) -s $(SUIDROOT) $(SUIDROOTBINS) $(INTBINDIR)
+	libtool --mode=install $(INSTALL) -s $(USERMODES) $(SUIDSPBINS) $(INTBINDIR)
+	libtool --mode=install $(INSTALL) -s $(NOSETMODES) $(NOSETUBINS) $(INTBINDIR)
+	libtool --mode=install $(INSTALL) -s $(TTYGROUP) $(TTYGRPBINS) $(INTBINDIR)
+	cd helpmsg;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd loccgi;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd ins;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd apilib;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd remcgi;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd termserv;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	cd lpdint;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	-cd gtk;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+##	-cd motif;$(MAKE) install-strip prefix="$(prefix)" exec_prefix="$(exec_prefix)"
+	$(STAGED_INSTALL) || /usr/bin/perl $(BASE)/Checknetinst
+
+#	Clean-ups.
+
+clean:
+	$(RM) *.o $(PROGS) $(SHPROGS) apilibd loccgid remcgid insd termservd motifd gtkd
+	cd lib;$(MAKE) clean
+	cd apilib;$(MAKE) clean
+	cd loccgi;$(MAKE) clean
+	cd remcgi;$(MAKE) clean
+	cd ins;$(MAKE) clean
+	cd helpmsg;$(MAKE) clean
+	cd termserv;$(MAKE) clean
+	cd lpdint;$(MAKE) clean
+	-cd gtk;$(MAKE) clean
+	-cd motif;$(MAKE) clean
+
+distclean:	clean
+	cd lib;$(MAKE) distclean
+	cd apilib;$(MAKE) distclean
+	cd loccgi;$(MAKE) distclean
+	cd remcgi;$(MAKE) distclean
+	cd ins;$(MAKE) distclean
+	cd helpmsg;$(MAKE) distclean
+	cd termserv;$(MAKE) distclean
+	cd lpdint;$(MAKE) distclean
+	-cd gtk;$(MAKE) distclean
+	-cd motif;$(MAKE) distclean
+	$(RM) Makefile

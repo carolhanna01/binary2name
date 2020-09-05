@@ -1,0 +1,164 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- pack.sa: Configuration - packing
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class TK_PACK is
+   include TK_ARG_UTIL;
+    -- Configuring 
+    -- Look at GUI_UTIL for the meaningful incarnations of the packer
+    -- 
+    -- I *VERY STRONGLY* recommend that you take the time to read 
+    -- the packing algorithm described below or from the Tk manual.
+    -- It is quite easy to understand, and you will be paid back many
+    -- times over in improved understanding of what's going on.
+    -- 
+    -- In summary: each widget has a "strong" and a "weak" dimension,
+    --    determined by the side it is attached to. 
+    --    If it is attached to the left or right, its strong dim is vertical
+    --    If it is attached to the top or bottom, its strong dim is horizontal
+    --    A widget will grow in its strong dimension 
+    --       if fill is true for the strong dimension.
+    --    A widget will grow in its weak dimension 
+    --       if fill is true for the weak dimension.
+    --       *and* expand is true 
+    
+    -- The Tk packing algorithm:(from the packer man page)
+    --
+    -- The packing algorithm consists of two phases (STRONG) and (WEAK)
+    -- (STRONG) allocates all available space in the "strong" dimension
+    -- (WEAK) allocates extra left-over space in the "weak" dimension.
+    -- 
+    --  Terms
+    ---------
+    --  Requested size:  Refers to the width or height requested by the
+    --           widget through the "height" and "width" configuration options
+    --  Parcel:  Some preliminary space allocation, into which
+    --               the widget will actually be placed.
+    --  Fill (x or y):  Indicates whether the widget can grow within the
+    --           parcel in that dimension
+    --  Expand: Indicates whether the *parcel* itself can grow when space
+    --          is available in the weak dimension.
+    --          Expand may more appropriately be called expand_weak 
+    -- (STRONG)
+    -- --------
+    --   (1)Allocate parcel: First allocate a parcel along the reqested side
+    --        The initial parcel occupies all of the space in the strong
+    --         dimension + the requested size in the weak dimension. 
+    --   (2)Allocate space in parcel: 
+    --        First give the widget its requested width and height 
+    --         (as specified by the width and height options)
+    --         *within the already allocated parcel*  
+    --   (3)Fill out the parcel:
+    --        If fill is true in the strong dimension, grow the widget to
+    --        to take up the remaining space - in this phase the parcel will
+    --        get no extra space in the weak dimension.
+    --   (4)Place the actual slave:
+    --        If the widget is smaller than its parcel, use "anchor" 
+    --        to determine the location within
+    --   IMPORTANT:
+    --     Subsequent widgets do NOT MAKE use the left-over space in a parcel
+    --     until the (WEAK) phase
+    -- (WEAK)
+    -- -----
+    --   If there is space not used by widgets in (STRONG).
+    --   (1) Distribute the remaining space evenly among widgets in their
+    --         weak dimension, _if_they_have_expand_set_to_true_.
+    --   (2) Fill out the new parcels:
+    --        If fill is true in the weak dimension, then grow the widget
+    -- 
+    -- BEWARE!!
+    -- Expand just allocates *parcels*. If fill is not set for the weak
+    -- dimension, the space will be left empty!
+    -- 
+    
+    private const t: BOOL := true;
+    private const f: BOOL := false;
+    
+    ----------------- PREDEFINED PACKING VERSIONS ---------------------
+    -- I believe these are all the meaningful combinations
+    -- of (4) sides x (4) fill styles x (2) expand or not
+    -- Don't grow. Stick with requested width and height, if available.
+    left: TK_PACK is res::=#TK_PACK; return res.left_side end;
+    right: TK_PACK is res::=#TK_PACK; return res.right_side end;
+    top: TK_PACK is res::=#TK_PACK; return res.top_side end;
+    bot: TK_PACK is res::=#TK_PACK; return res.bot_side end;
+    
+    -- Grow strongly in one dimension, by attaching to an appropriate side
+    left_grow_vert: TK_PACK is return left.fill(f,t) end;
+    right_grow_vert:TK_PACK is return right.fill(f,t) end;
+    top_grow_horiz: TK_PACK is return top.fill(t,f) end;
+    bot_grow_horiz: TK_PACK is return bot.fill(t,f) end;
+    
+    -- Grow (weakly) in the non-standard dimension, using leftover expand space
+    left_n_grow_horiz:TK_PACK is return left.fill(t,f).expand(t) end;
+    right_n_grow_horiz:TK_PACK is return right.fill(t,f).expand(t)    end;
+    top_n_grow_vert: TK_PACK is   return top.fill(f,t).expand(t)  end;
+    bot_n_grow_vert: TK_PACK is return bot.fill(f,t).expand(t)  end;
+    
+    -- Grow strongly in one dimension and weakly in the other dimension
+    -- using "expand" space
+    left_grow_vert_n_horiz:TK_PACK is return left.fill(t,t).expand(t)  end;
+    right_grow_vert_n_horiz:TK_PACK is  return right.fill(t,t).expand(t) end;
+    top_grow_horiz_n_vert: TK_PACK is return top.fill(t,t).expand(t)  end;
+    bot_grow_horiz_n_vert: TK_PACK is  return bot.fill(t,t).expand(t) end;
+    none: TK_PACK is return #TK_PACK end;
+    --------------------------------------------------------------------------
+    create: SAME is res ::= new; return res end;
+    
+    str: STR is
+	return ""
+	      +pair("side",side)
+	      +pair("fill",fill)
+	      +pair("expand",exp_str)
+	      +pair("ipadx",ipadx)
+	      +pair("ipady",ipady)
+	      +pair("padx",padx)
+	      +pair("pady",pady)
+	      +pair("anchor",anchor);
+    end;
+    
+    private attr fill,exp_str,ipadx,ipady,padx,pady: STR;
+    private attr side: STR;
+    
+    -- The ability to set individual parameters in a package
+    attr anchor: TK_ANCHOR;
+    anchor(a: TK_ANCHOR): SAME is anchor := a;  return self; end;
+    internal_padding(x,y: FLT) is ipadx := x.str; ipady := y.str; end;
+    external_padding(x,y: FLT) is padx := x.str; pady := y.str; end;
+    internal_padding(x,y: FLT): SAME
+    is internal_padding(x,y); return self; end;
+    external_padding(x,y: FLT): SAME
+    is external_padding(x,y); return self; end;
+    
+    private right_side: SAME is side := "right";  return self; end;
+    private left_side: SAME is side := "left";  return self; end;
+    private top_side: SAME is side := "top";  return self; end;
+    private bot_side: SAME is side := "bottom";  return self; end;
+    private expand(v: BOOL): SAME is 
+	if v then exp_str:="true" else exp_str:="false" end;
+	return self;
+    end;
+    private fill(x,y: BOOL): SAME is
+	if x and y then fill := "both" 
+	elsif x then fill := "x" 
+	elsif y then fill := "y"
+	else fill := "none" end;
+	return self;
+    end;
+
+end; -- class TK_PACK
+-------------------------------------------------------------------
+
+

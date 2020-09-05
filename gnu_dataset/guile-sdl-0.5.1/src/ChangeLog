@@ -1,0 +1,4431 @@
+2013-09-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 0.5.1
+
+2013-09-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[mixer] Fix bug: Use specified params in ‘open-audio’.
+
+	* sdlmixer.c (mix_open_audio): Use specified format and chunksize.
+
+2013-09-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[C int] Use ‘bool’ instead of bit-field.
+
+	* guile-sdl.h (kp_t): Change type of
+	members ‘classic’ and ‘offset’ to ‘bool’.
+
+2013-09-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[C int] Futz w/ some types to avoid signed/unsigned warning.
+
+	* sdlenums.c (register_kp): Add local var ‘long ival’.
+	(enum2long): Change type of ‘idx’ to ‘long’.
+	(ulong2flags, kotk): Change type of ‘i’ to ‘size_t’.
+
+2013-08-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Declare unused parameters.
+
+	* guile-sdl.h (UNUSED): New #define.
+	* sdlcdrom.c (print_cd): Declare arg ‘pstate’ to be ‘UNUSED’.
+	* sdlcolor.c (print_color): Likewise, for ‘pstate’.
+	* sdlenums.c (print_enum, print_flagstash): Likewise, for ‘ps’.
+	* sdlgfx.c (print_fpsmgr): Likewise, for ‘pstate’.
+	* sdljoystick.c (print_joy): Likewise, for ‘pstate’.
+	* sdlrect.c (print_rect): Likewise, for ‘pstate’.
+	* sdlsurface.c (print_surface): Likewise, for ‘pstate’.
+	* sdlvideo.c (free_pixel_format): Likewise, for ‘pixel_format’.
+	(print_pixel_format): Likewise, for ‘pstate’.
+
+2013-08-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[slog] Use ‘smob_tag_t’ for smob tags.
+
+	* guile-sdl.h (struct obtw): ...here, for member ‘smob_tags’.
+	* sdlcdrom.c (cdrom_tag): Likewise.
+	* sdlenums.c (enum_tag): Likewise.
+	* sdlevent.c (event_tag): Likewise.
+	* sdlgfx.c (fpsmgr_tag): Likewise.
+	* sdljoystick.c (joystick_tag): Likewise.
+	* sdlmixer.c (mix_music_tag, mix_audio_tag): Likewise.
+	* sdlttf.c (ttf_font_tag): Likewise.
+	* sdlvideo.c (overlay_tag): Likewise.
+
+2013-08-25  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[simple] Fix bug: Autoload ‘(sdl ttf)’.
+
+	This remedies the long-standing assumption that
+	module ‘(sdl ttf)’ would be available always.
+
+	* simple.scm: Change ‘#:use-module’ clause in ‘define-module’
+	form to ‘#:autoload’ clause, w/ triggers ‘ttf-init’, ‘load-font’.
+	(simple-stylus): Use ‘ttf-init’, ‘load-font’,
+	‘render-text’ directly, sans prefix.
+
+2013-08-24  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build] Make k2c honor SDL's ‘-I DIR’.
+
+	* k/Makefile.am (.kf.c, .kp.c): Add $(SDLMINUSI) to k2c invocation.
+	* k/alphalim.kp: Remove "SDL/" from ‘#:infile’ value.
+	* k/alphalimold.kp: Likewise.
+	* k/appstate.kf: Likewise.
+	* k/cdstate.kp: Likewise.
+	* k/cdtracktype.kp: Likewise.
+	* k/evaction.kp: Likewise.
+	* k/evmask.kf: Likewise.
+	* k/evtype.kp: Likewise.
+	* k/fading.kp: Likewise.
+	* k/grabmode.kp: Likewise.
+	* k/init.kf: Likewise.
+	* k/jhpos.kf: Likewise.
+	* k/keysym.kp: Likewise.
+	* k/kmod.kf: Likewise.
+	* k/mb.kf: Likewise.
+	* k/mbut.kp: Likewise.
+	* k/overlay.kf: Likewise.
+	* k/palette.kf: Likewise.
+	* k/ttf.kf: Likewise.
+	* k/updn.kp: Likewise.
+	* k/video.kf: Likewise.
+
+2013-08-24  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Do #include "foo.h" instead of #include <SDL/foo.h>.
+
+	* guile-sdl.h: ...here, for SDL.h.
+	* misc.c: Likewise, for SDL_syswm.h.
+	* sdlevent.c: Likewise, for SDL_events.h, SDL_active.h.
+	* sdlmixer.c: Likewise, for SDL_mixer.h.
+	* sdlrect.c: Likewise, for SDL_image.h.
+	* sdlsurface.c: Likewise, for SDL_image.h.
+	* sdlttf.c: Likewise, for SDL_ttf.h.
+	* sdlvideo.c: Likewise, for SDL_image.h.
+	* SDL_gfx/SDL_framerate.h: Likewise, for SDL.h.
+	* SDL_gfx/SDL_gfxBlitFunc.h: Likewise, for SDL.h, SDL_video.h.
+	* SDL_gfx/SDL_gfxPrimitives.h: Likewise, for SDL.h.
+	* SDL_gfx/SDL_rotozoom.h: Likewise, for SDL.h.
+
+2013-07-19  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Release: 0.5.0
+
+2013-07-19  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add optional arg START to colormap procs.
+
+	* sdlvideo.c (set_colors, set_palette): Take additional
+	arg ‘start’; validate it as integer [0,255] and pass it
+	to the underlying libSDL func as arg FIRSTCOLOR.
+
+2013-07-19  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘surface-alpha!’ more.
+
+	* misc-utils.scm (fader/3p): ...here, instead of ‘set-alpha!’.
+
+2013-07-19  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use 32-bit flags in ‘surface-color-key!’.
+
+	This is a bug but not marked "fix bug" because pre-release,
+	from original commit, caught luckily by inspection -- at this
+	time there is no straightforward way to determine a surface's
+	color key if any.
+
+	* sdlsurface.c (surface_color_key_x): Use ‘Uint32’ for ‘cflags’.
+
+2013-07-18  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) proc: surface-pixels
+
+	* sdlsurface.c: #include "b-uv.h".
+	(srfi4) [! GI_LEVEL_1_8]: New module object.
+	(mk_u8v, mk_u16v, mk_u32v) [! GI_LEVEL_1_8]: New proc objects.
+	(scm_make_u8vector, scm_make_u16vector)
+	(scm_make_u32vector) [! GI_LEVEL_1_8]: New macros.
+	(surface_pixels): New PRIMPROC.
+
+2013-07-18  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use non-‘const’ uv struct variant instead of cast.
+
+	* sdlvideo.c (get_gamma_ramp): Declare writable ‘u16_struct’.
+	(get_gamma_ramp GREET): Use ‘GET_WRITABLE_PARTICULARS’.
+	(get_gamma_ramp WRITABLE_VBITS): Remove cast to ‘Uint16 *’.
+
+2013-07-18  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add ‘CONST’ as parameter to ‘DECLARE_UV_STRUCT’.
+
+	* b-uv.h (DECLARE_UV_STRUCT): Take first arg ‘CONST’;
+	replace ‘const’ for member ‘elt’ w/ ‘CONST’.
+	(DEFINE_STRUCT_AND_COPY_FUNC): Explicitly
+	specify ‘const’ to ‘DECLARE_UV_STRUCT’.
+
+2013-07-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstractions: DECLARE_UV_STRUCT, GET_WRITABLE_PARTICULARS
+
+	* b-uv.h (DECLARE_UV_STRUCT): New macro.
+	(DEFINE_STRUCT_AND_COPY_FUNC): Use ‘DECLARE_UV_STRUCT’.
+	(GET_WRITABLE_PARTICULARS): New macro.
+
+2013-07-14  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Replace keysymold.kp w/ keysym.kp.
+
+	* k/keysym.kp: New file.
+	* k/keysymold.kp: Delete file.
+	* k/Makefile.am (allp): Replace keysymold.kp w/ keysym.kp.
+	* sdlevent.c: Don't #include "k/keysymold.c";
+	instead, #include "k/keysym.c".
+	(get_key_state): Add @pxref to doc comment; nfc.
+	(gsdl_init_event): Use ‘kysym_kp’, not ‘keysymold_kp’.
+
+2013-07-14  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add video.kf #:kxform.
+
+	* k/video.kf: ...here.
+	* misc-utils.scm (fader/3p): Use new video symbols.
+	* simple.scm (simple-canvas): Likewise.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add to #:kxform for ‘cdrom-state’ kp.
+
+	* k/cdstate.kp: ...here.
+	* sdlcdrom.c (cd_status): Don't list symbols;
+	instead, add @pxref to ‘cdrom-state’ enums.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add #:kxform for ‘event-type’ kf.
+
+	* k/evtype.kp: Rename from evtypeold.kp; add #:kxform.
+	* k/Makefile.am (stdp): Update accordingly.
+	* sdleventc: Don't #include "k/evtypeold.c";
+	instead, #include "k/evtype.c".
+	(gsdl_init_event): Use ‘evtype_kp’, not ‘evtypeold_kp’.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add evmask.kf #:kxform.
+
+	* k/evmask.kf: ...here.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add init.kf #:kxform.
+
+	* k/init.kf: ...here.
+	* sdl.c (init): Update doc comment.
+	* simple.scm (simple-canvas): Use new init symbols.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add kmod.kf #:kxform.
+
+	* k/kmod.kf: ...here.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[ttf] Add palette.kf #:kxform.
+
+	* k/palette.kf: ...here.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[ttf] Add ttf.kf #:kxform.
+
+	* k/ttf.kf: ...here.
+
+2013-07-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add overlay.kf #:kxform.
+
+	* k/overlay.kf: ...here.
+
+2013-07-11  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Drop procs: enumstash-enums, flagstash-flags
+
+	* sdlenums.c (enumstash_enums, flagstash_flags): Delete PRIMPROCs.
+
+2013-07-11  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Decruft: Drop machinery for enumstash object export.
+
+	* sdlcdrom.c (gsdl_init_cdrom): Remove ‘false’ from ‘allp’ init forms.
+	* sdlevent.c (gsdl_init_event): Likewise.
+	* sdlgfx.c (init_module): Likewise.
+	* sdlmixer.c (init_module): Likewise.
+	* sdlsurface.c (gsdl_init_surface): Likewise.
+	* sdlvideo.c (gsdl_init_video): Likewise.
+	* sdlenums.c (register_kp): Don't take arg ‘public’; don't
+	‘DEFINE_PUBLIC’ ever; move ‘PERMANENT’ call to ‘return’ statement.
+	(register_kp_v): Update call to ‘register_kp’.
+	* guile-sdl.h (kp_init_t): Delete member ‘public’.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Drop flagstash:* procs.
+
+	* sdlevent.c (get_event_mod_flags): Delete PRIMPROC.
+	(get_event_mask_flags): Likewise.
+	* sdlttf.c (get_ttf_flags): Likewise.
+	* sdlvideo.c (get_video_flags): Likewise.
+	(get_palette_flags, get_overlay_formats): Likewise.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Internalize enumstash objects.
+
+	* sdlevent.c (gsdl_init_event): Declare non-public
+	‘event_type_enum’, ‘event_keysym_enum’, ‘event_state_enum’.
+	* sdlgfx.c (init_module): Likewise ‘frot_enum’.
+	* sdlsurface.c (gsdl_init_surface): Likewise ‘alpha_enums’.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Rewrite ‘ignore-all-event-types-except’.
+
+	* misc-utils.scm (ignore-all-event-types-except):
+	...here, to use ‘event-type-handling’ and ‘kotk’.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘video-cmf’, not ‘get-video-info’.
+
+	* simple.scm (simple-canvas set-bg!): ...here.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[doc] Remove enumstash references in doc comments.
+
+	* sdlevent.c: ...here, throughout, replacing them
+	with @xref or @pxref to the appropriate stash.
+	* sdlsurface.c: Likewise.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[doc] Remove flagstash:FOO references in doc comments.
+
+	* sdlevent.c: ...here, throughout, replacing them
+	with @xref or @pxref to the appropriate stash.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate listing by ‘k2c -o FILE’ side-effect.
+
+	* k/Makefile.am (CLEANFILES): Add *.list.
+	* Makefile.am (k-stamp): Concatenate k/*.list to make $@.
+
+2013-07-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use k2c to generate all init data.
+
+	* k/active.kp: New file.
+	* k/evstate.kp: New file.
+	* k/frot.kp: New file.
+	* k/Makefile.am (stdp): Add active.kp, evstate.kp, frot.kp.
+	* sdlevent.c: #include "k/active.c"; #include "k/evstate.c".
+	(active_names, active_kp, evstate_values, evstate_names)
+	(evstate_kp): Delete data structures.
+	* sdlgfx.c: #include "k/frot.c".
+	(frot_names, frot_kp): Delete data structures.
+	* Makefile.am (k-count.h): Don't bother grepping ./*.c.
+
+2013-07-08  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make conversion procs also accept stash name.
+
+	* sdlenums.c (resolve_kp): New static func.
+	(RESOLVE_KP, DECLINIT_KP2NUM_CC): New macros.
+	(enum_to_number): Rename arg; use ‘DECLINIT_KP2NUM_CC’.
+	(number_to_enum): Rename arg; use ‘RESOLVE_KP’.
+	(resolve_kf): New static func.
+	(RESOLVE_KF, DECLINIT_KF2NUM_CC): New macros.
+	(flags_to_number): Use ‘DECLINIT_KF2NUM_CC’.
+	(number_to_flags): Use ‘RESOLVE_KF’.
+
+2013-07-08  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add "obsoleted" blurb to FOOstash-FOOs doc.
+
+	* sdlenums.c (enumstash_enums, flagstash_flags): ...here.
+
+2013-07-08  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Add (sdl sdl) proc: kotk
+
+	* Makefile.am (BUILT_SOURCES): Add k-count.h.
+	(k-count.h): New target.
+	(DISTCLEANFILES): Add k-count.h.
+	* sdlenums.c: #include "k-count.h".
+	(enum kdisp): New.
+	(konstants): New static data structure.
+	(note): New static func.
+	(KOTK_DISPOSITION): New macro.
+	(gsdl_sym_enums, gsdl_sym_flags): New DECLARE_SIMPLE_SYMs.
+	(kreb_mb): New struct typedef.
+	(kunpack): New func forward-decl.
+	(kref): New static func.
+	(register_kp, make_flagstash): Use ‘note’.
+	(kunpack): New static func.
+	(kotk): New PRIMPROC.
+
+2013-07-07  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Register kf as array instead of individually.
+
+	* guile-sdl.h (make_flagstash_t): Delete func typedef.
+	(kf_init_t): New struct typedef.
+	(register_kf_v_t): New func typedef.
+	(MAKE_FLAGSTASH): Delete macro.
+	(REGISTER_KF_V): New macro.
+	(struct obtw): Delete member ‘make_flagstash’;
+	add member ‘register_kf_v’.
+	* sdlenums.c (register_kf_v): New static func.
+	(gsdl_init_enums): Don't init ‘btw->make_flagstash’;
+	instead, init ‘btw->register_kf_v’.
+	* sdl.c (init_module): Convert individual calls to
+	‘MAKE_FLAGSTASH’ into a ‘kf_init_t’ array; use ‘REGISTER_KF_V’.
+	* sdlevent.c (gsdl_init_event): Likewise.
+	* sdlttf.c (init_module): Likewise.
+	* sdlvideo.c (gsdl_init_video): Likewise.
+
+2013-07-07  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Register kp as array instead of individually.
+
+	* guile-sdl.h (register_kp_t): Delete func typedef.
+	(kp_init_t): New struct typedef.
+	(register_kp_v_t): New func typedef.
+	(REGISTER_KP_V): New macro.
+	(struct obtw): Delete member ‘register_kp’;
+	add member ‘reigster_kp_v’.
+	* sdlenums.c (register_kp_v): New static func.
+	(gsdl_init_enums): Don't init ‘btw->register_kp’;
+	instead, init ‘btw->register_kp_v’.
+	* sdlcdrom.c (gsdl_init_cdrom): Convert individual calls to
+	‘btw->register_kp’ into a ‘kp_init_t’ array; use ‘REGISTER_KP_V’.
+	* sdlevent.c (gsdl_init_event): Likewise.
+	* sdlgfx.c (init_module): Likewise.
+	* sdlmixer.c (init_module): Likewise.
+	* sdlsurface.c (gsdl_init_surface): Likewise.
+	* sdlvideo.c (gsdl_init_video): Likewise.
+
+2013-07-07  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Change type of possibly-freeable ‘.internalp’ to ‘bool’.
+
+	* guile-sdl.h (DECLARE_PF): ...here.
+	(RETURN_NEW_SURFACE): Use ‘false’.
+	(RETURN_INT_SURFACE): Use ‘true’.
+	* sdlvideo.c (RETURN_NEW_CURSOR): Use ‘false’.
+	(RETURN_INT_CURSOR): Use ‘true’.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use enumstash for grab modes.
+
+	* k/grabmode.c: New file.
+	* k/Makefile.am (stdp): Add grabmode.kp.
+	* sdlvideo.c: #include "k/grabmode.c".
+	(grab_modes): New static var.
+	(query, off, on): Delete symbols.
+	(wm_grab_input): Rewrite.
+	(gsdl_init_video): Init ‘grab_modes’.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate CD track type init data.
+
+	* k/cdtracktype.kp: New file.
+	* k/Makefile.am (stdp): Add cdtracktype.kp.
+	* sdlcdrom.c: #include "k/cdtracktype.c".
+	(cd_track_type): New static var.
+	(audio, data): Delete symbols.
+	(cd_nth_track_itlo): Use ‘long2num’, ‘cd_track_type’.
+	(gsdl_init_cdrom): Init ‘cd_track_type’.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate CDROM states init data.
+
+	* k/cdstate.kp: New file.
+	* k/Makefile.am (stdp): Add cdstate.kp.
+	* sdlcdrom.c: #include "k/cdstate.c".
+	(cdrom_state): New static var.
+	(TRAYEMTPY, STOPPED, PLAYING, PAUSED, ERROR): Delete symbols.
+	(cd_status): Use ‘btw->long2enum’ and ‘cdromt_state’.
+	(gsdl_init_cdrom): Init ‘cdrom_state’.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use "caller constants" to reduce enums/flags data motion.
+
+	* guile-sdl.h (sym2num_cc_t): New struct and typedef.
+	(DECLINIT_SYM2NUM_CC): New macro.
+	(enum2long_t): Simplify arglist to ‘sym2num_cc_t *cc’ and ‘obj’.
+	(GSDL_ENUM2LONG): Delete macro.
+	(ENUM2LONG): New macro.
+	(flags2ulong_t): Simplify arglist to ‘sym2num_cc_t *cc’ and ‘obj’.
+	(GSDL_FLAGS2ULONG): Delete macro.
+	(FLAGS2ULONG): New macro.
+	(GSDL_ENUM_SETTER): Use ‘DECLINIT_SYM2NUM_CC’, ‘ENUM2LONG’.
+	(GSDL_FLAG_SETTER): Use ‘DECLINIT_SYM2NUM_CC’, ‘FLAGS2ULONG’.
+	* sdlenums.c (enum2long): Take ‘sym2num_cc_t *cc’ instead of
+	‘enumstash’, ‘pos’, ‘FUNC_NAME’; extract those from ‘cc’.
+	(enum_to_number): Use ‘DECLINIT_SYM2NUM_CC’, ‘ENUM2LONG’.
+	(flags2ulong): Take ‘sym2num_cc_t *cc’ instead of
+	‘stash’, ‘pos’, ‘FUNC_NAME’; extract those from ‘cc’.
+	(flags_to_number): Use ‘DECLINIT_SYM2NUM_CC’, ‘FLAGS2ULONG’.
+	* sdl.c (init, init_subsystem, quit_subsystem, was_init):
+	Use new macros for enums/flags decode.
+	* sdlevent.c (make_event, evqueue_do, peep_events)
+	(event_type_handling, event_state, set_mod_state, button_p): Likewise.
+	* sdlgfx.c (font_rotation_x): Likewise.
+	* sdljoystick.c (joystick_event_state): Likewise.
+	* sdlsurface.c (make_surface, create_rgb_surface, set_color_key)
+	(surface_alpha_x, set_alpha, convert_surface): Likewise.
+	* sdlttf.c (ttf_set_font_style): Likewise.
+	* sdlvideo.c (create_yuv_overlay, list_modes, video_mode_ok)
+	(set_video_mode, set_palette): Likewise.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Drop abstraction: GI_LEVEL_NOT_YET_1_8
+
+	* b-uv.h: Throughout, use ‘! GI_LEVEL_1_8’ directly.
+	* sdlgfx.c: Likewise.
+	* sdlvideo.c: Likewise.
+	* guile-sdl.h (GI_LEVEL_NOT_YET_1_8): Delete #define.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use fast integers for enums/flags.
+
+	* src/sdlenums.c: #include "snuggle/fastint.h".
+	(register_kp): Use ‘NUM_FASTINT’.
+	(enum2long): Use ‘C_FASTINT’.
+	(enum_to_number, make_flagstash): Use ‘NUM_FASTINT’.
+	(flags2ulong): Use ‘C_FASTINT’.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Detect non-member-symbol and throw error.
+
+	* sdlenums.c (gsdl_sym_nonmember): New DECLARE_SYM.
+	(sorry): New static func.
+	(SORRY): New macro.
+	(enum2long): If symbol is not hashed, throw error.
+	(enum_to_number): Use ‘GSDL_ENUM2LONG’ directly.
+	(flags2long): If symbol is not hashed, throw error.
+
+2013-07-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[gfx] Accept integer ROTATION for ‘font-rotation!’.
+
+	* sdlgfx.c (font_rotation_x): Don't coerce non-symbol
+	objects to 0; call ‘GSDL_ENUM2LONG’ directly.
+
+2013-07-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add a ‘const’.
+
+	* sdlenums.c (lookup): ...here, for second arg ‘e’.
+
+2013-07-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Drop (sdl sdl) proc: make-keysym
+
+	* sdlevent.c (keysym_tag): Delete var.
+	(keysym_nick): Delete #define.
+	(ASSERT_KEYSYM, UNPACK_KEYSYM, RETURN_NEW_KEYSYM): Delete macros.
+	(free_keysym): Delete static func.
+	(make_keysym): Delete PRIMPROC.
+	(gsdl_init_event): Don't init ‘keysym_tag’ SMOB.
+
+2013-07-03  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add kp comprehension.
+
+	* guile-sdl.h (kp_t): Add members ‘classic’, ‘offset’.
+	* sdlenums.c (register_kp): Update ‘value’
+	computation to handle ‘classic’ and ‘offset’ modes.
+	(enum2long): Likewise, for ‘result’ computation.
+	(enum_to_number): Likewise, for return value.
+	* sdlevent.c (active_values): Delete.
+	(active_kp): Update with ‘val = NULL’,
+	‘classic = true’ and ‘offset = false’.
+	(evstate_kp): Update with both ‘classic’ and ‘offset’ false.
+	* sdlgfx.c (frot_values): Delete.
+	(frot_kp): Update with ‘val = NULL’,
+	‘classic = true’ and ‘offset = false’.
+
+2013-07-03  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Do ‘s/enum_struct/kp_t/g’.
+
+	* guile-sdl.h: ...here.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+
+2013-07-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Take ‘#t’ to mean "full set" in flags-to-number conversion.
+
+	* guile-sdl.h (flagstash_t): Add member ‘full’.
+	* sdlenums.c (make_flagstash): Bitwise
+	accumulate all element values into ‘stash->full’.
+	(flags2ulong): If ‘flags’ is true, return the full-set value.
+	(flags_to_number): Update doc comment.
+
+2013-07-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Add (sdl sdl) procs: evqueue-{add,peek,get}
+
+	* sdlevent.c (evqueue_add): New PRIMPROC.
+	(evqueue_do_details): New struct.
+	(evqueue_do): New static func.
+	(evqueue_peek, evqueue_get): New PRIMPROCs.
+	(peep_events): Add "obsoleted" blurb.
+
+2013-07-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Make ‘push-event’ return a boolean.
+
+	* sdlevent.c (push_event): Return ‘#t’ on success.
+
+2013-07-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Drop abstractions: RETURN_{FALSE,TRUE}
+
+	* guile-sdl.h (RETURN_FALSE, RETURN_TRUE): Delete #define:s.
+	(NEWSMOB_OR_FALSE, RETURN_NEW_PF_OR_FALSE): Use ‘return’ directly.
+	* sdl.c: Likewise, throughout.
+	* sdlcdrom.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2013-07-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Drop abstractions: SET_{FALSE,TRUE}
+
+	* guile-sdl.h (SET_FALSE, SET_TRUE): Delete macros.
+	(UNBOUND_MEANS_FALSE): Use ‘=’ directly.
+	* sdlvideo.c (list_modes): Likewise.
+
+2013-07-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Decruft: Remove aka-based machinery; de-bifurcate.
+
+	* guile-sdl.h (aka_t): Delete union typedef.
+	(valaka_t): Delete struct typdef.
+	(enum_struct): Delete member ‘backing’.
+	(VALAKA, VAL_AND_AKA): Delete macros.
+	(define_enum_t): Delete func typedef.
+	(DEFINE_ENUM): Delete macro.
+	(struct obtw): Delete member ‘define_enum’.
+	* sdlenums.c (register_kp): Don't set ‘kp->backing’.
+	(define_enum): Delete func.
+	(enum2long, enum_to_number): Use ‘e->val’ directly.
+	(enumstash_enums): Use ‘enum_type->linear’ directly.
+	(gsdl_init_enums): Update ‘btw’ init.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Generate ‘event_keysym_enum’ init data; use ‘register_kp’.
+
+	This change is not marked "internal" (w/ "[int]" in the title)
+	because the count has increased from 133 to 231.  DWR!  Bloat!
+
+	* k/keysymold.kp: New file.
+	* k/Makefile.am (stdp): Add keysymold.kp.
+	* sdlevent.c: #include "k/keysymold.c".
+	(event_keysym_eback): Delete data structure.
+	(gsdl_init_event): Use ‘register_kp’ w/ new data structures.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate ‘event_type_enums’ init data; use ‘register_kp’.
+
+	* k/evtypeold.kp: New file.
+	* k/Makefile.am (stdp): Add evtypeold.kp.
+	* sdlevent.c: #include "k/evtypeold.c".
+	(event_type_eback): Delete data structure.
+	(gsdl_init_event): Use ‘register_kp’ w/ new data structures.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate ‘event_action_enums’ init data; use ‘register_kp’.
+
+	* k/evaction.kp: New file.
+	* k/Makefile.am (stdp): Add evaction.kp.
+	* sdlevent.c: #include "k/evaction.c".
+	(event_action_eback): Delete data structure.
+	(gsdl_init_event): Use ‘register_kp’ w/ new data structures.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use Pascal pool for enumstash ‘event-states’ init.
+
+	* sdlevent.c (event_state_eback): Delete data structure.
+	(evstate_values, evstate_names, evstate_kp): New data structures.
+	(gsdl_init_event): Use ‘register_kp’ w/ new data structures.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[mixer] Change "fading status" symbols; internalize enumstash.
+
+	* k/fading.kp: New file.
+	* k/Makefile.am (stdp) [HAVE_MIXER]: Add fading.kp.
+	(EXTRA_DIST) [HAVE_MIXER]: Add fading.kp.
+	* sdlmixer.c: #include "k/fading.c".
+	(fading_status_eback): Delete data structure.
+	(mix_fading_music): Remove @xref from docstring;
+	list set of symbols explictily.
+	(mix_fading_channel): Remove @xref from docstring; say
+	that rv is from the same set as returned by ‘fading-music’.
+	(init_module): Use ‘register_kp’ w/ new data structures.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate ‘alpha_enums’ init data; use ‘register_kp’.
+
+	* k/alphalimold.kp: New file.
+	* k/Makefile.am (stdp): Add alphalimold.kp.
+	* sdlsurface.c (alpha_eback): Delete data structure.
+	<top-level>: #include "k/alphalimold.c".
+	(gsdl_init_surface): Use ‘register_kp’ w/ new data structures.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Add (sdl sdl) proc: surface-color-key!
+
+	* sdlsurface.c (surface_color_key_x): New PRIMPROC.
+	(set_color_key): Add "obsoleted" blurb.
+
+2013-07-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Add (sdl sdl) proc: surface-alpha!
+
+	* k/alphalim.kp: New file.
+	* k/Makefile.am (stdp): Add alphalim.kp.
+	* sdlsurface.c (kp_alpha): New static var.
+	(surface_alpha_x): New PRIMPROC.
+	(set_alpha): Add "obsoleted" blurb.
+	<top-level>: #include "k/alphalim.c".
+	(gsdl_init_surface): Init ‘kp_alpha’.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Drop enumstash: gl-enums
+
+	* sdlvideo.c (gl_enums): Delet var.
+	(gl_eback): Delete data structure.
+	(gsdl_init_video): Don't init ‘gl_enums’.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate ‘mbut’ init data; use ‘register_kp’.
+
+	* k/mbut.kp: New file.
+	* k/Makefile.am (stdp): Add mbut.kp.
+	* sdlevent.c: #include "k/mbut.c".
+	(mbut_eback): Delete data structure.
+	(gsdl_init_event): Use ‘register_kp’ w/ new data structures.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Rename enum ‘mb’ to ‘mbut’.
+
+	* sdlevent.c (mbut_enum): Rename from ‘mb_enum’.
+	(event_button_button, gsdl_init_event): Update accordingly.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Generate ‘updn’ init data; use ‘register_kp’.
+
+	* k/updn.kp: New file.
+	* k/Makefile.am (stdp): Add updn.kp.
+	* sdlevent.c: #include "k/updn.c".
+	(updn_eback): Delete data structure.
+	(gsdl_init_event): Use ‘register_kp’ w/ new data structures.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘register_kp’ for "activity changes".
+
+	* sdlevent.c (active_eback): Delete data structure.
+	(active_values, active_names, active_kp): New static data structures.
+	(gsdl_init_event): Use ‘register_kp’ w/ new data structures.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add .val and .linear to ‘enum_struct’; bifurcate.
+
+	* guile-sdl.h (enum_struct): Add members ‘val’, ‘linear’.
+	(register_kp_t): Remove second arg in func typedef.
+	* sdlenums.c (register_kp): Don't take 2nd arg ‘values’;
+	don't malloc for ‘kp->backing’; instead, init set it ‘NULL’;
+	malloc for ‘kp->linear’; use ‘kp->val’ in loop.
+	(enum2long): If backing is ‘NULL’, fall back to ‘val’.
+	(enumstash_enums, enum_to_number): Likewise.
+	* sdlgfx.c (frot_kp): Init ‘.val’ with ‘frot_values’ directly.
+	(init_module): Update call to ‘register_kp’.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘register_kp’ for ‘font-rotations’.
+
+	* sdlgfx.c (frot_eback): Delete data structure.
+	(frot_values, frot_names, frot_kp): New static data structures.
+	(init_module): Use ‘register_kp’ w/ new data structures.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add ‘register_kp’.
+
+	* guile-sdl.h: #include <stdbool.h>.
+	(register_kp_t): New func typedef.
+	(struct obtw): Add member ‘register_kp’.
+	* sdlenums.c (register_kp): New static func.
+	(gsdl_init_enums): Init ‘btw->register_kp’.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘struct symset’ in ‘enum_struct’.
+
+	* guile-sdl.h (enum_struct): Use ‘struct symset’.
+	* sdlenums.c (print_enum): Update access.
+	(define_enum, enumstash_enums): Likewise.
+
+2013-06-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstraction: struct symset
+
+	* guile-sdl.h (struct symset): New.
+	(flagstash_t): Use ‘struct symset’.
+	* sdlenums.c (print_flagstash): Update access.
+	(make_flagstash, ulong2flags, flagstash_flags): Likewise.
+
+2013-06-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Require flagstash PRETTY to be a string.
+
+	* k/appstate.kf: Set PRETTY.
+	* k/jhpos.kf: Likewise.
+	* k/mb.kf: Likewise.
+	* sdlenums.c (print_flagstash): Drop "(anonymous)" support.
+
+2013-06-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Move *.fs to k/*.kf.
+
+	* k: New directory.
+	* k/appstate.kf: Move here from appstate.fs.
+	* k/evmask.kf: Move here from evmask.fs.
+	* k/init.kf: Move here from init.fs.
+	* k/jhpos.kf: Move here from jhpos.fs.
+	* k/kmod.kf: Move here from kmod.fs.
+	* k/mb.kf: Move here from mb.fs.
+	* k/overlay.kf: Move here from overlay.fs.
+	* k/palette.kf: Move here from palette.fs.
+	* k/ttf.kf: Move here from ttf.fs.
+	* k/video.kf: Move here from video.fs.
+	* k/Makefile.am: New file.
+	* Makefile.am (SUBDIRS): Add k.
+	(FLAGSTASH): Delete var.
+	(BUILT_SOURCES): Remove $(FLAGSTASH); add k-stamp.
+	(k-stamp): New target.
+	(EXTRA_DIST): Remove $(FLAGSTASH:.c=.fs).
+	(SUFFIXES): Remove .fs.
+	(.fs.c): Delete old-style suffix rule.
+	(EXTRA_DIST) [HAVE_TTF]: Remove ttf.c.
+	(BUILT_SOURCES) [HAVE_TTF]: Remove ttf.c.
+	* sdl.c: Update #include:s to use "k/FOO" instead of "FOO".
+	* sdlevent.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2013-06-28  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add "obsoleted" blurb for get-mouse{,-relative}-state.
+
+	* sdlevent.c (get_mouse_state, get_relative_mouse_state): ...here.
+
+2013-06-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add proc: joystick-polling
+
+	* sdljoystick.c (joystick_polling): New PRIMPROC.
+	(joystick_event_state): Mention obsolence in doc comment; nfc.
+
+2013-06-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add proc: event-type-handling
+
+	* sdlevent.c (event_type_handling): New PRIMPROC.
+	(event_state): Mention obsolence in doc comment; nfc.
+
+2013-06-27  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstraction: CSTATE_FROM_SETTING
+
+	* guile-sdl.h (CSTATE_FROM_SETTING): New macro.
+
+2013-06-25  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make ‘joystick-get-button’ return a symbol.
+
+	* guile-sdl.h (struct obtw): Add member ‘updn_enum’.
+	* sdlevent.c (gsdl_init_event): Init ‘btw->updn_enum’.
+	* sdljoystick.c (joystick_get_button):
+	Return symbol from set ‘btw->updn_enum’.
+
+2013-06-25  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Return new state for ‘(sdl sdl) event-state’.
+
+	* sdlevent.c (event_state): Rewrite.
+
+2013-06-24  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make ‘joystick-event-state’ fully symbolic.
+
+	* guile-sdl.h (struct obtw): Add member ‘event_state_enum’.
+	* sdlevent.c (gsdl_init_event): Init ‘btw->event_state_enum’.
+	* sdljoystick.c (joystick_event_state): Rewrite.
+
+2013-06-24  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Don't insist on integer arg for ‘set-mod-state’.
+
+	Regression introduced 2003-11-08 (Guile-SDL 0.2.0) during
+	foof-to-ttn transition.  Briefly: 0/ arg type initially exact
+	with type check; 1/ foof changed type to flags and commented
+	out the now-obsolete exact check; 2/ ttn commented in the check.
+
+	* sdlevent.c (set_mod_state): Don't ‘ASSERT_INTEGER’.
+
+2013-06-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make active state value fully symbolic.
+
+	* sdlevent.c (active_state): Use ‘FLAG_GETSET’ and ‘appstate_flags’.
+
+2013-06-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make active gain value fully symbolic.
+
+	* sdlevent.c (active_enum): New static SCM.
+	(active_eback): New static ‘valaka_t’ array.
+	(active_gain): Use ‘ENUM_GETSET’ and ‘active_enum’.
+	(gsdl_init_event): Init ‘active_enum’.
+
+2013-06-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Move ‘get-app-state’ to sdlevent.c.
+
+	* misc.c: Move #include <SDL/SDL_active.h>
+	and #include "appstate.c" from here...
+	(appstate_flags): Move var from here...
+	(get_app_state): Move PRIMPROC from here...
+	(gsdl_init_misc): Move ‘appstate_flags’ init from here...
+	* sdlevent.c: ...to here.
+	(appstate_flags): ...to here.
+	(get_app_state): ...to here.
+	(gsdl_init_event): ...to here.
+
+2013-06-22  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[boot] Use Guile-BAUX for SNUGGLE files.
+
+	* sdlvideo.c (assert_colormap_copy): Use ‘VECTOR_REF’.
+	* guile-sdh.h (LIST2, LIST3, LIST4, LIST5, SYMBOLP)
+	(INTEGERP, VECTORP, C_CHAR, C_LONG, C_DOUBLE, VECREF)
+	(GC_PROTECT, GC_UNPROTECT, SYMBOLN, DEFINE_PUBLIC)
+	(MODULE_LOOKUP): Delete macros and ‘#define’s.
+
+2013-06-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use Pascal string pool for flagstash init.
+
+	* guile-sdl.h (flagstash_t): Drop member ‘aka’;
+	add members ‘pool’ and ‘linear’.
+	* sdlenums.c (make_flagstash): Allocate ‘stash->linear’;
+	init from ‘stash->pool’; save to ‘stash->linear’; don't
+	use ‘PERMANENT’; instead, use ‘GC_PROTECT’, ‘GC_UNPROTECT’.
+	(ulong2flags): Consult ‘s->linear’.
+	(flagstash_flags): Consult ‘cstash->linear’.
+
+2013-06-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstraction: MAKE_FLAGSTASH
+
+	* guile-sdl.h (MAKE_FLAGSTASH): New macro.
+	* misc.c (gsdl_init_misc): Use ‘MAKE_FLAGSTASH’.
+	* sdl.c (init_module): Likewise.
+	* sdlevent.c (gsdl_init_event): Likewise.
+	* sdlttf.c (init_module): Likewise.
+	* sdlvideo.c (gsdl_init_video): Likewise.
+
+2013-06-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstraction: SYMBOLN
+
+	* guile-sdl.h (SYMBOLN): New macro, bifurcated.
+
+2013-06-19  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Move {enum,flagstash}_nick out of header.
+
+	* guile-sdl.h (enum_nick, flagstash_nick):
+	Move these #define:s from here...
+	* sdlenums.c (enum_nick, flagstash_nick): ...to here.
+
+2013-06-19  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Gather {enum,flag}stash (et al) struct defs in one place.
+
+	* sdlenums.c (enum_struct): Move struct/typedef from here...
+	* guile-sdl.h (enum_struct): ...to here.
+	(flagstash_t): Move struct/typedef earlier in file; nfc.
+
+2013-06-18  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Decruft: Don't do manual ‘NULL’ checking in ‘cd-open’.
+
+	Macro ‘RETURN_NEW_CDROM’ via ‘NEWSMOB_OR_FALSE’ handles that.
+
+	* sdlcdrom.c (cd_open): ...here.
+
+2013-06-18  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make cdrom procs signal error if not open.
+
+	* sdlcdrom.c (assert_open_cdrom): New static func.
+	(ASSERT_FIRST_ARG_OPEN_CDROM): New macro.
+	(cd_status): Use ‘ASSERT_FIRST_ARG_OPEN_CDROM’.
+	(cd_in_drive_p, cd_nth_track_itlo, cd_get_nth_track)
+	(cd_play_tracks, cd_play, cd_pause, cd_resume, cd_stop)
+	(cd_eject, cd_close): Likewise.
+
+2013-06-18  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make joystick procs signal error if not open.
+
+	* sdljoystick.c (assert_open_joystick): New static func.
+	(ASSERT_FIRST_ARG_OPEN_JOYSTICK): New macro.
+	(joystick_index): Use ‘ASSERT_FIRST_ARG_OPEN_JOYSTICK’.
+	(joystick_num_axes, joystick_num_balls, joystick_num_hats)
+	(joystick_num_buttons, joystick_get_axis, joystick_ball_xy)
+	(joystick_get_ball, joystick_get_hat, joystick_get_button)
+	(joystick_close): Likewise.
+
+2013-06-18  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Use snuggle/defsmob.h.
+
+	* guile-sdl.h: #include "snuggle/defsmob.h".
+	(DEFSMOB, GCMALLOC, GCFREE, GCRV): Delete macros.
+
+2013-06-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Decruft: Zonk unused macro ‘THROW_NOT_YET_IMPLEMENTED’.
+
+	* guile-sdl.h (THROW_NOT_YET_IMPLEMENTED): Delete macro.
+
+2013-06-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Drop abstraction: RETURN_LIST11
+
+	* sdlvideo.c (get_video_info): Build return value directly.
+	* guile-sdl.h (_rv_PUSH, RETURN_LIST11): Delete macros.
+
+2013-06-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Drop abstractions: RETURN_LIST[2345].
+
+	* sdlcdrom.c: Throughout, use ‘return LIST2’
+	through ‘return LIST5’ directly.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+	* guile-sdl.h (RETURN_LIST2): Delete macro.
+	(RETURN_LIST3, RETURN_LIST4, RETURN_LIST5): Likewise.
+
+2013-06-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Decruft: Zonk unused macro ‘RETURN_LIST0’.
+
+	* guile-sdl.h (RETURN_LIST0): Delete.
+
+2013-06-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘VECTOR_LEN’ instead of ‘VECLENGTH’.
+
+	* sdlvideo.c (assert_colormap_copy): ...here.
+	* guile-sdl.h (VECLENGTH): Delete macro.
+
+2013-06-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Use snuggle/humdrum.h.
+
+	* guile-sdl.h: #include "snuggle/humdrum.h",
+	but #undef ‘VECREF’ so that can be defined again later.
+	(NULLP, PAIRP, BOOLEAN, NUM_INT, NUM_LONG, NUM_ULONG, SYMBOL)
+	(STRING, BSTRING, C_BOOL, C_INT, C_ULONG, EQ, CONS, CAR, CDR)
+	(CALL0, CALL1, CALL2, CALL3): Delete macros.
+
+2013-06-17  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Decruft: Zonk some unused abstractions.
+
+	* guile-sdl.h (STRINGP): Delete.
+	(CAAR, SETCAR, UVECLENGTH, LOOKUP): Likewise.
+
+2013-06-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Use snuggle/mkhash.h.
+
+	* sdlenums.c: #include "snuggle/mkhash.h".
+	(REASONABLE_BUCKET_COUNT, MAKE_HASH_TABLE): Delete macros.
+
+2013-06-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Use snuggle/finangle.h.
+
+	* sdlgfx.c: #include "snuggle/finangle.h".
+	* sdlmixer.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+	* guile-sdl.h (range_t): Delete struct typedef.
+	(RS, RLEN, FINANGLABLE_SCHEME_STRING_FROM_SYMBOL, ROZT_X)
+	(_FINANGLE, REND, NUL_AT_END_X, UNFINANGLE, FINANGLE_RAW)
+	(FINANGLE): Delete macros.
+
+2013-06-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Use snuggle/level.h.
+
+	* guile-sdl.h: #include "snuggle/level.h".
+	(GI_LEVEL_NOT_YET_1_8): Use ‘GI_LEVEL_1_8’.
+
+2013-06-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[boot] Import SNUGGLE headers.
+
+	* Makefile.am (EXTRA_DIST): Add snuggle.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) procs: pixel-rgb, pixel-rgba
+
+	* sdlvideo.c (pixel_rgb, pixel_rgba): New PRIMPROCs.
+	(get_rgb, get_rgba): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) proc: video-cmf
+
+	* sdlvideo.c (video_cmf): New PRIMPROC.
+	(get_video_info): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) proc: caption-ti
+
+	* sdlvideo.c: #include "b-values.h".
+	(caption_ti): New PRIMPROC.
+	(wm_get_caption): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) proc: cd-nth-track-itlo
+
+	* sdlcdrom.c (gsdl_sym_audio): New DECLARE_SIMPLE_SYM.
+	(gsdl_sym_data): Likewise.
+	(cd_nth_track_itlo): New PRIMPROC.
+	(cd_get_nth_track): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) proc: frames-msf
+
+	* sdlcdrom.c: #include "b-values.h".
+	(frames_msf): New PRIMPROC.
+	(cd_frames_to_msf): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) proc: joystick-ball-xy
+
+	* sdljoystick.c: #include "b-values.h".
+	(joystick_ball_xy): New PRIMPROC.
+	(joystick_get_ball): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl mixer) proc: device-ffc
+
+	* sdlmixer.c: #include "b-values.h".
+	(device_ffc): New PRIMPROC.
+	(mix_query_spec): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl ttf) procs: text-wh, utf8-wh
+
+	* sdlttf.c (text_wh, utf8_wh): New PRIMPROCs.
+	(ttf_size_text, ttf_size_utf8): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl ttf) proc: font:glyph-xXyYa
+
+	* sdlttf.c: #include "b-values.h".
+	(font_glyph_xXyYa): New PRIMPROC.
+	(ttf_glyph_metrics): Document expiration date.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘RETURN_VALUES3’ more.
+
+	* sdlevent.c (mouse_bxy): ...here.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstractions: RETURN_VALUES[2345]
+
+	* b-values.h (RETURN_VALUES2, RETURN_VALUES3)
+	(RETURN_VALUES4, RETURN_VALUES5): New macros.
+
+2013-06-13  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstractions: LIST2, LIST4, LIST5; split LIST3.
+
+	* guile-sdl.h (LIST2, LIST4, LIST5): New bifurcations.
+	(LIST3): Delete macro; bifurcate instead.
+	(RETURN_LIST2): Use ‘LIST2’.
+	(RETURN_LIST3): Use ‘LIST3’.
+	(RETURN_LIST4): Use ‘LIST4’.
+	(RETURN_LIST5): Use ‘LIST5’.
+
+2013-06-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	New (sdl sdl) proc: mouse-bxy
+
+	* sdlevent.c: #include "b-values.h".
+	(mouse_bxy): New PRIMPROC.
+
+2013-06-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Make ‘LIST3’ more visible to other code.
+
+	* misc.c (LIST3): Move macro from here...
+	* guile-sdl.h (LIST3): ...to here.
+
+2013-06-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[build int] Make sure ‘scm_values’ is available.
+
+	* b-values.h: New file.
+	* Makefile.am (headers): Add b-values.h.
+
+2013-06-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make joystick hat value fully symbolic.
+
+	* jhpos.fs: New file.
+	* Makefile.am (FLAGSTASH): add jhpos.c.
+	* sdlevent.c (event_jhpos_flags): New static var.
+	(event_jhat_value): Use ‘FLAG_GETSET’ and ‘event_jhpos_flags’.
+	<top-level>: #include "jhpos.c".
+	(gsdl_init_event): Init ‘event_jhpos_flags’.
+
+2013-06-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make key/mbutton/jbutton state fully symbolic.
+
+	* sdlevent.c (updn_enum, updn_eback): New static vars.
+	(event_key_state): Use ‘ENUM_GETSET’ and ‘updn_enum’.
+	(event_button_state, event_jbutton_state): Likewise.
+	(gsdl_init_event): Init ‘updn_enum’.
+
+2013-06-12  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstraction: VAL_AND_AKA
+
+	* guile-sdl.h (VAL_AND_AKA): New macro.
+	* sdlevent.c (BUTTON_AKA): Use ‘VAL_AND_AKA’.
+
+2013-06-08  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Change xrep of enumstash objects.
+
+	* sdlenums.c (enum_struct): Add member ‘name’.
+	(print_enum): New static func.
+	(define_enum): Save ‘name’ in ‘s->name’.
+	(gsdl_init_enums): Specify ‘print_enum’ in SMOB def.
+
+2013-06-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Don't bother naming the mouse-button flagstash.
+
+	Omission from 2013-05-31, "Add mouse-button flagstash".
+
+	* mb.fs: Specify ‘NULL’ name.
+
+2013-06-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Change xrep of flagstash objects.
+
+	* sdlenums.c (print_flagstash): Display name as
+	"SDL PRETTY name", using "(anonymous)" if PRETTY is ‘NULL’.
+
+2013-06-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add application-state flagstash.
+
+	* appstate.fs: New file.
+	* Makefile.am (FLAGSTASH): Add appstate.c.
+	* misc.c (mousefocus, inputfocus, active):
+	Delete DECLARE_SIMPLE_SYMs
+	(appstate_flags): New static SCM.
+	(get_app_state): Rewrite.
+	<top-level>: #include "appstate.c".
+	(gsdl_init_misc): Init ‘appstate_flags’.
+
+2013-06-06  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Use ‘DECLARE_SIMPLE_SYM’ more.
+
+	* misc.c (gsdl_sym_mousefocus, gsdl_sym_inputfocus)
+	(gsdl_sym_active, gsdl_sym_x11): Use ‘DECLARE_SIMPLE_SYM’.
+
+2013-06-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make button.button access fully symbolic.
+
+	* sdlevent.c (BUTTON_AKA): New macro.
+	(mb_enum, mb_eback): New static vars.
+	(event_button_button): Use ‘ENUM_GETSET’ and ‘mb_enum’.
+	(gsdl_init_enums): Init ‘mb_enum’.
+
+2013-06-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Allow for "anonymous" enumstash.
+
+	* sdlenums.c (define_enum): If ‘name’ is NULL,
+	don't do ‘DEFINE_PUBLIC’; instead, make it ‘PERMANENT’.
+
+2013-06-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Make motion.state access fully symbolic.
+
+	* sdlevent.c (event_motion_state):
+	Use ‘FLAG_GETSET’ and ‘event_mb_flags’.
+
+2013-06-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Require uvec args; no longer accept normal vectors.
+
+	* sdlgfx.c (s16): Delete ‘DEFINE_ANY_TO’.
+	* sdlvideo.c (u8, u16): Likewise.
+	* b-uv.h (DEFINE_ANY_TO): Delete macro.
+	(ASSERT_UVEC): Rewrite w/o support for normal vector.
+
+2013-06-05  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Collect enum symbols more efficiently.
+
+	Omission from 2011-05-02, "Use single
+	hash for enums; init from static arrays".
+
+	* sdlenums.c (hfold, acons): Delete static vars.
+	(enumstash_enums): Use the backing aka symbol directly.
+	(gsdl_init_enums): Don't init ‘acons’, ‘hfold’.
+
+2013-06-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Drop flags: KMOD_NONE, KMOD_RESERVED
+
+	* kmod.fs (#:region): Specify.
+
+2013-06-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	For ulong-to-flags conversion, cons remainder onto rv.
+
+	* sdlenums.c (ulong2flags): Never return ‘#f’;
+	instead, if there is a remainder, cons it onto ‘rv’.
+	(number_to_flags): Update doc comment accordingly.
+
+2013-06-02  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Handle symbolic mask in ‘(sdl sdl) button?’.
+
+	* sdlevent.c (button_p): If MASK is not an integer,
+	try resolving it using the mouse-button flagstash.
+
+2013-06-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Actually consult mouse button state in ‘button?’!
+
+	This is a long-standing mis-implementation.
+
+	* sdlevent.c (button_p): Rewrite.
+
+2013-06-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Add optional arg ‘symbolic’ for mouse state procs.
+
+	* sdlevent.c (getmouse): Take arg ‘symbolic’;
+	if non-‘#f’, arrange to return a list of symbols
+	for the ‘state’ value.
+	(get_mouse_state, get_relative_mouse_state): Take
+	optional arg ‘symbolic’; pass it to ‘getmouse’.
+
+2013-06-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Handle null cdrom and joystick names.
+
+	* sdlcdrom.c (cd_name): Use ‘RETURN_0STR_OR_FALSE’.
+	* sdljoystick.c (joystick_name): Likewise.
+
+2013-06-01  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstraction: RETURN_0STR_OR_FALSE
+
+	* guile-sdl.h (RETURN_0STR_OR_FALSE): New macro.
+
+2013-05-31  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Consolidate get-mouse{,-relative}-state impls.
+
+	* sdlevent.c (getmouse_sdl_fn): New typedef.
+	(getmouse): New static func.
+	(get_mouse_state): Use ‘getmouse’.
+	(get_relative_mouse_state): Likewise.
+
+2013-05-31  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add mouse-button flagstash.
+
+	* mb.fs: New file.
+	* Makefile.am (FLAGSTASH): Add mb.c.
+	* sdlevent.c (event_mb_flags): New static var.
+	<top-level>: #include "mb.c".
+	(gsdl_init_event): Init ‘event_mb_flags’.
+
+2013-05-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[doc] Mention wheel-up and wheel-down in ‘button?’.
+
+	* sdlevent.c (button_p): ...here, in doc comment.
+
+2013-05-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[mixer] Support internal playback via ‘set-music-command’.
+
+	* sdlmixer.c (mix_set_music_cmd): If COMMAND is ‘#f’,
+	call ‘Mix_SetMusicCMD’ with ‘NULL’, thereby arranging
+	to use SDL-internal playback routines.
+
+2013-05-29  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Rename arg "file" to "filename".
+
+	That's how GNU likes it (info "(standards) GNU Manuals").
+
+	* sdlmixer.c (mix_load_music, mix_load_wave): ...here;
+	update doc comment accordingly.
+	* sdlsurface.c (load_bmp, load_image, save_bmp): Likewise.
+
+2013-05-28  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Drop (sdl sdl) proc: string->image
+
+	* sdlsurface.c (string_to_image): Delete func.
+
+2013-05-23  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Drop procs: cd-null?, joystick-null?
+
+	* sdlcdrom.c (cd_null_p): Delete func.
+	* sdljoystick.c (joystick_null_p): Likewise.
+
+2013-05-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	Fix bug: Accept signed integers for some event field setters.
+
+	* sdlevent.c (SNUMBER_SETTER, UNUMBER_SETTER): Split from
+	‘NUMBER_SETTER’, using ‘C_LONG’ and ‘C_ULONG’ respectively.
+	(NUMBER_SETTER): Delete macro.
+	(SNUM2_SETTER, UNUM2_SETTER, NUM2_SETTER): Likewise,
+	using ‘SNUMBER_SETTER’ and ‘UNUM2_SETTER’, respectively.
+	(SNUM2_GETSET, UNUM2_GETSET, NUM2_GETSET): Likewise,
+	using ‘SNUM2_SETTER’ and ‘UNUM2_SETTER’, respectively.
+	(SNUM3_SETTER, UNUM3_SETTER, NUM3_SETTER): Likewise,
+	using ‘SNUMBER_SETTER’ and ‘UNUMBER_SETTER’, respectively.
+	(SNUM3_GETSET, UNUM3_GETSET, NUM3_GETSET): Likewise,
+	using ‘SNUM3_SETTER’ and ‘UNUM3_SETTER’, respectively.
+	(event_motion_xrel, event_motion_yrel, event_jaxis_value)
+	(event_jball_xrel, event_jball_yrel, event_resize_w)
+	(event_resize_h): Use ‘SNUM2_GETSET’.
+	(event_active_gain, event_active_state, event_key_state)
+	(event_motion_state, event_motion_x, event_motion_y)
+	(event_button_button, event_button_state, event_button_x)
+	(event_button_y, event_jaxis_which, event_jaxis_axis)
+	(event_jbutton_which, event_jbutton_button, event_jbutton_state)
+	(event_jball_which, event_jball_ball, event_jhat_which)
+	(event_jhat_hat, event_jhat_value): Use ‘UNUM2_GETSET’.
+	(event_key_keysym_scancode, event_key_keysym_unicode):
+	Use ‘UNUM3_GETSET’.
+
+2013-05-20  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[doc] Fix typo in ‘get-mouse-relative-state’ doc comment.
+
+	* sdlevent.c (get_relative_mouse_state): ...here.
+
+2013-05-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[sdl] Preserve surface depth for h/v flipping.
+
+	* sdlsurface.c (MAKE_DEST_SURFACE): Don't hardcode
+	depth; instead, use the depth from the source surface.
+
+2013-05-16  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	[int] Add abstraction: MAKE_DEST_SURFACE
+
+	* sdlsurface.c (MAKE_DEST_SURFACE): New macro.
+	(vertical_flip_surface, horizontal_flip_surface): Use it.
+
+2013-03-18  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Release: 0.4.2
+
+2013-03-18  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Add support for configure var ‘IMFI_CFLAGS’.
+
+	* SDL_gfx/Makefile.am (libSDL_gfx_la_SOURCES):
+	Move SDL_imageFilter.c and SDL_imageFilter.h from here...
+	(noinst_LTLIBRARIES): Add libimfi.la.
+	(libimfi_la_SOURCES): ...to here.
+	(libimfi_la_CFLAGS): New var.
+	* Makefile.am (gfx_la_LIBADD): Add SDL_gfx/libimfi.la.
+
+2013-03-18  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Transfer configure's ‘CFLAGS’ to ‘NORMAL_CFLAGS’.
+
+	* Makefile.am (AM_CFLAGS): New var.
+	* SDL_gfx/Makefile.am (AM_CFLAGS): Likewise.
+	(libSDL_gfx_la_CFLAGS): Delete var.
+
+2013-03-18  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Use ‘SDL_CFLAGS’ directly.
+
+	* Makefile.am (AM_CPPFLAGS): New var.
+	* SDL_gfx/Makefile.am (AM_CPPFLAGS): Likewise.
+
+2012-11-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Release: 0.4.1
+
+2012-11-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Convert Scheme character to C correctly.
+
+	* sdlttf.c (ttf_glyph_metrics):
+	Use ‘C_CHAR’ to convert ‘ch’ from Scheme to C.
+
+2012-11-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[sdl] No longer accept integer arg for ‘grab-input’.
+
+	* sdlvideo.c (wm_grab_input): Drop support for integer ‘mode’.
+
+2012-11-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Don't barf if decrufting is unnecessary.
+
+	Apparently, w/ Automake 1.12.4, there is no longer any need for
+	2011-12-07, "Decruft: Zonk $(pkglibdir) for !LAME "make install"".
+	However, we keep it around, in subdued form, for hysterical raisins.
+
+	* Makefile.am (install-data-hook) [!LAME]: If $(pkglibdir)
+	doesn't exist, don't fail on the attempt to delete it.
+	Also, include $(DESTDIR) prefix and single quotes.
+
+2012-11-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Use C func for Guile 1.8+ to make hash table.
+
+	Suggested by Andy Wingo.
+
+	* sdlenums.c (REASONABLE_BUCKET_COUNT):
+	Move inside preproc cond ‘#if GI_LEVEL_NOT_YET_1_8’.
+	(MAKE_HASH_TABLE): Bifurcate on ‘GI_LEVEL_NOT_YET_1_8’,
+	using ‘scm_c_make_hash_table’ for Guile 1.8+.
+
+2011-12-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Release: 0.4.0
+
+2011-12-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Mention planned retirment of integer ‘mode’ to ‘grab-input’.
+
+	* sdlvideo.c (wm_grab_input): Don't tie retirement to Guile-SDL
+	version number; instead, state the date 2012-05-31 explicitly.
+
+2011-12-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use ‘INTEGERP’ more.
+
+	* sdlvideo.c (wm_grab_input): Use ‘INTEGERP’.
+
+2011-12-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: IF_BOUND_ASSERT_{INTEGER,LONG,ULONG}_COPY
+
+	* guile-sdl.h (IF_BOUND_ASSERT_INTEGER_COPY)
+	(IF_BOUND_ASSERT_LONG_COPY, IF_BOUND_ASSERT_ULONG_COPY): New macros.
+	* sdlcdrom.c: Use new macros throughout.
+	* sdlmixer.c: Likewise.
+
+2011-12-13  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: {IF_BOUND_}ASSERT_DOUBLE_COPY
+
+	* sdlgfx.c (ASSERT_DOUBLE_COPY): New macro.
+	(IF_BOUND_ASSERT_DOUBLE_COPY): Likewise.
+	(roto_zoom_surface, roto_zoom_surface_xy)
+	(zoom_surface): Use them.
+
+2011-12-12  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: ASSERT_{INTEGER,INT,LONG,ULONG}_COPY
+
+	* guile-sdl.h (ASSERT_INTEGER_COPY, ASSERT_INT_COPY)
+	(ASSERT_LONG_COPY, ASSERT_ULONG_COPY): New macros.
+	* sdlcdrom.c: Use new macros throughout.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-12-12  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Tighten arg type-check from ‘exact?’ to ‘integer?’.
+
+	* guile-sdl.h (EXACTP): Delete macro/#define.
+	(INTEGERP): New macro/#define.
+	(ASSERT_EXACT): Delete macro.
+	(ASSERT_INTEGER): New macro.
+	(GSDL_NUMBER_SETTER): Use ‘ASSERT_INTEGER’.
+	* sdl.c: Do ‘s/ASSERT_EXACT/ASSERT_INTEGER/g’.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-12-11  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Validate args for ‘peep-events’ action ‘SDL_ADDEVENT’.
+
+	* sdlevent.c (EVENT_P): New macro.
+	(peep_events) <SDL_ADDEVENT>: Validate ‘events’;
+	use ‘SCM_MISC_ERROR’ to report insufficient ‘events’ length.
+
+2011-12-11  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: ASSERT_TYPE
+
+	* guile-sdl.h (ASSERT_TYPE): New macro.
+	(ASSERT_EXACT, ASSERT_SMOB): Use ‘ASSERT_TYPE’.
+	* sdlvideo.c (assert_colormap_copy): Likewise.
+
+2011-12-10  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Avoid ‘quotient’.
+
+	* misc-utils.scm (rotate-square): Use ‘ash’.
+
+2011-12-10  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: NEW_EVENT_X
+
+	* sdlevent.c (NEW_EVENT_X): New macro.
+	(peep_events, the_event_filter): Use ‘NEW_EVENT_X’.
+
+2011-12-10  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	On smob "wrong type arg" throw, report expected type.
+
+	U ≡ "Update call to ‘ASSERT_SMOB’".
+	* guile-sdl.h (enum_nick, flagstash_nick): New ‘#define’s.
+	(ASSERT_SMOB): Use ‘SCM_ASSERT_TYPE’, ‘SCM_SMOB_PREDICATE’;
+	take ‘lpre’ instead of ‘tag’; compute _tag and _nick internally.
+	(color_nick, pixel_format_nick): New ‘#define’s.
+	(ASSERT_COLOR, ASSERT_RECT, ASSERT_SURFACE, ASSERT_PIXEL_FORMAT)
+	(GSDL_NUMBER_GETTER, GSDL_PF_NUMBER_GETTER, GSDL_NUMBER_SETTER)
+	(GSDL_ENUM_GETTER, GSDL_ENUM_SETTER, GSDL_FLAG_GETTER)
+	(GSDL_FLAG_SETTER): U.
+	* sdlcdrom.c (ASSERT_CDROM): U.
+	* sdlcolor.c (color_nick): Delete #define.
+	* sdlenums.c (ASSERT_ENUM, ASSERT_FLAGSTASH): U.
+	(gsdl_init_enums): Use ‘enum_nick’, ‘flagstash_nick’.
+	* sdlevent.c (ASSERT_EVENT, ASSERT_KEYSYM): U.
+	* sdlgfx.c (ASSERT_FPSMGR): U.
+	* sdljoystick.c (ASSERT_JOYSTICK): U.
+	* sdlmixer.c (mix_music_nick, mix_audio_nick): New ‘#define’s.
+	(init_module): Use ‘mix_music_nick’, ‘mix_audio_nick’.
+	* sdlttf.c (ttf_font_nick): New #define.
+	(ASSERT_TTFONT): U.
+	(init_module): Use ‘ttf_font_nick’.
+	* sdlvideo.c (overlay_nick): New #define.
+	(ASSERT_CURSOR, ASSERT_OVERLAY): U.
+	(gsdl_init_video): Use ‘overlay_nick’.
+
+2011-12-10  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use more <libguile/validate.h> abstractions.
+
+	* b-uv.h (ASSERT_UVEC): Use ‘SCM_ASSERT_TYPE’.
+	* guile-sdl.h (ASSERT_EXACT): Likewise.
+	(ASSERT_VECTOR): Use ‘SCM_VALIDATE_VECTOR’.
+	(ASSERT_SYMBOL): Use ‘SCM_VALIDATE_SYMBOL’.
+	(ASSERT_STRING): Use ‘SCM_VALIDATE_STRING’.
+	(SCM_VALIDATE_NUMBER): New macro, if not already defined.
+	(ASSERT_NUMBER): Use ‘SCM_VALIDATE_NUMBER’.
+	(ASSERT_CHAR): Use ‘SCM_VALIDATE_CHAR’.
+	(ASSERT_LIST): Use ‘SCM_VALIDATE_LIST’.
+
+2011-12-09  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fully validate  ‘set-colors!’, ‘set-palette’ colormap arg.
+
+	* guile-sdl.h (VECREF): New macro/#define.
+	* sdlvideo.c: Don't #include <alloca.h>.
+	(ALLOCA_COLORS): Delete macro.
+	(assert_colormap_copy): New static func.
+	(ASSERT_COLORMAP_COPY): New macro.
+	(set_colors, set_palette): Don't ‘alloca’; make auto var
+	‘ccolors’ a 256-element array; use ‘ASSERT_COLORMAP_COPY’.
+
+2011-12-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use ‘SCM_MISC_ERROR’.
+
+	* guile-sdl.h (THROW_NOT_YET_IMPLEMENTED): Use ‘SCM_MISC_ERROR’.
+	* sdlevent.c (peep_events): Likewise.
+	* sdlvideo.c (wm_grab_input): Likewise.
+
+2011-12-08  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Document uniform vs ordinary vectors; spiff docstrings.
+
+	* sdlgfx.c (draw_polygon, draw_aa_polygon)
+	(draw_textured_polygon, draw_bezier): Spiff doc.
+	* sdlvideo.c (create_cursor)
+	(get_gamm_ramp, set_gamma_ramp): Likewise.
+
+2011-12-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Relax uvec restriction; re-allow ordinary vectors.
+
+	* b-uv.h (DEFINE_ANY_TO): New macro.
+	(ASSERT_UVEC): If ‘obj’ is a vector, substitute it w/ a new uvec.
+	* sdlgfx.c (s16): New ‘DEFINE_ANY_TO’.
+	* sdlvideo.c (u8, u16): New ‘DEFINE_ANY_TO’s.
+
+2011-12-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: SELECT_UVEC_PREDICATE
+
+	* b-uv.h (SELECT_UVEC_PREDICATE): New macro.
+	* sdlgfx.c: Use it.
+	* sdlvideo.c: Likewise.
+
+2011-12-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: IMPORT_SRFI4
+
+	* b-uv.h (IMPORT_SRFI4): New macro.
+	* sdlgfx.c: Use it.
+	* sdlvideo.c: Likewise.
+
+2011-12-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Decruft: Zonk $(pkglibdir) for !LAME "make install".
+
+	This is a temporary workaround.  Long term, it would be better to
+	instruct Automake not to create that directory in the first place.
+
+	* Makefile.am (install-data-hook) [!LAME]: Delete $(pkglibdir).
+
+2011-12-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Declare (sdl sdl) shared state "hidden" for GCC 4.1+.
+
+	This leaves one visible func per module, the module init thunk.
+	To verify, do ‘nm --defined-only -g .libs/*.so’ under GNU/Linux.
+
+	* guile-sdl.h (GCC_VERSION, DSOPRIVATE, GBO): New #define:s.
+	[!GUILE_SDL_OPTIONAL_MODULE] (btw): Use ‘GBO’, not ‘extern’.
+	* sdl.c (DECLARE_INIT_THUNK): New macro.
+	(gsdl_init_enums, gsdl_init_rect, gsdl_init_color)
+	(gsdl_init_video, gsdl_init_surface, gsdl_init_event)
+	(gsdl_init_joystick, gsdl_init_cdrom, gsdl_init_misc): Use it.
+
+2011-12-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Move ‘gsdl_video_flags’ into ‘btw’.
+
+	* guile-sdl.h (struct obtw): Add member ‘video_flags’.
+	[!GUILE_SDL_OPTIONAL_MODULE] (gsdl_video_flags): Delete var decl.
+	* sdlsurface.c (make_surface, create_rgb_surface)
+	(GSDL_FLAG_GETTER, set_color_key, set_alpha)
+	(convert_surface): Use ‘btw->video_flags’.
+	* sdlvideo.c (gsdl_video_flags): Delete var.
+	(get_video_flags, list_modes, video_mode_ok)
+	(set_video_mode): Use ‘btw->video_flags’.
+	(gsdl_init_video): Init ‘btw->video_flags’.
+
+2011-12-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Move ‘gsdl_make_flagstash’ into ‘btw’.
+
+	* sdlenums.c (make_flagstash): Rename
+	from ‘gsdl_make_flagstash’; make static.
+	(gsdl_init_enums): Init ‘btw->make_flagstash’.
+	* sdl.c (init_module): Don't init ‘btw->make_flagstash’;
+	use ‘btw->make_flagstash’.
+	* sdlevent.c (gsdl_init_event): Use ‘btw->make_flagstash’.
+	* sdlvideo.c (gsdl_init_video): Likewise.
+	* guile-sdl.h (gsdl_make_flagstash): Delete func decl.
+
+2011-12-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Replace ‘(sdl misc-utils) exact-floor’ w/ ‘exact-truncate’.
+
+	Rounding to zero is more useful in practice.  Ah, symmetry!
+
+	* misc-utils.scm (exact-truncate): New proc, exported.
+	(exact-floor): Delete proc.
+	(fader/3p): Use ‘exact-truncate’.
+
+2011-12-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: ALLOCA_EVENTS, ALLOCA_COLORS
+
+	* sdlevent.c (ALLOCA_EVENTS): New macro.
+	(peep_events): Use ‘ALLOCA_EVENTS’.
+	* sdlcolors.c (ALLOCA_COLORS): New macro.
+	(set_colors): Use ‘ALLOCA_COLORS’.
+
+2011-12-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Generate documentation for smob enum-access procs.
+
+	* guile-sdl.h (GSDL_ENUM_GETTER, GSDL_ENUM_SETTER): Rewrite.
+	* sdlevent.c (ENUM_GETTER, ENUM_SETTER): Update calls
+	to ‘GSDL_ENUM_GETTER’ and ‘GSDL_ENUM_SETTER’, respectively.
+
+2011-12-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Generate documentation for smob flag-access procs.
+
+	* guile-sdl.h (GSDL_FLAG_GETTER, GSDL_FLAG_SETTER): Rewrite.
+	* sdlevent.c (FLAG_GETTER, FLAG_SETTER): Update calls
+	to ‘GSDL_FLAG_GETTER’ and ‘GSDL_FLAG_SETTER’, respectively.
+	* sdlsurface.c (surface_get_flags): Update call to ‘GSDL_FLAG_GETTER’.
+
+2011-12-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Don't mention SDL type in smob number-access procs.
+
+	* guile-sdl.h (SMOBF): New macro.
+	(SMOBFIELD): Use ‘SMOBF’.
+	(GSDL_NUMBER_GETTER, GSDL_PF_NUMBER_GETTER)
+	(GSDL_NUMBER_SETTER): Rewrite.
+	* sdlcolor.c (NUMBER_GETTER, NUMBER_SETTER): Update calls
+	to ‘GSDL_NUMBER_GETTER’ and ‘GSDL_NUMBER_SETTER’, respectively.
+	* sdlevent.c (NUMBER_GETTER, NUMBER_SETTER): Likewise.
+	* sdlrect.c (NUMBER_GETTER, NUMBER_SETTER): Likewise.
+	* sdlsurface.c (NUMBER_GETTER):
+	Update call to ‘GSDL_PF_NUMBER_GETTER’.
+
+2011-12-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Don't mention "object->" in PF smob getter docstring.
+
+	Omission from 2011-11-27, "Fix bug:
+	Don't ‘SDL_FreeSurface’ internal surfaces".
+
+	* guile-sdl.h (GSDL_PF_NUMBER_GETTER): New macro.
+	* sdlsurface.c (NUMBER_GETTER): Use ‘GSDL_PF_NUMBER_GETTER’.
+	(get_surface_w, get_surface_h, get_surface_depth): Update.
+
+2011-12-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Make ‘get-caption’ handle NULL title, icon.
+
+	* sdlvideo.c (wm_get_caption): If ‘title’ or ‘icon’
+	is NULL, don't cons a string; instead, yield ‘#f’.
+
+2011-12-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Redesign ‘show-cursor’.
+
+	* sdlvideo.c (show_cursor): Rewrite.
+
+2011-12-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Decruft: Assume ‘surface:flags’ returns a list of symbols.
+
+	Omission from 2011-04-29, "Fix bug: Make
+	‘number->flags’ return symbols, not strings".
+
+	* misc-utils.scm (copy-surface conv): Don't
+	bother mapping ‘string->symbol’ over ‘surface:flags’ rv.
+
+2011-12-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use ‘PF_Surface’ more.
+
+	Omission from 2011-11-27, "Fix bug:
+	Don't ‘SDL_FreeSurface’ internal surfaces".
+
+	* sdlsurface.c (surface_get_flags): Specify ‘PF_Surface *’
+	and ‘object->flags’ for unpacking and internal access.
+
+2011-12-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Increase ‘string->image’ safety.
+
+	* sdlsurface.c (string_to_image): Use ‘SDL_RWFromConstMem’.
+
+2011-12-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc int] Use ‘-args:’ in docstrings.
+
+	* misc-utils.scm (rotate-square, rectangle-closure)
+	(poll-with-push-on-timeout-proc, copy-surface)
+	(toroidal-panner/3p): Use ‘-args:’ in docstring.
+	* sdlevent.c (set_event_filter): Likewise.
+	* simple.scm (simple-vpacked-image): Likewise.
+
+2011-11-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Define ‘GET_PARTICULARS’ consistently.
+
+	Omission from 2011-11-30, "Add uvec wrangling abstractions".
+
+	* b-uv.h [GI_LEVEL_NOT_YET_1_8] (GET_PARTICULARS):
+	Invert order of arguments.
+
+2011-11-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Return / take u16 uvec for gamma-ramp getter / setter procs.
+
+	* sdlvideo.c (gsdl_scm_to_uint16s): Delete func.
+	(gsdl_scm_from_uint16s): Likewise.
+	[GI_LEVEL_NOT_YET_1_8] (u16v_p): New scheme object proc.
+	[GI_LEVEL_NOT_YET_1_8] (mk_u16v, u16v_x): Likewise.
+	[GI_LEVEL_NOT_YET_1_8] (scm_u16vector_p): New macro.
+	[GI_LEVEL_NOT_YET_1_8] (scm_make_u16vector): Likewise.
+	(u16_stuff, copy_u16): New, via ‘DEFINE_STRUCT_AND_COPY_FUNC’.
+	(ASSERT_UVEC_U16, U16_STUFF)
+	(GET_U16_PARTICULARS, HOWDY_U16): New macros.
+	(GAMMAVEC): Delete macro.
+	(get_gamma_ramp): Rewrite.
+	(ASSERT_VSZFIT): Delete macro.
+	(set_gamma_ramp): Rewrite.
+
+2011-11-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Restrict type to u8 uvec for some ‘create-cursor’ args.
+
+	* sdlvideo.c: #include "b-uv.h".
+	(gsdl_scm_to_uint8s): Delete func.
+	[GI_LEVEL_NOT_YET_1_8] (srfi4): New module object.
+	[GI_LEVEL_NOT_YET_1_8] (u8v_p): New scheme proc object.
+	[GI_LEVEL_NOT_YET_1_8] (scm_u8vector_p): New macro.
+	(u8_stuff, copy_u8): New, via ‘DEFINE_STRUCT_AND_COPY_FUNC’.
+	(ASSERT_UVEC_U8, U8_STUFF, GET_U8_PARTICULARS, HOWDY_U8): New macros.
+	(create_cursor): Rewrite.
+
+2011-11-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Make ‘get-gamma-ramp’ return a simple list, not an alist.
+
+	* sdlvideo.c (redtable, greentable, bluetable): Delete symbols.
+	(get_gamma_ramp): Return a simple list.
+
+2011-11-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Add abstraction: CALL2
+
+	* guile-sdl.h (CALL2): New #define.
+
+2011-11-30  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add uvec wrangling abstractions.
+
+	* b-uv.h: New file.
+	* Makefile.am (headers): Add b-uv.h.
+	* sdlgfx.c: #include "b-uv.h".
+	(S16VECTORP): Delete macro.
+	(ASSERT_UVEC_S16): Use ‘ASSERT_UVEC’.
+	(ST, VBITS, VLEN, STUFF, GET_PARTICULARS)
+	(HOWDY, LATER): Delete macros.
+	(struct s16_stuff, copy_16): Delete explicit definitions;
+	instead, define via ‘DEFINE_STRUCT_AND_COPY_FUNC’.
+	(STUFF2): Use ‘S16_STUFF’.
+	(HOWDY2): Use ‘HOWDY_S16’.
+
+2011-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Use ‘@code’ around ‘#t’ and ‘#f’ in doc strings.
+
+	* misc-utils.scm: Use ‘@code’ around ‘#t’ and ‘#f’ in doc strings.
+	* misc.c: Likewise.
+	* sdl.c: Likewise.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+	* simple.scm: Likewise.
+
+2011-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use ‘zero?’.
+
+	* misc-utils.scm (rectangle<-geometry-string): Use ‘zero?’.
+	(poll-with-push-on-timeout-proc, toroidal-panner/3p): Likewise.
+	* simple.scm (simple-canvas, simple-vpacked-image): Likewise.
+
+2011-11-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[dist] Also distribute sdl.tsar.
+
+	This file is needed to generate sdl.exports.
+	TODO: Make do without.
+
+	* Makefile.am [MAINTAINER_MODE] (EXTRA_DIST): Add sdl.tsar.
+
+2011-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Fix bug: Define old-style suffix rule .fs.c unconditionally.
+
+	Omission from 2011-10-23, "Don't use gperf(1);
+	use hash table for flagstash lookup".
+
+	* Makefile.am (.fs.c): Move old-style
+	suffix rule out of am-cond ‘MAINTAINER_MODE’.
+
+2011-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Move vector conversion funcs into unique .c client.
+
+	* Makefile.am (sdlimpl): Remove convert.c.
+	* guile-sdl.h (gsdl_scm_to_uint16s): Delete func decl.
+	(gsdl_scm_to_uint8s, gsdl_scm_from_uint16s): Likewise.
+	* convert.c: Delete file; move funcs to...
+	* sdlvideo.c (gsdl_scm_to_uin16s): ...here; make static.
+	(gsdl_scm_to_uint8s, gsdl_scm_from_uint16s): Likewise.
+
+2011-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Move flags conversion funcs dispatch into ‘btw’.
+
+	* guile-sdl.h (flags2ulong_t, ulong2flags_t): New typedefs.
+	(gsdl_flags2ulong, gsdl_ulong2flags): Delete func decls.
+	(GSDL_FLAGS2ULONG): Use ‘btw->flags2ulong’.
+	(struct obtw): Add members ‘flags2ulong’, ‘ulong2flags’.
+	(GSDL_FLAG_GETTER): Use ‘btw->ulong2flags’.
+	* sdlenums.c (flags2ulong): Rename from
+	‘gsdl_flags2ulong’; make static.
+	(ulong2flags): Rename from ‘gsdl_ulong2flags’; make static.
+	(number_to_flags): Use ‘ulong2flags’.
+	(gsdl_init_enums): Init ‘btw->flags2ulong’, ‘btw->ulong2flags’.
+	* sdl.c (was_init): Use ‘btw->ulong2flags’.
+	* sdlevent.c (get_mod_state): Likewise.
+	* sdlttf.c (ttf_get_font_style): Likewise.
+
+2011-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use ‘GSDL_FLAGS2ULONG’ more.
+
+	* sdlevent.c (peep_events): Use ‘GSDL_FLAGS2ULONG’.
+	* sdlvideo.c (create_yuv_overlay): Likewise.
+
+2011-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Decruft: Internalize enum definition func.
+
+	Omission from (it was already moved into ‘btw’ by) 2011-11-23,
+	"Support "make install" and "make check" under Guile 1.8+".
+
+	* guile-sdl.h (gsdl_define_enum): Delete func decl.
+	* sdl.c (init_module): Don't init ‘btw->define_enum’.
+	* sdlenums.c (define_enum): Rename from
+	‘gsdl_define_enum’; make static.
+	(gsdl_init_enums): Init ‘btw->define_enum’.
+
+2011-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	For import, use #:prefix instead of #:renamer.
+
+	* misc-utils.scm: Use #:prefix in ‘define-module’ form.
+	* simple.scm: Likewise.
+
+2011-11-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	New (sdl gfx) elements: font-rotation!, font-rotations
+
+	* sdlgfx.c (frot_enum): New static ‘SCM’.
+	(frot_eback): New static array of ‘valaka_t’.
+	(font_rotation_x): New PRIMPROC.
+	(init_module): Init ‘frot_enum’ w/ Scheme name ‘font-rotations’.
+
+2011-11-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Move enum conversion funcs dispatch into ‘btw’.
+
+	* guile-sdl.h (gsdl_enum2long, gsdl_long2enum): Delete func decls.
+	(enum2long_t, long2enum_t): New typedefs.
+	(GSDL_ENUM2LONG): Use ‘btw->enum2long’.
+	(struct obtw): Add members ‘enum2long’, ‘long2enum’.
+	(GSDL_ENUM_GETTER): Use ‘btw->long2enum’.
+	* sdlenums.c (enum2long): Rename from ‘gsdl_enum2long’; make static.
+	(long2enum): Rename from ‘gsdl_long2enum’; make static.
+	(gsdl_init_enums): Init ‘btw->enum2long’ and ‘btw->long2enum’.
+	* sdlevent.c (the_event_filter)
+	(event_state, get_key_state): Use ‘btw->long2enum’.
+	* sdlmixer.c (RETURN_FADINGSTATUS): Likewise.
+
+2011-11-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Decruft: Don't #include <SDL/SDL.h> unnecessarily.
+
+	It's no longer necessary due to 2011-11-27, "Add
+	abstractions: DECLARE_PF, RETURN_NEW_PF_OR_FALSE".
+
+	* misc.c: Don't #include <SDL/SDL.h>.
+	* sdl.c: Likewise.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-11-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Don't ‘SDL_FreeSurface’ internal surfaces.
+
+	* guile-sdl.h (surface_nick): Move #define here from sdlsurface.c.
+	(Surface): New ‘DECLARE_PF’.
+	(UNPACK_PF_SURFACE): New macro.
+	(UNPACK_SURFACE): Use ‘UNPACK_PF_SURFACE’.
+	(RETURN_PF_SURFACE): New macro.
+	(RETURN_NEW_SURFACE): Use ‘RETURN_PF_SURFACE’.
+	(RETURN_INT_SURFACE): New macro.
+	* sdlsurface.c (surface_nick): Move #define to guile-sdl.h.
+	(free_surface): Rewrite.
+	(NUMBER_GETTER): Use ‘PF_Surface’.
+	(surface_get_w, surface_get_h, surface_depth):
+	Update to look in actual ‘object’.
+	* sdlvideo.c (get_video_surface, set_video_mode):
+	Use ‘RETURN_INT_SURFACE’.
+
+2011-11-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use pf to wrap ‘SDL_Cursor’.
+
+	* sdlvideo.c (xSDL_Cursor): Delete struct.
+	(GCMALLOC_CURSOR): Delete macro.
+	(Cursor): New ‘DECLARE_PF’.
+	(UNPACK_PF_CURSOR): New macro.
+	(UNPACK_CURSOR): Use ‘UNPACK_PF_CURSOR’.
+	(RETURN_PF_CURSOR): New macro.
+	(RETURN_NEW_CURSOR): Use ‘RETURN_PF_CURSOR’.
+	(RETURN_INT_CURSOR): New macro.
+	(free_cursor): Rewrite.
+	(create_cursor): Update call to ‘RETURN_NEW_CURSOR’.
+	(set_cursor): Use ‘UNPACK_CURSOR’ directly.
+	(get_cursor): Use ‘RETURN_INT_CURSOR’.
+
+2011-11-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: DECLARE_PF, RETURN_NEW_PF_OR_FALSE
+
+	* guile-sdl.h: #include <SDL/SDL.h>.
+	(DECLARE_PF, RETURN_NEW_PF_OR_FALSE): New macros.
+
+2011-11-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use UNPACK_{SURFACE,RECT} more.
+
+	* sdlgfx.c (roto_zoom_surface, roto_zoom_surface_xy)
+	(zoom_surface, shrink_surface): Use ‘UNPACK_SURFACE’.
+	* sdlsurface.c (vertical_flip_surface)
+	(horizontal_flip_surface): Likewise.
+	* sdlrect.c (print_rect): Use ‘UNPACK_RECT’.
+
+2011-11-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Decruft: Don't stone enumstash and its hash.
+
+	* sdlenums.c (gsdl_define_enum): Don't stone the hash or smob.
+
+2011-11-25  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	New (sdl gfx) proc: draw-thick-line
+
+	* sdlgfx.c (draw_thick_line): New PRIMPROC.
+
+2011-11-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[gfx] Fix typo in rounded-rectangle subroutine.
+
+	TODO: Send this to Andreas Schiffler.
+
+	* SDL_gfx/SDL_gfxPrimitives.c (_murphyWideline):
+	Fix typo: Swap ‘y1’ and ‘y2’ correctly.
+
+2011-11-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	New (sdl gfx) proc: draw-rounded-rectangle
+
+	* sdlgfx.c (draw_rounded_rectangle): New PRIMPROC.
+
+2011-11-23  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Add abstraction: VECTORP
+
+	* guile-sdl.h (VECTORP): New #define.
+	(ASSERT_VECTOR): Use ‘VECTORP’.
+
+2011-11-23  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Support "make install" and "make check" under Guile 1.8+.
+
+	* guile-sdl.h (CALL0): New #define.
+	(PACK_POINTER, UNPACK_POINTER): New macros.
+	(define_enum_t): New typedef.
+	(DEFINE_ENUM): Use ‘btw->define_enum’.
+	(make_flagstash_t): New typedef.
+	(struct obtw): New.
+	[GUILE_SDL_OPTIONAL_MODULE] (btw): New ‘static’ var decl.
+	[!GUILE_SDL_OPTIONAL_MODULE] (btw): New ‘extern’ var decl.
+	(GSTX_COLOR, GSTX_RECT, GSTX_SURFACE, GSTX_PIXEL_FORMAT)
+	(GSTX_RESERVED4, GSTX_RESERVED5, GSTX_RESERVED6, GSTX_RESERVED7)
+	(GSTX_TOO_MUCH): Delete #define:s.
+	(gsdl_smob_tags): Delete var.
+	(color_tag, rect_tag, surface_tag, pixel_format_tag): Use ‘btw’.
+	(gsdl_video_flags, gsdl_scm_to_uint16s, gsdl_scm_to_uint8s)
+	(gsdl_scm_from_uint16s): Move var and func decls inside
+	cpp conditional ‘!defined GUILE_SDL_OPTIONAL_MODULE’.
+	* sdl.c (btw): New var.
+	(gsdl_smob_tags): Delete var.
+	(obtw): New PRIMPROC.
+	(init_module): Init ‘btw’.
+	* sdlgfx.c (GUILE_SDL_OPTIONAL_MODULE): New #define.
+	(obtw): New Scheme proc object.
+	(init_module): Init ‘btw’.
+	* sdlmixer.c (GUILE_SDL_OPTIONAL_MODULE): New #define.
+	(obtw): New Scheme proc object.
+	(init_module): #include "sdlmixer.x" earlier; init ‘btw’.
+	* sdlttf.c (GUILE_SDL_OPTIONAL_MODULE): New #define.
+	(obtw): New Scheme proc object.
+	(init_module): #include "sdlttf.x" earlier; init ‘btw’.
+	* Makefile.am [LAME] (genwrap, basic, CLEANFILES): New vars.
+	[LAME] (cmod_DATA): Add $(basic).
+	[LAME] (pkglib_LTLIBRARIES): New var.
+	[LAME] (sdl.exports, gfx.exports, sdl, gfx): New targets.
+	[!LAME] (cmod_LTLIBRARIES): Move var into this am-cond.
+	(soargs): Bifurcate var on am-cond ‘LAME’.
+	(install-data-hook): Drop "past mistakes" decrufting;
+	if ‘LAME’, do ‘FOR_MAKE_CHECK’ handling; move $(updatemodcat)
+	into am-cond ‘!LAME’; drop am-cond ‘HAVE_MKPIMMC’.
+	(uninstall-hook): Move $(updatemodcat) into am-cond ‘!LAME’;
+	drop am-cond ‘HAVE_MKPIMMC’; delete both $(cmoddir), $(pkglibdir).
+	[HAVE_MIXER, LAME] (cmod_DATA): Add mixer.
+	[HAVE_MIXER, LAME] (pkglib_LTLIBRARIES): Add mixer.la.
+	[HAVE_MIXER, LAME] (CLEANFILES): Add mixer, mixer.exports.
+	[HAVE_MIXER, LAME] (mixer.exports, mixer): New targets.
+	[HAVE_MIXER] (cmod_LTLIBRARIES): Move ‘+=’ into am-cond ‘!LAME’.
+	[HAVE_TTF, LAME] (cmod_DATA): Add ttf.
+	[HAVE_TTF, LAME] (pkglib_LTLIBRARIES): Add ttf.la.
+	[HAVE_TTF, LAME] (CLEANFILES): add ttf, ttf.exports.
+	[HAVE_TTF, LAME] (ttf.exports, ttf): New targets.
+	[HAVE_TTF] (cmod_LTLIBRARIES): Move ‘+=’ into am-cond ‘!LAME’.
+	[HAVE_MKPIMMC] (noinst_DATA): Delete var ‘+=’.
+	[HAVE_MKPIMMC] (.module-catalog, clean-local): Delete targets.
+	(group-stamp): New target.
+	(noinst_DATA): Add group-stamp.
+	(update-libsite-module-catalog): Move out
+	of am-cond ‘HAVE_MKPIMMC’; use $(GUILE_TOOLS).
+
+2011-11-23  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Restrict type to s16 uvec for some gfx primitives.
+
+	These used accept arbitrary vectors, doing a costly
+	internal conversion on every call.  Good-bye slack!
+
+	* sdlgfx.c: #include <SDL/SDL.h>.
+	[GI_LEVEL_NOT_YET_1_8] (srfi4): New module object.
+	[GI_LEVEL_NOT_YET_1_8] (s16v_p): New Scheme proc object.
+	(S16VECTORP, ASSERT_UVEC_S16): New macros.
+	(s16_stuff): New struct.
+	(copy_s16): New static func.
+	(ST, VBITS, VLEN, STUFF, GET_PARTICULARS, HOWDY, LATER)
+	(STUFF2, HOWDY2, LATER2): New macros.
+	(draw_polygon, draw_aa_polygon)
+	(draw_textured_polygon, draw_bezier): Rewrite.
+	* convert.c (gsdl_scm_to_int16s): Delete func.
+	* guile-sdl.h (gsdl_scm_to_int16s): Delete func decl.
+
+2011-11-23  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: MODULE_LOOKUP, SELECT_MODULE_VAR
+
+	* guile-sdl.h (MODULE_LOOKUP, SELECT_MODULE_VAR):
+	New #define:s and macros.
+
+2011-11-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Add smob abstractions; rework smob free funcs.
+
+	* guile-sdl.h (DEFSMOB, GCMALLOC, GCFREE, GCRV): New macros.
+	(rect_nick): New #define.
+	(GCMALLOC_RECT): New macro.
+	* sdlcdrom.c (cdrom_nick): New #define.
+	(print_cd): Use ‘cdrom_nick’.
+	(gsdl_init_cdrom): Use ‘DEFSMOB’, ‘cdrom_nick’.
+	* sdlcolor.c (color_nick): New #define.
+	(free_color): Use ‘GCFREE’, ‘GCRV’, ‘color_nick’.
+	(print_color): Use ‘color_nick’.
+	(color_p): Say "SDL-Color" in docstring; nfc.
+	(make_color): Use ‘GCMALLOC’, ‘color_nick’.
+	(gsdl_init_color): Use ‘DEFSMOB’, ‘color_nick’.
+	* sdlenums.c (gsdl_init_enums): Use ‘DEFSMOB’.
+	* sdlevent.c (event_nick): New #define.
+	(free_event): Use ‘GCFREE’, ‘GCRV’, ‘event_nick’.
+	(keysym_nick): New #define.
+	(free_keysym): Use ‘GCFREE’, ‘GCRV’, ‘keysym_nick’.
+	(GCMALLOC_EVENT): New macro.
+	(make_event): Use ‘GCMALLOC_EVENT’.
+	(make_keysym): Use ‘GCMALLOC’, ‘keysym_nick’.
+	(peep_events, the_event_filter): Use ‘GCMALLOC_EVENT’.
+	(gsdl_init_event): Use ‘DEFSMOB’, ‘event_nick’, ‘keysym_nick’.
+	* sdlgfx.c (fpsmgr_nick): New #define.
+	(free_fpsmgr): Use ‘GCFREE’, ‘GCRV’, ‘fpsmgr_nick’.
+	(make_fps_manager): Use ‘GCMALLOC’, ‘fpsmgr_nick’.
+	(init_module): Use ‘DEFSMOB’, ‘fpsmgr_nick’.
+	* sdljoystick.c (joystick_nick): New #define.
+	(print_joy): Use ‘joystick_nick’.
+	(gsdl_init_joystick): Use ‘DEFSMOB’, ‘joystick_nick’.
+	* sdlmixer.c (init_module): Use ‘DEFSMOB’.
+	* sdlrect.c (free_rect): ‘GCFREE’, ‘GCRV’, ‘rect_nick’.
+	(print_rect): Use ‘rect_nick’.
+	(make_rect): Use ‘GCMALLOC_RECT’.
+	(gsdl_init_rect): Use ‘DEFSMOB’, ‘rect_nick’.
+	* sdlsurface.c (surface_nick): New #define.
+	(print_surface): Use ‘surface_nick’.
+	(get_clip_rect): Use ‘GCMALLOC_RECT’.
+	(gsdl_init_surface): Use ‘DEFSMOB’, ‘surface_nick’.
+	* sdlttf.c (init_module): Use ‘DEFSMOB’.
+	* sdlvideo.c (cursor_nick): New #define.
+	(GCMALLOC_CURSOR): New macro.
+	(MALLOC_XSDL_CURSOR): Delete macro.
+	(free_cursor): Use ‘GCFREE’, ‘cursor_nick’, ‘GCRV’.
+	(pixel_format_nick): New #define.
+	(print_pixel_format): Use ‘pixel_format_nick’.
+	(create_cursor, get_cursor): Use ‘GCMALLOC_CURSOR’.
+	(gsdl_init_video): Use ‘DEFSMOB’, ‘cursor_nick’, ‘pixel_format_nick’.
+
+2011-11-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Stack-allocate temp ‘SDL_SysWMinfo’ object.
+
+	* misc.c (get_wm_info): Convert auto var ‘info’ from
+	pointer to object; don't ‘malloc’ and ‘free’; update refs.
+
+2011-11-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Stack-allocate temp ‘SDL_Color’ array.
+
+	* sdlvideo.c (set_colors, set_palette):
+	Use ‘alloca’; don't ‘scm_must_free’ afterwards.
+
+2011-11-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Allocate enough memory for temp ‘SDL_Color’ array.
+
+	* sdlvideo.c (set_colors, set_palette):
+	Use ‘length * sizeof (SDL_Color)’ in
+	the allocation request, not just ‘length’.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Add abstraction: STRINGP
+
+	* guile-sdl.h (STRINGP): New #define.
+	(ASSERT_STRING): Use ‘STRINGP’.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Use ‘scm_c_read_string’ instead of ‘scm_read_0str’.
+
+	* guile-sdl.h [!GI_LEVEL_NOT_YET_1_8] (IMPORT_MODULE):
+	Use ‘scm_c_read_string’.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: MOD_INIT_LINK_THUNK
+
+	* guile-sdl.h [GI_LEVEL_NOT_YET_1_8] (MOD_INIT_LINK_THUNK):
+	New #define.
+	[!GI_LEVEL_NOT_YET_1_8] (MOD_INIT_LINK_THUNK):
+	Rename from ‘GH_MODULE_LINK_FUNC’; rewrite.
+	* sdl.c: Use ‘MOD_INIT_LINK_THUNK’.
+	* sdlgfx.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlttf.c: Likewise.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Say ‘IMPORT_MODULE’ instead of ‘GH_USE_MODULE’.
+
+	* guile-sdl.h [GI_LEVEL_NOT_YET_1_8] (IMPORT_MODULE): New #define.
+	[!GI_LEVEL_NOT_YET_1_8] (IMPORT_MODULE): Rename from ‘GH_USE_MODULE’.
+	* sdlgfx.c (sdlsup): Use ‘IMPORT_MODULE’.
+	* sdlmixer.c (sdlsup): Likewise.
+	* sdlttf.c (sdlsup): Likewise.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Remove tsar files on maintainer-mode "make clean".
+
+	* Makefile.am [MAINTAINER_MODE] (CLEANFILES): New var.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Fix bug: Define ‘C_CHAR’ correctly for Guile 1.8.7.
+
+	Regression introduced 2011-04-28,
+	"Add abstractions: C_{BOOL,CHAR,INT,LONG,ULONG,DOUBLE}".
+
+	* guile-sdl.h [!GI_LEVEL_NOT_YET_1_8] (C_CHAR):
+	Rewrite to use ‘scm_char_to_integer’ and ‘C_INT’.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Say ‘PERMANENT’ instead of ‘GH_STONED’.
+
+	* guile-sdl.h (PERMANENT): New #define.
+	(GH_STONED): Delete #define.
+	(GH_USE_MODULE): Use ‘PERMANENT’.
+	* sdlenums.c (gsdl_make_flagstash): Likewise.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[uninstall] Fix bug: Make sure everything is properly deleted.
+
+	* Makefile.am (bx, soargs): New vars.
+	(install-data-hook): Use $(bx), $(soargs).
+	(uninstall-hook): Invoke $(bx)/uninstall-sofixed.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Internalize "palette" flagstash object.
+
+	* sdlvideo.c (palette_flags):
+	Rename from ‘gsdl_palette_flags’; make static.
+	(get_palette_flags, set_palette, gsdl_init_video): Update refs.
+	* guile-sdl.h (gsdl_palette_flags): Delete var decl.
+
+2011-11-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Internalize "alpha" enumstash object.
+
+	* sdlsurface.c (alpha_enums, alpha_eback): New static vars.
+	(set_alpha): Use ‘alpha_enums’.
+	(gsdl_init_surface): Init ‘alpha_enums’.
+	* sdlvideo.c (gsdl_alpha_enums, alpha_eback): Delete vars.
+	(gsdl_init_video): Don't init ‘gsdl_alpha_enums’.
+	* guile-sdl.h (gsdl_alpha_enums): Delete var decl.
+
+2011-11-19  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Add (sdl misc-utils) proc: exact-floor
+
+	* misc-utils.scm (exact-floor): New proc, exported.
+	(fader/3p): Use ‘exact-floor’.
+
+2011-10-25  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Use ‘GI_LEVEL_NOT_YET_1_8’ everywhere possible.
+
+	Omission from 2011-10-24, "Use libguile
+	version (ugh) for abstraction bifurcation".
+
+	* convert.c (gsdl_scm_to_int16s, gsdl_scm_to_uint16s)
+	(gsdl_scm_to_uint8s, gsdl_scm_from_uint16s):
+	Use ‘GI_LEVEL_NOT_YET_1_8’.
+	* guile-sdl.h: Fix typo: Use ‘#if’, not ‘#ifdef’.
+
+2011-10-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Avoid ‘SCM_MAKINUM’.
+
+	* sdlenums.c (REASONABLE_BUCKET_COUNT): Use ‘NUM_INT’.
+
+2011-10-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Use correct s_FOO for ‘#define FUNC_NAME’.
+
+	* sdlmixer.c (mix_paused): Use ‘s_mix_paused’.
+	* sdlsurface.c (load_image): Use ‘s_load_image’.
+	* sdlvideo.c (set_gamma_ramp): Use ‘s_set_gamma_ramp’.
+
+2011-10-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Bifurcate C-byte-range finangling.
+
+	U ≡ "Use ‘FINANGLE’, ‘UNFINANGLE’".
+	* guile-sdl.h (BSTRING): New #define.
+	(range_t): New typedef.
+	(RS, RLEN, FINANGLABLE_SCHEME_STRING_FROM_SYMBOL)
+	(_FINANGLE, UNFINANGLE): New macros.
+	[GI_LEVEL_NOT_YET_1_8] (ROZT_X, ROZT): New macros.
+	[!GI_LEVEL_NOT_YET_1_8] (REND, NUL_AT_END_X): New macros.
+	(FINANGLE_RAW, FINANGLE): New macros.
+	* sdlgfx.c (draw_string): U.
+	* sdlmixer.c (mix_load_music)
+	(mix_load_wave, mix_set_music_cmd): U.
+	* sdlsurface.c (load_bmp, load_image, save_bmp): U.
+	(string_to_image): Use ‘FINANGLE_RAW’, ‘UNFINANGLE’.
+	* sdlttf.c (ttf_load_font, ttf_size_text, ttf_size_utf8)
+	(ttf_render_text, ttf_render_utf8): U.
+	* sdlvideo.c (wm_set_caption): U.
+
+2011-10-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[slog] Use libguile version (ugh) for abstraction bifurcation.
+
+	* guile-sdl.h (GI_LEVEL_NOT_YET_1_8): New #define,
+	based on ‘SCM_MAJOR_VERSION’, ‘SCM_MINOR_VERSION’ values.
+
+2011-10-23  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Don't use gperf(1); use hash table for flagstash lookup.
+
+	* guile-sdl.h (recognition_t, lookup_t): Delete.
+	(flagstash_t): Drop member ‘lookup’; add member ‘ht’.
+	* sdlenums.c (mark_flagstash): New static func.
+	(gsdl_make_flagstash): Rewrite.
+	(gsdl_flags2ulong LOOKUP_IOR): New internal macro.
+	(gsdl_flags2ulong): Use ‘LOOKUP_IOR’.
+	(gsdl_init_enums): Set the mark function for ‘flagstash_tag’.
+	* Makefile.am [MAINTAINER_MODE] (.fs.c): Don't specify ‘-g $(GPERF)’.
+
+2011-10-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: GC_PROTECT, GC_UNPROTECT
+
+	* guile-sdl.h (GC_PROTECT, GC_UNPROTECT): New #define:s.
+
+2011-10-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Incorporate ‘GSDL_FLAG2ULONG’ into unique caller.
+
+	* sdlvideo.c (GSDL_FLAG2ULONG): Delete macro.
+	(create_yuv_overlay): Use ‘gsdl_flags2ulong’ directly.
+
+2011-10-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Don't #include "config.h" twice.
+
+	It's enough to #include "guile-sdl.h".
+
+	* misc.c: Don't #include "config.h".
+	* sdl.c: Likewise.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-10-22  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Don't distribute src/modsup.h.
+
+	Omission from 2011-08-25, "Incorporate
+	selected modsup.h elements if needed".
+
+	* Makefile.am (headers): Remove modsup.h.
+
+2011-10-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use ‘%zu’ for ‘size_t’ arg to ‘snprintf’.
+
+	* sdlenums.c (print_flagstash):
+	Use ‘%zu’ for ‘size_t’ arg to ‘snprintf’.
+
+2011-10-21  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Require gperf(1) for maintenance; support env var override.
+
+	* Makefile.am [MAINTAINER_MODE] (.fs.c): Specify ‘-g $(GPERF)’.
+
+2011-08-25  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Incorporate selected modsup.h elements if needed.
+
+	Implicit: "[!HAVE_GUILE_MODSUP_H]".
+	* guile-sdl.h (GH_DEFPROC, GH_MODULE_LINK_FUNC)
+	(GH_STONED, GH_USE_MODULE): New macros.
+	[!SCM___GH__H] (gh_module_lookup, gh_call0)
+	(gh_call1, gh_call2, gh_call3): New func decls.
+
+2011-05-07  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Use Guile-BAUX for init snarfing.
+
+	* Makefile.am (SUFFIXES): Remove .x.
+	(.c.x): Use ‘$(gx) c2x’ instead of $(c2x).
+
+2011-05-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Don't bother making convert.x.
+
+	* Makefile.am (WRAPPER_SOURCES): Remove convert.c.
+	(sdlimpl): New var.
+	(sdl_la_SOURCES, sdl.tsar): Use $(sdlimpl).
+
+2011-05-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use single hash for enums; init from static arrays.
+
+	* sdlenums.c: Don't #include <stdarg.h>.
+	(enum_struct): Drop members ‘min’, ‘max’, ‘rev’;
+	add members ‘backing’, ‘count’.
+	(gsdl_define_enum): Rewrite to take count and table directly,
+	store reverse mapping in the hash, store only backing index
+	of forward mapping.
+	(lookup): Don't take enumstash; instead, take ‘enum_struct *’.
+	(gsdl_enum2long): Update call to ‘lookup’
+	and handling of non-‘#f’ return value.
+	(gsdl_long2enum): Use ‘lookup’.
+	(enumstash_enums): Filter out non-symbols.
+	(enum_to_number): Update call to ‘lookup’
+	and handling of non-‘#f’ return value.
+	(number_to_enum): Use ‘lookup’.
+	* guile-sdl.h (GSDL_CSCS): Delete macro.
+	(valaka_t): New struct/typedef.
+	(VALAKA): New macro.
+	(gsdl_define_enum): Update func decl.
+	(DEFINE_ENUM): New macro.
+	* sdlevent.c (event_type_eback, event_state_eback, event_keysym_eback)
+	(event_action_eback): New static arrays of ‘valaka_t’.
+	(gsdl_init_event): Use ‘DEFINE_ENUM’, ‘event_type_eback’,
+	‘event_keysym_eback’, ‘event_action_eback’, ‘event_state_eback’.
+	* sdlmixer.c (fading_status_eback): New static array of ‘valaka_t’.
+	(init_module): Use ‘DEFINE_ENUM’, ‘fading_status_eback’.
+	* sdlvideo.c (gl_eback, alpha_eback): New static arrays of ‘valaka_t’.
+	(gsdl_init_video): Use ‘DEFINE_ENUM’, ‘alpha_eback’, ‘gl_eback’.
+
+2011-05-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Internalize event enum vars.
+
+	* sdlevent.c (event_type_enum, event_state_enum)
+	(event_keysym_enum, event_action_enum): Make static.
+
+2011-05-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Make each enumstash a permanent object.
+
+	* sdlenums.c (free_enum): Delete func.
+	(gsdl_define_enum): Make the new object permanent.
+	(gsdl_init_enums): Don't set a smob-free func for ‘enum_tag’.
+
+2011-05-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Make print funcs more efficient.
+
+	Implicit in all files is "#include <stdio.h>".
+	* sdlcdrom.c (print_cd): Use ‘snprintf’
+	to a local buffer and only one ‘scm_puts’.
+	* sdlcolor.c (print_color): Likewise.
+	* sdlenums.c (print_flagstash): Likewise.
+	* sdlgfx.c (print_fpsmgr): Likewise.
+	* sdljoystick.c (print_joy): Likewise.
+	* sdlrect.c (print_rect): Likewise.
+	* sdlsurface.c (print_surface): Likewise.
+	* sdlvideo.c (print_pixel_format): Likewise.
+
+2011-05-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Sort flagstash linear vals; move work to build time.
+
+	* guile-sdl.h (val_and_name_t): Delete typedef and struct.
+	(in_word_set_t): Delete typedef.
+	(recognition, recognition_t): New struct and typedef.
+	(lookup_t, aka_t): New typedefs.
+	(flagstash_t): Dose member ‘name’ w/ ‘const’; drop members
+	‘sparse’, ‘linear’; use ‘size_t’ for total and make it ‘const’;
+	change type of ‘lookup’ to ‘lookup_t *’; drop unused
+	member ‘reverse_lookup_cache’; add members ‘val’, ‘aka’.
+	* sdlenums.c (free_flagstash): Delete func.
+	(gsdl_make_flagstash): Rewrite.
+	(gsdl_flags2ulong): Update to consult stash's ‘val’ array.
+	(gsdl_ulong2flags): Update to scan stash's
+	‘val’ array and cons symbols from its ‘aka’ array.
+	(flagstash_flags): Update to consult stash's ‘aka’ array.
+	(gsdl_init_enums): Don't set a smob-free func for ‘flagstash_tag’.
+
+2011-04-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build int] Specify fs2c line regexp symbolically.
+
+	* evmask.fs (#:regexp): Delete.
+	(#:symrgx): New keyword + value.
+	* init.fs: Likewise.
+	* kmod.fs: Likewise.
+	* overlay.fs: Likewise.
+	* palette.fs: Likewise.
+	* ttf.fs: Likewise.
+	* video.fs: Likewise.
+
+2011-04-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Require exact bitwise match in ‘gsdl_ulong2flags’.
+
+	* sdlenums.c (gsdl_ulong2flags): Don't consider a flag
+	matched unless all of its bits are set in the candidate value.
+
+2011-04-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug: Make ‘number->flags’ return symbols, not strings.
+
+	* sdlenums.c (gsdl_make_flagstash): Save a symbol,
+	not a string, for each flag's ‘val_and_name_t.sname’.
+
+2011-04-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Decruft: Drop unused ‘val_and_name_t.sval’.
+
+	* guile-sdl.h (val_and_name_t): Delete member ‘.sval’.
+	* sdlenums.c (gsdl_make_flagstash): Don't init ‘->sval’.
+
+2011-04-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Internalize flagstash objects.
+
+	* evmask.fs: New file.
+	* init.fs: New file.
+	* kmod.fs: New file.
+	* overlay.fs: New file.
+	* palette.fs: New file.
+	* ttf.fs: New file.
+	* video.fs: New file.
+	* Makefile.am (FLAGSTASH): Remove initf.c, kmodf.c,
+	videof.c, palettef.c, overlayf.c, evmaskf.c; add initf.c,
+	kmodf.c, videof.c, palettef.c, overlayf.c, evmaskf.c
+	(headers): Remove gperfsup.h.
+	(BUILT_SOURCES): Move $(FLAGSTASH) first.
+	(EXTRA_DIST): Update ‘FLAGSTASH’ ext-transform to say ‘.fs’.
+	(sdl_la_SOURCES): Remove $(FLAGSTASH).
+	(SUFFIXES): Remove .fspec; add .fs.
+	(fspec2c): Delete var.
+	(.fspec.c): Delete old-style suffix rule.
+	(.fs.c): Add old-style suffix rule.
+	[HAVE_TTF] (EXTRA_DIST, BUILT_SOURCES): Do ‘s/ttff/ttf/g’.
+	[HAVE_TTF] (BUILT_SOURCES): Move ttf.c first.
+	[HAVE_TTF] (ttf_la_SOURCES): Remove ttff.c.
+	* sdl.c (gsdl_init_flagstash): Delete var decl;
+	instead, #include "init.c".
+	(init_module): Use ‘init_flagstash’.
+	* sdlevent.c (gsdl_kmod_flagstash, gsdl_evmask_flagstash):
+	Delete var decls; instead #include "kmod.c", "evmask.c".
+	(gsdl_init_event): Use ‘kmod_flagstash’, ‘evmask_flagstash’.
+	* sdlttf.c (gsdl_ttf_flagstash): Delete var decl;
+	instead, #include "ttf.c".
+	(init_module): Use ‘ttf_flagstash’.
+	* sdlvideo.c (gsdl_video_flagstash, gsdl_palette_flagstash)
+	(gsdl_overlay_flagstash): Delete var decls;
+	intstead, #include "video.c", "palette.c", "overlay.c".
+	(gsdl_init_video): Use ‘vid_flagstash’,
+	‘pal_flagstash’, ‘ov_flagstash’.
+	* evmaskf.fspec: Delete file.
+	* initf.fspec: Delete file.
+	* kmodf.fspec: Delete file.
+	* overlayf.fspec: Delete file.
+	* palettef.fspec: Delete file.
+	* ttff.fspec: Delete file.
+	* videof.fspec: Delete file.
+	* gperfsup.h: Delete file.
+
+2011-04-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Move module-catalog facilities check to configure time.
+
+	C(X) ≡ "Conditionalize X on automake conditional ‘HAVE_MKPIMMC’".
+	* Makefile.am (install-data-hook, uninstall-hook):
+	C ($(updatemodcat) invocation).
+	(noinst_DATA): C (adding .module-catalog).
+	(.module-catalog): C (target); rewrite actions.
+	(clean-local): C (target).
+	(update-libsite-module-catalog): C (target); rewrite actions.
+
+2011-04-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[doc] Don't say "return value unspecified".
+
+	U ≡ Remove inanity from docstring.
+	* sdl.c (delay): U.
+	* sdlcdrom.c (cd_close): U.
+	* sdlevent.c (pump_events, set_mod_state): U.
+	* sdljoystick.c (joystick_close): U.
+	* sdlmixer.c (mix_pause, mix_resume, mix_pause_music)
+	(mix_resume_music, mix_rewind_music): U.
+	* sdlsurface.c (unlock_surface): U.
+	* sdlvideo.c (update_rect, update_rects, flip)
+	(warp_mouse, set_cursor, gl_set_attribute)
+	(gl_swap_buffers, unlock_yuv_overlay): U.
+
+2011-04-28  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Switch to Guile-BAUX for doc maintenance.
+
+	* Makefile.am (SUFFIXES): Remove .doc.
+	(gx): New var.
+	(c2doc, scm2doc, mkdocindex, dotdocfiles): Delete vars.
+	(.c.doc, .scm.doc): Delete old-style suffix rules.
+	(.doc-index): Delete target.
+	[MAINTAINER_MODE] (coding, c_docscan, c_usual_args): New vars.
+	[MAINTAINER_MODE] (noinst_DATA): Add sdl.tsar.
+	[MAINTAINER_MODE] (sdl.tsar): New target.
+	[MAINTAINER_MODE] (noinst_DATA): Add gfx.tsar.
+	[MAINTAINER_MODE] (gfx.tsar): New target.
+	[MAINTAINER_MODE] (noinst_DATA): Add scheme.tsar.
+	[MAINTAINER_MODE] (scheme.tsar): New target.
+	(noinst_DATA): Remove .doc-index.
+	(MAINTAINERCLEANFILES): Delete var.
+	[HAVE_MIXER] (dotdocfiles): Delete var.
+	[HAVE_MIXER, MAINTAINER_MODE] (noinst_DATA): Add mixer.tsar.
+	[HAVE_MIXER, MAINTAINER_MODE] (mixer.tsar): New target.
+	[HAVE_TTF] (dotdocfiles): Delete var.
+	[HAVE_TTF, MAINTAINER_MODE] (noinst_DATA): Add ttf.tsar.
+	[HAVE_TTF, MAINTAINER_MODE] (ttf.tsar): New target.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Make sure snarfing looks in $(srcdir).
+
+	* Makefile.am (snarfcppopts): Use $(DEFAULT_INCLUDES).
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: C_{BOOL,CHAR,INT,LONG,ULONG,DOUBLE}
+
+	* guile-sdl.h (C_BOOL, C_CHAR, C_INT)
+	(C_LONG, C_ULONG, C_DOUBLE): New macros.
+	* sdl.c: Do ‘s/gh_scm2bool/C_BOOL/g’, ‘s/gh_scm2char/C_CHAR/g’,
+	‘s/gh_scm2int/C_INT/g’, ‘s/gh_scm2long/C_LONG/g’,
+	‘s/gh_scm2ulong/C_ULONG/g’, ‘s/gh_scm2double/C_DOUBLE/g’.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: STRING
+
+	* guile-sdl.h (STRING): New macro.
+	(RETURN_0STR): Use it.
+	* sdlenums.c (gsdl_make_flagstash): Likewise.
+	* sdlvideo.c (wm_get_caption): Likewise.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: SYMBOL
+
+	* guile-sdl.h (SYMBOL): New macro.
+	* sdlenums.c (gsdl_define_enum, flagstash_flags): Use it.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: BOOLEAN
+
+	* guile-sdl.h (BOOLEAN): New macro.
+	(RETURN_BOOL): Use it.
+	* sdlvideo.c (get_video_info): Likewise.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use ‘scm_vector_ref’ more.
+
+	* sdlvideo.c (set_colors, set_palette): Use ‘scm_vector_ref’.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: NUM_INT, NUM_LONG, NUM_ULONG
+
+	* guile-sdl.h (NUM_INT, NUM_LONG, NUM_ULONG): New macros.
+	(RETURN_INT): Use ‘NUM_LONG’.
+	(RETURN_UINT): Use ‘NUM_ULONG’.
+	* misc.c: Do ‘s/gh_int2scm/NUM_INT/g’,
+	‘s/gh_long2scm/NUM_LONG/g’, ‘s/gh_ulong2scm/NUM_ULONG/g’.
+	* sdlcdrom.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Use C array instead of Scheme vector for enum table.
+
+	* sdlenums.c (enum_struct): Drop member ‘.vec’; add member ‘.rev’.
+	(mark_enum): Update.
+	(free_enum): Also ‘free’ the ‘rev’.
+	(gsdl_define_enum): Allocate and init ‘.rev’.
+	(lookup): New static func.
+	(gsdl_enum2long): Use ‘lookup’; rename args for clarity.
+	(gsdl_long2enum): Update; also, if value out of range, return ‘#f’.
+	(enumstash_enums): Rename arg; nfc.
+	(enum_to_number): Rename arg; use ‘lookup’.
+	(number_to_enum): Use ‘gsdl_long2enum’.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: LOOKUP
+
+	Suggested by Brian Templeton.
+
+	* guile-sdl.h (LOOKUP): New macro.
+	* sdlenums.c (gsdl_init_enums): Use it.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: CALL1, CALL3
+
+	* guile-sdl.h (CALL1, CALL3): New macros.
+	* sdlenums.c (enumstash_enums): Use ‘CALL3’.
+	* sdlevent.c (the_event_filter): Use ‘CALL1’.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Avoid ‘gh_list’.
+
+	* misc.c (LIST3): New macro.
+	(get_wm_info): Use it.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: DEFINE_PUBLIC
+
+	Suggested by Brian Templeton.
+
+	* guile-sdl.h (DEFINE_PUBLIC): New macro.
+	* sdlenums.c (gsdl_define_enum): Use it.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: VECLENGTH, UVECLENGTH
+
+	* guile-sdl.h (VECLENGTH, UVECLENGTH): New macros.
+	* sdlgfx.c (draw_polygon, draw_aa_polygon)
+	(draw_textured_polygon, draw_bezier): Use ‘UVECLENGTH’.
+	* sdlvideo.c (create_cursor, set_colors)
+	(set_palette, get_gamma_ramp): Use ‘VECLENGTH’.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: EQ
+
+	* guile-sdl.h (EQ): New macro.
+	* sdlvideo.c (wm_grab_input): Use it.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: SETCAR
+
+	* guile-sdl.h (SETCAR): New macro.
+	* sdlenums.c (enumstash_enums): Use it.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: CONS, CAR, CAAR, CDR
+
+	Suggested by Brian Templeton.
+
+	* guile-sdl.h (CONS, CAR, CAAR, CDR): New macros.
+	(_rv_PUSH): Use ‘CONS’.
+	* misc.c: Do s/gh_foo/FOO/g, foo ∈ {cons, car, caar, cdr}.
+	* sdlcdrom.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstractions: NULLP, PAIRP, EXACTP, SYMBOLP
+
+	Suggested by Brian Templeton.
+
+	* guile-sdl.h: #include <libguile> unconditionally.
+	(NULLP, PAIRP, EXACTP, SYMBOLP): New macros.
+	(ASSERT_LIST): Use ‘NULLP’, ‘PAIRP’.
+	* sdlenums.c (enumstash_enums): Use ‘NULLP’.
+	(gsdl_flags2ulong): Use ‘NULLP’, ‘PAIRP’.
+	* sdlevent.c (peep_events): Use ‘NULLP’.
+	* sdlmixer.c (mix_volume): Use ‘EXACTP’.
+	* sdlsurface.c (set_alpha): Use ‘NULLP’.
+	* sdlvideo.c (create_yuv_overlay): Use ‘SYMBOLP’.
+	(update_rects): Use ‘NULLP’.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add abstraction: PRIMPROC
+
+	Suggested by Brian Templeton.
+
+	* guile-sdl.h (PRIMPROC): New macro.
+	(GSDL_NUMBER_GETTER, GSDL_NUMBER_SETTER, GSDL_ENUM_GETTER)
+	(GSDL_ENUM_SETTER, GSDL_FLAG_GETTER, GSDL_FLAG_SETTER): Use it.
+	* misc.c: Do s/GH_DEFPROC/PRIMPROC/g.
+	* sdl.c: Likewise.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Add/use vector conversion funcs by Brian Templeton.
+
+	* convert.c: New file.
+	* Makefile.am (WRAPPER_SOURCES): Add convert.c.
+	* guile-sdl.h: #include <stdint.h>.
+	(gsdl_scm_to_int16s): New func decl.
+	(gsdl_scm_to_uint16s): Likewise.
+	(gsdl_scm_to_uint8s): Likewise.
+	(gsdl_scm_from_uint16s): Likewise.
+	* sdlgfx.c (draw_polygon, draw_aa_polygon)
+	(draw_textured_polygon, draw_bezier): Use ‘gsdl_scm_to_int16s’.
+	* sdlvideo.c (create_cursor): Use ‘gsdl_scm_to_uint8s’.
+	(GAMMAVEC): Use ‘gsdl_scm_from_uint16s’.
+	(set_gamma_ramp): Use ‘gsdl_scm_to_uint16s’.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Stack-allocate cursor data and mask.
+
+	* sdlvideo.c: #include <alloca.h>
+	(create_cursor): Use ‘alloca’; don't ‘free’ afterwards.
+
+2011-04-27  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[maint] Move module-catalog machinery into src/.
+
+	* Makefile.am (noinst_DATA): New var.
+	[MAINTAINER_MODE] (noinst_DATA): Convert ‘=’ to ‘+=’.
+	(updatemodcat): New var.
+	(install-data-hook, uninstall-hook): Also $(updatemodcat).
+	(noinst_DATA): Add .module-catalog.
+	(.module-catalog): New target.
+	(clean-local, update-libsite-module-catalog): Likewise.
+
+2011-04-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[gfx] Extend ‘imfi-mmx?’ to also wrap SDL_imageFilterMMX{on,off}.
+
+	* sdlgfx.c (imfi_mmx_p): Take optional arg SETTING;
+	enable MMX if ‘#t’; disable if ‘#f’; do nothing otherwise.
+
+2011-04-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[gfx] Upgrade to SDL_gfx 2.0.22.
+
+	* SDL_gfx/README: Update
+	* SDL_gfx/SDL_framerate.h: Update; plus use #include
+	<SDL/foo.h> instead of #include <foo.h> or "foo.h".
+	* SDL_gfx/SDL_gfxBlitFunc.h: Likewise.
+	* SDL_gfx/SDL_gfxPrimitives.h: Likewise.
+	* SDL_gfx/SDL_gfxPrimitives_font.h: Likewise.
+	* SDL_gfx/SDL_imageFilter.h: Likewise.
+	* SDL_gfx/SDL_rotozoom.h: Likewise.
+	* SDL_gfx/SDL_framerate.c: Update; plus #include "config.h".
+	* SDL_gfx/SDL_gfxBlitFunc.c: Likewise.
+	* SDL_gfx/SDL_gfxPrimitives.c: Likewise.
+	* SDL_gfx/SDL_imageFilter.c: Likewise.
+	* SDL_gfx/SDL_rotozoom.c: Likewise.
+
+2011-04-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Use _LIBADD instead of _LDFLAGS to embed SDL_gfx.
+
+	* Makefile.am (gfx_la_LDFLAGS): Remove ‘-L’ and ‘-l’ args.
+	(gfx_La_LIBADD): New var.
+
+2011-04-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[int] Make ‘free’ decl available to sdlenums.c.
+
+	* sdlenums.c: #include <stdlib.h>.
+
+2010-06-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[dist] Add copyright notice to SDL_gfx source files.
+
+	* SDL_gfx/SDL_framerate.c: Add copyright notice.
+	* SDL_gfx/SDL_framerate.h: Likewise.
+	* SDL_gfx/SDL_gfxBlitFunc.c: Likewise.
+	* SDL_gfx/SDL_gfxBlitFunc.h: Likewise.
+	* SDL_gfx/SDL_gfxPrimitives.c: Likewise.
+	* SDL_gfx/SDL_gfxPrimitives.h: Likewise.
+	* SDL_gfx/SDL_gfxPrimitives_font.h: Likewise.
+	* SDL_gfx/SDL_imageFilter.c: Likewise.
+	* SDL_gfx/SDL_imageFilter.h: Likewise.
+	* SDL_gfx/SDL_rotozoom.c: Likewise.
+	* SDL_gfx/SDL_rotozoom.h: Likewise.
+
+2010-06-26  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[dist] Fix omission bug: Also distribute SDL_gfx LICENSE.
+
+	* SDL_gfx/Makefile.am: Add copyright notice.
+	(EXTRA_DIST): New var.
+
+2009-10-20  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Consolidate headers; nfc.
+
+	Implicit for each *.c is: don't #include <guile/gh.h>;
+	#include "guile-sdl.h"; dont't #include FOO.
+
+	* guile-sdl.h: New file.
+	* Makefile.am (headers): Add guile-sdl.h; delete argcheck.h,
+	bool,h, retval.h, sdlenums.h, sdlsmobs.h, sdlvideo.h, sym.h, wholefuns.h.
+	* gperfsup.h: Don't #include "sdlenums.h"; #include "guile-sdl.h".
+	* misc.c: "sym.h".
+	* sdl.c: "argcheck.h", "sdlenums.h", "sdlsmobs.h", "retval.h".
+	* sdlcdrom.c: "argcheck.h", "sdlsmobs.h", "retval.h", "sym.h", "bool.h".
+	* sdlcolor.c: "argcheck.h", "sdlsmobs.h", "wholefns.h".
+	* sdlenums.c: "argcheck.h", "sdlenums.h",
+	"sdlsmobs.h", "retval.h", "bool.h".
+	* sdlevent.c: "argcheck.h", "sdlsmobs.h",
+	"sdlenums.h", "wholefns.h", "retval.h", "sym.h".
+	* sdlgfx.c: "argcheck.h", "sdlsmobs.h", "retval.h", "bool.h".
+	* sdljoystick.c: "argcheck.h", "sdlsmobs.h", "retval.h", "sym.h".
+	* sdlmixer.c: "argcheck.h", "sdlenums.h"
+	"sdlsmobs.h", "retval.h", "sym.h", "bool.h".
+	* sdlrect.c: "argcheck.h", "sdlsmobs.h", "wholefns.h".
+	* sdlsurface.c: "argcheck.h", "wholefns.h",
+	"sdlenums.h", "sdlsmobs.h", "sdlvideo.h", "retval.h", "bool.h".
+	* sdlttf.c: "argcheck.h", "sdlsmobs.h",
+	"sdlenums.h", "retval.h", "sym.h", "bool.h".
+	* sdlvideo.c: "argcheck.h", "sdlenums.h",
+	"sdlsmobs.h", "retval.h", "sym.h", "bool.h".
+
+2009-10-19  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	[build] Ensure "config.h" is first to be #include:d.
+
+	* SDL_gfx/SDL_imageFilter.c: Move #include "config.h" first.
+	* misc.c: Likewise.
+	* sdl.c: Likewise.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2009-04-24  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Release: 0.3.10
+
+2009-04-23  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Implement `set-event-filter', `get-event-filter'.
+
+	* sdlevent.c (event_filter_info): New struct.
+	(efi): New static `struct event_filter_info'.
+	(the_event_filter): New static func.
+	(set_event_filter, get_event_filter): Implement.
+	(gsdl_init_event): Init `efi.proc'.
+
+2009-04-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	New (sdl gfx) proc: draw-arc
+
+	* sdlgfx.c (draw_arc): New GH_DEFPROC.
+
+2009-04-04  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Clean up some SDL_gfx warnings.
+
+	* SDL_gfx/SDL_gfxPrimitives.c (circleColor):
+	Delete unused local variables `ocx', `ocy'.
+	(arcColor): Likewise.  Also, init `stopval_start', `temp'.
+	* SDL_gfx/SDL_rotozoom.c (transformSurfaceRGBA):
+	Init `c00', `c01', `c10', `c11'.
+	(rotozoomSurfaceXY): Init `colorkey'.
+
+2009-04-03  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Update SDL_gfx to 2.0.18.
+
+	* SDL_gfx/SDL_gfxPrimitives.c: Update.
+	* SDL_gfx/SDL_gfxPrimitives.h: Likewise.
+	* SDL_gfx/SDL_rotozoom.c: Likewise.
+	* SDL_gfx/SDL_rotozoom.h: Likewise.
+
+2009-04-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Allocate `gh_scm2shorts' dest on the stack (use `alloca').
+
+	* sdlgfx.c: #include <alloca.h>.
+	(draw_polygon, draw_aa_polygon, draw_textured_polygon)
+	(draw_bezier): Use `alloca' for `cvx', `cvy'.
+
+2009-04-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Hide symbols of embedded libSDL_gfx, if compiling w/ GCC.
+
+	* SDL_gfx/Makefile.am (libSDL_gfx_la_CFLAGS): New var.
+
+2009-04-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Decruft: Use 1..8 instead of ARGH1..ARGH8.
+
+	* argcheck.h (ARGH1, ARGH2, ARGH3, ARGH4, ARGH5, ARGH6)
+	(ARGH7, ARGH8, ARGHn): Delete macros.
+	* sdl.c: Throughout, use 1..8 instead of ARGH1..ARGH8.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlmixer.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlttf.c: Likewise.
+	* sdlvideo.c: Likewise.
+	* wholefns.h: Likewise.
+
+2009-01-05  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Decruft: Use 1..7 instead of SCM_ARG1..SCM_ARG7.
+
+	* argcheck.h (ARGH1, ARGH2, ARGH3)
+	(ARGH4, ARGH5, ARGH6, ARGH7): Use 1..7 directly.
+
+2008-06-16  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Detect MMX availability at configure-time.
+
+	* SDL_gfx/SDL_imageFilter.c: #include "config.h".
+
+2008-05-29  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Fix bug introduced in Guile-SDL 0.3.9 (2008-04-02):
+	New (sdl mixer) procs: set-panning, set-distance, set-position:
+	Specify correct number of args for `set-position'.
+
+	* mix_set_position (mix_set_position): Fix bug: Specify 3 args.
+
+2008-04-19  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Install foo.so instead of foo.so.0.0.0; delete .0.0.0 if found.
+
+	* Makefile.am (modflags): New var.
+	(sdl_la_LDFLAGS, gfx_la_LDFLAGS): Use $(modflags).
+	(install-data-hook): Delete "$(DESTDIR)$(cmoddir)/*.0.0.0", as well.
+	[HAVE_MIXER] (mixer_la_LDFLAGS): Use $(modflags).
+	[HAVE_TTF] (ttf_la_LDFLAGS): Use $(modflags).
+
+2008-04-19  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Clean up Makefile.am files.
+
+	* SDL_gfx/Makefile.am (AM_CPPFLAGS): Delete var.
+	(EXTRA_DIST): Delete var.
+	(libSDL_gfx_la_SOURCES): Add SDL_framerate.h, SDL_gfxBlitFunc.h,
+	SDL_gfxPrimitives.h, SDL_imageFilter.h, SDL_rotozoom.h.
+	(libSDL_gfx_la_CFLAGS, libSDL_gfx_la_LIBADD): Delete vars.
+
+	* Makefile.am (AUTOMAKE_OPTIONS): Delete var.
+	(headers): New var.
+	(EXTRA_DIST): Remove argcheck.h, bool.h, gperfsup.h, modsup.h,
+	retval.h, sdlenums.h, sdlsmobs.h, sdlvideo.h, sym.h, wholefuns.h.
+	(sdl_la_SOURCES): Add $(headers).
+	(gfx_la_SOURCES): Add $(headers).
+
+2008-04-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Make "make uninstall" DTRT.
+
+	* Makefile.am (uninstall-hook): New target.
+
+2008-04-02  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	New (sdl mixer) procs: set-panning, set-distance, set-position
+
+	* sdlmixer.c (mix_set_panning): New GH_DEFPROC.
+	(mix_set_distance, mix_set_position): Likewise.
+
+2008-04-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Move config.h to src/.
+
+	* Makefile.am (snarfcppopts): No longer specify `-I..'.
+
+2008-04-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Consolidate Scheme source into src/.
+
+	* OLD.scm.ChangeLog: Rename from ../sdl/ChangeLog.
+	* misc-utils.scm: Rename from ../sdl/misc-utils.scm.
+	* simple.scm: Rename from ../sdl/simple.scm.
+	* Makefile.am: No longer include $(top_srcdir)/am/common.
+	(cmmoddir, scheme, cmod_DATA): New vars.
+	(SUFFIXES): Convert from appending-var to var.
+	(scm2doc): New var.
+	(dotdocfiles): Add $(scheme:.scm=.doc).
+	(.scm.doc): New pattern rule.
+	(DISTCLEANFILES, noinst_DATA): Convert from appending-var to var.
+
+2008-04-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Consolidate C source into src/.
+
+	* OLD.gfx.ChangeLog: Rename from ../sdl-gfx/ChangeLog.
+	* OLD.include.ChangeLog: Rename from ../include/ChangeLog.
+	* OLD.mixer.ChangeLog: Rename from ../sdl-mixer/ChangeLog.
+	* OLD.ttf.ChangeLog: Rename from ../sdl-ttf/ChangeLog.
+	* SDL_gfx: Rename from ../sdl-gfx/SDL_gfx.
+	* argcheck.h: Rename from ../include/argcheck.h.
+	* bool.h: Rename from ../include/bool.h.
+	* gperfsup.h: Rename from ../include/gperfsup.h.
+	* retval.h: Rename from ../include/retval.h.
+	* sdlenums.h: Rename from ../include/sdlenums.h.
+	* sdlsmobs.h: Rename from ../include/sdlsmobs.h.
+	* sdlvideo.h: Rename from ../include/sdlvideo.h.
+	* sym.h: Rename from ../include/sym.h.
+	* wholefns.h: Rename from ../include/wholefns.h.
+	* sdlgfx.c: Rename from ../sdl-gfx/sdlgfx.c.
+	Also, use `#include "SDL_gfx/foo"' explicitly.
+	* sdlmixer.c: Rename from ../sdl-mixer/sdlmixer.c.
+	* sdlttf.c: Rename from ../sdl-ttf/sdlttf.c.
+	* ttff.fspec: Rename from ../sdl-ttf/ttff.fspec.
+
+	* Makefile.am: No longer include $(top_srcdir)/am/fspec.
+	No longer include $(top_srcdir)/am/snarfing.
+	(SUBDIRS): New var.
+	(cmod_LTLIBRARIES): Add gfx.la.
+	(BUILT_SOURCES): Add sdlgfx.x.
+	(EXTRA_DIST): Init to *.fspec and *.h files.
+	(gfx_la_SOURCES, gfx_la_LDFLAGS): New vars.
+	(SUFFIXES): New appending-var.
+	(snarfcppopts, c2doc, mkdocindex, dotdocfiles): New vars.
+	(.c.x, .c.doc): New pattern rules.
+	(.doc-index): New target.
+	(DISTCLEANFILES): New appending-var.
+	[MAINTAINER_MODE] (fspec2c): New var.
+	[MAINTAINER_MODE] (.fpsec.c): New pattern rule.
+	[MAINTAINER_MODE] (noinst_DATA): New appending-var.
+	[MAINTAINER_MODE] (MAINTAINERCLEANFILES): New appending-var.
+	(SOFIXFLAGS): New var.
+	(install-data-hook): Add command to "sofix" installed modules.
+	[HAVE_MIXER] (BUILT_SOURCES): New appending-var.
+	[HAVE_MIXER] (dotdocfiles, cmod_LTLIBRARIES): Likewise.
+	[HAVE_MIXER] (mixer_la_SOURCES, mixer_la_LDFLAGS): New vars.
+	[HAVE_TTF] (BUILT_SOURCES): New appending-var.
+	[HAVE_TTF] (EXTRA_DIST, dotdocfiles, cmod_LTLIBRARIES): Likewise.
+	[HAVE_TTF] (ttf_la_SOURCES, ttf_la_LDFLAGS): New vars.
+
+2008-04-01  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Move flip funcs into sdlsurface.c.
+
+	* sdlsurface.c (vertical_flip_surface): New GH_DEFPROC.
+	(horizontal_flip_surface): Likewise.
+	(vh_flip_surface): Likewise.
+	* sdlgfx.c: Delete file.
+	* sdl.c (gsdl_init_gfx): Delete extern decl.
+	(init_module): No longer call `gsdl_init_gfx'.
+	* Makefile.am (WRAPPER_SOURCES): Remove sdlgfx.c.
+
+2008-03-19  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Clean up (a little) before quitting.
+
+	* sdl.c (quit, quit_subsystem): Do a garbage collection
+	prior to calling the SDL quitting function.
+
+2008-02-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	Replace CVS-isms w/ Git-isms.
+
+	* .cvsignore: Delete file.
+
+2007-09-15  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	* Makefile.am (install-data-hook): Rewrite.
+
+2007-09-14  Thien-Thi Nguyen  <ttn@gnuvola.org>
+
+	* misc.c, sdl.c, sdlcdrom.c, sdlcolor.c, sdlenums.c, sdlevent.c
+	* sdlgfx.c, sdljoystick.c, sdlrect.c, sdlsurface.c, sdlvideo.c:
+	Convert docstrings into doc: comments.
+
+2007-01-02  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlevent.c (NUM2_GETTER, NUM2_SETTER, NUM3_GETTER, NUM3_SETTER):
+	Prettify docstrings; remove whitespace between C struct components.
+
+2007-01-01  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlcdrom.c (GETCUR): New macro.
+	(cd_get_num_tracks, cd_get_cur_track, cd_get_cur_frame): Use it.
+
+2006-12-19  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlcdrom.c (RETURN_NEW_CDROM): Use `NEWSMOB_OR_FALSE'.
+
+	* sdlcolor.c (make_color): Don't init `color' if it is NULL.
+
+	* sdlevent.c (RETURN_NEW_EVENT)
+	(RETURN_NEW_KEYSYM): Use `NEWSMOB_OR_FALSE'.
+	(make_event): Don't init `event' if it is NULL.
+	(make_keysym): Likewise for `keysym'.
+
+	* sdljoystick.c (RETURN_NEW_JOYSTICK): Use `NEWSMOB_OR_FALSE'.
+
+	* sdlrect.c (make_rect): Don't init `rect' if it is NULL.
+
+	* sdlsurface.c (load_image): Use `RETURN_NEW_SURFACE'.
+	(get_clip_rect): Don't init `rect' if it is NULL;
+
+	* sdlvideo.c (RETURN_NEW_CURSOR)
+	(RETURN_NEW_OVERLAY): Use `NEWSMOB_OR_FALSE'.
+	(create_cursor, get_cursor): Don't init `cursor' if it is NULL.
+	(set_colors, set_palette): Likewise for `ccolors'.
+
+2006-12-15  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlsurface.c (load_image): Return #f if there are problems.
+
+2006-12-07  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlvideo.c (wm_grab_input): Handle MODE being -1, 0, 1.
+
+2006-12-07  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlvideo.c (query, off, on): New simple symbols.
+	(wm_grab_input): Rewrite.
+
+2006-11-16  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlsurface.c (make_surface): Fix bug: If there
+	is no current surface, don't try to get its flags.
+
+2006-11-16  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlsurface.c (make_surface): Fix bug: Get default
+	pixel-format info from current video surface, if available.
+
+2006-11-16  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlsurface.c (set_clip_rect):
+	If RECT is #f, clear the the clip rect.
+
+2006-11-16  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdlvideo.c (update_rects): Use `ASSERT_LIST'.
+
+2006-11-14  Thien-Thi Nguyen  <ttn@ambire>
+
+	* sdl.c (quit, quit_subsystem): Return true.
+
+2006-10-27  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c (get_video_info): Fix typo: "wm-available".
+	Also, use boolean for `blit-fill' alist element.
+
+2006-10-26  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c (map_rgb, map_rgba): Fix bug: Return unsigned integer.
+
+2006-07-21  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (peep_events): Typecheck NUMEVENTS.
+	Throw "bad action" error on unrecognized ACTION.
+
+2006-07-20  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (peep_events): Doc fix.
+
+2006-05-28  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlrect.c (rect_p): New GH_DEFPROC.
+	* sdlcolor.c (color_p): New GH_DEFPROC.
+
+2006-01-27  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (get_key_state): Write implementation.
+
+2005-05-17  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* misc.c: Include <SDL/SDL_syswm.h>.
+	(x11): New symbol.
+	(get_wm_info): New GH_DEFPROC.
+
+2005-05-16  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c (mark_cd): Delete func.
+	(gsdl_init_cdrom): Don't register a mark func for "SDL-CD".
+
+	* sdlcolor.c (mark_color): Delete func.
+	(gsdl_init_color): Don't register a mark func for "SDL-Color".
+
+	* sdlenums.c (mark_flagstash): Delete func.
+	(gsdl_init_enums): Don't register a mark func for "flagstash".
+
+	* sdlevent.c (mark_event, mark_keysym): Delete funcs.
+	(gsdl_init_event): Don't register mark
+	funcs for "SDL-Event" and "SDL-Keysym".
+
+	* sdljoystick.c (mark_joy): Delete func.
+	(gsdl_init_joystick): Don't register a mark func for "SDL-Joystick".
+
+	* sdlrect.c (mark_rect): Delete func.
+	(gsdl_init_rect): Don't register a mark func for "SDL-Rect".
+
+	* sdlsurface.c (mark_surface): Delete func.
+	(gsdl_init_surface): Don't register a mark func for "SDL-Surface".
+
+	* sdlvideo.c (mark_cursor, mark_yuv_overlay)
+	(mark_pixel_format): Delete funcs.
+	(gsdl_init_video): Don't register mark funcs
+	for "SDL-Cursor", "SDL-Pixel-Format" and "SDL-Overlay".
+
+2005-05-16  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlenums.c (free_enum): Fix bug: return amount freed.
+
+2005-05-16  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c (xSDL_Cursor): New struct typedef.
+	(MALLOC_XSDL_CURSOR): New macro.
+	(UNPACK_CURSOR): Use `xSDL_Cursor'.
+	(mark_cursor): Return SCM_BOOL_F.
+	(mark_yuv_overlay, mark_pixel_format): Likewise.
+	(free_cursor): Rewrite.
+	(create_cursor): Use `xSDL_Cursor'.
+	(set_cursor, get_cursor): Likewise.
+	(gsdl_init_video): For `cursor' smob, use `xSDL_Cursor'.
+
+2005-05-15  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (mark_surface): Return SCM_BOOL_F.
+	(gsdl_init_surface): Fix bug: For `surface' smob, arrange
+	to allocate space for `SDL_Surface *' only, not `SDL_Surface'.
+
+	* sdlrect.c (mark_rect): Return SCM_BOOL_F.
+	(free_rect): Fix bug: return amount freed.
+	Also, use `UNPACK_RECT'.
+
+	* sdlevent.c (mark_event, mark_keysym): Return SCM_BOOL_F.
+	(free_event): Fix bug: return amount freed.
+	(free_keysym): Elide auto var; nfc.
+
+	* sdlcolor.c (mark_color): Return SCM_BOOL_F.
+	(free_color): Fix bug: return amount freed.
+
+	* sdljoystick.c (mark_joy): Return SCM_BOOL_F.
+
+	* sdlcdrom.c (mark_cd): Return SCM_BOOL_F.
+	(gsdl_init_cdrom): Fix bug: For `cdrom' smob, arrange
+	to allocate space for `SDL_CD *' only, not `SDL_CD'.
+
+2005-04-02  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlenums.c (gsdl_flags2ulong):
+	If `flags' is #f or the empty list, return 0.
+
+2005-04-02  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* misc.c: New file.
+	* Makefile.am (WRAPPER_SOURCES): Add misc.c.
+	* sdl.c (gsdl_init_misc): New extern func decl.
+	(init_module): Call `gsdl_init_misc'.
+
+2005-02-07  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c (print_pixel_format): New static func.
+	(gsdl_init_video): Register new func as pixel format printer.
+
+2005-02-07  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (print_surface): Use `scm_putc' and `scm_intprint'.
+	* sdlrect.c (print_rect): Likewise.
+	* sdljoystick.c (print_joy): Likewise.
+	* sdlenums.c (print_flagstash): Likewise.
+	* sdlcolor.c (print_color): Likewise.
+
+2005-02-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (set_alpha): Make third arg optional.
+	If unspecified, take it as zero.
+	Also, take #f for `flag' as zero, as well.
+
+2005-02-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (create_rgb_surface): Fix signedness bug:
+	Use `gh_scm2ulong'.  Also, remove redundant casts.
+
+	* sdlvideo.c (map_rgb): Likewise.
+	(map_rgba): Likewise.
+	(get_rgb): Likewise.
+	(get_rgba): Likewise.
+	(warp_mouse): Likewise.
+
+2005-02-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (make_surface): Remove redundant casts.
+	(create_rgb_surface): Likewise.
+	(set_color_key): Likewise.
+	(set_alpha): Likewise.
+	(convert_surface): Likewise.
+
+	* sdlvideo.c (list_modes): Likewise.
+	(video_mode_ok): Likewise.
+	(set_video_mode): Likewise.
+	(update_rect): Likewise.
+
+2005-02-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcolor.c (NUMBER_SETTER):
+	Pass additional arg to `GSDL_NUMBER_SETTER'.
+
+	* sdlevent.c (NUMBER_SETTER): Likewise.
+
+	* sdlrect.c (NUMBER_SETTER):
+	Take additional arg `conv'; pass it to `GSDL_NUMBER_SETTER'.
+	(NUMBER_GETSET): Take additional arg `c2s'. Update callers.
+
+2005-02-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (make_event): Use `GSDL_ENUM2LONG'.
+	(make_keysym): Likewise.
+	(peep_events): Likewise.
+	(event_state): Likewise.
+
+	* sdlsurface.c (set_alpha): Likewise.
+
+2005-02-05  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (get_clip_rect): Fix omission bug: Allocate rect.
+
+2005-01-22  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlroto.c: Delete file.
+
+	* sdl.c (gsdl_init_rotozoom): Delete extern func decl.
+	(init_module): No longer call `gsdl_init_rotozoom'.
+
+	* Makefile.am (AM_CPPFLAGS): Delete var.
+	(SUBDIRS): Likewise.
+	(WRAPPER_SOURCES): Remove sdlroto.c.
+	(sdl_la_LDFLAGS): No longer specify "-LSDL_rotozoom" and "-lrotozoom".
+
+2005-01-21  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c (fill_rect): Fix bug: Use `gh_scm2ulong'.
+
+2005-01-08  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (peep_events): Use structure assignment instead of `memcpy'.
+
+2005-01-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (event_action_enum): New var, global.
+	(event_mask_flags): New var, static.
+	(get_event_mask_flags): New GH_DEFPROC.
+	(peep_events): Write implementation.
+	(gsdl_evmask_flagstash): New extern var decl.
+	(gsdl_init_event): Init `event_action_enum' and `event_mask_flags'.
+
+2005-01-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* initf.fspec (#:struct): Arrange to quote the key.
+	* kmodf.fspec: Likewise.
+	* overlayf.fspec: Likewise.
+	* palettef.fspec: Likewise.
+	* videof.fspec: Likewise.
+
+2005-01-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* evmaskf.fspec: New file.
+	* Makefile.am (FLAGSTASH): Add evmaskf.c.
+
+2005-01-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (event_state): Write implementation.
+
+2005-01-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlenums.c (print_flagstash): Start w/ hash char per convention.
+
+2005-01-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlgfx.c (scale_surface): Delete func.
+
+2005-01-04  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (make_surface): Fix bug: Use `cflags'.
+	(create_rgb_surface): Likewise.
+
+2004-07-23  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Move "#define FUNC_NAME" inside func scope; nfc.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlroto.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2004-07-23  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (gsdl_init_event):
+	Remove `SDL_DISABLE' from `event-states' enumstash.
+
+2004-07-22  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c (gsdl_init_video): Use macro `GSDL_CSCS'.
+	* sdlevent.c (gsdl_init_event): Likewise.
+
+2004-07-22  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlenums.c (hfold): New static var.
+	(acons): Likewise.
+	(MAKE_HASH_TABLE): Init w/ `SCM_EOL'.
+	(enumstash_enums): New GH_DEFPROC.
+	(gsdl_init_enums): Init `acons' and `hfold'.
+
+2004-07-12  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am (install-data-hook): In $(cmoddir),
+	symlink each foo.la in $(cmod_LTLIBRARIES) to libfoo.la.
+
+2004-06-28  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c (scm_init_sdl_sdl_module): Rename
+	from `sdl_init_sdl_sdl_sup_module'.
+
+	* Makefile.am (cmod_LTLIBRARIES): Remove sdl-sup.la, add sdl.la.
+	(sdl_sup_la_SOURCES): Delete.
+	(sdl_sup_la_LDFLAGS): Likewise.
+	(sdl_la_SOURCES): New automake var/directive.
+	(sdl_la_LDFLAGS): Likewise.
+	(install-data-hook): New target.
+
+2004-05-20  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c (gsdl_smob_tags): Init w/ dummy value.
+
+2004-03-05  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Doc munging; nfc.
+
+	* sdlcdrom.c: Doc munging.
+	Simplify expressions comparing against NULL.
+	Use new macros.
+	(UNPACK_CDROM): New macro.
+	(RETURN_NEW_CDROM): Likewise.
+	(CDROM_P): Likewise.
+	(TRAYEMTPY): New simple symbol.
+	(STOPPED): Likewise.
+	(PLAYING): Likewise.
+	(PAUSED): Likewise.
+	(ERROR): Likewise.
+	(cd_status): Return symbol instead of number.
+	(cd_get_nth_track): On error return #f.
+
+	* sdlcolor.c: Use `UNPACK_COLOR'.
+
+	* sdlenums.c: Use new macros.
+	(ASSERT_ENUM): New macro.
+	(UNPACK_ENUM): Likewise.
+	(UNPACK_FLAGSTASH): Likewise.
+
+	* sdlevent.c: Doc munging.
+	Use new macros.
+	(UNPACK_EVENT): New macro.
+	(RETURN_NEW_EVENT): Likewise.
+	(UNPACK_KEYSYM): Likewise.
+	(RETURN_NEW_KEYSYM): Likewise.
+
+	* sdlgfx.c: Use macro `THROW_NOT_YET_IMPLEMENTED'.
+
+	* sdljoystick.c: Simplify expressions comparing against NULL.
+	Use new macros.
+	(UNPACK_JOYSTICK): New macro.
+	(RETURN_NEW_JOYSTICK): Likewise.
+	(JOYSTICK_P): Likewise.
+	(joystick_get_ball): On error, return #f.
+
+	* sdlroto.c: Refill; nfc.
+
+	* sdlsurface.c: Use new macro.
+	(SURFACE_P): New macro.
+
+	* sdlvideo.c: Use new macros.
+	(COLOR_P): New macro.
+	(RECT_P): Likewise.
+
+2004-03-04  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (string_to_image): New GH_DEFPROC.
+
+2004-02-25  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c: Use `RETURN_LIST4',
+	`RETURN_LIST0' and `RETURN_LIST3'.
+	* sdlevent.c: Use `RETURN_LIST3'.
+	* sdljoystick.c: Use `RETURN_LIST2' and `RETURN_LIST0'.
+	* sdlvideo.c: Use `RETURN_LIST11', `RETURN_LIST3',
+	`RETURN_LIST4' and `RETURN_LIST2'.
+
+2004-02-25  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c: Use `gh_bool2scm'.
+
+2004-02-25  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c: Include "bool.h".
+	Use `RETURN_FALSE' and `NOT_FALSEP'.
+
+	* sdlenums.c: Include "bool.h".
+	Use `RETURN_FALSE', `BOOL_FALSE' and `NOT_FALSEP'.
+
+	* sdlevent.c: Include "bool.h". Use `NOT_FALSEP'.
+	* sdlroto.c: Likewise.
+	* sdlsurface.c: Likewise.
+
+	* sdlvideo.c: Include "bool.h".
+	Use `NOT_FALSEP', `SET_FALSE', `SET_TRUE',
+	`BOOL_FALSE', `RETURN_FALSE' and `EXACTLY_FALSEP'.
+
+2004-02-25  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c: Include "sym.h".
+	Use `DECLARE_SIMPLE_SYM' and `SYM'.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlvideo.c: Likewise.	Also, use `DECLARE_SYM'.
+
+2004-02-24  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlenums.c: Include "retval.h".
+	Use `RETURN_UINT'.
+
+2004-02-24  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Use `RETURN_0STR'.
+	* sdlcdrom.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2004-02-24  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c: Use `RETURN_BOOL'.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2004-02-24  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Use `RETURN_INT'.
+	* sdlcdrom.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2004-02-24  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Include "retval.h".
+	Use `RETURN_UNSPECIFIED'.
+	* sdlcdrom.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2004-02-08  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlvideo.c (video_mode_ok): Make fourth arg optional.
+	(flip): Doc fix; nfc.
+	(wm_set_caption): Make second arg optional.
+
+2004-02-08  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlsurface.c (set_clip_rect): Make second arg optional.
+
+2004-02-08  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlroto.c (roto_zoom_surface): Fix bug: Set `zoom' correctly.
+
+2004-02-08  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c (cd_play_tracks): Handle #f same as unbound, for
+	`s_start_track', `s_start_frame', `s_n_tracks' and `s_n_frames'.
+	(cd_msf_to_frames): Likewise, for `s_s' and `s_f'.
+
+	* sdlevent.c (make_keysym): Handle #f same as unbound for `sym'.
+
+	* sdlroto.c (roto_zoom_surface): Handle #f same as unbound for `s_zoom'.
+	(zoom_surface): Likewise, for `s_zoomy'.
+
+	* sdlsurface.c (blit_surface): Handle #f same as
+	unbound, for `s_srcrect', `s_dst' and `s_dstrect'.
+
+	* sdlvideo.c (list_modes): Handle #f same as
+	unbound, for `s_pixel_format' and `s_flags'.
+	Also, fix bug: check `s_pixel_format', not SCM_UNDEFINED!
+
+2004-01-18  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c, sdlcdrom.c, sdlcolor.c, sdlenums.c, sdlevent.c,
+	sdlgfx.c, sdljoystick.c, sdlrect.c, sdlroto.c, sdlsurface.c,
+	sdlvideo.c: Update copyright.
+
+2003-11-23  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c (NUM2_GETTER, NUM2_SETTER, NUM3_GETTER, NUM3_SETTER):
+	Fix over-specification bug: Remove redundant "##"
+	pre-processor operators between "." and other tokens.
+
+2003-11-21  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am (sdl_sup_la_SOURCES): Add $(FLAGSTASH).
+	Remove $(BUILT_SOURCES).
+	(EXTRA_DIST): Add empty var to support $(top_srcdir)/am/fspec.
+
+2003-11-21  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlgfx.c (gsdl_init_gfx): Rename from `gsdl_gfx_init'.
+	* sdl.c (gsdl_init_gfx): Add forward decl.
+	(init_module): Also call `gsdl_init_gfx'.
+
+2003-11-21  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcolor.c (make_color): Use abstraction `RETURN_NEW_COLOR'.
+
+	* sdlgfx.c (vertical_flip_surface, horizontal_flip_surface):
+	Use abstraction `RETURN_NEW_SURFACE'.
+
+	* sdlrect.c (make_rect): Use abstraction `RETURN_NEW_RECT'.
+
+2003-11-21  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlroto.c (vertical_flip_surface, horizontal_flip_surface,
+	vh_flip_surface): Delete redundant funcs.
+
+2003-11-21  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlevent.c: Use `(void)' instead of `()' for arglists.
+	(make_keysym, pump_events, peep_events, poll_event, wait_event,
+	push_event, set_event_filter, get_event_filter, event_state,
+	enable_unicode, enable_key_repeat, button_p): Add docstring.
+	(get_key_state): Update docstring.
+
+2003-11-20  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlgfx.c (horizontal_flip_surface):
+	Fix typo in scheme name.
+
+	* sdlroto.c (horizontal_flip_surface):
+	Rename from `horiztonal_flip_surface'.
+
+2003-11-19  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Rename Scheme-visible objects to omit "sdl-" prefix.
+	* sdlcolor.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlroto.c: Likewise.
+	* sdlvideo.c: Likewise.
+	* sdlcdrom.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlsurface.c: Likewise.
+
+2003-11-19  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c (init_flags): Rename static var from `sdl_init_flags'.
+	* sdlvideo.c (gl_enums): Rename static var from `sdl_gl_enums'.
+
+2003-11-19  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Rename GH_DEFPROC funcs to omit leading "sdl_".
+	Update associated "#define FUNC_NAME".
+	* sdlcdrom.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlroto.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2003-11-17  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c: Use GH_DEFPROC instead of MDEFLOCEXP.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlroto.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+	* sdl.c: Use GH_DEFPROC instead of MDEFLOCEXP
+	and GH_MODULE_LINK_FUNC instead of MDEFLINKFUNC.
+
+2003-11-10  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am: Include $(top_srcdir)/am/common.
+	Include $(top_srcdir)/am/fspec.
+	Include $(top_srcdir)/am/snarfing.
+	(AM_CPPFLAGS): Change "=" to "+=".  Remove
+	elements found in AM_CPPFLAGS set in $(top_srcdir)/am/common.
+	(cmoddir, BUILT_DOCS, SUFFIXES, .c.x, fspec2c, .fspec.c,
+	DISTCLEANFILES, GUILE_SNARF_DOCS, GUILE_SNARF_DOCS_TEXI,
+	%.doc:%.c, .doc.texi): Delete.
+
+2003-11-09  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c: Use gh_bool2scm.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2003-11-09  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdlcdrom.c: Use BOUNDP, UNBOUNDP, and UNBOUND_MEANS_FALSE macros.
+	* sdlevent.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlroto.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2003-11-09  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Use ARGH* instead of SCM_ARG*.
+	* sdlcdrom.c: Likewise.
+	* sdlcolor.c: Likewise.
+	* sdlenums.c: Likewise.
+	* sdlevent.c: Likewise.
+	* sdlgfx.c: Likewise.
+	* sdljoystick.c: Likewise.
+	* sdlrect.c: Likewise.
+	* sdlroto.c: Likewise.
+	* sdlsurface.c: Likewise.
+	* sdlvideo.c: Likewise.
+
+2003-11-09  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am (.c.x, .cspec.c): Use guile-tools
+	instead of pre-inst-guile-tools.
+
+2003-11-08  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* sdl.c: Update copyright.
+	No longer include <libguile.h>.
+	Include <guile/gh.h>.
+	No longer include "sdl.h".
+	Include "config.h" and "argcheck.h".
+	No longer include "sdlrect.h", "sdlcolor.h", "sdlsurface.h",
+	"sdlvideo.h", "sdlevent.h", "sdlcdrom.h", "sdljoystick.h"
+	and "sdlroto.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(gsdl_init_enums): Add forward decl for this func.
+	(gsdl_init_rect, gsdl_init_color, gsdl_init_video,
+	gsdl_init_surface, gsdl_init_rotozoom, gsdl_init_event,
+	gsdl_init_joystick, gsdl_init_cdrom): Likewise.
+	(gsdl_smob_tags): New var.
+	(sdl_init_flags): Make static.
+	(sdl_get_init_flags): New MDEFLOCEXP func.
+	(gsdl_init_flagstash): New extern var decl.
+	(init_module): Rename from `guile_sdl_init' and make static.
+	Use `gsdl_make_flagstash' and associated arglist to
+	set `sdl_init_flags' instead of `scm_c_define_flag'.
+	Remove call to `scm_c_export'.
+	(scm_init_sdl_sdl_sup_module): New func, declared and
+	defined using macro `MDEFLINKFUNC'.
+
+	* sdlcdrom.c: Update copyright.
+	No longer include <libguile.h>.
+	Include <guile/gh.h>.
+	No longer include "sdlcdrom.h".
+	Include "config.h", "argcheck.h" and "sdlsmobs.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(cdrom_tag): Rename from `sdl_cdrom_tag'. Make static.
+	(ASSERT_CDROM): New macro.
+	(sdl_cd_get_nth_track): Make return value assoc list w/
+	one SCM_LISTn call instead of with multiple `scm_acons' calls.
+	(sdl_cd_frames_to_msf): Likewise.
+	(gsdl_sym_offset, gsdl_sym_length, gsdl_sym_type, gsdl_sym_id,
+	gsdl_sym_f, gsdl_sym_s, gsdl_sym_m): New static vars.
+	(mark_cd): New static func.
+	(free_cd, print_cd): Make static.
+	(sdl_init_cdrom): Register `mark_cd'.
+	Remove call to `scm_c_export'.
+
+	* sdlcolor.c: Update copyright.
+	No longer include <libguile.h>.
+	Include <guile/gh.h>.
+	No longer include "sdlsurface.h".
+	Include "config.h", "argcheck.h" and "wholefns.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(color_tag): Make static.
+	(mark_color): New static func.
+	(free_color, print_color): Make static.
+	(NUMBER_GETTER, NUMBER_SETTER, NUMBER_GETSET): New macros.
+	(sdl_init_color): Register `mark_color'.
+	Remove calls to `scm_c_define_gsubr'.
+	Remove call to `scm_c_export'.
+
+	* sdlenums.c: Update copyright.
+	No longer include <libguile.h>.
+	Include <guile/gh.h>.
+	No longer include "sdlsurface.h".
+	Include "config.h" and "argcheck.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(MAX_FLAGS): Delete macro.
+	(enum_tag): Make static.
+	(enum_struct): New struct.
+	(mark_enum, free_enum): Make static.
+	(REASONABLE_BUCKET_COUNT): New macro.
+	(MAKE_HASH_TABLE): New macro.
+	(gsdl_define_enum): Rename from `scm_c_define_enum'.
+	(gsdl_enum2long): Rename from `scm_enum2long'.
+	(gsdl_long2enum): Rename from `scm_long2enum'.
+	(number_to_enum): Rename from `scm_number_to_enum'. Make MDEFLOCEXP.
+	(scm_c_define_flag): Delete func.
+	(flagstash_tag): New static var.
+	(ASSERT_FLAGSTASH): New macro.
+	(mark_flagstash, free_flagstash, print_flagstash): New static funcs.
+	(gsdl_make_flagstash): New func.
+	(gsdl_flags2ulong): Rename from `scm_flags2ulong'.
+	Remove support for `flags' being an exact number.
+	Add support for `flags' being a single symbol.
+	(gsdl_ulong2flags): Rename from `scm_ulong2flags'.
+	Fix bug: Test full mask instead of only one bit position.
+	Fix bug: Handle case where stash has a member w/ value 0x0.
+	No longer unconditionally return computed result; instead,
+	return SCM_BOOL_F if the stash does not cover the value.
+	(flagstash_flags): New MDEFLOCEXP func.
+	(flags_to_number): Rename from `scm_flags_to_number'.
+	Make MDEFLOCEXP.
+	(number_to_flags): Likewise from `scm_number_to_flags'.
+	(gsdl_init_enums): Renaem from `sdl_init_enums'.
+	Register smob type "flagstash" and its mark, free, print funcs.
+	Remove call to `scm_c_export'.
+
+	* sdlevent.c: Update copyright.
+	Include <guile/gh.h>.
+	No longer include "sdlevent.h".
+	Include "config.h", "argcheck.h" and "wholefns.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(event_tag, keysym_tag, event_mod_flags): Make static.
+	(ASSERT_EVENT, ASSERT_KEYSYM): New macros.
+	(mark_event, mark_keysym, free_keysym): New static funcs.
+	(free_event): Make static.
+	(make_keysym): Make MDEFLOCEXP.
+	(ENUM_GETTER, ENUM_SETTER, ENUM_GETSET, NUMBER_GETTER,
+	NUMBER_SETTER, NUM2_GETTER, NUM2_SETTER, NUM2_GETSET,
+	NUM3_GETTER, NUM3_SETTER, NUM3_GETSET, FLAG_GETTER,
+	FLAG_SETTER, FLAG_GETSET): New macros.
+	(pump_events, peep_events, poll_event, wait_event, push_event,
+	set_event_filter, get_event_filter, event_state, sdl_enable_unicode,
+	sdl_enable_key_repeat, sdl_get_key_state, sdl_get_mod_state,
+	sdl_set_mod_state, sdl_get_mouse_state, sdl_get_relative_mouse_state,
+	sdl_button_p): Make MDEFLOCEXP.
+	(gsdl_sym_state, gsdl_sym_x, gsdl_sym_y): New static vars.
+	(sdl_get_event_mod_flags): New MDEFLOCEXP.
+	(gsdl_kmod_flagstash): New extern var decl.
+	(gsdl_init_event): Rename from `sdl_init_event'.
+	Register `mark_event'.
+	Register smob type "SDL-Keysym" and its mark and free funcs.
+	Initialize `event_mod_flags' using `gsdl_make_flagstash'
+	instead of `scm_c_define_flag'.
+	Remove calls to `scm_c_define_gsubr'.
+	Remove call to `scm_c_export'.
+
+	* sdlgfx.c: Update copyright.
+	Include <guile/gh.h> and <SDL/SDL_image.h>.
+	No longer include "sdlgfx.h".
+	Include "config.h", "argcheck.h" and "sdlsmobs.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Write docstrings.
+	(gsdl_gfx_init): Rename from `sdl_gfx_init'.
+	Remove calls to `scm_c_define_gsubr'.
+	Remove call to `scm_c_export'.
+
+	* sdljoystick.c: Update copyright.
+	No longer include <libguile.h>.
+	No longer include "sdljoystick.h".
+	Include "config.h", "argcheck.h" and "sdlsmobs.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(joystick_tag): Rename from `sdl_joystick_tag'. Make static.
+	(ASSERT_JOYSTICK): New macro.
+	(gsdl_init_joystick): Rename from `sdl_init_joystick'.
+	Register func `mark_joy'.
+	Remove call to `scm_c_export'.
+
+	* sdlrect.c: Update copyright.
+	No longer include <libguile.h>.
+	Include <guile/gh.h>.
+	No longer include "sdlenums.h".
+	No longer include "sdlrect.h".
+	Include "config.h", "argcheck.h" and "wholefns.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(rect_tag): Delete var.
+	(mark_rect): New static func.
+	(free_rect, print_rect): Make static.
+	(gsdl_init_rect): Rename from `sdl_init_rect'.
+	Register func `mark_rect'.
+	Remove calls to `scm_c_define_gsubr'.
+	Remove call to `scm_c_export'.
+
+	* sdlroto.c: Update copyright.
+	No longer include <libguile.h>.
+	No longer include "sdlroto.h".
+	No longer include "sdlvideo.h".
+	Include "config.h", "argcheck.h" and "sdlsmobs.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(gsdl_init_rotozoom): Rename from `sdl_init_rotozoom'.
+	Remove call to `scm_c_export'.
+
+	* sdlsurface.c: Update copyright.
+	No longer include <libguile.h>.
+	Include <guile/gh.h>.
+	No longer include "sdlsurface.h".
+	Include "config.h", "argcheck.h" and "wholefns.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(surface_tag): Delete var.
+	(mark_surface): New static func.
+	(free_surface, print_surface): Make static.
+	(gsdl_init_surface): Rename from `sdl_init_surface'.
+	Register func `mark_surface'.
+	Remove calls to `scm_c_define_gsubr'.
+	Remove call to `scm_c_export'.
+
+	* sdlvideo.c: Update copyright.
+	No longer include <libguile.h>.
+	Include <guile/gh.h>.
+	No longer include "sdlrect.h".
+	No longer include "sdlcolor.h".
+	No longer include "sdlsurface.h".
+	Include "config.h" and "argcheck.h".
+	Throughout, replace `SCM_DEFINE' with `MDEFLOCEXP'.
+	Throughout, use gh_* funcs and other abstractions where possible.
+	Convert docstrings: "returns" -> "return", etc.
+	(sdl_gl_enums): Make static.
+	(gsdl_alpha_enums): Rename from `sdl_alpha_enums'.
+	(gsdl_video_flags): Rename from `sdl_video_flags'.
+	(gsdl_palette_flags): Rename from `sdl_palette_flags'.
+	(pixel_format_tag): Delete var.
+	(cursor_tag, overlay_tag): Make static.
+	(ASSERT_CURSOR, ASSERT_OVERLAY, UNPACK_CURSOR, UNPACK_OVERLAY,
+	RETURN_NEW_CURSOR, RETURN_NEW_OVERLAY): New macros.
+	(mark_cursor, mark_yuv_overlay, mark_pixel_format): New static funcs.
+	(free_cursor, free_yuv_overlay, free_pixel_format): Make static.
+	(sdl_get_video_flags, sdl_get_palette_flags,
+	sdl_get_overlay_formats): New MDEFLOCEXP funcs.
+	(gsdl_sym_hw_available, gsdl_sym_ww_available, gsdl_sym_blit_hw,
+	gsdl_sym_blit_hw_CC, gsdl_sym_blit_hw_A, gsdl_sym_blit_sw,
+	gsdl_sym_blit_sw_CC, gsdl_sym_blit_sw_A, gsdl_sym_blit_fill,
+	gsdl_sym_video_mem, gsdl_sym_vfmt, gsdl_sym_redtable,
+	gsdl_sym_greentable, gsdl_sym_bluetable, gsdl-sym_r, gsdl_sym_g,
+	gsdl_sym_b, gsdl_sym_a, gsdl_sym_title, gsdl_sym_icon): New static vars.
+	(GAMMAVEC): New macro.
+	(fill_rect): No longer return a number. Instead, return #t for success.
+	(ASSERT_VSZFIT): New macro.
+	(gsdl_video_flagstash, gsdl_palette_flagstash,
+	gsdl_overlay_flagstash): New extern var decls.
+	(gsdl_init_video): Rename from `sdl_init_video'.
+	Register `mark_cursor' and `free_cursor'.
+	Register `mark_pixel_format'.
+	Register `mark_yuv_overlay'.
+	(gsdl_video_flags, gsdl_palette_flags, gsdl_overlay_formats):
+	Initialize using `gsdl_make_flagstash' instead of `scm_c_define_flag'.
+	Remove call to `scm_c_export'.
+
+2003-11-07  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am (AM_CPPFLAGS): Add "-Ifoo"
+	for $(srcdir) and some children.
+	(lib_LTLIBRARIES): Delete directive.
+	(libguileSDL_la_SOURCES): Likewise.
+	(libguileSDL_la_CFLAGS): Likewise.
+	(libguileSDL_la_LIBADD): Likewise.
+	(libguileSDL_la_LDFLAGS): Likewise.
+	(libguileSDL_la_DEPENDENCIES): Likewise.
+	(cmoddir): New var.
+	(cmod_LTLIBRARIES): New directive.
+	(FLAGSTASH): New var.
+	(BUILT_SOURCES): Add $(FLAGSTASH).
+	(sdl_sup_la_SOURCES): New directive.
+	(sdl_sup_la_LDFLAGS): Likewise.
+	(SUFFIXES): Add ".fspec".
+	(GUILE_SNARF): Delete var.
+	(.c.x): Use pre-inst-$(c2x) instead of $(GUILE_SNARF).
+	(.fspec.c): New pattern rule.
+
+2003-11-07  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* initf.fspec (#:gperf-options): Add "--includes".
+	* kmodf.fspec: Likewise.
+	* overlayf.fspec: Likewise.
+	* palettef.fspec: Likewise.
+	* videof.fspec: Likewise.
+
+2003-11-06  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* initf.fspec: New file.
+	* kmodf.fspec: Likewise.
+	* overlayf.fspec: Likewise.
+	* palettef.fspec: Likewise.
+	* videof.fspec: Likewise.
+
+2003-10-29  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am (CC, CFLAGS, LIBS): Delete vars.
+	(AM_CPPFLAGS): Renamed from `INCLUDES'.
+
+2003-10-29  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am (PACKAGE, VERSION): Delete directives.
+
+2003-10-29  Thien-Thi Nguyen  <ttn@surf.glug.org>
+
+	* Makefile.am: Merge multiple `SUFFIXES' directives into one.
+
+
+Copyright (C) 2010, 2011, 2012, 2013 Thien-Thi Nguyen
+
+Copying and distribution of this file, with or without modification,
+are permitted provided the copyright notice and this notice are preserved.

@@ -1,0 +1,118 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class TEST_FSTR is
+   include TEST;
+    
+   main is
+      class_name("FSTR");
+      -- Out of laziness, some tests for STR in here...
+      ssplit: STR := "This is\n a\n test of"; 
+      sl: LIST{STR} := #;
+      loop sl.append(ssplit.split!('\n')) end;
+      test("split size",sl.size,3);
+      splitres ::= #LIST{STR}(#ARRAY{STR}(|"This is\n"," a\n"," test of"|));
+      test("splitresult",sl,splitres);
+      schunk: STR := "123451234512345";
+      chunkdoes: LIST{STR} := #;   
+      loop chunkdoes.append(schunk.chunk!(5)) end;
+      chunkshould ::= #LIST{STR}(#ARRAY{STR}(|"12345","12345","12345"|));
+      test("chunkres",chunkdoes,chunkshould);
+      s ::= #FSTR;
+      test("length",s.length.str,"0");
+      s := s+'c';
+      test("length2",s.length.str,"1");
+      test("+char, str",s.str,"c");
+      s.clear;
+      test("clear",s.str,"");
+      s := s+"TEST";
+      test("plus s",s.str,"TEST");
+      s := s+2;
+      test("plus int",s.str,"TEST2");
+      s := s+3.0;
+      test("plus float",s.str,"TEST23");
+      test("is_eq",s.is_eq("TEST23").str,"true");
+      s.clear;
+      s := s+"test";
+      s_test ::= s.copy;
+      test("copy",(s_test).str,"test");
+      test("is_eq 2",(s_test.is_eq("test")).str,"true");
+      test("is_eq 3",(s_test.is_eq("no_test")).str,"false");
+      s.clear;
+      s := s+"TEST";
+      s_TEST ::= s.copy;
+      test("copy 2",s_TEST.str,"TEST");
+      s_TEST := s_TEST+"TEST OF A LONGER STRING THAT SHOULD DOUBLE";
+      test("plus str",s_TEST.str,"TESTTEST OF A LONGER STRING THAT SHOULD DOUBLE");
+      s := s+s;
+      test("plus fstr",s.str,"TESTTEST");
+      s.clear;
+      s := s+"TEST"+500;
+      test("plus int2",s.str,"TEST500");
+      s.clear;     s := s+"TEST"+(-1000);
+      test("plus int2",s.str,"TEST-1000");
+      s.clear;     s := s+"TEST"+463.479;
+      test("plus float2",s.str,"TEST463.479");
+      s.clear;     s := s+"TEST"+(-12463.479);
+      test("plus float3",s.str,"TEST-12463.5");
+      s_TEST.clear;      s_TEST := s_TEST+"TEST";
+      s_test.clear;      s_test := s_test+"test";
+      test("is_upper",s_TEST.is_upper.str,"true");
+      test("is_upper",s_test.is_upper.str,"false");
+      test("is_lower",s_TEST.is_lower.str,"false");
+      test("is_lower",s_test.is_lower.str,"true");
+      -- Iterator tests:
+
+      si ::= #FSTR("this is");
+      lf ::= #FLIST{CHAR};
+      loop lf := lf.push(si.elt!); end;
+      lb ::= #FLIST{CHAR};
+      loop lb := lb.push(si.elt!(1)); end;
+      lc ::= #FLIST{CHAR};
+      loop lc := lc.push(si.elt!(1,2)); end;
+      ld ::= #FLIST{CHAR};
+      loop ld := ld.push(si.elt!(1,3,2)); end;
+      test("lf",sf(lf),si.str);
+      test("lb",sf(lb),"his is");
+      test("lc",sf(lc),"hi");
+      test("lc",sf(ld),"hsi");
+      
+      
+      ssi ::= "this is";
+      slf ::= #FLIST{CHAR};
+      loop slf := slf.push(ssi.elt!); end;
+      slb ::= #FLIST{CHAR};
+      loop slb := slb.push(ssi.elt!(1)); end;
+      slc ::= #FLIST{CHAR};
+      loop slc := slc.push(ssi.elt!(1,2)); end;
+      test("lf",sf(slf),ssi);
+      test("lb",sf(slb),"his is");
+      test("lc",sf(slc),"hi");
+      finish;
+   end;
+
+   sf(f: FLIST{CHAR}): STR is
+      res ::= "";
+      loop res := res+f.elt! end;
+      return res;
+   end;
+end; -- class TEST_FSTR
+
+-------------------------------------------------------------------
+
+
+
+
+

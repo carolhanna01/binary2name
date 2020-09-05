@@ -1,0 +1,2867 @@
+%%%% sundl_02.ldf
+%%%% Created by Laurence D. Finston (LDF) Sun Oct  7 18:53:17 CEST 2007
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Run like this:
+
+%% 3dldf sundl_02.ldf 
+%% mpost sundl_02.mp 
+%% tex sundl_02.txt 
+%% dvips -o sundl_02.ps sundl_02.dvi
+
+%% All on one line:
+if false:
+3dldf sundl_02.ldf; mpost sundl_02.mp; tex sundl_02.txt; \
+dvips -o sundl_02.ps sundl_02.dvi
+fi;
+
+%% View using Ghostview like this:
+%% gv sundl_02.ps &
+
+%% ** (2) 
+
+%% ** (2) Current sample code.
+
+%% *** (3) Sundials 2
+%%         Full sets of hour lines on the vertical and horizontal planes.
+%%         Using the latitude of Goettingen, Germany:
+%%         latitude: 51 deg 32' N, longitude:  9 deg 56' E
+%%         and Chicago, Illinois, USA:
+%%         latitude:  41 deg 54' N  longitude:  87 deg 39' W
+%%
+%%          London, UK:  51 deg. 30' 28'' N 0 deg. 7' 41'' W
+%%          51 deg. 30' 28'' N == 51.5777 N
+%%
+%%         LDF 2007.10.06.
+
+%% **** (4) 
+
+focus f[];
+
+set f0 with_position (0, 5, -12) with_direction (0, 5, 10) with_distance 10;
+
+%% **** (4) Declarations and Initializations
+
+point p[];     %% Points on the dial
+
+point g[];     %% Points on the gnomon
+
+point gv;      %% Trace of gnomon on vertical plane
+point gh;      %% Trace of gnomon on horizontal plane
+
+circle c[];    %% c0 is the dial
+
+point q[];
+
+rectangle r[];  
+
+transform t[];
+
+bool_point_vector bpv;
+
+string s;
+
+pen path_pen;
+path_pen := pencircle scaled (.75mm, .75mm);
+
+plane m[];
+path h[]v;
+path h[]h;
+
+%% **** (4) Parameters
+
+radius := 5;
+
+%% Goettingen:  latitude:  51 deg 32' N, longitude:   9 deg 56' E
+%% Chicago:     latitude:  41 deg 54' N  longitude:  87 deg 39' W
+%% London, UK:  51 deg. 30' 28'' N 0 deg. 7' 41'' W
+%% 51 deg. 30' 28'' N == 51.5777 N
+
+latitude := 51.533;   %% Goettingen
+% latitude := 41.9;   %% Chicago
+% latitude := 51.5777 %% London
+
+%% **** (4) Set equatorial circle and surrounding rectangles
+
+set c0 with_diameter (2 * radius) with_point_count 32;
+r0 := out_rectangle c0;
+r1 := r0 scaled (1.3, 0, 1.3);
+
+t0 := identity rotated (90, 90);
+
+c0 *= r0 *= r1 *= t0;
+
+%% **** (4) Figure 1
+
+pickup pencircle scaled (.575mm, .575mm);
+
+beginfig(1); 
+
+dotlabel.lrt("$\rm{origin}$", origin);
+
+g0 := (3 * radius, 0) rotated (0, 0, -latitude);
+g1 := (-5 * radius, 0) rotated (0, 0, -latitude);
+
+drawdblarrow g0 -- g1;
+
+label.bot("$g_0$", g0);
+label.top("$g_1$", g1);
+
+p0 := (0, 0, radius);
+
+%% **** (4) Points on top of dial (vertical)
+
+for i = 15 step 15 until 180:
+  p[i] := p[i - 15] rotated -15;
+endfor;
+
+for i = 0 step 15 until 180:
+   rotate p[i] (0, 0, -latitude);
+   if false: 
+      draw origin -- p[i];
+   fi; 
+endfor;
+
+%% **** (4) Points on bottom of dial (horizontal)
+
+for i = -15 step -15 until -165:
+  p[i] := p[i + 15] rotated 15;
+endfor;
+
+for i = -15 step -15 until -165:
+   rotate p[i] (0, 0, -latitude);
+   if false: 
+      draw origin -- p[i];
+   fi; 
+endfor;
+
+%draw p[75] -- p[-105];
+
+
+%% **** (4) Rotate dial and surrounding rectangles.
+
+t2 := identity rotated (0, 0, -latitude);
+
+c0 *= r0 *= r1 *= t2;
+
+%% **** (4) Draw and label the rectangles surrounding the dial
+
+draw r0 with_color red;
+draw r1 with_color green;
+
+for i = 0 upto 3:
+   q[28 + i] := get_point (i) r0;
+   q[i] := get_point (i) r1;
+endfor;
+
+
+%% ***** (5) r0
+
+dotlabel.bot("$q_{28}$", q28);
+dotlabel.ulft("$q_{29}$", q29);
+dotlabel.top("$q_{30}$", q30);
+dotlabel.rt("$q_{31}$", q31);
+
+label.lrt("$r_0$", mediate(q28, q31, .25)) with_text_color red;
+
+%% ***** (5) r1
+
+dotlabel.bot("$q_0$", q0);
+dotlabel.ulft("$q_1$", q1);
+dotlabel.top("$q_2$", q2);
+dotlabel.rt("$q_3$", q3);
+
+label.lrt("$r_1$", mediate(q0, q3)) with_text_color green;
+
+
+%% **** (4) Get the rectangle perpendicular to r1, draw and label it (r4)
+
+q4 := unit_vector(q3 - q0) * 2 shifted q0 rotated_around(q0, q1) 90;
+q5 := unit_vector(q3 - q0) * 2 shifted q0 rotated_around(q0, q1) -90;
+
+dotlabel.lft("$q_4$", q4);
+dotlabel.lft("$q_5$", q5);
+
+
+q6 := unit_vector(q2 - q1) * 2 shifted q1 rotated_around(q0, q1) 90;
+q7 := unit_vector(q2 - q1) * 2 shifted q1 rotated_around(q0, q1) -90;
+
+dotlabel.urt("$q_6$", q6);
+dotlabel.lrt("$q_7$", q7);
+
+r4 := (q5, q4, q6, q7);
+
+draw r4 with_color cyan;
+
+label.llft("$r_4$", mediate(q4, q5, .25)) with_text_color cyan;
+
+%% **** (4) Find, draw and label the rectangle representing the vertical plane (r2)
+
+q8 := q4 shifted (0, 14);
+q9 := q6 shifted (0, 14);
+
+dotlabel.lft("$q_8$", q8);
+dotlabel.lft("$q_9$", q9);
+
+r2 := (q6, q4, q8, q9);
+
+draw r2 with_color red;
+
+label.lft("$r_2$", mediate(q4, q8)) with_text_color red;
+
+
+
+bpv := r2 intersection_points (g0 -- g1);
+
+gv := bpv0;
+
+dotlabel.urt("$g_v$", gv);
+
+
+%% **** (4) 90 deg.  Noon line.
+
+%% ***** (5) Vertical
+
+q11 := mediate(q4, q6); %% Trace of noon line on vertical plane
+
+dotlabel.rt("$q_{11}$", q11);
+
+draw gv -- q11;
+
+q12 := mediate(q5, q7);
+dotlabel.lrt("$q_{12}$", q12);
+
+draw q11 -- q12;
+
+%% **** (4) Horizontal plane (plane of r6)
+
+q50 := q0 shifted 12;
+q51 := q1 shifted 12;
+
+r6 := (q0, q1, q51, q50);
+
+draw r6 with_color orange;
+
+label.bot("$r_6$", mediate(q0, q50)) with_text_color orange;
+
+q80 := get_center r6;
+q81 := (get_normal r6 * -1) shifted q80;
+
+dotlabel.llft("$q_{80}$", q80);
+label.rt("\vbox{\hbox{$q_{81}$}\hbox{(normal to $r_6$)}}", q81);
+
+drawarrow q80 -- q81 with_color orange;
+
+dotlabel.bot("$q_{50}$", q50);
+dotlabel.rt("$q_{51}$", q51);
+
+bpv := r6 intersection_points (g0 -- g1);
+
+gh := bpv0; %% Trace of gv on r6
+
+dotlabel.urt("$g_h$", gh);
+
+%% **** (4) Planes of the vertical and horizontal rectangles
+
+m2 := get_plane r2;  %% Vertical
+m6 := get_plane r6;  %% Horizontal
+
+%% **** (4) 180 deg. (6:00 AM) 
+
+m180 := (origin, gv, p180);
+
+%% ***** (5) Vertical
+
+h180v := m180 intersection m2;
+
+bpv := h180v intersection_points r2;
+
+q75 := bpv0;
+
+dotlabel.lft("$q_{75}$", q75);
+
+draw gv -- q75;
+
+%% ***** (5) Horizontal
+
+h180h := m180 intersection m6;
+
+bpv := h180h intersection_points r6;
+
+q76 := bpv1;
+
+dotlabel.bot("$q_{76}$", q76);
+
+draw gh -- q76;
+
+%% **** (4) 165 deg. (7:00 AM) 
+
+m165 := (origin, gv, p165);
+
+%% ***** (5) Vertical
+
+h165v := m165 intersection m2;
+
+bpv := h165v intersection_points r2;
+
+q73 := bpv0;
+
+dotlabel.lft("$q_{73}$", q73);
+
+draw gv -- q73;
+
+%% ***** (5) Horizontal
+
+h165h := m165 intersection m6;
+
+bpv := h165h intersection_points r6;
+
+q74 := bpv1;
+
+dotlabel.bot("$q_{74}$", q74);
+
+draw gh -- q74;
+
+%% **** (4) 150 deg. (8:00 AM) 
+
+m150 := (origin, gv, p150);
+
+%% ***** (5) Vertical
+
+h150v := m150 intersection m2;
+
+bpv := h150v intersection_points r2;
+
+q71 := bpv0;
+
+dotlabel.lft("$q_{71}$", q71);
+
+draw gv -- q71;
+
+%% ***** (5) Horizontal
+
+h150h := m150 intersection m6;
+
+bpv := h150h intersection_points r6;
+
+q72 := bpv1;
+
+dotlabel.bot("$q_{72}$", q72);
+
+draw gh -- q72;
+
+%% **** (4) 135 deg. (9:00 AM) 
+
+m135 := (origin, gv, p135);
+
+%% ***** (5) Vertical
+
+h135v := m135 intersection m2;
+
+bpv := h135v intersection_points r2;
+
+q69 := bpv0;
+
+dotlabel.lrt("$q_{69}$", q69);
+
+draw gv -- q69;
+
+%% ***** (5) Horizontal
+
+h135h := m135 intersection m6;
+
+bpv := h135h intersection_points r6;
+
+q70 := bpv0;
+
+dotlabel.ulft("$q_{70}$", q70);
+
+draw gh -- q70;
+
+
+
+
+%% **** (4) 120 deg. (10:00 AM) 
+
+m120 := (origin, gv, p120);
+
+%% ***** (5) Vertical
+
+h120v := m120 intersection m2;
+
+bpv := h120v intersection_points r2;
+
+q67 := bpv0;
+
+dotlabel.rt("$q_{67}$", q67);
+
+draw gv -- q67;
+
+%% ***** (5) Horizontal
+
+h120h := m120 intersection m6;
+
+bpv := h120h intersection_points r6;
+
+q68 := bpv0;
+
+dotlabel.lft("$q_{68}$", q68);
+
+draw gh -- q68;
+
+
+%% **** (4) 105 deg. (11:00 AM) 
+
+m105 := (origin, gv, p105);
+
+%% ***** (5) Vertical
+
+h105v := m105 intersection m2;
+
+bpv := h105v intersection_points r2;
+
+q65 := bpv0;
+
+dotlabel.rt("$q_{65}$", q65);
+
+draw gv -- q65;
+
+%% ***** (5) Horizontal
+
+h105h := m105 intersection m6;
+
+bpv := h105h intersection_points r6;
+
+q66 := bpv0;
+
+dotlabel.lft("$q_{66}$", q66);
+
+draw gh -- q66;
+
+
+%% **** (4) 90 deg. (Noon)
+
+q13 := mediate(q0, q1); %% Trace of noon line on horizontal plane
+
+dotlabel.llft("$q_{13}$", q13);
+draw gh -- q13;
+
+
+%% **** (4) 75 deg.  (1:00 PM)
+
+%% ***** (5) Vertical
+
+m75 := (origin, gv, p75);
+
+h75v := m75 intersection m2;
+
+bpv := h75v intersection_points r2;
+
+q56 := bpv0;
+
+draw gv -- q56;
+
+dotlabel.rt("$q_{56}$", q56);
+
+%% ***** (5) Horizontal
+
+h75h := m75 intersection m6;
+
+bpv := h75h intersection_points r6;
+
+q57 := bpv0;
+
+draw gh -- q57;
+dotlabel.ulft("$q_{57}$", q57);
+
+%% **** (4) 60 deg. (2:00 PM)
+
+m60 := (origin, gv, p60);
+
+%% ***** (5) Vertical
+
+h60v := m60 intersection m2;
+
+bpv := h60v intersection_points r2;
+
+q53 := bpv0;
+
+dotlabel.rt("$q_{53}$", q53);
+
+%% ***** (5) Horizontal
+
+h60h := m60 intersection m6;
+
+bpv := h60h intersection_points r6;
+
+q58 := bpv0;
+
+draw gh -- q58;
+dotlabel.lft("$q_{58}$", q58);
+
+%% **** (4) 45 deg. (3:00 PM) 
+
+m45 := (origin, gv, p45);
+
+%% ***** (5) Vertical
+
+h45v := m45 intersection m2;
+
+bpv := h45v intersection_points r2;
+
+q54 := bpv0;
+
+dotlabel.lrt("$q_{54}$", q54);
+
+%% ***** (5) Horizontal
+
+h45h := m45 intersection m6;
+
+bpv := h45h intersection_points r6;
+
+q59 := bpv0;
+
+draw gh -- q59;
+dotlabel.lft("$q_{59}$", q59);
+
+%% **** (4) 30 deg. (4:00 PM) 
+
+m30 := (origin, gv, p30);
+
+%% ***** (5) Vertical
+
+h30v := m30 intersection m2;
+
+bpv := h30v intersection_points r2;
+
+q55 := bpv1;
+
+dotlabel.lrt("$q_{55}$", q55);
+
+draw gv -- q55;
+
+%% ***** (5) Horizontal
+
+h30h := m30 intersection m6;
+
+bpv := h30h intersection_points r6;
+
+q60 := bpv0;
+
+dotlabel.ulft("$q_{60}$", q60);
+
+draw gh -- q60;
+
+
+%% **** (4) 15 deg. (5:00 PM) 
+
+m15 := (origin, gv, p15);
+
+%% ***** (5) Vertical
+
+h15v := m15 intersection m2;
+
+bpv := h15v intersection_points r2;
+
+q61 := bpv1;
+
+dotlabel.urt("$q_{61}$", q61);
+
+draw gv -- q61;
+
+%% ***** (5) Horizontal
+
+h15h := m15 intersection m6;
+
+bpv := h15h intersection_points r6;
+
+q62 := bpv0;
+
+dotlabel.urt("$q_{62}$", q62);
+
+draw gh -- q62;
+
+%% **** (4) 0 deg. (18:00 PM) 
+
+m0 := (origin, gv, p0);
+
+%% ***** (5) Vertical
+
+h0v := m0 intersection m2;
+
+bpv := h0v intersection_points r2;
+
+q63 := bpv1;
+
+dotlabel.rt("$q_{63}$", q63);
+
+draw gv -- q63;
+
+%% ***** (5) Horizontal
+
+h0h := m0 intersection m6;
+
+bpv := h0h intersection_points r6;
+
+q64 := bpv0;
+
+dotlabel.top("$q_{64}$", q64);
+
+draw gh -- q64;
+
+%% **** (4) End of time divisions
+
+%% **** (4) Draw dial
+
+draw c0;
+
+label.urt("$c_0$", get_point(16) c0 * .875 shifted (.1, 0));
+
+%% ***** (5) Draw axes of equatorial dial
+
+draw p0 -- p180 with_color blue with_pen path_pen;
+draw p[-90] -- p90 with_color blue with_pen path_pen;
+
+%% ***** (5) Draw time divisions on vertical dial
+
+draw q16 -- gv;  %% 1:00 PM (75 deg.) 
+draw gv -- q53;  %% 2:00 PM (60 deg.)
+draw gv -- q54;  %% 3:00 PM (45 deg.)
+
+%% ***** (5) 
+
+%% **** (4) Labels for top of vertical dial.
+
+if false: 
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 6} $(180^\circ)$", p180);
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 7} $(165^\circ)$", p165);
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 8} $(150^\circ)$", p150);
+   dotlabel.llft("\uppercase\expandafter{\romannumeral 9} $(135^\circ)$", p135);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 10} $(120^\circ)$", p120);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 11} $(105^\circ)$", p105);
+
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 12} $(90^\circ)$", p90);
+   
+   dotlabel.lft("$p_{75} =$\uppercase\expandafter{\romannumeral 13} $(75^\circ)$", p75);
+   dotlabel.rt("\uppercase\expandafter{\romannumeral 14} $(60^\circ)$", p60);
+
+   s := "\setbox0=\hbox{$(45^\circ)$}" 
+        & "\vbox{\hbox to \wd0{\hfil\uppercase\expandafter{\romannumeral 15}}"
+        & "\box0}";
+
+   dotlabel.lft(s, p45);
+
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 16} $(30^\circ)$", p30);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 17} $(15^\circ)$", p15);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 18} $(0^\circ)$", p0);
+fi;
+
+%% **** (4) Labels for bottom of dial.  (horizontal)
+
+if false: 
+ dotlabel.lrt("\uppercase\expandafter{\romannumeral 7} $(-165^\circ)$", p[-165]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", p[-150]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", p[-150]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 9} $(-135^\circ)$", p[-135]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 10} $(-120^\circ)$", p[-120]);
+ dotlabel.lrt("\uppercase\expandafter{\romannumeral 11} $(-105^\circ)$", p[-105]);
+
+ dotlabel.urt("\uppercase\expandafter{\romannumeral 12} $(-90^\circ)$", p[-90]);
+
+ dotlabel.urt("\uppercase\expandafter{\romannumeral 13} $(-75^\circ)$", p[-75]);
+ dotlabel.ulft("\uppercase\expandafter{\romannumeral 14} $(-60^\circ)$", p[-60]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 15} $(-45^\circ)$", p[-45]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 16} $(-30^\circ)$", p[-30]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 17} $(-15^\circ)$", p[-15]);
+fi; 
+
+
+%% **** (4) Center of r2 and normal of r2, shifted to center of r2
+
+q40 := get_center r2;
+q41 := get_normal r2 * -1 shifted q40;
+
+dotlabel.lft("$q_{40}$", q40);
+
+s := "$q_{41}$ (normal to $r_2$)";
+label.rt(s, q41);
+
+drawarrow q40 -- q41 with_color red;
+
+%% 90 deg.  Noon line on horizontal plane
+
+%% 1:00 PM line on horizontal plane
+
+%% **** (4) End of figure 1
+
+endfig with_focus f0 no_sort;
+
+%% *** (3) Figure 2.  Parallel projection onto plane of dial.
+%%         Since parallel projection onto an arbitrary plane currently isn't 
+%%         all of the objects that need to be displayed are transformed 
+%%         appropriately.
+%%         LDF 2007.09.30.
+
+beginfig(2); 
+
+t1 := identity rotated (0, 0, latitude);
+rotate t1 (180, 180);
+
+c1 := c0;
+
+r10 := r0;
+r11 := r1;
+r12 := r2;
+
+c1 *= r10 *= r11 *= r12 *= t1;
+
+for i = -165 step 15 until 180:
+   draw origin -- (p[i] transformed t1);
+endfor;
+
+
+draw c1;
+draw r10 with_color red;
+draw r11 with_color green;
+
+draw (p[-90] transformed t1) -- (p90 transformed t1) with_color blue;
+draw (p0 transformed t1) -- (p180 transformed t1) with_color blue;
+
+%% **** (4) Labels for top of dial.  (vertical)
+
+dotlabel.ulft("\uppercase\expandafter{\romannumeral 6} $(180^\circ)$", 
+   p180 transformed t1);
+dotlabel.ulft("\uppercase\expandafter{\romannumeral 7} $(165^\circ)$", 
+   p165 transformed t1);
+dotlabel.ulft("\uppercase\expandafter{\romannumeral 8} $(150^\circ)$", 
+   p150 transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 9} $(135^\circ)$", 
+   p135 transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 10} $(120^\circ)$", 
+   p120 transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 11} $(105^\circ)$", 
+   p105 transformed t1);
+
+dotlabel.top("\uppercase\expandafter{\romannumeral 12} $(90^\circ)$", 
+   p90 transformed t1);
+
+dotlabel.rt("\uppercase\expandafter{\romannumeral 13} $(75^\circ)$", 
+   p75 transformed t1);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 14} $(60^\circ)$", 
+   p60 transformed t1);
+
+s := "\setbox0=\hbox{$(45^\circ)$}" 
+     & "\vbox{\hbox to \wd0{\hfil\uppercase\expandafter{\romannumeral 15}}"
+     & "\box0}";
+
+dotlabel.rt(s, p45 transformed t1);
+
+dotlabel.rt("\uppercase\expandafter{\romannumeral 16} $(30^\circ)$", 
+   p30 transformed t1);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 17} $(15^\circ)$", 
+   p15 transformed t1);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 18} $(0^\circ)$", 
+   p0 transformed t1);
+
+%% **** (4) Labels for bottom of dial.  (horizontal)
+
+dotlabel.llft("\uppercase\expandafter{\romannumeral 7} $(-165^\circ)$", 
+   p[-165] transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", 
+   p[-150] transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", 
+   p[-150] transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 9} $(-135^\circ)$", 
+   p[-135] transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 10} $(-120^\circ)$", 
+   p[-120] transformed t1);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 11} $(-105^\circ)$", 
+   p[-105] transformed t1);
+dotlabel.bot("\uppercase\expandafter{\romannumeral 12} $(-90^\circ)$", 
+   p[-90] transformed t1);
+dotlabel.lrt("\uppercase\expandafter{\romannumeral 13} $(-75^\circ)$", 
+   p[-75] transformed t1);
+dotlabel.urt("\uppercase\expandafter{\romannumeral 14} $(-60^\circ)$", 
+   p[-60] transformed t1);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 15} $(-45^\circ)$", 
+   p[-45] transformed t1);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 16} $(-30^\circ)$", 
+   p[-30] transformed t1);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 17} $(-15^\circ)$", 
+   p[-15] transformed t1);
+
+%% **** (4) End of figure 2 
+
+endfig with_projection parallel_z_y with_factor 1.25 no_sort; 
+
+%% *** (3) Figure 3:  Parallel projection onto vertical plane (plane of r2)
+
+beginfig(3);
+
+t3 := align (q40 -- q41) with_axis y_axis;
+rotate t3 (0, -90);
+
+r5 := r2 transformed t3;
+
+%% **** (4) Get the vertices of r5
+
+q42 := q6 transformed t3;
+q43 := q4 transformed t3;
+q44 := q8 transformed t3;
+q45 := q9 transformed t3;
+
+%% **** (4) Draw and label r5
+
+draw r5;
+
+dotlabel.rt("$q_{42}$", q42);
+dotlabel.ulft("$q_{43}$", q43);
+dotlabel.lft("$q_{44}$", q44);
+dotlabel.rt("$q_{45}$", q45);
+
+
+%% **** (4) Label the directions
+
+label("Up", mediate(q44, q45) shifted (0, 0, 1));
+label("Down", mediate(q42, q43) shifted (0, 0, -1.5));
+label("East", mediate(q42, q45) shifted 1);
+label("West", mediate(q43, q44) shifted -1);
+
+%% **** (4) Draw the dial
+
+dotlabel.top("$g_v$", gv transformed t3);
+
+%% ***** (5) 6:00 AM (180 deg.)
+
+dotlabel.lft("VI $q_{75}$", q75 transformed t3);
+
+draw (gv -- q75) transformed t3;
+
+%% ***** (5) 7:00 AM (165 deg.)
+
+dotlabel.lft("VII $q_{73}$", q73 transformed t3);
+
+draw (gv -- q73) transformed t3;
+
+
+
+%% ***** (5) 8:00 AM (150 deg.)
+
+dotlabel.lft("VIII $q_{71}$", q71 transformed t3);
+
+draw (gv -- q71) transformed t3;
+
+%% ***** (5) 9:00 AM (135 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{69}$}\hbox{IX}}", q69 transformed t3);
+
+draw (gv -- q69) transformed t3;
+
+%% ***** (5) 10:00 AM (120 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{67}$}\hbox{X}}", q67 transformed t3);
+
+draw (gv -- q67) transformed t3;
+
+%% ***** (5) 11:00 AM (105 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{65}$}\hbox{XI}}", q65 transformed t3);
+
+draw (gv -- q65) transformed t3;
+
+
+%% ***** (5) 90 deg.  (Noon)
+
+draw (gv -- q11) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{11}$}\hbox{XII}}", q11 transformed t3);
+
+%% ***** (5) 75 deg.  (1:00 PM)
+
+draw (gv -- q56) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{56}$}\hbox{XIII}}", q56 transformed t3);
+
+%% ***** (5) 60 deg. (2:00 PM) 
+
+draw (gv -- q53) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{53}$}\hbox{XIV}}", q53 transformed t3);
+
+%% ***** (5) 3:00 PM (45 deg.)
+
+draw (gv -- q54) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{54}$}\hbox{XV}}", q54 transformed t3);
+
+%% ***** (5) 4:00 PM (30 deg.)
+
+dotlabel.rt("$q_{55}$ XVI", q55 transformed t3);
+
+draw (gv -- q55) transformed t3;
+
+%% ***** (5) 5:00 PM (30 deg.)
+
+dotlabel.rt("$q_{61}$ XVII", q61 transformed t3);
+
+draw (gv -- q61) transformed t3;
+
+
+%% ***** (5) 6:00 PM (0 deg.)
+
+dotlabel.rt("$q_{63}$ XVIII", q63 transformed t3);
+
+draw (gv -- q63) transformed t3;
+
+
+
+
+%% **** (4) End of figure 3
+
+endfig with_projection parallel_x_z with_factor 1.5;  
+
+%% *** (3) Figure 4:  Parallel projection onto horizontal plane 
+%% *** (3) (plane of r6)
+
+beginfig(4);
+
+t4 := align (q80 -- q81) with_axis y_axis;
+rotate t4 (0, -90);
+
+draw r6 transformed t4;
+
+
+%% **** (4) Label the directions
+
+label("North", q13 transformed t4 shifted (0, 0, 1.5));
+label("South", mediate(q50 transformed t4, q51 transformed t4) shifted (0, 0, -1));
+label("East", mediate(q51 transformed t4, q1 transformed t4) shifted 2.5);
+label("West", mediate(q50 transformed t4, q0 transformed t4) shifted -2.5);
+
+%% **** (4) Label the vertices of r6
+
+dotlabel.llft("$q_{0}$",  q0 transformed t4);
+dotlabel.bot("$q_{50}$", q50 transformed t4);
+dotlabel.bot("$q_{51}$", q51 transformed t4);
+dotlabel.lrt("$q_{1}$",   q1 transformed t4);
+
+%% **** (4) The trace of the gnomon on the plane of r6
+
+dotlabel.bot("$g_h$", gh  transformed t4);  
+
+
+%% **** (4) Time division points and lines
+
+%% ***** (5) 180 deg.  (6:00 AM)
+
+draw (gh -- q76) transformed t4;
+dotlabel.lft("VI $q_{76}$", q76 transformed t4);
+
+%% ***** (5) 165 deg.  (7:00 AM)
+
+draw (gh -- q74) transformed t4;
+dotlabel.lft("VII $q_{74}$", q74 transformed t4);
+
+%% ***** (5) 150 deg.  (8:00 AM)
+
+draw (gh -- q72) transformed t4;
+dotlabel.lft("VIII $q_{72}$", q72 transformed t4);
+
+%% ***** (5) 135 deg.  (9:00 AM)
+
+draw (gh -- q70) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{70}$}\hbox{IX}}", q70 transformed t4);
+
+
+%% ***** (5) 120 deg.  (10:00 AM)
+
+draw (gh -- q68) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{68}$}\hbox{X}}", q68 transformed t4);
+
+
+%% ***** (5) 105 deg.  (11:00 AM)
+
+draw (gh -- q66) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{66}$}\hbox{XI}}", q66 transformed t4);
+
+
+%% ***** (5) 90 deg.  (Noon)
+
+draw (gh -- q13) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{13}$}\hbox{XII}}", q13 transformed t4);
+
+
+%% ***** (5) 75 deg.  (1:00 PM)
+
+draw (gh -- q57) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{57}$}\hbox{XIII}}", q57 transformed t4);
+
+%% ***** (5) 60 deg.  (2:00 PM)
+
+draw (gh -- q58) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{58}$}\hbox{XIV}}", q58 transformed t4);
+
+%% ***** (5) 45 deg. (3:00 PM)
+
+draw (gh -- q59) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{59}$}\hbox{XV}}", q59 transformed t4);
+
+%% ***** (5) 30 deg. (4:00 PM)
+
+draw (gh -- q60) transformed t4;
+dotlabel.rt("$q_{60}$ XVI", q60 transformed t4);
+
+%% ***** (5) 15 deg. (5:00 PM)
+
+draw (gh -- q62) transformed t4;
+dotlabel.rt("$q_{62}$ XVII", q62 transformed t4);
+
+
+%% ***** (5) 0 deg. (6:00 PM)
+
+draw (gh -- q64) transformed t4;
+dotlabel.rt("$q_{64}$ XVIII", q64 transformed t4);
+
+
+%% **** (4) End of figure 4
+
+endfig with_projection parallel_x_z with_factor 1.5;  
+
+%% *** (3) Chicago.
+
+
+%% **** (4) 
+
+%% **** (4) Declarations and Initializations
+
+point p[];     %% Points on the dial
+
+point g[];     %% Points on the gnomon
+
+point gv;      %% Trace of gnomon on vertical plane
+point gh;      %% Trace of gnomon on horizontal plane
+
+circle c[];    %% c0 is the dial
+
+point q[];
+
+rectangle r[];  
+
+transform t[];
+
+clear bpv;
+
+string s;
+
+pen path_pen;
+path_pen := pencircle scaled (.75mm, .75mm);
+
+plane m[];
+path h[]v;
+path h[]h;
+
+%% **** (4) Parameters
+
+radius := 5;
+
+%% Goettingen:  latitude:  51 deg 32' N, longitude:   9 deg 56' E
+%% Chicago:     latitude:  41 deg 54' N  longitude:  87 deg 39' W
+%% London, UK:  51 deg. 30' 28'' N 0 deg. 7' 41'' W
+%% 51 deg. 30' 28'' N == 51.5777 N
+
+% latitude := 51.533;  %% Goettingen
+latitude := 41.9;    %% Chicago
+% latitude := 51.5777 %% London
+
+%% **** (4) Set equatorial circle and surrounding rectangles
+
+set c0 with_diameter (2 * radius) with_point_count 32;
+r0 := out_rectangle c0;
+r1 := r0 scaled (1.3, 0, 1.3);
+
+t0 := identity rotated (90, 90);
+
+c0 *= r0 *= r1 *= t0;
+
+beginfig(5); 
+
+dotlabel.lrt("$\rm{origin}$", origin);
+
+g0 := (3 * radius, 0) rotated (0, 0, -latitude);
+g1 := (-5 * radius, 0) rotated (0, 0, -latitude);
+
+drawdblarrow g0 -- g1;
+
+label.bot("$g_0$", g0);
+label.top("$g_1$", g1);
+
+p0 := (0, 0, radius);
+
+%% **** (4) Points on top of dial (vertical)
+
+for i = 15 step 15 until 180:
+  p[i] := p[i - 15] rotated -15;
+endfor;
+
+for i = 0 step 15 until 180:
+   rotate p[i] (0, 0, -latitude);
+   if false: 
+      draw origin -- p[i];
+   fi; 
+endfor;
+
+%% **** (4) Points on bottom of dial (horizontal)
+
+for i = -15 step -15 until -165:
+  p[i] := p[i + 15] rotated 15;
+endfor;
+
+for i = -15 step -15 until -165:
+   rotate p[i] (0, 0, -latitude);
+   if false: 
+      draw origin -- p[i];
+   fi; 
+endfor;
+
+%draw p[75] -- p[-105];
+
+
+%% **** (4) Rotate dial and surrounding rectangles.
+
+t2 := identity rotated (0, 0, -latitude);
+
+c0 *= r0 *= r1 *= t2;
+
+%% **** (4) Draw and label the rectangles surrounding the dial
+
+draw r0 with_color red;
+draw r1 with_color green;
+
+for i = 0 upto 3:
+   q[28 + i] := get_point (i) r0;
+   q[i] := get_point (i) r1;
+endfor;
+
+
+%% ***** (5) r0
+
+dotlabel.bot("$q_{28}$", q28);
+dotlabel.ulft("$q_{29}$", q29);
+dotlabel.top("$q_{30}$", q30);
+dotlabel.rt("$q_{31}$", q31);
+
+label.lrt("$r_0$", mediate(q28, q31, .25)) with_text_color red;
+
+%% ***** (5) r1
+
+dotlabel.bot("$q_0$", q0);
+dotlabel.ulft("$q_1$", q1);
+dotlabel.top("$q_2$", q2);
+dotlabel.rt("$q_3$", q3);
+
+label.lrt("$r_1$", mediate(q0, q3)) with_text_color green;
+
+
+%% **** (4) Get the rectangle perpendicular to r1, draw and label it (r4)
+
+q4 := unit_vector(q3 - q0) * 2 shifted q0 rotated_around(q0, q1) 90;
+q5 := unit_vector(q3 - q0) * 2 shifted q0 rotated_around(q0, q1) -90;
+
+dotlabel.lft("$q_4$", q4);
+dotlabel.lft("$q_5$", q5);
+
+
+q6 := unit_vector(q2 - q1) * 2 shifted q1 rotated_around(q0, q1) 90;
+q7 := unit_vector(q2 - q1) * 2 shifted q1 rotated_around(q0, q1) -90;
+
+dotlabel.urt("$q_6$", q6);
+dotlabel.lrt("$q_7$", q7);
+
+r4 := (q5, q4, q6, q7);
+
+draw r4 with_color cyan;
+
+label.llft("$r_4$", mediate(q4, q5, .25)) with_text_color cyan;
+
+%% **** (4) Find, draw and label the rectangle representing the vertical plane (r2)
+
+q8 := q4 shifted (0, 14);
+q9 := q6 shifted (0, 14);
+
+dotlabel.lft("$q_8$", q8);
+dotlabel.lft("$q_9$", q9);
+
+r2 := (q6, q4, q8, q9);
+
+draw r2 with_color red;
+
+label.lft("$r_2$", mediate(q4, q8)) with_text_color red;
+
+
+
+bpv := r2 intersection_points (g0 -- g1);
+
+gv := bpv0;
+
+dotlabel.urt("$g_v$", gv);
+
+
+%% **** (4) 90 deg.  Noon line.
+
+%% ***** (5) Vertical
+
+q11 := mediate(q4, q6); %% Trace of noon line on vertical plane
+
+dotlabel.rt("$q_{11}$", q11);
+
+draw gv -- q11;
+
+q12 := mediate(q5, q7);
+dotlabel.lrt("$q_{12}$", q12);
+
+draw q11 -- q12;
+
+%% **** (4) Horizontal plane (plane of r6)
+
+q50 := q0 shifted 12;
+q51 := q1 shifted 12;
+
+r6 := (q0, q1, q51, q50);
+
+draw r6 with_color orange;
+
+label.bot("$r_6$", mediate(q0, q50)) with_text_color orange;
+
+q80 := get_center r6;
+q81 := (get_normal r6 * -1) shifted q80;
+
+dotlabel.llft("$q_{80}$", q80);
+label.rt("\vbox{\hbox{$q_{81}$}\hbox{(normal to $r_6$)}}", q81);
+
+drawarrow q80 -- q81 with_color orange;
+
+dotlabel.bot("$q_{50}$", q50);
+dotlabel.rt("$q_{51}$", q51);
+
+bpv := r6 intersection_points (g0 -- g1);
+
+gh := bpv0; %% Trace of gv on r6
+
+dotlabel.urt("$g_h$", gh);
+
+%% **** (4) Planes of the vertical and horizontal rectangles
+
+m2 := get_plane r2;  %% Vertical
+m6 := get_plane r6;  %% Horizontal
+
+%% **** (4) 180 deg. (6:00 AM) 
+
+m180 := (origin, gv, p180);
+
+%% ***** (5) Vertical
+
+h180v := m180 intersection m2;
+
+bpv := h180v intersection_points r2;
+
+q75 := bpv0;
+
+dotlabel.lft("$q_{75}$", q75);
+
+draw gv -- q75;
+
+%% ***** (5) Horizontal
+
+h180h := m180 intersection m6;
+
+bpv := h180h intersection_points r6;
+
+q76 := bpv1;
+
+dotlabel.bot("$q_{76}$", q76);
+
+draw gh -- q76;
+
+%% **** (4) 165 deg. (7:00 AM) 
+
+m165 := (origin, gv, p165);
+
+%% ***** (5) Vertical
+
+h165v := m165 intersection m2;
+
+bpv := h165v intersection_points r2;
+
+q73 := bpv0;
+
+dotlabel.lft("$q_{73}$", q73);
+
+draw gv -- q73;
+
+%% ***** (5) Horizontal
+
+h165h := m165 intersection m6;
+
+bpv := h165h intersection_points r6;
+
+q74 := bpv1;
+
+dotlabel.bot("$q_{74}$", q74);
+
+draw gh -- q74;
+
+%% **** (4) 150 deg. (8:00 AM) 
+
+m150 := (origin, gv, p150);
+
+%% ***** (5) Vertical
+
+h150v := m150 intersection m2;
+
+bpv := h150v intersection_points r2;
+
+q71 := bpv0;
+
+dotlabel.lft("$q_{71}$", q71);
+
+draw gv -- q71;
+
+%% ***** (5) Horizontal
+
+h150h := m150 intersection m6;
+
+bpv := h150h intersection_points r6;
+
+q72 := bpv1;
+
+dotlabel.bot("$q_{72}$", q72);
+
+draw gh -- q72;
+
+%% **** (4) 135 deg. (9:00 AM) 
+
+m135 := (origin, gv, p135);
+
+%% ***** (5) Vertical
+
+h135v := m135 intersection m2;
+
+bpv := h135v intersection_points r2;
+
+q69 := bpv0;
+
+dotlabel.lrt("$q_{69}$", q69);
+
+draw gv -- q69;
+
+%% ***** (5) Horizontal
+
+h135h := m135 intersection m6;
+
+bpv := h135h intersection_points r6;
+
+q70 := bpv0;
+
+dotlabel.ulft("$q_{70}$", q70);
+
+draw gh -- q70;
+
+
+
+
+%% **** (4) 120 deg. (10:00 AM) 
+
+m120 := (origin, gv, p120);
+
+%% ***** (5) Vertical
+
+h120v := m120 intersection m2;
+
+bpv := h120v intersection_points r2;
+
+q67 := bpv0;
+
+dotlabel.rt("$q_{67}$", q67);
+
+draw gv -- q67;
+
+%% ***** (5) Horizontal
+
+h120h := m120 intersection m6;
+
+bpv := h120h intersection_points r6;
+
+q68 := bpv0;
+
+dotlabel.lft("$q_{68}$", q68);
+
+draw gh -- q68;
+
+
+%% **** (4) 105 deg. (11:00 AM) 
+
+m105 := (origin, gv, p105);
+
+%% ***** (5) Vertical
+
+h105v := m105 intersection m2;
+
+bpv := h105v intersection_points r2;
+
+q65 := bpv0;
+
+dotlabel.rt("$q_{65}$", q65);
+
+draw gv -- q65;
+
+%% ***** (5) Horizontal
+
+h105h := m105 intersection m6;
+
+bpv := h105h intersection_points r6;
+
+q66 := bpv0;
+
+dotlabel.lft("$q_{66}$", q66);
+
+draw gh -- q66;
+
+
+%% **** (4) 90 deg. (Noon)
+
+q13 := mediate(q0, q1); %% Trace of noon line on horizontal plane
+
+dotlabel.llft("$q_{13}$", q13);
+draw gh -- q13;
+
+
+%% **** (4) 75 deg.  (1:00 PM)
+
+%% ***** (5) Vertical
+
+m75 := (origin, gv, p75);
+
+h75v := m75 intersection m2;
+
+bpv := h75v intersection_points r2;
+
+q56 := bpv0;
+
+draw gv -- q56;
+
+dotlabel.rt("$q_{56}$", q56);
+
+%% ***** (5) Horizontal
+
+h75h := m75 intersection m6;
+
+bpv := h75h intersection_points r6;
+
+q57 := bpv0;
+
+draw gh -- q57;
+dotlabel.ulft("$q_{57}$", q57);
+
+%% **** (4) 60 deg. (2:00 PM)
+
+m60 := (origin, gv, p60);
+
+%% ***** (5) Vertical
+
+h60v := m60 intersection m2;
+
+bpv := h60v intersection_points r2;
+
+q53 := bpv0;
+
+dotlabel.rt("$q_{53}$", q53);
+
+%% ***** (5) Horizontal
+
+h60h := m60 intersection m6;
+
+bpv := h60h intersection_points r6;
+
+q58 := bpv0;
+
+draw gh -- q58;
+dotlabel.lft("$q_{58}$", q58);
+
+%% **** (4) 45 deg. (3:00 PM) 
+
+m45 := (origin, gv, p45);
+
+%% ***** (5) Vertical
+
+h45v := m45 intersection m2;
+
+bpv := h45v intersection_points r2;
+
+q54 := bpv0;
+
+dotlabel.lrt("$q_{54}$", q54);
+
+%% ***** (5) Horizontal
+
+h45h := m45 intersection m6;
+
+bpv := h45h intersection_points r6;
+
+q59 := bpv0;
+
+draw gh -- q59;
+dotlabel.lft("$q_{59}$", q59);
+
+%% **** (4) 30 deg. (4:00 PM) 
+
+m30 := (origin, gv, p30);
+
+%% ***** (5) Vertical
+
+h30v := m30 intersection m2;
+
+bpv := h30v intersection_points r2;
+
+q55 := bpv1;
+
+dotlabel.lrt("$q_{55}$", q55);
+
+draw gv -- q55;
+
+%% ***** (5) Horizontal
+
+h30h := m30 intersection m6;
+
+bpv := h30h intersection_points r6;
+
+q60 := bpv0;
+
+dotlabel.ulft("$q_{60}$", q60);
+
+draw gh -- q60;
+
+
+%% **** (4) 15 deg. (5:00 PM) 
+
+m15 := (origin, gv, p15);
+
+%% ***** (5) Vertical
+
+h15v := m15 intersection m2;
+
+bpv := h15v intersection_points r2;
+
+q61 := bpv1;
+
+dotlabel.urt("$q_{61}$", q61);
+
+draw gv -- q61;
+
+%% ***** (5) Horizontal
+
+h15h := m15 intersection m6;
+
+bpv := h15h intersection_points r6;
+
+q62 := bpv0;
+
+dotlabel.urt("$q_{62}$", q62);
+
+draw gh -- q62;
+
+%% **** (4) 0 deg. (18:00 PM) 
+
+m0 := (origin, gv, p0);
+
+%% ***** (5) Vertical
+
+h0v := m0 intersection m2;
+
+bpv := h0v intersection_points r2;
+
+q63 := bpv1;
+
+dotlabel.rt("$q_{63}$", q63);
+
+draw gv -- q63;
+
+%% ***** (5) Horizontal
+
+h0h := m0 intersection m6;
+
+bpv := h0h intersection_points r6;
+
+q64 := bpv0;
+
+dotlabel.top("$q_{64}$", q64);
+
+draw gh -- q64;
+
+%% **** (4) End of time divisions
+
+%% **** (4) Draw dial
+
+draw c0;
+
+label.urt("$c_0$", get_point(16) c0 * .875 shifted (.1, 0));
+
+%% ***** (5) Draw axes of equatorial dial
+
+draw p0 -- p180 with_color blue with_pen path_pen;
+draw p[-90] -- p90 with_color blue with_pen path_pen;
+
+%% ***** (5) Draw time divisions on vertical dial
+
+draw q16 -- gv;  %% 1:00 PM (75 deg.) 
+draw gv -- q53;  %% 2:00 PM (60 deg.)
+draw gv -- q54;  %% 3:00 PM (45 deg.)
+
+%% ***** (5) 
+
+%% **** (4) Labels for top of vertical dial.
+
+if false: 
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 6} $(180^\circ)$", p180);
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 7} $(165^\circ)$", p165);
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 8} $(150^\circ)$", p150);
+   dotlabel.llft("\uppercase\expandafter{\romannumeral 9} $(135^\circ)$", p135);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 10} $(120^\circ)$", p120);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 11} $(105^\circ)$", p105);
+
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 12} $(90^\circ)$", p90);
+   
+   dotlabel.lft("$p_{75} =$\uppercase\expandafter{\romannumeral 13} $(75^\circ)$", p75);
+   dotlabel.rt("\uppercase\expandafter{\romannumeral 14} $(60^\circ)$", p60);
+
+   s := "\setbox0=\hbox{$(45^\circ)$}" 
+        & "\vbox{\hbox to \wd0{\hfil\uppercase\expandafter{\romannumeral 15}}"
+        & "\box0}";
+
+   dotlabel.lft(s, p45);
+
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 16} $(30^\circ)$", p30);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 17} $(15^\circ)$", p15);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 18} $(0^\circ)$", p0);
+fi;
+
+%% **** (4) Labels for bottom of dial.  (horizontal)
+
+if false: 
+ dotlabel.lrt("\uppercase\expandafter{\romannumeral 7} $(-165^\circ)$", p[-165]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", p[-150]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", p[-150]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 9} $(-135^\circ)$", p[-135]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 10} $(-120^\circ)$", p[-120]);
+ dotlabel.lrt("\uppercase\expandafter{\romannumeral 11} $(-105^\circ)$", p[-105]);
+
+ dotlabel.urt("\uppercase\expandafter{\romannumeral 12} $(-90^\circ)$", p[-90]);
+
+ dotlabel.urt("\uppercase\expandafter{\romannumeral 13} $(-75^\circ)$", p[-75]);
+ dotlabel.ulft("\uppercase\expandafter{\romannumeral 14} $(-60^\circ)$", p[-60]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 15} $(-45^\circ)$", p[-45]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 16} $(-30^\circ)$", p[-30]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 17} $(-15^\circ)$", p[-15]);
+fi; 
+
+
+%% **** (4) Center of r2 and normal of r2, shifted to center of r2
+
+q40 := get_center r2;
+q41 := get_normal r2 * -1 shifted q40;
+
+dotlabel.lft("$q_{40}$", q40);
+
+s := "$q_{41}$ (normal to $r_2$)";
+label.rt(s, q41);
+
+drawarrow q40 -- q41 with_color red;
+
+%% 90 deg.  Noon line on horizontal plane
+
+%% 1:00 PM line on horizontal plane
+
+%% **** (4) End of figure 5
+
+endfig with_focus f0 no_sort;
+
+
+%% *** (3) Figure 6:  Parallel projection onto vertical plane (plane of r2)
+
+beginfig(6);
+
+t3 := align (q40 -- q41) with_axis y_axis;
+rotate t3 (0, -90);
+
+r5 := r2 transformed t3;
+
+%% **** (4) Get the vertices of r5
+
+q42 := q6 transformed t3;
+q43 := q4 transformed t3;
+q44 := q8 transformed t3;
+q45 := q9 transformed t3;
+
+%% **** (4) Draw and label r5
+
+draw r5;
+
+dotlabel.rt("$q_{42}$", q42);
+dotlabel.ulft("$q_{43}$", q43);
+dotlabel.lft("$q_{44}$", q44);
+dotlabel.rt("$q_{45}$", q45);
+
+
+%% **** (4) Label the directions
+
+label("Up", mediate(q44, q45) shifted (0, 0, 1));
+label("Down", mediate(q42, q43) shifted (0, 0, -1.5));
+label("East", mediate(q42, q45) shifted 1);
+label("West", mediate(q43, q44) shifted -1);
+
+%% **** (4) Draw the dial
+
+dotlabel.top("$g_v$", gv transformed t3);
+
+%% ***** (5) 6:00 AM (180 deg.)
+
+dotlabel.lft("VI $q_{75}$", q75 transformed t3);
+
+draw (gv -- q75) transformed t3;
+
+%% ***** (5) 7:00 AM (165 deg.)
+
+dotlabel.lft("VII $q_{73}$", q73 transformed t3);
+
+draw (gv -- q73) transformed t3;
+
+
+
+%% ***** (5) 8:00 AM (150 deg.)
+
+dotlabel.lft("VIII $q_{71}$", q71 transformed t3);
+
+draw (gv -- q71) transformed t3;
+
+%% ***** (5) 9:00 AM (135 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{69}$}\hbox{IX}}", q69 transformed t3);
+
+draw (gv -- q69) transformed t3;
+
+%% ***** (5) 10:00 AM (120 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{67}$}\hbox{X}}", q67 transformed t3);
+
+draw (gv -- q67) transformed t3;
+
+%% ***** (5) 11:00 AM (105 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{65}$}\hbox{XI}}", q65 transformed t3);
+
+draw (gv -- q65) transformed t3;
+
+
+%% ***** (5) 90 deg.  (Noon)
+
+draw (gv -- q11) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{11}$}\hbox{XII}}", q11 transformed t3);
+
+%% ***** (5) 75 deg.  (1:00 PM)
+
+draw (gv -- q56) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{56}$}\hbox{XIII}}", q56 transformed t3);
+
+%% ***** (5) 60 deg. (2:00 PM) 
+
+draw (gv -- q53) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{53}$}\hbox{XIV}}", q53 transformed t3);
+
+%% ***** (5) 3:00 PM (45 deg.)
+
+draw (gv -- q54) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{54}$}\hbox{XV}}", q54 transformed t3);
+
+%% ***** (5) 4:00 PM (30 deg.)
+
+dotlabel.rt("$q_{55}$ XVI", q55 transformed t3);
+
+draw (gv -- q55) transformed t3;
+
+%% ***** (5) 5:00 PM (30 deg.)
+
+dotlabel.rt("$q_{61}$ XVII", q61 transformed t3);
+
+draw (gv -- q61) transformed t3;
+
+
+%% ***** (5) 6:00 PM (0 deg.)
+
+dotlabel.rt("$q_{63}$ XVIII", q63 transformed t3);
+
+draw (gv -- q63) transformed t3;
+
+%% **** (4) End of figure 6
+
+endfig with_projection parallel_x_z with_factor 1.5;  
+
+%% *** (3) Figure 7:  Parallel projection onto horizontal plane 
+%% *** (3) (plane of r6)
+
+beginfig(7);
+
+t4 := align (q80 -- q81) with_axis y_axis;
+rotate t4 (0, -90);
+
+draw r6 transformed t4;
+
+
+%% **** (4) Label the directions
+
+label("North", q13 transformed t4 shifted (0, 0, 1.5));
+label("South", mediate(q50 transformed t4, q51 transformed t4) shifted (0, 0, -1));
+label("East", mediate(q51 transformed t4, q1 transformed t4) shifted 2.5);
+label("West", mediate(q50 transformed t4, q0 transformed t4) shifted -2.5);
+
+%% **** (4) Label the vertices of r6
+
+dotlabel.llft("$q_{0}$",  q0 transformed t4);
+dotlabel.bot("$q_{50}$", q50 transformed t4);
+dotlabel.bot("$q_{51}$", q51 transformed t4);
+dotlabel.lrt("$q_{1}$",   q1 transformed t4);
+
+%% **** (4) The trace of the gnomon on the plane of r6
+
+dotlabel.bot("$g_h$", gh  transformed t4);  
+
+
+%% **** (4) Time division points and lines
+
+%% ***** (5) 180 deg.  (6:00 AM)
+
+draw (gh -- q76) transformed t4;
+dotlabel.lft("VI $q_{76}$", q76 transformed t4);
+
+%% ***** (5) 165 deg.  (7:00 AM)
+
+draw (gh -- q74) transformed t4;
+dotlabel.lft("VII $q_{74}$", q74 transformed t4);
+
+%% ***** (5) 150 deg.  (8:00 AM)
+
+draw (gh -- q72) transformed t4;
+dotlabel.lft("VIII $q_{72}$", q72 transformed t4);
+
+%% ***** (5) 135 deg.  (9:00 AM)
+
+draw (gh -- q70) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{70}$}\hbox{IX}}", q70 transformed t4);
+
+
+%% ***** (5) 120 deg.  (10:00 AM)
+
+draw (gh -- q68) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{68}$}\hbox{X}}", q68 transformed t4);
+
+
+%% ***** (5) 105 deg.  (11:00 AM)
+
+draw (gh -- q66) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{66}$}\hbox{XI}}", q66 transformed t4);
+
+
+%% ***** (5) 90 deg.  (Noon)
+
+draw (gh -- q13) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{13}$}\hbox{XII}}", q13 transformed t4);
+
+
+%% ***** (5) 75 deg.  (1:00 PM)
+
+draw (gh -- q57) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{57}$}\hbox{XIII}}", q57 transformed t4);
+
+%% ***** (5) 60 deg.  (2:00 PM)
+
+draw (gh -- q58) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{58}$}\hbox{XIV}}", q58 transformed t4);
+
+%% ***** (5) 45 deg. (3:00 PM)
+
+draw (gh -- q59) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{59}$}\hbox{XV}}", q59 transformed t4);
+
+%% ***** (5) 30 deg. (4:00 PM)
+
+draw (gh -- q60) transformed t4;
+dotlabel.rt("$q_{60}$ XVI", q60 transformed t4);
+
+%% ***** (5) 15 deg. (5:00 PM)
+
+draw (gh -- q62) transformed t4;
+dotlabel.rt("$q_{62}$ XVII", q62 transformed t4);
+
+
+%% ***** (5) 0 deg. (6:00 PM)
+
+draw (gh -- q64) transformed t4;
+dotlabel.rt("$q_{64}$ XVIII", q64 transformed t4);
+
+%% **** (4) End of figure 7
+
+endfig with_projection parallel_x_z with_factor 1.5;  
+
+%% *** (3) End of code for Chicago
+
+%% *** (3) Beginning of code for London 
+
+%% **** (4) Declarations and Initializations
+
+point p[];     %% Points on the dial
+
+point g[];     %% Points on the gnomon
+
+point gv;      %% Trace of gnomon on vertical plane
+point gh;      %% Trace of gnomon on horizontal plane
+
+circle c[];    %% c0 is the dial
+
+point q[];
+
+rectangle r[];  
+
+transform t[];
+
+clear bpv;
+
+string s;
+
+pen path_pen;
+path_pen := pencircle scaled (.75mm, .75mm);
+
+plane m[];
+path h[]v;
+path h[]h;
+
+%% **** (4) Parameters
+
+radius := 5;
+
+%% Goettingen:  latitude:  51 deg 32' N, longitude:   9 deg 56' E
+%% Chicago:     latitude:  41 deg 54' N  longitude:  87 deg 39' W
+%% London, UK:  51 deg. 30' 28'' N 0 deg. 7' 41'' W
+%% 51 deg. 30' 28'' N == 51.5777 N
+
+% latitude := 51.533;  %% Goettingen
+% latitude := 41.9;    %% Chicago
+
+latitude := 51.5777; %% London
+
+%% **** (4) Set equatorial circle and surrounding rectangles
+
+set c0 with_diameter (2 * radius) with_point_count 32;
+r0 := out_rectangle c0;
+r1 := r0 scaled (1.3, 0, 1.3);
+
+t0 := identity rotated (90, 90);
+
+c0 *= r0 *= r1 *= t0;
+
+
+beginfig(8); 
+
+dotlabel.lrt("$\rm{origin}$", origin);
+
+g0 := (3 * radius, 0) rotated (0, 0, -latitude);
+g1 := (-5 * radius, 0) rotated (0, 0, -latitude);
+
+drawdblarrow g0 -- g1;
+
+label.bot("$g_0$", g0);
+label.top("$g_1$", g1);
+
+p0 := (0, 0, radius);
+
+%% **** (4) Points on top of dial (vertical)
+
+for i = 15 step 15 until 180:
+  p[i] := p[i - 15] rotated -15;
+endfor;
+
+for i = 0 step 15 until 180:
+   rotate p[i] (0, 0, -latitude);
+   if false: 
+      draw origin -- p[i];
+   fi; 
+endfor;
+
+%% **** (4) Points on bottom of dial (horizontal)
+
+for i = -15 step -15 until -165:
+  p[i] := p[i + 15] rotated 15;
+endfor;
+
+for i = -15 step -15 until -165:
+   rotate p[i] (0, 0, -latitude);
+   if false: 
+      draw origin -- p[i];
+   fi; 
+endfor;
+
+%draw p[75] -- p[-105];
+
+
+%% **** (4) Rotate dial and surrounding rectangles.
+
+t2 := identity rotated (0, 0, -latitude);
+
+c0 *= r0 *= r1 *= t2;
+
+%% **** (4) Draw and label the rectangles surrounding the dial
+
+draw r0 with_color red;
+draw r1 with_color green;
+
+for i = 0 upto 3:
+   q[28 + i] := get_point (i) r0;
+   q[i] := get_point (i) r1;
+endfor;
+
+
+%% ***** (5) r0
+
+dotlabel.bot("$q_{28}$", q28);
+dotlabel.ulft("$q_{29}$", q29);
+dotlabel.top("$q_{30}$", q30);
+dotlabel.rt("$q_{31}$", q31);
+
+label.lrt("$r_0$", mediate(q28, q31, .25)) with_text_color red;
+
+%% ***** (5) r1
+
+dotlabel.bot("$q_0$", q0);
+dotlabel.ulft("$q_1$", q1);
+dotlabel.top("$q_2$", q2);
+dotlabel.rt("$q_3$", q3);
+
+label.lrt("$r_1$", mediate(q0, q3)) with_text_color green;
+
+
+%% **** (4) Get the rectangle perpendicular to r1, draw and label it (r4)
+
+q4 := unit_vector(q3 - q0) * 2 shifted q0 rotated_around(q0, q1) 90;
+q5 := unit_vector(q3 - q0) * 2 shifted q0 rotated_around(q0, q1) -90;
+
+dotlabel.lft("$q_4$", q4);
+dotlabel.lft("$q_5$", q5);
+
+
+q6 := unit_vector(q2 - q1) * 2 shifted q1 rotated_around(q0, q1) 90;
+q7 := unit_vector(q2 - q1) * 2 shifted q1 rotated_around(q0, q1) -90;
+
+dotlabel.urt("$q_6$", q6);
+dotlabel.lrt("$q_7$", q7);
+
+r4 := (q5, q4, q6, q7);
+
+draw r4 with_color cyan;
+
+label.llft("$r_4$", mediate(q4, q5, .25)) with_text_color cyan;
+
+%% **** (4) Find, draw and label the rectangle representing the vertical plane (r2)
+
+q8 := q4 shifted (0, 14);
+q9 := q6 shifted (0, 14);
+
+dotlabel.lft("$q_8$", q8);
+dotlabel.lft("$q_9$", q9);
+
+r2 := (q6, q4, q8, q9);
+
+draw r2 with_color red;
+
+label.lft("$r_2$", mediate(q4, q8)) with_text_color red;
+
+
+
+bpv := r2 intersection_points (g0 -- g1);
+
+gv := bpv0;
+
+dotlabel.urt("$g_v$", gv);
+
+
+%% **** (4) 90 deg.  Noon line.
+
+%% ***** (5) Vertical
+
+q11 := mediate(q4, q6); %% Trace of noon line on vertical plane
+
+dotlabel.rt("$q_{11}$", q11);
+
+draw gv -- q11;
+
+q12 := mediate(q5, q7);
+dotlabel.lrt("$q_{12}$", q12);
+
+draw q11 -- q12;
+
+%% **** (4) Horizontal plane (plane of r6)
+
+q50 := q0 shifted 12;
+q51 := q1 shifted 12;
+
+r6 := (q0, q1, q51, q50);
+
+draw r6 with_color orange;
+
+label.bot("$r_6$", mediate(q0, q50)) with_text_color orange;
+
+q80 := get_center r6;
+q81 := (get_normal r6 * -1) shifted q80;
+
+dotlabel.llft("$q_{80}$", q80);
+label.rt("\vbox{\hbox{$q_{81}$}\hbox{(normal to $r_6$)}}", q81);
+
+drawarrow q80 -- q81 with_color orange;
+
+dotlabel.bot("$q_{50}$", q50);
+dotlabel.rt("$q_{51}$", q51);
+
+bpv := r6 intersection_points (g0 -- g1);
+
+gh := bpv0; %% Trace of gv on r6
+
+dotlabel.urt("$g_h$", gh);
+
+%% **** (4) Planes of the vertical and horizontal rectangles
+
+m2 := get_plane r2;  %% Vertical
+m6 := get_plane r6;  %% Horizontal
+
+%% **** (4) 180 deg. (6:00 AM) 
+
+m180 := (origin, gv, p180);
+
+%% ***** (5) Vertical
+
+h180v := m180 intersection m2;
+
+bpv := h180v intersection_points r2;
+
+q75 := bpv0;
+
+dotlabel.lft("$q_{75}$", q75);
+
+draw gv -- q75;
+
+%% ***** (5) Horizontal
+
+h180h := m180 intersection m6;
+
+bpv := h180h intersection_points r6;
+
+q76 := bpv1;
+
+dotlabel.bot("$q_{76}$", q76);
+
+draw gh -- q76;
+
+%% **** (4) 165 deg. (7:00 AM) 
+
+m165 := (origin, gv, p165);
+
+%% ***** (5) Vertical
+
+h165v := m165 intersection m2;
+
+bpv := h165v intersection_points r2;
+
+q73 := bpv0;
+
+dotlabel.lft("$q_{73}$", q73);
+
+draw gv -- q73;
+
+%% ***** (5) Horizontal
+
+h165h := m165 intersection m6;
+
+bpv := h165h intersection_points r6;
+
+q74 := bpv1;
+
+dotlabel.bot("$q_{74}$", q74);
+
+draw gh -- q74;
+
+%% **** (4) 150 deg. (8:00 AM) 
+
+m150 := (origin, gv, p150);
+
+%% ***** (5) Vertical
+
+h150v := m150 intersection m2;
+
+bpv := h150v intersection_points r2;
+
+q71 := bpv0;
+
+dotlabel.lft("$q_{71}$", q71);
+
+draw gv -- q71;
+
+%% ***** (5) Horizontal
+
+h150h := m150 intersection m6;
+
+bpv := h150h intersection_points r6;
+
+q72 := bpv1;
+
+dotlabel.bot("$q_{72}$", q72);
+
+draw gh -- q72;
+
+%% **** (4) 135 deg. (9:00 AM) 
+
+m135 := (origin, gv, p135);
+
+%% ***** (5) Vertical
+
+h135v := m135 intersection m2;
+
+bpv := h135v intersection_points r2;
+
+q69 := bpv0;
+
+dotlabel.lrt("$q_{69}$", q69);
+
+draw gv -- q69;
+
+%% ***** (5) Horizontal
+
+h135h := m135 intersection m6;
+
+bpv := h135h intersection_points r6;
+
+q70 := bpv0;
+
+dotlabel.ulft("$q_{70}$", q70);
+
+draw gh -- q70;
+
+
+
+
+%% **** (4) 120 deg. (10:00 AM) 
+
+m120 := (origin, gv, p120);
+
+%% ***** (5) Vertical
+
+h120v := m120 intersection m2;
+
+bpv := h120v intersection_points r2;
+
+q67 := bpv0;
+
+dotlabel.rt("$q_{67}$", q67);
+
+draw gv -- q67;
+
+%% ***** (5) Horizontal
+
+h120h := m120 intersection m6;
+
+bpv := h120h intersection_points r6;
+
+q68 := bpv0;
+
+dotlabel.lft("$q_{68}$", q68);
+
+draw gh -- q68;
+
+
+%% **** (4) 105 deg. (11:00 AM) 
+
+m105 := (origin, gv, p105);
+
+%% ***** (5) Vertical
+
+h105v := m105 intersection m2;
+
+bpv := h105v intersection_points r2;
+
+q65 := bpv0;
+
+dotlabel.rt("$q_{65}$", q65);
+
+draw gv -- q65;
+
+%% ***** (5) Horizontal
+
+h105h := m105 intersection m6;
+
+bpv := h105h intersection_points r6;
+
+q66 := bpv0;
+
+dotlabel.lft("$q_{66}$", q66);
+
+draw gh -- q66;
+
+
+%% **** (4) 90 deg. (Noon)
+
+q13 := mediate(q0, q1); %% Trace of noon line on horizontal plane
+
+dotlabel.llft("$q_{13}$", q13);
+draw gh -- q13;
+
+
+%% **** (4) 75 deg.  (1:00 PM)
+
+%% ***** (5) Vertical
+
+m75 := (origin, gv, p75);
+
+h75v := m75 intersection m2;
+
+bpv := h75v intersection_points r2;
+
+q56 := bpv0;
+
+draw gv -- q56;
+
+dotlabel.rt("$q_{56}$", q56);
+
+%% ***** (5) Horizontal
+
+h75h := m75 intersection m6;
+
+bpv := h75h intersection_points r6;
+
+q57 := bpv0;
+
+draw gh -- q57;
+dotlabel.ulft("$q_{57}$", q57);
+
+%% **** (4) 60 deg. (2:00 PM)
+
+m60 := (origin, gv, p60);
+
+%% ***** (5) Vertical
+
+h60v := m60 intersection m2;
+
+bpv := h60v intersection_points r2;
+
+q53 := bpv0;
+
+dotlabel.rt("$q_{53}$", q53);
+
+%% ***** (5) Horizontal
+
+h60h := m60 intersection m6;
+
+bpv := h60h intersection_points r6;
+
+q58 := bpv0;
+
+draw gh -- q58;
+dotlabel.lft("$q_{58}$", q58);
+
+%% **** (4) 45 deg. (3:00 PM) 
+
+m45 := (origin, gv, p45);
+
+%% ***** (5) Vertical
+
+h45v := m45 intersection m2;
+
+bpv := h45v intersection_points r2;
+
+q54 := bpv0;
+
+dotlabel.lrt("$q_{54}$", q54);
+
+%% ***** (5) Horizontal
+
+h45h := m45 intersection m6;
+
+bpv := h45h intersection_points r6;
+
+q59 := bpv0;
+
+draw gh -- q59;
+dotlabel.lft("$q_{59}$", q59);
+
+%% **** (4) 30 deg. (4:00 PM) 
+
+m30 := (origin, gv, p30);
+
+%% ***** (5) Vertical
+
+h30v := m30 intersection m2;
+
+bpv := h30v intersection_points r2;
+
+q55 := bpv1;
+
+dotlabel.lrt("$q_{55}$", q55);
+
+draw gv -- q55;
+
+%% ***** (5) Horizontal
+
+h30h := m30 intersection m6;
+
+bpv := h30h intersection_points r6;
+
+q60 := bpv0;
+
+dotlabel.ulft("$q_{60}$", q60);
+
+draw gh -- q60;
+
+
+%% **** (4) 15 deg. (5:00 PM) 
+
+m15 := (origin, gv, p15);
+
+%% ***** (5) Vertical
+
+h15v := m15 intersection m2;
+
+bpv := h15v intersection_points r2;
+
+q61 := bpv1;
+
+dotlabel.urt("$q_{61}$", q61);
+
+draw gv -- q61;
+
+%% ***** (5) Horizontal
+
+h15h := m15 intersection m6;
+
+bpv := h15h intersection_points r6;
+
+q62 := bpv0;
+
+dotlabel.urt("$q_{62}$", q62);
+
+draw gh -- q62;
+
+%% **** (4) 0 deg. (18:00 PM) 
+
+m0 := (origin, gv, p0);
+
+%% ***** (5) Vertical
+
+h0v := m0 intersection m2;
+
+bpv := h0v intersection_points r2;
+
+q63 := bpv1;
+
+dotlabel.rt("$q_{63}$", q63);
+
+draw gv -- q63;
+
+%% ***** (5) Horizontal
+
+h0h := m0 intersection m6;
+
+bpv := h0h intersection_points r6;
+
+q64 := bpv0;
+
+dotlabel.top("$q_{64}$", q64);
+
+draw gh -- q64;
+
+%% **** (4) End of time divisions
+
+%% **** (4) Draw dial
+
+draw c0;
+
+label.urt("$c_0$", get_point(16) c0 * .875 shifted (.1, 0));
+
+%% ***** (5) Draw axes of equatorial dial
+
+draw p0 -- p180 with_color blue with_pen path_pen;
+draw p[-90] -- p90 with_color blue with_pen path_pen;
+
+%% ***** (5) Draw time divisions on vertical dial
+
+draw q16 -- gv;  %% 1:00 PM (75 deg.) 
+draw gv -- q53;  %% 2:00 PM (60 deg.)
+draw gv -- q54;  %% 3:00 PM (45 deg.)
+
+%% ***** (5) 
+
+%% **** (4) Labels for top of vertical dial.
+
+if false: 
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 6} $(180^\circ)$", p180);
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 7} $(165^\circ)$", p165);
+   dotlabel.lrt("\uppercase\expandafter{\romannumeral 8} $(150^\circ)$", p150);
+   dotlabel.llft("\uppercase\expandafter{\romannumeral 9} $(135^\circ)$", p135);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 10} $(120^\circ)$", p120);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 11} $(105^\circ)$", p105);
+
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 12} $(90^\circ)$", p90);
+   
+   dotlabel.lft("$p_{75} =$\uppercase\expandafter{\romannumeral 13} $(75^\circ)$", p75);
+   dotlabel.rt("\uppercase\expandafter{\romannumeral 14} $(60^\circ)$", p60);
+
+   s := "\setbox0=\hbox{$(45^\circ)$}" 
+        & "\vbox{\hbox to \wd0{\hfil\uppercase\expandafter{\romannumeral 15}}"
+        & "\box0}";
+
+   dotlabel.lft(s, p45);
+
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 16} $(30^\circ)$", p30);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 17} $(15^\circ)$", p15);
+   dotlabel.lft("\uppercase\expandafter{\romannumeral 18} $(0^\circ)$", p0);
+fi;
+
+%% **** (4) Labels for bottom of dial.  (horizontal)
+
+if false: 
+ dotlabel.lrt("\uppercase\expandafter{\romannumeral 7} $(-165^\circ)$", p[-165]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", p[-150]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 8} $(-150^\circ)$", p[-150]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 9} $(-135^\circ)$", p[-135]);
+ dotlabel.rt("\uppercase\expandafter{\romannumeral 10} $(-120^\circ)$", p[-120]);
+ dotlabel.lrt("\uppercase\expandafter{\romannumeral 11} $(-105^\circ)$", p[-105]);
+
+ dotlabel.urt("\uppercase\expandafter{\romannumeral 12} $(-90^\circ)$", p[-90]);
+
+ dotlabel.urt("\uppercase\expandafter{\romannumeral 13} $(-75^\circ)$", p[-75]);
+ dotlabel.ulft("\uppercase\expandafter{\romannumeral 14} $(-60^\circ)$", p[-60]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 15} $(-45^\circ)$", p[-45]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 16} $(-30^\circ)$", p[-30]);
+ dotlabel.lft("\uppercase\expandafter{\romannumeral 17} $(-15^\circ)$", p[-15]);
+fi; 
+
+
+%% **** (4) Center of r2 and normal of r2, shifted to center of r2
+
+q40 := get_center r2;
+q41 := get_normal r2 * -1 shifted q40;
+
+dotlabel.lft("$q_{40}$", q40);
+
+s := "$q_{41}$ (normal to $r_2$)";
+label.rt(s, q41);
+
+drawarrow q40 -- q41 with_color red;
+
+%% 90 deg.  Noon line on horizontal plane
+
+%% 1:00 PM line on horizontal plane
+
+%% **** (4) End of figure 8
+
+endfig with_focus f0 no_sort;
+
+
+%% *** (3) Figure 9:  Parallel projection onto vertical plane (plane of r2)
+
+beginfig(9);
+
+t3 := align (q40 -- q41) with_axis y_axis;
+rotate t3 (0, -90);
+
+r5 := r2 transformed t3;
+
+%% **** (4) Get the vertices of r5
+
+q42 := q6 transformed t3;
+q43 := q4 transformed t3;
+q44 := q8 transformed t3;
+q45 := q9 transformed t3;
+
+%% **** (4) Draw and label r5
+
+draw r5;
+
+dotlabel.rt("$q_{42}$", q42);
+dotlabel.ulft("$q_{43}$", q43);
+dotlabel.lft("$q_{44}$", q44);
+dotlabel.rt("$q_{45}$", q45);
+
+
+%% **** (4) Label the directions
+
+label("Up", mediate(q44, q45) shifted (0, 0, 1));
+label("Down", mediate(q42, q43) shifted (0, 0, -1.5));
+label("East", mediate(q42, q45) shifted 1);
+label("West", mediate(q43, q44) shifted -1);
+
+%% **** (4) Draw the dial
+
+dotlabel.top("$g_v$", gv transformed t3);
+
+%% ***** (5) 6:00 AM (180 deg.)
+
+dotlabel.lft("VI $q_{75}$", q75 transformed t3);
+
+draw (gv -- q75) transformed t3;
+
+%% ***** (5) 7:00 AM (165 deg.)
+
+dotlabel.lft("VII $q_{73}$", q73 transformed t3);
+
+draw (gv -- q73) transformed t3;
+
+
+
+%% ***** (5) 8:00 AM (150 deg.)
+
+dotlabel.lft("VIII $q_{71}$", q71 transformed t3);
+
+draw (gv -- q71) transformed t3;
+
+%% ***** (5) 9:00 AM (135 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{69}$}\hbox{IX}}", q69 transformed t3);
+
+draw (gv -- q69) transformed t3;
+
+%% ***** (5) 10:00 AM (120 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{67}$}\hbox{X}}", q67 transformed t3);
+
+draw (gv -- q67) transformed t3;
+
+%% ***** (5) 11:00 AM (105 deg.)
+
+dotlabel.bot("\vbox{\hbox{$q_{65}$}\hbox{XI}}", q65 transformed t3);
+
+draw (gv -- q65) transformed t3;
+
+
+%% ***** (5) 90 deg.  (Noon)
+
+draw (gv -- q11) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{11}$}\hbox{XII}}", q11 transformed t3);
+
+%% ***** (5) 75 deg.  (1:00 PM)
+
+draw (gv -- q56) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{56}$}\hbox{XIII}}", q56 transformed t3);
+
+%% ***** (5) 60 deg. (2:00 PM) 
+
+draw (gv -- q53) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{53}$}\hbox{XIV}}", q53 transformed t3);
+
+%% ***** (5) 3:00 PM (45 deg.)
+
+draw (gv -- q54) transformed t3; 
+dotlabel.bot("\vbox{\hbox{$q_{54}$}\hbox{XV}}", q54 transformed t3);
+
+%% ***** (5) 4:00 PM (30 deg.)
+
+dotlabel.rt("$q_{55}$ XVI", q55 transformed t3);
+
+draw (gv -- q55) transformed t3;
+
+%% ***** (5) 5:00 PM (30 deg.)
+
+dotlabel.rt("$q_{61}$ XVII", q61 transformed t3);
+
+draw (gv -- q61) transformed t3;
+
+
+%% ***** (5) 6:00 PM (0 deg.)
+
+dotlabel.rt("$q_{63}$ XVIII", q63 transformed t3);
+
+draw (gv -- q63) transformed t3;
+
+%% **** (4) End of figure 9
+
+endfig with_projection parallel_x_z with_factor 1.5;  
+
+%% *** (3) Figure 10:  Parallel projection onto horizontal plane 
+%% *** (3) (plane of r6)
+
+beginfig(10);
+
+t4 := align (q80 -- q81) with_axis y_axis;
+rotate t4 (0, -90);
+
+draw r6 transformed t4;
+
+
+%% **** (4) Label the directions
+
+label("North", q13 transformed t4 shifted (0, 0, 1.5));
+label("South", mediate(q50 transformed t4, q51 transformed t4) shifted (0, 0, -1));
+label("East", mediate(q51 transformed t4, q1 transformed t4) shifted 2.5);
+label("West", mediate(q50 transformed t4, q0 transformed t4) shifted -2.5);
+
+%% **** (4) Label the vertices of r6
+
+dotlabel.llft("$q_{0}$",  q0 transformed t4);
+dotlabel.bot("$q_{50}$", q50 transformed t4);
+dotlabel.bot("$q_{51}$", q51 transformed t4);
+dotlabel.lrt("$q_{1}$",   q1 transformed t4);
+
+%% **** (4) The trace of the gnomon on the plane of r6
+
+dotlabel.bot("$g_h$", gh  transformed t4);  
+
+
+%% **** (4) Time division points and lines
+
+%% ***** (5) 180 deg.  (6:00 AM)
+
+draw (gh -- q76) transformed t4;
+dotlabel.lft("VI $q_{76}$", q76 transformed t4);
+
+%% ***** (5) 165 deg.  (7:00 AM)
+
+draw (gh -- q74) transformed t4;
+dotlabel.lft("VII $q_{74}$", q74 transformed t4);
+
+%% ***** (5) 150 deg.  (8:00 AM)
+
+draw (gh -- q72) transformed t4;
+dotlabel.lft("VIII $q_{72}$", q72 transformed t4);
+
+%% ***** (5) 135 deg.  (9:00 AM)
+
+draw (gh -- q70) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{70}$}\hbox{IX}}", q70 transformed t4);
+
+
+%% ***** (5) 120 deg.  (10:00 AM)
+
+draw (gh -- q68) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{68}$}\hbox{X}}", q68 transformed t4);
+
+
+%% ***** (5) 105 deg.  (11:00 AM)
+
+draw (gh -- q66) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{66}$}\hbox{XI}}", q66 transformed t4);
+
+
+%% ***** (5) 90 deg.  (Noon)
+
+draw (gh -- q13) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{13}$}\hbox{XII}}", q13 transformed t4);
+
+
+%% ***** (5) 75 deg.  (1:00 PM)
+
+draw (gh -- q57) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{57}$}\hbox{XIII}}", q57 transformed t4);
+
+%% ***** (5) 60 deg.  (2:00 PM)
+
+draw (gh -- q58) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{58}$}\hbox{XIV}}", q58 transformed t4);
+
+%% ***** (5) 45 deg. (3:00 PM)
+
+draw (gh -- q59) transformed t4;
+dotlabel.top("\vbox{\hbox{$q_{59}$}\hbox{XV}}", q59 transformed t4);
+
+%% ***** (5) 30 deg. (4:00 PM)
+
+draw (gh -- q60) transformed t4;
+dotlabel.rt("$q_{60}$ XVI", q60 transformed t4);
+
+%% ***** (5) 15 deg. (5:00 PM)
+
+draw (gh -- q62) transformed t4;
+dotlabel.rt("$q_{62}$ XVII", q62 transformed t4);
+
+
+%% ***** (5) 0 deg. (6:00 PM)
+
+draw (gh -- q64) transformed t4;
+dotlabel.rt("$q_{64}$ XVIII", q64 transformed t4);
+
+%% **** (4) End of figure 10
+
+endfig with_projection parallel_x_z with_factor 1.5;  
+
+%% *** (3) End of  code for London 
+
+% *** (3) End of 3DLDF code.
+
+verbatim_metapost "end;";
+
+end;
+
+
+%% ** (2) 
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%   	 GNU Emacs editor.  The local variable list is not evaluated when an 
+%%   	 indirect buffer is visited, so it's necessary to evaluate the       
+%%   	 following s-expression in order to use the facilities normally      
+%%   	 accessed via the local variables list.                              
+%%   	 \initials{LDF 2004.02.12}.                                          
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80))    
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% End:

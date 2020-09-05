@@ -1,0 +1,64 @@
+#
+#	Doc files Makefile
+#
+#   Copyright 2009 Free Software Foundation, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+SHELL		=	/bin/sh
+
+BASE		=	..
+PARENT		=	..
+prefix		=	/usr/local
+exec_prefix	=	${prefix}
+datarootdir	=	${prefix}/share
+MANDIR		=	$(DESTDIR)${datarootdir}/man
+PDFDIR		=	$(DESTDIR)${datarootdir}/gnubatch/pdf
+INSTALL		=	/usr/bin/install -c
+INSTALL_DATA	=	${INSTALL} -m 644
+STARTLINKS	=	conn disconn dst
+
+all:  manpages pdfdocs
+
+manpages:
+	# Currently don't do anything
+
+pdfdocs:
+	# If we have pdflatex run the sub makefile
+	-type pdflatex >/dev/null 2>&1 && (cd latexdoc;$(MAKE))
+
+install install-strip: all
+	$(INSTALL) -d $(MANDIR)/man1
+	$(INSTALL) -d $(MANDIR)/man3
+	$(INSTALL) -d $(MANDIR)/man5
+	$(INSTALL) -d $(MANDIR)/man8
+	$(INSTALL_DATA) poddoc/man/*.1 $(MANDIR)/man1
+	$(INSTALL_DATA) poddoc/man/*.3 $(MANDIR)/man3
+	$(INSTALL_DATA) poddoc/man/*.5 $(MANDIR)/man5
+	$(INSTALL_DATA) poddoc/man/*.8 $(MANDIR)/man8
+	cd $(MANDIR)/man1; for p in $(STARTLINKS); do ln -f -s gbch-start.1 gbch-$$p.1; done
+	cd $(MANDIR)/man1; ln -f -s gbch-filemon.1 gbch-xfilemon.1
+	cd $(MANDIR)/man3; ln -f -s gbatch_jobfind.3 gbatch_jobfindslot.3
+	cd $(MANDIR)/man3; ln -f -s gbatch_varfind.3 gbatch_varfindslot.3
+	cd $(MANDIR)/man8; ln -f -s gbch-hostedit.8 gbch-xhostedit.8
+	$(INSTALL) -d $(PDFDIR)
+	$(INSTALL_DATA) pdf/*.pdf $(PDFDIR)
+
+clean:
+	cd latexdoc;$(MAKE) clean
+
+distclean:
+	cd latexdoc;$(MAKE) distclean
+	$(RM) Makefile

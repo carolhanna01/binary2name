@@ -1,0 +1,32 @@
+# @configure_input@
+
+srcdir = @srcdir@
+  VPATH = @srcdir@
+  SHELL = /bin/sh
+SUBDIRS = V dis src objects doc
+
+# This line is needed to force BSD-style makes to do the right target
+# by default -- they get confused by the following target.
+defaulttarget: all
+
+all install uninstall clean mostlyclean realclean TAGS tags info dvi dist test check depend:
+	@for i in $(SUBDIRS) ; do \
+		echo Making $@ in ./$${i} ... ; \
+		( cd $$i ; $(MAKE) $(MFLAGS) $@ ) ; \
+	done
+
+Makefile: Makefile.in config.status
+	$(SHELL) config.status
+
+config.status:
+	$(SHELL) $(srcdir)/configure --no-create
+
+configure: configure.in
+	cd $(srcdir); autoconf
+
+distclean:
+	@for i in $(SUBDIRS) ; do \
+		echo Making $@ in ./$${i} ... ; \
+		( cd $$i ; $(MAKE) $(MFLAGS) $@ ) ; \
+	done
+	rm -f Makefile config.status config.log config.cache

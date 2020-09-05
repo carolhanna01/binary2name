@@ -1,0 +1,88 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class SYSTEM_LEX is
+
+    private attr lex_state:INT; 
+        -- 0 for default, 1 for in comment, 2 for in string
+    private attr buf:FSTR;
+	-- contents of the file being parsed
+    private attr pos:INT;
+	-- current read position
+    private attr name:STR;
+	-- Name of the file
+
+    create(s:STR):SAME is
+        res::=new;
+	res.name:=s;
+        f::=BFILE::open_for_read(s);
+        if f.error then barf("Couldn't open system file "+s); end;
+        res.lex_state:=0;
+	res.buf:=f.fstr;
+	res.pos:=0;
+        return res;
+    end;
+
+    get_str:STR is
+	-- ignore comments and whitespace and read in a
+	-- quote-delimited string.  When the last string has been
+	-- read, this returns void.
+
+	c:CHAR;
+	tmp::=#FSTR;
+
+	loop
+	    until!(pos>=buf.size);
+	    c:=buf[pos];
+	    pos:=pos+1;
+	    case lex_state
+                when 0 then
+		    case c
+			when '-' then lex_state:=1;
+			when '\"' then lex_state:=2;
+			when '\n',' ','\t','\r','\\' then
+			else barf("Illegal character "+c.pretty
+				        +" in input file "+name);
+		    end;
+		when 1 then
+		    case c
+			when '\n','\r' then lex_state:=0;
+			else 
+		    end;
+		when 2 then
+		    case c 
+			when '\"' then lex_state:=0; return tmp.str;
+			when '\\' then -- ignore backslashes
+			else tmp:=tmp+c;
+		    end;
+		else barf("Unknown lex state in back end");
+	    end;
+	end;
+        return void;
+    end;
+
+    elt!:STR is
+        loop
+            s::=get_str;
+            if void(s) then quit;
+            else yield s;
+            end;
+        end;
+    end;
+
+    private barf(msg:STR) is
+	#ERR + msg + '\n';
+	UNIX::exit(1);
+    end;
+
+end; -- SYSTEM_LEX

@@ -1,0 +1,222 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class ARRAY3{T} < $ELT{T} is
+   -- Three-dimensional arrays of elements of type T.
+   private include AREF{T}   aclear->aclear, array_ptr->array_ptr;
+
+   readonly attr size1:INT;  -- Size of the slowest changing dimension.   
+   readonly attr size2:INT;	-- Size of the second fastest changing dimension.
+   readonly attr size3:INT;	-- Size of the fastest changing dimension.
+   private attr size23:INT;  -- size2*size3, pre-multiplied to spare a 
+                        -- multiplication in accessing the array
+
+   create(d1,d2,d3:INT):SAME  pre d1>0 and d2>0 and d3>0 is
+      -- A new three-dimensional array with dimensions `d1 x d2 x d3'
+      -- initialized to void.
+      res::=new(d1*d2*d3);
+      res.size1:=d1;
+      res.size2:=d2;
+      res.size3:=d3;
+      res.size23:=d2*d3;
+      return(res); end;
+
+   create(a: ARRAY{ARRAY{ARRAY{T}}}): SAME  
+      pre a.size > 0 and a[0].size > 0 and a[0][0].size > 0 is
+      -- Create a new array with the same dimensions and values as
+      -- a, which is an array of array(arrays(rows)). 
+      -- Assume that all the rows of "a" have the same number of elements
+      sz1 ::= a.size;
+      sz2 ::= a[0].size;
+      sz3 ::= a[0][0].size;
+      res ::= #SAME(sz1,sz2,sz3);
+      loop r::=sz1.times!; 
+	 loop c::=sz2.times!; 
+	    loop e::=sz3.times!; res[r,c,e] := a[r][c][e]; end end end;
+      return(res);
+      end;
+	 
+   copy: SAME pre ~void(self) and nr > 0 and nc > 0 and ne > 0 is
+      -- Return a new 3D array with the same set of values as self
+      res ::= #SAME(nr,nc,ne);
+      res.acopy(self);
+      return(res);
+      end;
+      
+   aget(i1,i2,i3:INT):T is
+      -- The element with indices `[i1,i2,i3]'.
+      return([i1*(size23)+i2*size3+i3]) end;
+
+   aset(i1,i2,i3:INT,val:T) is
+      -- Set the element with indices `[i1,i2,i3]' to val.
+      [i1*(size23)+i2*size3+i3]:=val end;      
+   
+-- obsolete
+   nr: INT is 
+      -- The size of the first dimension of the array. Number of rows
+      return size1 end;
+   
+-- obsolete
+   nc: INT is
+      -- The size of the second dimension of the array. Number of cols
+      return size2 end;
+-- obsolete
+   ne: INT is
+      -- The size of the third dimension of the array. Number of elements
+      return size3 end;
+
+   ind1!: INT is
+      -- Yield each value of the first index in order. The rows
+      loop yield(size1.times!); end end;
+   
+   ind2!:INT is
+      -- Yield each value of the second index in order. The columns
+      loop yield(size2.times!); end end;
+
+   ind3!:INT is
+      -- Yield each value of the third index in order. The elements
+      loop yield(size3.times!); end end;
+
+   row_ind!: INT is
+      -- Yield each value of the first index in order. The rows
+      loop yield(size1.times!); end end;
+   
+   col_ind!:INT is
+      -- Yield each value of the second index in order. The columns
+      loop yield(size2.times!); end end;
+
+   elem_ind!:INT is
+      -- Yield each value of the third index in order. The elements
+      loop yield(size3.times!); end end;
+   
+   diag_elt!: T is
+      -- Yield values along the diagonal (square in smaller dimension)
+      loop ind ::= (nr.min(nc).min(ne)).times!; yield([ind,ind,ind]) end; end;
+
+   set_diag_elt!(val:T) is
+      -- Set values along the diagonal (square in smaller dimension)
+      loop id ::= (nr.min(nc).min(ne)).times!; [id,id,id] := val; yield;  end; end;
+   
+   inds!:TUP{INT,INT,INT} is
+      -- Yield tuples of the indices of self in lexicographical order.
+      loop row ::=size1.times!;
+	 loop col::=size2.times!;
+	    loop yield(#TUP{INT,INT,INT}(row,col,size3.times!)); end end end end;
+
+   elt!: T is
+      -- Yield all elements in row major order
+      loop yield(aelt!) end; end;
+   
+   set!(val:T) is
+      -- Set all elements in row major order
+      loop aset!(val); yield; end end;
+---------------------
+   row_elt!(once row,once elem:INT):T is
+      -- Yield elements by varying index 2 and holding index 1 at `row' 
+      -- and index 3 at `elem'.
+      -- The elements of a row "row"
+      --      loop yield(aelt!(row*nc,nc,1)); end end;
+      loop yield([row,col_ind!,elem]); end; end;
+
+   col_elt!(once col,once elem:INT):T is
+      -- Yield elements by varying index 1 and holding index 2 at `col'
+      -- and index 3 at `elem'.
+      -- The elements of a "column" col
+      --      loop yield(aelt!(col,nr,nc)); end end;
+      loop yield([row_ind!,col,elem]); end; end;
+
+   elem_elt!(once row,once col:INT):T is
+      -- Yield elements by varying index 3 and holding index 2 at `col'
+      -- and index 1 at `row'.
+      -- The elements of a "elements (third dimension)" elem
+      loop yield([row,col,elem_ind!]); end; end;
+
+   set_row!(once row,once elem:INT, val:T) is
+      -- Set to val elements with varying index 2 and index 1 fixed at `row'
+      -- and the index 3 fixed at `elem'.
+      -- i.e. setting a row "row"
+      --      loop aset!(row*nc,nc,val); yield end end;
+      loop [row,col_ind!,elem]:=val; yield; end; end;
+
+   set_col!(once col,once elem:INT, val:T) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `col'
+      -- and index 3 fixed at `elem'.
+      -- i.e. setting the column col 
+      --      loop aset!(col,nr,nc,val); yield end end;
+      loop [row_ind!,col,elem]:=val; yield; end; end;
+
+   set_elem!(once row,once col:INT, val:T) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `col'
+      -- and index 3 fixed at `elem'.
+      -- i.e. setting the column col 
+      --      loop aset!(col,nr,nc,val); yield end end;
+      loop [row,col,elem_ind!]:=val; yield; end; end;
+
+   elt1!(once col,once elem:INT):T is
+      -- Yield elements by varying index 1 and holding index 2 at `col'
+      -- and index 3 at `elem'.
+      -- The elements of a "column" col
+      --      loop yield(aelt!(col,nr,nc)); end end;
+      loop yield([ind1!,col,elem]); end; end;
+
+   elt2!(once row,once elem:INT):T is
+      -- Yield elements by varying index 2 and holding index 1 at `row' 
+      -- and index 3 at `elem'.
+      -- The elements of a row "row"
+      --      loop yield(aelt!(row*nc,nc,1)); end end;
+      loop yield([row,ind2!,elem]); end; end;
+
+   elt3!(once row,once col:INT):T is
+      -- Yield elements by varying index 3 and holding index 2 at `col'
+      -- and index 1 at `row'.
+      -- The elements of a "elements (third dimension)" elem
+      loop yield([row,col,ind3!]); end; end;
+
+   set1!(once col,once elem:INT, val:T) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `col'
+      -- and index 3 fixed at `elem'.
+      -- i.e. setting the column col 
+      --      loop aset!(col,nr,nc,val); yield end end;
+      loop [ind1!,col,elem]:=val; yield; end; end;
+
+   set2!(once row,once elem:INT, val:T) is
+      -- Set to val elements with varying index 2 and index 1 fixed at `row'
+      -- and the index 3 fixed at `elem'.
+      -- i.e. setting a row "row"
+      --      loop aset!(row*nc,nc,val); yield end end;
+      loop [row,ind2!,elem]:=val; yield; end; end;
+
+   set3!(once row,once col:INT, val:T) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `col'
+      -- and index 3 fixed at `elem'.
+      -- i.e. setting the column col 
+      --      loop aset!(col,nr,nc,val); yield end end;
+      loop [row,col,ind3!]:=val; yield; end; end;
+
+----------------------------
+      
+   transpose: SAME is
+      -- Return a new array containing the transpose of self
+      res ::= #SAME(nc,nr,ne);
+      res.to_transpose_of(self);
+      return(res) end;
+   
+   to_transpose_of(a1:SAME)
+      -- Set self to the transpose of a1.
+      pre a1.nr=nc and a1.nc=nr and a1.ne=ne is
+      loop t::=inds!; [t.t1,t.t2,t.t3]:=a1[t.t3,t.t2,t.t1] end;
+      end;
+
+end; -- class ARRAY3{T}
+
+-------------------------------------------------------------------

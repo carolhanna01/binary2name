@@ -1,0 +1,70 @@
+#! /bin/sh
+#  -*- Mode: Shell-script -*-
+# dynref.test --- test dynamic scoping of definition values
+#
+# Time-stamp:        "2005-03-07 13:05:44 bkorb"
+# Author:            Bruce Korb <bkorb@gnu.org>
+# Maintainer:        Bruce Korb <bkorb@gnu.org>
+# Created:           Fri Oct 1 10:27:31 PDT 1999
+# Last Modified:     $Date: 2006/09/24 02:11:15 $
+#            by: bkorb
+#
+# $Id: dynref.test,v 4.4 2006/09/24 02:11:15 bkorb Exp $
+# ----------------------------------------------------------------------
+
+. ./defs
+
+# # # # # # # # # # TEMPLATE FILE # # # # # # # # #
+
+echo creating $testname.tpl
+cat > $testname.tpl <<'_EOF_'
+[= AutoGen5 Template test =]
+[=
+
+DEFINE nest         =][=
+
+  FOR nesting        =][=
+    IF (first-for?)
+=]The un-nested value is:  [=val_u=].[=
+    ENDIF           =][=
+  ENDFOR            =][=
+
+ENDDEF              =][=
+
+nest Val-u = "hidden value"
+
+=]
+_EOF_
+
+
+# # # # # # # # # # DEFINITIONS FILE # # # # # # # # #
+
+echo creating $testname.def
+cat > $testname.def <<_EOF_
+autogen definitions $testname;
+
+nesting = { name = one;   };
+nesting = { name = two;   };
+nesting = { name = three; };
+nesting = { name = four;  };
+_EOF_
+
+# this is the output we should expect to see
+cat > $testname.out <<_EOF_
+The un-nested value is:  hidden value.
+_EOF_
+
+echo ${AGexe} $testname.def
+${AGexe} $testname.def || failure ${AGexe} failed
+cmp -s $testname.test $testname.out || \
+  failure "`diff $testname.test $testname.out`"
+
+cleanup
+
+## Local Variables:
+## Mode: shell-script
+## indent-tabs-mode: nil
+## sh-indentation: 2
+## End:
+
+# end of dynref.test

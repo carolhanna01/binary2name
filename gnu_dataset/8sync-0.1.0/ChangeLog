@@ -1,0 +1,279 @@
+2016-04-22  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	build: Bump version number.
+	* configure.ac: Change version to 0.1.0.
+
+	README: Mention COPYING
+	* README: Mention COPYING file.
+
+2016-04-15  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Mention INSTALL in the README file.
+	* README: Mention INSTALL file.
+
+	Add generic GNU style INSTALL file
+	* INSTALL: New file.
+
+	Move README.md to README
+	* README: Renamed from README.md.
+
+	build: Add COPYING-gplv3 to EXTRA_DIST
+	* Makefile.am (EXTRA_DIST): add COPYING-GPLv3.txt
+
+	Update %8sync -> 8sync in NEWS and README.md
+	* NEWS:
+	* README.md: Update references from %8sync -> 8sync.
+
+2016-04-15  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	agenda: Rename %8sync (and %8sync-*) to 8sync (and 8sync-*)
+	* 8sync/agenda.scm (%8sync, %8sync-delay, %8sync-run, %8sync-run-at)
+	  (%8sync-run-delay, %8sync-port, %8sync-port-remove, catch-%8sync):
+	  Rename, removing % sign.  Rename all references to other %8sync-foo
+	  in definitions and comments as well.
+	  (catch-8sync): Removed aliased version.
+	  (make-async-request, setup-async-request): Rename references of
+	  %8sync-foo to 8sync-foo.
+
+	* 8sync/systems/irc.scm (make-basic-irc-handler):
+	* 8sync/systems/web.scm (receive-http-conn):
+	* tests/test-agenda.scm: Rename all %8sync-foo to 8sync-foo.
+
+2016-04-14  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	systems: web: Re-enable co-op repl with simple http server
+	* 8sync/systems/web.scm (run-simple-webserver): Uncomment enabling
+	  the coop-repl.
+
+2016-04-09  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	doc: Add scaffolding for new chapters
+	* doc/8sync.texi (Installation, Getting started, API Reference, Contributing):
+	  New chapter scaffolding added.
+
+2016-03-09  Jan Nieuwenhuizen  <janneke@gnu.org>
+
+	Add guix package.
+	* package.scm: New file.
+
+2016-02-29  Jan Nieuwenhuizen  <janneke@gnu.org>
+
+	Update texinfo menus so that info documentation builds.
+	* 8sync.texi: Run texinfo-all-menus-update.
+
+2016-02-09  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Put in a warning that 8sync has an unstable API.
+	* README.md: New text.
+
+	We're GNU 8sync now!
+	* README.md: Updated text to reflect GNU status
+
+2015-12-30  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	doc: More tweaks to the comments on copyleft section
+	* doc/8sync.texi: Tweaked documentation and added a new paragraph
+
+2015-12-18  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	doc:Updating indentation for consistency
+	doc/8sync.texi: Minor indentation tweak.
+
+	doc: Removing a sentence which made things tricky
+	doc/8sync.texi: Removed text.
+
+	Also mention requirement of permitting linking to modified versions of 8sync
+	* doc/8sync.texi: New text in 8sync license section.
+
+2015-12-18  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Reformatting documentation for easier revision control handling
+	See also:
+	  http://dustycloud.org/blog/vcs-friendly-patchable-document-line-wrapping/
+
+	* doc/8sync.texi: Reformatting/indenting text
+
+2015-12-17  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	doc: Add section: "8sync's license and general comments on copyleft"
+	* doc/8sync.texi: New section.
+
+2015-12-11  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Adding absolute basic webdev environment
+	Incomplete, but running
+
+	* 8sync/system/web.scm: New file
+	* demos/hello-web.scm: New demo file
+	* Makefile.am: Adding files
+
+2015-12-11  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Return a value to the continuations from various %8sync-* calls
+	Just doing (kont) would result in an error at times.
+
+	* 8sync/agenda.scm (%8sync-port, %8sync-port-remove, %8sync-immediate):
+	  Updated with fix.
+
+2015-12-11  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Switch from (%8sync (%run)) to just (%8sync) or (%8sync-run)
+	This is a major overhaul inspired by the fact that (%8sync-port) never
+	worked (or at least not since error propagation), because the error
+	resolution code in (%8sync) was specific to (%run).
+
+	* 8sync/agenda.scm (%run, %run-at, %run-delay, %port-request)
+	  (%port-remove-request): Removed variables.
+	  (%8sync, %8sync-run, %8sync-run-at, %8sync-run-delay)
+	  (%8sync-port, %8sync-port-remove): Updated to new pattern.
+	  (%run-with-return, %8sync-immediate): Rename.
+	* 8sync/systems/irc.scm (make-basic-irc-handler):
+	  Update from %8sync-run to %8sync
+	* tests/test-agenda.scm (run-in-fake-agenda): new helper macro
+	  (test-%run-and-friends): Updated to work with run-in-fake-agenda,
+	    and upated several calls
+	  (talk-about-the-zoo, indirection-remote-func-breaks): Updated
+
+2015-12-06  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Fix %port-request and %port-remove-request
+	Both of these need to have their continuation wrapped with (wrap).
+	I'm honestly a bit fuzzy on why this fixes things but it does.
+
+	* 8sync/agenda.scm (%port-request, %port-remove-request):
+	  Adjusted to wrap kont with `wrap' macro.
+
+2015-12-06  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	agenda: Various %port-foo enhancements
+	Export port-remove stuff, add %8sync-port-remove, and fix
+	%port-request and %port-remove-request
+
+	* 8sync/agenda.scm (%8sync-port-remove): new variable
+	  (%port-remove-request, %8sync-port-remove): exported
+	  (%port-request, %port-remove-request): Fixed calls to make-run-request
+
+2015-12-03  Mike Gerwitz  <mtg@gnu.org>
+
+	Fail configure when GUILE_PROGS cannot be found
+	Available in $prefix/share/aclocal/guile.m4
+
+2015-12-01  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	irc: shut down properly when the server does too
+	Formerly things would busyloop on irc disconnect; changed to prevent
+	that situation.
+
+	* 8sync/systems/irc.scm (make-basic-irc-handler): remove ports
+	  and don't break when the connection closes.
+
+2015-12-01  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Port removal, stop-on-nothing-to-do, and select when sleeping
+	The aligned goal here is to allow for removing ports, not busy-looping
+	when there's no ports but something to wait on, and allow for stopping
+	when nothing is remaining.  Accomplishing the latter requires all
+	of the former.
+
+	* 8sync/agenda.scm (<make-port-request>, make-port-remove-request)
+	  (port-remove-request port-remove-request?, stop-on-nothing-to-do):
+	  New variables.
+
+	  (update-agenda-from-select!): Sleep (via select, currently) when
+	  there's no ports in the queue but we still have things scheduled.
+
+	  (start-agenda): New comments
+
+2015-11-30  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Add <port-remove-request> and friends
+	* 8sync/agenda.scm (<port-remove-request>, make-port-remove-request)
+	  (port-remove-request?, port-remove-request-port, port-remove-request)
+	  (%port-remove-request, agenda-handle-port-remove-request!): New variables
+	* 8sync/agenda.scm (%port-request): Original syntax of this probably
+	  never worked; fixed.
+	* 8sync/agenda.scm (agenda-run-once): Updated for port-remove-request
+
+	Switch irc.scm to use %8sync-run
+	* 8sync/systems/irc.scm (make-basic-irc-handler): Update to use %8sync-run
+
+	tests: update to use make-q* instead of manually mutating a queue
+	* tests/test-agenda.scm: Adjust agenda queue calls to use (make-q*)
+
+2015-11-29  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	doc: 8sync code *does* use coroutines, but not generator style
+	* doc/8sync.texi: Make several clarifications between generator style
+	  coroutines and 8sync delimited continuation style, and clarify that
+	  8sync style *are* coroutines.
+
+	Fix tests to check for equality
+	* tests/test-agenda.scm: Tests were checking for test-assert
+	  where they should have been checking for test-equal.
+
+	Make use of %8sync-run in tests
+	* tests/test-agenda.scm (local-func-gets-break):
+	  Switched from `(%8sync (run foo))' to `(%8sync-run foo)'
+
+	Add %8sync-run sugar and friends
+	* 8sync/agenda.scm (%8sync-run, %8sync-run-at): New variables
+	  (%8sync-run-delay, %8sync-port): New variables
+
+	Added a TODO for myself to write (%run-immediately)
+	8sync/agenda.scm: new comment
+
+	build: Add demos/run-demo.sh and demos/ircbot.scm to EXTRA_DIST
+	* Makefile.am (EXTRA_DIST): Added `demos/run_demo.sh' and `demos/ircbot.scm'
+
+2015-11-29  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Add ./run-demo.sh script
+	This script lets you run demos in this directory no matter where
+	`guile' is installed on your system.
+
+	* demos/run-demo.sh: New file
+
+2015-11-29  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Renaming `eightsync' to `8sync' everywhere in the code
+	* eightsync/agenda.scm, 8sync/agenda.scm: Renamed
+	* eightsync/repl.scm, 8sync/repl.scm: Renamed
+	* eightsync/systems/irc.scm, 8sync/systems/irc.scm: Renamed
+	* demos/ircbot.scm: Changed module import to 8sync
+	* tests/test-agenda.scm: Changed module import to 8sync
+	* Makefile.am: Updated to reference new file naming
+
+	doc: Filled out Introduction and Acknowledgement sections
+	* doc/8sync.texi: Updated docs
+
+2015-11-29  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	Updating copyright headers to be more "modern"
+	In other words, change from physical addresses to retrieve licenses to
+	HTTP URIs.
+
+	* demos/ircbot.scm: Updated header
+	* eightsync/agenda.scm: Updated header
+	* eightsync/repl.scm: Updated header
+	* eightsync/systems/irc.scm: Updated header
+	* tests/test-agenda.scm: Updated header
+	* tests/utils.scm: Updated header
+
+2015-11-29  Christopher Allan Webber  <cwebber@dustycloud.org>
+
+	doc: Adding clarification of dual license under LGPLv3+
+	* doc/8sync.texi: Add clarification
+
+	Successfully build doc/8sync.texi skeleton manual
+	* doc/Makefile.am: Removed file
+	* Makefile.am: Added commands to build texinfo files
+	  (info_TEXINFOS, 8sync_TEXINFOS, dvi-local): New variables.
+	* .gitignore: Ignore *.info and texinfo.tex files
+	* doc/8sync.texi: Fixed @ escaping and removed unused `@end'
+
+	build: Attempt to add buildable texinfo (not all is working yet)
+	* Makefile.am (EXTRA_DIST): Added `NOCOMP_SOURCES'
+	  (SUBDIRS): New variable
+	* doc/8sync.texi: New file
+	* doc/Makefile.am: New file
+	* doc/fdl.texi: New file

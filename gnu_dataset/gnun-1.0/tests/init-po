@@ -1,0 +1,52 @@
+#! /bin/sh
+# Copyright (C) 2014 Free Software Foundation, Inc.
+
+# This file is part of GNUnited Nations.
+
+# GNUnited Nations is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# GNUnited Nations is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with GNUnited Nations.  If not, see <http://www.gnu.org/licenses/>.
+
+# Test the gnun-init-po script.
+
+"${bindir}/gnun-init-po" -C "${srcdir}/compendium.bg.po" \
+  "${srcdir}/init.pot" || exit 1
+
+date_mask='....-..-.. ..:.\{5,7\}'
+timestamp='1983-09-27 12:36-0500'
+# The PO-Revision-Date will depend on the time of checking;
+# the Language field may appear in various positions.
+"${SED}" -i -e \
+  's/^\("PO-Revision-Date:\) '"$date_mask"'\\n"$/\1 '"$timestamp"'\\n"/' \
+  -e '/^"Language: bg\\n"$/d' init.bg.po
+case "x$WDIFF" in
+  x ) file=init-no-diffs.bg.po ;;
+  * ) file=init.bg.po ;;
+esac
+diff "$srcdir/$file" init.bg.po || exit 1
+rm init.bg.po
+"${bindir}/gnun-init-po" "${srcdir}/init.pot" \
+  --compendium="${srcdir}/compendium.bg.po" || exit 1
+"${SED}" -i -e \
+  's/^\("PO-Revision-Date:\) '"$date_mask"'\\n"$/\1 '"$timestamp"'\\n"/' \
+  -e '/^"Language: bg\\n"$/d' init.bg.po
+diff "$srcdir/$file" init.bg.po || exit 1
+rm init.bg.po
+"${bindir}/gnun-init-po" -dC"${srcdir}/compendium.bg.po" \
+  "${srcdir}/init.pot" || exit 1
+"${SED}" -i -e \
+  's/^\("PO-Revision-Date:\) '"$date_mask"'\\n"$/\1 '"$timestamp"'\\n"/' \
+  -e '/^"Language: bg\\n"$/d' init.bg.po
+diff "$srcdir/init-no-diffs.bg.po" init.bg.po || exit 1
+rm init.bg.po
+
+exit 0

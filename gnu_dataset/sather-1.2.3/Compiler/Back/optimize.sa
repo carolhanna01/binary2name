@@ -1,0 +1,599 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class EXPR_HOISTED is -- helper class to hoist expressions out of loops
+   attr expr:$AM_EXPR;
+   attr is_safe:BOOL; -- true if expr has only safe attr expressions
+   attr local:AM_LOCAL_EXPR; -- local used to store the hoisted expression
+
+   create(e:$AM_EXPR,s:BOOL,l:AM_LOCAL_EXPR):SAME is 
+      r::=new;
+      r.expr:=e;
+      r.is_safe:=s;
+      r.local:=l;
+      return r; 
+   end;
+end;
+
+class OPT_CONSTANTS is
+   shared prog:PROG;
+   shared tp_int:$TP;
+   shared tp_bool:$TP;
+   shared tp_char:$TP;
+   shared zero:AM_INT_CONST;
+   shared one:AM_INT_CONST;
+   shared two:AM_INT_CONST;
+   shared m_one:AM_INT_CONST;
+   shared m_two:AM_INT_CONST;
+   shared cs_options:CS_OPTIONS;
+end;
+
+class OPT_HELPER is
+   prog:PROG is return OPT_CONSTANTS::prog ; end;
+   tp_int:$TP is return OPT_CONSTANTS::tp_int ; end;
+   tp_bool:$TP is return OPT_CONSTANTS::tp_bool ; end;
+   tp_char:$TP is return OPT_CONSTANTS::tp_char ; end;
+   zero:AM_INT_CONST is return OPT_CONSTANTS::zero ; end;
+   one:AM_INT_CONST is return OPT_CONSTANTS::one ; end;
+   two:AM_INT_CONST is return OPT_CONSTANTS::two ; end;
+   m_one:AM_INT_CONST is return OPT_CONSTANTS::m_one ; end;
+   m_two:AM_INT_CONST is return OPT_CONSTANTS::m_two ; end;
+   cs_options:CS_OPTIONS is return OPT_CONSTANTS::cs_options ; end;
+
+   private has_no_iter(am:$AM):BOOL is
+      c::=#AM_CURSOR(prog,am);
+      c.ignore_pre:=true;
+      c.ignore_post:=true;
+      c.ignore_assert:=true;
+      loop
+         a::=c.next!;
+	 typecase a when AM_ITER_CALL_EXPR then return false;
+	 else end;
+      end;
+      return true;
+   end;
+
+   private has_attr_expr(am:$AM):BOOL is
+      c::=#AM_CURSOR(prog,am);
+      c.ignore_pre:=true;
+      c.ignore_post:=true;
+      c.ignore_assert:=true;
+      loop
+         a::=c.next!;
+	 typecase a when AM_ATTR_EXPR then return true;
+	 else end;
+      end;
+      return false;
+   end;
+
+   -- check if the given AM_EXPR, which is a destination in an
+   -- assignment, may be moved to the beginning of the loop. 
+   private hoistable_dest(desta:AM_ASSIGN_STMT,c:AM_CURSOR,need_safe_attr:BOOL,in_conditional:BOOL):BOOL is
+      dest::=desta.dest;
+      if in_conditional then
+         return false;
+      else 
+	 -- we have to hide the dest. in this assignment
+	 desta.dest:=void;
+	 r::=c.is_const_in_loop(dest) and c.is_not_used_in_loop_before_eval_cur_expr(dest);
+	 desta.dest:=dest;
+	 if r and need_safe_attr then -- this means, that there could be a break!
+				      -- before executing this assignment, therefore
+				      -- we have to be sure that the early assignment
+				      -- is not visible outside the loop.
+	    typecase dest when AM_LOCAL_EXPR then
+	       return c.is_not_used_outside_innermost_loop(dest);
+	    else return false;
+	    end;
+	 end;
+	 return r;
+      end;
+   end;
+
+   -- check if the given AM_EXPR may be moved to the beginning of the loop. 
+   private hoistable(src:$AM_EXPR,c:AM_CURSOR,need_safe_attr:BOOL,in_conditional:BOOL):BOOL is
+      if c.is_current_lhs then return false; end;
+      if in_conditional then
+         return c.is_non_fatal_and_const_in_loop(src);
+      else
+         if need_safe_attr then
+	    return c.is_non_fatal_and_const_in_loop(src);
+	 else
+	    return c.is_const_in_loop(src);
+         end;
+      end;
+   end;
+
+   -- check if the given AM_EXPR, which is a destination in an
+   -- assignment, may be moved to the beginning of the loop. The function
+   -- assumes that the code will only be executed once as an initialization for
+   -- an iter.
+   private hoistable_init_dest(dest:$AM_EXPR,c:AM_CURSOR,need_safe_attr:BOOL,in_conditional:BOOL):BOOL is
+      if in_conditional then
+         return false;
+      else 
+	 if c.is_not_used_in_loop_before_eval_cur_expr(dest) then
+	    if need_safe_attr then -- this means, that there could be a break!
+	                           -- before executing this assignment, therefore
+				   -- we have to be sure that the early assignment
+				   -- is not visible outside the loop.
+	       typecase dest when AM_LOCAL_EXPR then
+	          return c.is_not_used_outside_innermost_loop(dest);
+	       else return false;
+	       end;
+	    else 
+	       return c.is_const_in_loop_before_eval_cur_expr(dest);
+	    end;
+	 else return false;
+	 end;
+      end;
+   end;
+
+   -- check if the given AM_EXPR may be moved to the beginning of the loop. The 
+   -- function assumes that the code will only be executed once as an 
+   -- initialization for an iter.
+   private hoistable_init(src:$AM_EXPR,c:AM_CURSOR,need_safe_attr:BOOL,in_conditional:BOOL):BOOL is
+      if in_conditional then
+         return c.is_non_fatal_and_const_in_loop(src);
+      else
+         if need_safe_attr then
+	    return c.is_non_fatal_and_const_in_loop_before_eval_cur_expr(src);
+	 else
+	    return c.is_const_in_loop_before_eval_cur_expr(src);
+         end;
+      end;
+   end;
+
+   make_sure_emitted(s:SIG) is
+      cgen::=prog.back_end;
+      typecase cgen when CGEN then
+         cgen.make_sure_emitted(s);
+      end;
+   end;
+      
+   check_leftover_functions(am:$AM_EXPR) is
+      c::=#AM_CURSOR(prog,am);
+      loop
+	 a::=c.next!;
+	 typecase a 
+	 when AM_ITER_CALL_EXPR then
+	    make_sure_emitted(a.fun);
+	 when AM_ROUT_CALL_EXPR then
+	    make_sure_emitted(a.fun);
+	 else end;
+      end;
+   end;
+
+   new_local(func:AM_ROUT_DEF,tp:$TP,source:SFILE_ID):AM_LOCAL_EXPR is
+      lc::=#AM_LOCAL_EXPR(source,void,tp);
+      func.locals:=func.locals.push(lc);
+      return lc;
+   end;
+
+   new_local(func:AM_ROUT_DEF,tp:$TP):AM_LOCAL_EXPR is
+      lc::=#AM_LOCAL_EXPR(func.code.source,void,tp);
+      func.locals:=func.locals.push(lc);
+      return lc;
+   end;
+
+   is_local(am:$AM):BOOL is 
+      typecase am when AM_LOCAL_EXPR then return true;
+      else end;
+      return false;
+   end;
+
+   private make_unsafe_attr(a:$AM) is
+      c::=#AM_CURSOR(prog,a);
+      loop
+         am::=c.next!;
+	 typecase am when AM_ATTR_EXPR then
+	    am.secure:=false;
+	 else end;
+      end;
+   end;
+
+   private make_safe_attr(a:$AM) is
+      c::=#AM_CURSOR(prog,a);
+      loop
+         am::=c.next!;
+	 typecase am when AM_ATTR_EXPR then
+	    am.secure:=true;
+	 else end;
+      end;
+   end;
+
+   private move_init_stmts(func:AM_ROUT_DEF,am:AM_ITER_CALL_EXPR,c:AM_CURSOR) is
+      prog.stat.incr("O: # of initializations of iters moved outside the loop");
+      if ~func.is_iter then -- if we are not in an iter we can safely move the initialization
+      			    -- out of the loop. We do this to allow const_hoisting of those
+			    -- expression out of a possible existing outer loop
+	 c.insert_in_loop_init(am.init);
+	 am.init:=void;
+	 am.init_before_loop:=true;
+      end;
+   end;
+
+   private inline_func(func:AM_ROUT_DEF,am:AM_ROUT_CALL_EXPR,c:AM_CURSOR):BOOL is
+      if ~prog.inline_routs then return false; end;
+      if c.is_lhs_of_at_expr then
+         make_sure_emitted(am.fun);
+	 return false;
+      end;
+      
+      -- prevent inlining of bodies if simple fork statements
+      if prog.fast_fork then
+	 if c.in_body_of_fork_stmt then
+	    #OUT + "INSIDE FORK STMT\n";
+	    make_sure_emitted(am.fun);
+	    return false;
+	 end;
+      end;
+      
+      ok::=false;
+      if prog.opt_debug then 
+	 #OUT+"Trying to inline the func call " + 
+           am.fun.str+":";
+      end;
+      n::=prog.inliner.general_inline(func,am);
+      if ~SYS::ob_eq(n,am) then
+	 prog.stat.incr("O: # of func calls inlined");
+	 if prog.opt_debug then 
+	    #OUT+" done\n";
+	 end;
+	 typecase n when AM_STMT_EXPR then
+	    n.replaced:=am;
+	 else 
+	    #ERR+"huch, inlined should only return a AM_STMT_EXPR?\n";
+	 end;
+	 c.replace_expr(n);
+	 ok:=true;
+      else
+	 if prog.opt_debug then
+	    #OUT+"no way\n";
+	 end;
+      end;
+      return ok;
+   end;
+
+end;
+
+class OPTIMIZE < $OPTIMIZE is
+-- This optimizer moves as many expressions as possible out of loops. An expression
+-- is movable if it is either
+-- * a constant
+-- * a constant from the beginning of the loop to its first call 
+--   and it is not in a conditional expression. We have to check two cases:
+--    if it is possible that the expression is never evaluated, because the loop
+--    terminates early (iter call, return, raise), we have to make sure that
+--    during the evaluation of the code there is no fatal error. Hence we 
+--    move only local, global and attr expressions out of the loop. Attr expressions
+--    are guarded against void accesses.
+-- * if the code is in a conditional expression, we check that all it consists only of
+--   local, global or attr expressions that are constant during the whole loop
+--   Attr expressions have to be guarded against void accesses.
+-- NOTE: if an attr expression is guarded against void accesses, the program
+--       will not stop with an "void access" but silently continue. Therefore
+--       you should not use -O if you need to check all accesses.
+
+   include OPT_HELPER;
+
+   create(p:PROG):SAME is
+      r::=new;
+      OPT_CONSTANTS::prog:=p;
+      OPT_CONSTANTS::tp_int:=TP_BUILTIN::int;
+      OPT_CONSTANTS::tp_bool:=TP_BUILTIN::bool;
+      OPT_CONSTANTS::tp_char:=TP_BUILTIN::char;
+
+      asint ::= #AS_INT_LIT_EXPR;
+      asint.val := #INTI(0);
+      OPT_CONSTANTS::zero:=#AM_INT_CONST(asint);
+      OPT_CONSTANTS::zero.tp_at:=r.tp_int;	
+
+      asint := #AS_INT_LIT_EXPR;
+      asint.val := #INTI(1);
+      OPT_CONSTANTS::one:=#AM_INT_CONST(asint);
+      OPT_CONSTANTS::one.tp_at:=r.tp_int;	
+
+      asint := #AS_INT_LIT_EXPR;
+      asint.val := #INTI(2);
+      OPT_CONSTANTS::two:=#AM_INT_CONST(asint);
+      OPT_CONSTANTS::two.tp_at:=r.tp_int;	
+
+      asint := #AS_INT_LIT_EXPR;
+      asint.val := #INTI(-1);
+      OPT_CONSTANTS::m_one:=#AM_INT_CONST(asint);
+      OPT_CONSTANTS::m_one.tp_at:=r.tp_int;	
+
+      asint := #AS_INT_LIT_EXPR;
+      asint.val := #INTI(-2);
+      OPT_CONSTANTS::m_two:=#AM_INT_CONST(asint);
+      OPT_CONSTANTS::m_two.tp_at:=r.tp_int;	
+
+      return r;
+   end;
+
+   init is
+      prog.back_end.init;
+      -- extract the typesafe options from the program
+      temp::=prog.get_options;
+      typecase temp
+      when CS_OPTIONS then OPT_CONSTANTS::cs_options := temp;
+      end;
+   end;
+
+
+   -- set the is_hot attr of AM_LOCAL_EXPR
+   mark_hot_args(func:AM_ROUT_DEF) is
+      if void(func.sig.hot) then return; end;
+      loop
+         i::=func.ind!;
+	 if i>0 then -- ignore self
+	    if func.sig.hot[i-1] then -- self is not included in sig
+	       func[i].expr.is_hot:=true;
+	    end;
+	 end;
+      end;
+   end;
+
+   do_loop_opt(func:AM_ROUT_DEF) is
+      -- if func.sig.is_iter then mark_hot_args(func); end;
+      -- unfortunatly it is very hard to do any optimizations within iters.
+      -- The problem is that it not possible to move code or evaluate 
+      -- expressions before or after the yield statement where they were.
+      -- It is for example impossible to move the expression 'a*b' out
+      -- of a loop, as you don't know if the caller may change it or not:
+      --    loop yield 1.up!*a*b; end;
+      -- This assumes that either a or b are attributes, and not locals 
+      -- of course. As it seems not worth the trouble, iters are not 
+      -- optimized at all (but we do inlining in iters, of course);
+      opt_fork::=func.sig.is_par_routine and cs_options.parloops and cs_options.side_effects and ~func.sig.get_se_context(prog).may_block;
+      has_locks::=false;
+      after_loop_break:ARRAY{BOOL}:=#(30); -- not more than 30 loop recursions
+
+      if ~func.is_iter and (prog.hoist_const or prog.move_while) then OPT_CONST::const_hoisting(func,1); end;
+
+      c::=#AM_CURSOR(prog,func.code);
+      c.ignore_pre:=true;
+      c.ignore_post:=true;
+      c.ignore_assert:=true;
+      loop
+	 am::=c.next!;
+	 typecase am
+	 when AM_PRE_STMT then  -- PRE, POST, ASSERT are not inlined, therefore we have to be sure that
+	                  -- all functions are emitted.
+	    check_leftover_functions(am.test);
+	 when AM_POST_STMT then
+	    check_leftover_functions(am.test);
+	 when AM_ASSERT_STMT then
+	    check_leftover_functions(am.test);
+	 when AM_ATTACH_STMT then
+	    make_sure_emitted(am.rout);
+	    if opt_fork and cs_options.side_effects and cs_options.parloops 
+	      and am.rout.is_fork_routine and (void(am.at) or SYS::id(am.at)=SYS::id(#AM_HERE_EXPR(void))) then
+	       con::=am.rout.get_se_context(prog);
+	       am.rout.opt_fork:=~con.may_block and ~con.forks;
+	       opt_fork:=am.rout.opt_fork;
+	    else
+	       opt_fork:=false;
+	    end;
+	 when AM_LOOP_STMT then
+	    am.no_begin_loop:=cs_options.side_effects;
+	    after_loop_break[c.loops+1]:=false;
+	 when AM_YIELD_STMT then
+	    if has_locks then
+	       l::=c.lock_stmt;
+	       if ~void(l) then l.manual_unlock:=false; end;
+	    end;
+	    after_loop_break[c.loops]:=true;
+	 when AM_RAISE_STMT then
+	    if has_locks then
+	       l::=c.lock_stmt;
+	       if ~void(l) then l.manual_unlock:=false; end;
+	    end;
+	    after_loop_break[c.loops]:=true;
+	 when AM_BREAK_STMT then
+	    c.loop_stmt.breaks:=c.loop_stmt.breaks+1;
+	    after_loop_break[c.loops]:=true;
+	 when AM_RETURN_STMT then
+	    after_loop_break[c.loops]:=true;
+	 when AM_BND_ROUT_CALL_EXPR then
+	    if prog.psather and has_locks and cs_options.side_effects then
+	       l::=c.lock_stmt;
+	       if ~void(l) then l.manual_unlock:=false; end;
+	    end;
+	 when AM_ROUT_CALL_EXPR then
+	    if cs_options.side_effects and prog.psather and has_locks then
+	       l::=c.lock_stmt;
+	       if ~void(l) then
+		  con::=am.fun.get_se_context(prog);
+		  if con.has_raise then l.manual_unlock:=false; end;
+	       end;
+	    end;
+	    if ~inline_func(func,am,c) then
+	       -- there could be a raise in this routine cal. If we are unable to
+	       -- know this (because we compile without side effects), we assume
+	       -- the worst. We only need to check that if we don't inline the call
+	       -- of course.
+	       after_loop_break[c.loops]:=after_loop_break[c.loops] 
+	           or ~c.with_side_effects or (~void(am.fun.get_se_context(prog)) and am.fun.get_se_context(prog).has_raise);
+	    end;
+	 when AM_BND_ITER_CALL_EXPR then
+	    if prog.psather and has_locks and cs_options.side_effects then
+	       l::=c.lock_stmt;
+	       if ~void(l) then l.manual_unlock:=false; end;
+	    end;
+	    am.lp.no_begin_loop:=false;
+	 when AM_ITER_CALL_EXPR then
+	    if cs_options.side_effects then
+	       con::=am.fun.get_se_context(prog);
+	       if prog.psather and has_locks then
+		  l::=c.loop_or_lock_stmt;
+		  if ~void(l) then
+		     typecase l when AM_LOCK_STMT then
+		     if con.has_raise then l.manual_unlock:=false; end;
+		     else end;
+		  end;
+	       end;
+	       if con.has_yield_in_lock then
+		  am.lp.no_begin_loop:=false;
+	       end;
+	    end;
+	    OPT_ITER::work_on_iter(func,am,c,after_loop_break);
+	    after_loop_break[c.loops]:=true;
+	 when AM_LOCK_STMT then
+	    if prog.locks_on_stack then
+	       if has_locks then
+		  l::=c.lock_stmt; -- returns the enclosing lock, if it exists
+		  if ~void(l) then l.manual_unlock:=false; end;
+	       end;
+	       am.manual_unlock:=cs_options.side_effects;
+	       has_locks:=true;
+	    end;
+	 when AM_UNLOCK_STMT then
+	    l::=c.lock_stmt;
+	    assert(~void(l)); -- there has to be a lock stmt
+	    l.manual_unlock:=false;
+	 else end;
+      end;
+      func.sig.opt_fork:=opt_fork;
+      if ~void(c.top) then -- there may be some new statements at the beginning,
+                           -- so we have to adjust func.code.
+	 tam::=c.top;
+	 typecase tam when $AM_STMT then func.code:=tam; end;
+      end;
+
+      -- after inlining we may find some more loop constants to hoist
+      if ~func.is_iter and (prog.hoist_const or prog.move_while) then 
+         loop 
+	    if prog.opt_debug then #OUT+"HOISTING\n"; end;
+	    while!(OPT_CONST::const_hoisting(func,2.upto!(10))); 
+	    if prog.opt_debug then #OUT+"AFTER HOISTING\n";
+	       AM_OUT::AM_out(func.code);
+	    end;
+	 end;
+      end;
+	
+   end;
+
+   optimize(func:AM_ROUT_DEF) is
+      if prog.opt_verbose then
+         #OUT+"working on "+func.sig.str+"\n";
+      end;
+      if ~void(prog.opt_debug_func) then
+	 prog.opt_debug:=false;
+         loop
+	    if func.sig.str.search(prog.opt_debug_func.elt!)>=0 then
+	       prog.opt_debug:=true;
+	       break!;
+	    end;
+	 end;
+      end;
+      if prog.opt_debug then -- or func.sig.str="TRANS::last_declared_helper:AM_LOCAL_EXPR" then
+	 #OUT+"Optimizing function "+func.sig.str;
+	 if ~void(func.srcsig) then
+	    #OUT+"  "+func.srcsig.str;
+	 end;
+	 #OUT+"\n";
+	 #OUT+"non optimized code {\n";
+	 am::=func.code;
+	 AM_OUT::AM_out(am);
+	 #OUT+"}\n";
+	 c::=#AM_CURSOR(prog,func.code);
+	 c.assign_in_order:=true;
+	 c.test_am_cursor;
+      end;
+
+      if cs_options.cse and cs_options.side_effects
+         then OPT_CSE::remove_cse(func); end;
+
+      do_loop_opt(func);
+
+      -- there may be some more cs to e after inlining
+      if cs_options.cse and cs_options.side_effects
+         then OPT_CSE::remove_cse(func); end;
+      -- and some more prefetching too
+      if cs_options.prefetch and cs_options.side_effects and prog.distributed then
+         OPT_PREFETCH::prefetch(func); 
+      end;
+
+      if ~void(prog.opt_debug_func) then
+	 prog.opt_debug:=false;
+         loop
+	    if func.sig.str.search(prog.opt_debug_func.elt!)>=0 then
+	       prog.opt_debug:=true;
+	       break!;
+	    end;
+	 end;
+      end;
+      if prog.opt_debug then  #OUT+"starting local analysis\n"; end;
+      if cs_options.local_opt and cs_options.side_effects and prog.distributed then
+         OPT_LOCAL::check_for_local(func); end;
+      if prog.opt_debug then  #OUT+"local analysis done\n"; end;
+
+      if prog.opt_debug or (~void(prog.opt_debug_func) and prog.opt_debug_func[0]="AM") then 
+	 #OUT+"optimized code {\n";
+	 am::=func.code;
+	 AM_OUT::AM_out(am);
+	 #OUT+"}\n";
+	 #OUT+"Optimizing function "+func.sig.str+" DONE\n";
+      end;
+      prog.back_end.emit(func);
+   end;
+
+   no_optimize(func:AM_ROUT_DEF) is
+      -- if no optimization option is on, but opt_debug is on
+      -- the compiler dumps the AM form of all functions.
+      -- Handy to get them, but definitly the wrong place
+      -- for this code. This will most certainly be deleted
+      -- in future versions of the optimizer.
+      if prog.opt_verbose then
+         #OUT+"working on "+func.sig.str+"\n";
+      end;
+      if ~void(prog.opt_debug_func) then
+	 prog.opt_debug:=false;
+         loop
+	    if func.sig.str.search(prog.opt_debug_func.elt!)>=0 then
+	       prog.opt_debug:=true;
+	       break!;
+	    end;
+	 end;
+      end;
+      if prog.opt_debug then 
+	 #OUT+"Optimizing function "+func.sig.str;
+	 if ~void(func.srcsig) then
+	    #OUT+"  "+func.srcsig.str;
+	 end;
+	 #OUT+"\n";
+	 c::=#AM_CURSOR(prog,func.code);
+	 loop
+	    am::=c.next!;
+	    loop
+	       (c.indent+1).times!;
+	       #OUT+"-";
+	    end;
+	    #OUT+"* "+SYS::str_for_tp(SYS::tp(am))+"\n";
+	 end;
+	 #OUT+"AM_OUT {\n";
+	 AM_OUT::AM_out(func.code);
+	 #OUT+"}\n";
+	 #OUT+"Optimizing function "+func.sig.str+" DONE\n";
+      end;
+      #OUT.flush;
+      prog.back_end.emit(func);
+   end;
+
+   finalize is
+       prog.back_end.finalize;
+   end;
+end;
+-- vim:sw=3:nosmartindent

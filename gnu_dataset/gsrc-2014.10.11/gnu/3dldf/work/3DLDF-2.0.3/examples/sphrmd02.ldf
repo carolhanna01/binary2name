@@ -1,0 +1,912 @@
+%%%% sphrmd02.ldf
+%%%% Created by Laurence D. Finston (LDF) Mon May 31 19:22:33 CEST 2010
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2010, 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Last updated:  August 6, 2012
+%%                August 5, 2012
+%%                June 4, 2010
+
+%% Run like this:
+
+%% 3dldf sphrmd02.ldf 
+%% mpost sphrmd02.mp 
+%% tex sphrmd02.txt 
+%% dvips -o sphrmd02.ps sphrmd02.dvi
+%% ps2pdf sphrmd02.ps
+
+%% All on one line:
+if false:
+3dldf sphrmd02.ldf && mpost sphrmd02.mp && tex sphrmd02.txt && \
+dvips -o sphrmd02.ps sphrmd02.dvi \
+&& ps2pdf sphrmd02.ps
+fi;
+
+%% View the PostScript file using Ghostview like this:
+%% gv sphrmd02.ps &
+%% or with GNU Ghostview like this:
+%% ggv sphrmd02.ps &
+
+%% View the PDF file with Acrobat Reader like this:
+%% acroread sphrmd02.pdf &
+
+%% * (1) Beginning of 3DLDF code.
+
+%% ** (2) Plans for a paper (not cardboard!) model of a sphere (Sphere Development 2)
+
+%% LOG
+%% LDF 2010.06.02.
+%% Replaced dots with crosshairs.
+%% ENDLOG 
+
+
+input "sphrmd00.lmc";
+
+verbatim_metapost "verbatimtex \font\large=cmr17 etex;";
+
+%% *** (3) Declarations and initializations
+
+
+PI := 3.141592653589793;
+
+focus f[];
+
+set f0 with_position (0, 10, -30) 
+       with_direction (0, 10, 10) with_distance 20; 
+
+circle c[];       
+
+point p[];
+
+point u[][];
+
+path q[];
+
+transform t[];
+
+pen thin_pen;
+pen line_pen;
+pen dot_pen;
+
+thin_pen := pencircle scaled (.25mm, .25mm, .25mm);
+
+line_pen := pencircle scaled (.333mm, .333mm, .333mm);
+
+dot_pen := pencircle scaled (1mm, 1mm, 1mm);
+
+pickup line_pen;
+
+color_vector cv;
+
+cv += blue;
+cv += red;
+cv += green;
+cv += cyan;
+cv += magenta;
+cv += yellow;
+cv += violet;
+cv += orange;
+cv += black;
+
+picture v[];
+
+bool_point_vector bpv;
+
+string s;
+
+numeric m[];  %% Angles
+
+numeric r[];  %% Radii
+
+numeric d[][];  %% Lengths of the horizontals.
+
+string s;
+
+
+%% *** (3) Figure 0
+
+beginfig(0); 
+  
+k := 5;
+
+m[0] := 45;  %% Angle for main curves
+
+m[1] := 35; %% Angle for inner curve for stitches
+
+m[2] := 60; %% Angle for outer curve for stitches
+
+%% m[3] := 70; %% Angle for even further out curve for offset beyond the stitches
+
+m[4] := 25;  %% Angle for further inner curves for separate tabs
+
+m[5] :=  5;  %% Angle for tabs
+m[6] := 10;  
+m[7] := 15;  
+
+r0 := 5;
+
+set c0 with_diameter 2*r0 with_point_count 64;
+
+d[0][0] := 2 * PI * r0 * m[0] / 360;
+
+d[1][0] := 2 * PI * r0 * m[1] / 360;
+
+d[2][0] := 2 * PI * r0 * m[2] / 360;
+
+%% d[3][0] := 2 * PI * r0 * m[3] / 360;
+
+d[4][0] := 2 * PI * r0 * m[4] / 360;
+
+d[5][0] := 2 * PI * r0 * m[5] / 360;
+
+d[6][0] := 2 * PI * r0 * m[6] / 360;
+
+d[7][0] := 2 * PI * r0 * m[7] / 360;
+
+% for i = 0 upto 2:
+%    s := "d[" & decimal i & "][0]:";
+%    message s;
+%    show d[i][0];
+% endfor;
+
+p0 := get_center c0;
+
+%dotlabel.rt("$p_0$", p0);
+
+rotate c0 (90, 0);
+
+draw c0;
+
+p1 := p0 shifted (0, -r0);
+%dotlabel.lrt("$p_1$", p1);
+
+%draw p0 -- p1;  %% Not really necessary.
+
+j := 2;
+
+n := 17;
+
+for i := k step k until (180 - k):
+
+%    message "i:"; 
+%    show i;
+
+   p[j] := p1 rotated (0, 0, i);
+
+   s := "$p_{" & decimal j & "}$";
+   dotlabel.lrt(s, p[j]);
+
+   draw p0 -- p[j];  %% Not really necessary.
+
+   j += 1;
+
+   p[j] := (0, ypart p[j - 1]);
+
+   r[i] := magnitude (p[j] - p[j - 1]);
+
+   %s := "r[" & decimal i & "]:";
+   %message s;
+   %show r[i];
+
+   %s := "Points " & decimal (j - 1) & " and " & decimal j;
+   %message s;  
+
+   %s := "$p_{" & decimal j & "}$";
+
+   %dotlabel.ulft(s, p[j]);
+
+   draw p[j - 1] -- p[j];  %% Not really necessary.
+
+   j += 1;
+
+   d[0][i] := (2 * PI * r[i] *  m[0]) / 360;
+   d[1][i] := (2 * PI * r[i] *  m[1]) / 360;
+   d[2][i] := (2 * PI * r[i] *  m[2]) / 360;
+%  d[3][i] := (2 * PI * r[i] *  m[3]) / 360;
+   d[4][i] := (2 * PI * r[i] *  m[4]) / 360;
+   d[5][i] := (2 * PI * r[i] *  m[5]) / 360;
+   d[6][i] := (2 * PI * r[i] *  m[6]) / 360;
+   d[7][i] := (2 * PI * r[i] *  m[7]) / 360;
+
+
+%   s := "d[0][" & decimal i & "]:";
+%
+%   message s;
+%   show d[0][i];
+
+
+endfor;
+
+dotlabel.bot("$p_{1}$", p1);
+dotlabel.lft("$p_{13}$", p13);
+
+%message "magnitude(p13 - p1):";
+%show magnitude(p13 - p1);
+
+% message "p0:"; 
+% show p0;
+
+% message "p13:"; 
+% show p13;
+
+% show p0;
+% show p8;
+% show p9;
+
+set c1 with_diameter (2 * r30);  %% Added LDF 2012.08.05.  Used in fig. 3, below.
+rotate c1 (90, 0);
+%shift c1 by p13;
+%draw c1;  
+
+endfig with_projection parallel_x_y no_sort;
+
+
+%% *** (3) Figure 1
+
+e := PI * r0;
+f := e * k / 180;
+
+numeric ZERO;
+ZERO := 0;
+
+numeric h_offset;
+numeric ht;
+
+
+beginfig(1); 
+
+p2 := (0, e);
+
+draw origin -- p2 with_pen thin_pen;
+
+j := 1;
+
+q0  += origin;
+q1  += origin;
+q2  += origin;
+q3  += origin;
+q4  += origin;
+q5  += origin;
+q6  += origin;
+q7  += origin;
+q8  += origin;
+q9  += origin;
+q10 += origin;
+q11 += origin;
+q12 += origin;
+q13 += origin;
+q14 += origin;
+
+q0  += ..;
+q1  += ..;
+q2  += ..;
+q3  += ..;
+q4  += ..;
+q5  += ..;
+q6  += ..;
+q7  += ..;
+q8  += ..;
+q9  += ..;
+q10 += ..;
+q11 += ..;
+q12 += ..;
+q13 += ..;
+q14 += ..;
+
+m := 1;
+
+%message "k:"; 
+%show k;
+
+path temp_path;
+numeric tab_dir_val;
+
+tab_dir_val := 1;
+
+for i := k step k until (180 - k):
+
+   if (i == 35) or (i == 155):
+      % message "iteration (j):";
+      % show j;
+      % message "i:"; 
+      % show i;
+      % message "magnitude (p3 - p4):"; 
+      % show magnitude (p3 - p4);
+      %drawdot p3 with_color red with_pen pencircle scaled (1.5mm, 1.5mm, 1.5mm);
+      %drawdot p4 with_color red with_pen pencircle scaled (1.5mm, 1.5mm, 1.5mm);
+
+      temp_path := p3 -- p4;
+
+      tab (temp_path, ZERO, h_offset, ht) {0, 1, .875, .75, .2, 5, tab_dir_val};
+      tab_dir_val *= -1; %% Switch direction for second tab.  LDF 2012.08.05.
+
+   fi;
+  
+
+   p3 := (-d[0][i]/2, j * f);  %% Points on main curves
+   p4 := (d[0][i]/2, j * f);
+
+   p5 := (-d[1][i]/2, j * f);  %% Points on inner curves
+   p6 := (d[1][i]/2, j * f);
+
+   p7 := (-d[2][i]/2, j * f);  %% Points on outer curves
+   p8 := (d[2][i]/2, j * f);
+
+
+   p9 := (d[3][i]/2, j * f);  %% Point on even further out curve
+
+   p10 := (-d[4][i]/2, j * f);  %% Points on further inner curves
+   p11 := (d[4][i]/2, j * f);   
+
+   p12 := (-d[5][i]/2, j * f);  %% Points on tabs
+   p13 := (d[5][i]/2, j * f);  
+
+   p14 := (-d[6][i]/2, j * f);  
+   p15 := (d[6][i]/2, j * f);  
+
+   p16 := (-d[7][i]/2, j * f);  
+   p17 := (d[7][i]/2, j * f);  
+
+
+   if (i == 45) or (i == 90) or (i == 135):  %% Horizontals
+      draw p3 -- p4 dashed evenly;
+   else: 
+      draw p3 -- p4 with_color gray;  
+   fi;
+
+
+
+   q0 += p3;                   %% Main curves
+   q1 += p4;
+
+   q2 += p5;                   %% Inner curves
+   q3 += p6;
+
+   if magnitude n == 15:          %% Added.  LDF 2010.06.04.
+      old_crosshair{(mediate(p4, p5, .25)), .1cm};
+      old_crosshair{(mediate(p5, p4, .25)), .1cm};
+   fi;
+ 
+   if magnitude n < 15:
+      old_crosshair{p5, .1cm};
+      old_crosshair{p6, .1cm};  
+   fi;
+
+   %drawdot p6 with_pen dot_pen;
+
+   q4 += p7;                   %% Outer curves
+
+   q5 += p8;                   %% Even futher out curve
+
+   q6 += p9;                   
+
+   p32 := p5 shifted (-.333cm, 0);
+   p34 := p32 shifted (-.333cm, 0);
+
+   p33 := p6 shifted (.333cm, 0);
+   p35 := p33 shifted (.333cm, 0);
+
+   tick{p32, -.25cm};
+   tick{p33, .25cm};
+
+   if n >= 0:
+      s := decimal n;
+   else:
+      s := decimal -n;
+   fi;
+
+   if is_even n:
+      label.lft(s, p34);
+   fi;
+
+   if is_even n:
+      label.rt(s, p35);
+   fi;
+
+   q9  += p12;  %% Tabs
+   q10 += p13;
+
+   q11 += p14;
+   q12 += p15;
+
+   q13 += p16;
+   q14 += p17;
+
+
+   
+   if magnitude n < 15:
+      old_crosshair{p6, .1cm};
+   fi;
+
+
+   %drawdot p8 with_pen dot_pen;
+   
+   n -= 1;
+
+   j += 1;
+
+   m += 1;
+
+endfor;
+
+q0 += p2;
+q1 += p2;
+
+q2  += p2;
+q3  += p2;
+q4  += p2;
+q5  += p2;
+q6  += p2;
+q7  += p2;
+q8  += p2;
+q9  += p2;
+q10 += p2;
+
+draw q0;  %% Outer curve, left.
+draw q1;  %% Outer curve, right.
+
+draw q2 dashed evenly withpen thin_pen;  %% Inner curves for stitches
+draw q3 dashed evenly withpen thin_pen;
+
+%draw q4;
+%draw q5 dashed evenly withpen thin_pen;
+
+draw q7 dashed evenly;
+draw q8 dashed evenly;
+
+draw q6;  %% Middle vertical line
+
+%dotlabel.rt("$p_0$", p0);
+%dotlabel.lrt("$p_1$", p1);
+%dotlabel.lrt("$p_2$", p2);
+
+v0 := currentpicture;
+v1 := v0;
+
+p30 := (0, .5e);
+p31 := p30;
+
+a := 6.5;
+
+t0 := identity shifted (a, 0);
+
+clear current_picture;
+
+t2 := identity shifted (.5a, 0);
+
+q15 := q6;
+
+for i = 9 upto 15:
+   q[i] *= t2;
+endfor;
+
+%%draw q9;   %% Curves for tabs
+%%draw q10;
+draw subpath (4, 33) of q11 dashed evenly;
+draw subpath (4, 33) of q12 dashed evenly;
+draw subpath (4, 33) of q13;
+draw subpath (4, 33) of q14;
+
+draw q15;  %% Middle line of tab
+
+n := -14;
+
+for i = 4 upto 32:
+
+   if n < 0:
+      s := decimal -n;
+   else:
+      s := decimal n;
+   fi;
+
+   if (i == 9) or (i == 18) or (i == 27):
+      draw get_point(i) q13 -- get_point (i) q14 dashed evenly;
+   else:
+      draw get_point(i) q13 -- get_point (i) q14 with_color gray;
+   fi;
+
+   p36 := (get_point (i) q11);
+   p37 := p36 shifted (-.5cm, 0);
+
+   p38 := (get_point (i) q12);
+   p39 := p38 shifted (.5cm, 0);
+
+   if is_even n:
+      label.lft(s, p37);
+      label.rt(s, p39);
+   fi;
+
+   tick{p37, .25cm};
+   tick{p39, -.25cm};
+
+   if (i > 4) and (i < 32):
+      %drawdot get_point (i) q11 with_pen dot_pen;
+      %drawdot get_point (i) q12 with_pen dot_pen;
+      old_crosshair{get_point (i) q11, .1cm}; 
+      old_crosshair{get_point (i) q12, .1cm}; 
+   fi;
+
+   n += 1;
+
+endfor;
+
+p40 := get_point(4) q13;
+p41 := get_point (4) q14;
+
+draw p40 -- p41;
+
+p44 := mediate(p40, p41, 5);
+p45 := mediate(p41, p40, 5);
+
+draw p44 -- p41 dashed evenly with_color gray;
+draw p45 -- p40 dashed evenly with_color gray;
+
+p42 := get_point(32) q13;
+p43 := get_point(32) q14;
+
+draw p42 -- p43;
+
+p46 := mediate(p43, p42, 5);
+p47 := mediate(p42, p43, 5);
+
+draw p46 -- p42 dashed evenly with_color gray;
+draw p47 -- p43 dashed evenly with_color gray;
+
+
+v2 := current_picture;
+v4 := v2;
+
+clear current_picture;
+
+for i = 1 upto 4:  %% 4
+   s := "{\large " & decimal i & "}";
+   label.urt(s, p31);
+   currentpicture += v1;
+   v1 *= t0;
+   p31 *= t0;
+endfor;
+
+%% Second row
+
+v1 := v0;
+v2 := v4;
+
+p31 := p30;
+
+t1 := identity shifted (0, -19);
+
+v2 *= v1 *= t1;
+p31 *= t1;
+
+for i = 5 upto 8:
+   s := "{\large " & decimal i & "}";
+   label.urt(s, p31);
+   currentpicture += v1;
+   v1 *= t0;
+   p31 *= t0;
+endfor;
+
+%dotlabel.rt("$p_0$", p0);
+%dotlabel.lrt("$p_1$", p1);
+
+endfig with_projection parallel_x_y no_sort;
+
+%% *** (3)
+
+beginfig(2); 
+
+v2 := v4;
+
+t3 := identity shifted (3cm, 0);
+
+for i = 0 upto 8:
+   current_picture += v2;
+   v2 *= t3;
+endfor;
+
+t4 := identity shifted (0, -14cm);  %% -17.5cm
+
+v2 := v4;
+v2 *= t4;
+
+
+for i = 0 upto 8:
+   current_picture += v2;
+   v2 *= t3;
+endfor;
+
+endfig with_projection parallel_x_y no_sort;
+
+%% *** (3) Figure 3, Octagonal caps
+
+beginfig(3); 
+
+%draw c1;
+
+%message "circumference c1:"; 
+%show circumference c1;
+
+numeric side_length;
+
+side_length := (circumference c1) / 8;
+
+% message "side_length:"; 
+% show side_length;
+
+%message "r30:"; 
+%show r30;
+
+reg_polygon rp[];
+rp0 := unit_octagon scaled (r30, 0, r30) rotated (90, 0);
+
+%draw rp0;
+
+point p[];
+
+for i = 0 upto 7:
+   p[i] := get_point (i) rp0;
+endfor;
+
+numeric rp_zero_side_length;
+
+rp_zero_side_length := magnitude (p0 - p1);
+
+%message "rp_zero_side_length:"; 
+%show rp_zero_side_length;
+
+numeric temp_val;
+
+temp_val := side_length / rp_zero_side_length;
+
+%message "temp_val:"; 
+%show temp_val;
+
+rp1 := rp0 scaled (temp_val, temp_val);
+
+%message "rp1:"; 
+%show rp1;
+
+c2 := in_circle rp1;
+
+%message "c2:"; 
+%show c2;
+
+%draw c2;
+
+
+draw rp1;  %% rp1 is scaled so that the length of one side is equal to 
+           %% 1/8 of the circumference of c1.
+           %% LDF 2012.08.05.
+
+
+old_crosshair{origin, .1cm};
+
+for i = 0 upto 7:
+   p[i + 8] := get_point (i) rp1;
+endfor;
+
+point temp_pt;
+
+temp_pt := mediate(p[8], p[15]);
+old_crosshair{mediate(origin, temp_pt, .675), .1cm};
+
+for i = 8 upto 14:
+   temp_pt := mediate(p[i], p[i + 1]);
+   old_crosshair{mediate(origin, temp_pt, .675), .1cm};
+endfor;
+
+
+numeric rp_one_side_length;
+
+rp_one_side_length := magnitude (p8 - p9);  %% 1.9635 Current value.  LDF 2012.08.06.
+
+%message "rp_one_side_length:"; 
+%show rp_one_side_length;
+
+%show rp1;
+
+%message "p8:";      %% Radius of rp1:  2.56543cm
+%show magnitude p8;
+
+%message "get_center rp1:"; 
+%show get_center rp1;
+
+% label.top("$p_8$", p0);
+% label.top("$p_9$", p1);
+% label.top("$p_{10}$", p10);
+% label.top("$p_{11}$", p11);
+% label.top("$p_{12}$", p12);
+% label.top("$p_{13}$", p13);
+% label.top("$p_{14}$", p14);
+% label.top("$p_{15}$", p15);
+
+
+reg_polygon poly;
+poly := rp1;
+
+tab (poly, ZERO, h_offset, ht) {0, 1, .875, .75, .2, 5, 1};
+tab (poly, ZERO, h_offset, ht) {1, 2, .875, .75, .2, 5, 1};
+tab (poly, ZERO, h_offset, ht) {2, 3, .875, .75, .2, 5, 1};
+tab (poly, ZERO, h_offset, ht) {3, 4, .875, .75, .2, 5, 1};
+tab (poly, ZERO, h_offset, ht) {4, 5, .875, .75, .2, 5, 1};
+tab (poly, ZERO, h_offset, ht) {5, 6, .875, .75, .2, 5, 1};
+tab (poly, ZERO, h_offset, ht) {6, 7, .875, .75, .2, 5, 1};
+tab (poly, ZERO, h_offset, ht) {7, 0, .875, .75, .2, 5, 1};
+
+picture octagon_picture;
+octagon_picture := current_picture;
+
+shift octagon_picture (6cm, 0);
+
+current_picture += octagon_picture;
+
+picture tab_picture;
+
+temp_path := p8 -- p15;
+
+temp_val := magnitude (p8 - p15);
+
+for i = 0 upto 3:
+   temp_path := (p8 -- p15) shifted (6cm, 0);
+   shift temp_path (i * temp_val, 0);
+   for j = 0 upto 7:
+      tab (temp_path, tab_picture, h_offset, ht) {0, 1, .875, .75, .2, 5, 1};
+      tab (temp_path, tab_picture, h_offset, ht) {0, 1, .875, .75, .2, 5, -1};
+      shift temp_path (0, -3.5ht);
+   endfor;
+endfor;
+
+shift tab_picture (5cm, 0);
+current_picture += tab_picture;
+
+
+endfig with_projection parallel_x_y no_sort;
+
+% r[30]:
+% >> 2.5
+% Points 12 and 13
+
+%% *** (3) Figure 999 (scratch picture) Crosshairs
+
+picture crosshair_picture;
+
+beginfig(999);
+   old_crosshair{origin, .1cm};
+
+   temp_pt := mediate(p[8], p[15]);
+   old_crosshair{mediate(origin, temp_pt, .675), .1cm};
+
+   for i = 8 upto 14:
+      temp_pt := mediate(p[i], p[i + 1]);
+      old_crosshair{mediate(origin, temp_pt, .675), .1cm};
+   endfor;
+
+   crosshair_picture := current_picture;
+
+endfig;  
+
+
+
+%% *** (3) Figure 4 (1004, 2004, 3004, 4004)
+%% *** (3) Octagonal pyramid.
+%% LDF 2012.08.06.
+
+picture u, v, w, text_picture, dbl_tab_picture;
+
+numeric diameter_two;
+
+clear u;
+clear v;
+clear w;
+clear text_picture;
+clear dbl_tab_picture;
+
+
+
+% 2.56543
+
+pyramid (u, v, w, text_picture, dbl_tab_picture, diameter_two, ZERO, ZERO) 
+        {8, (2 * 2.56543), 0.669873, 0, 0, 5, 0, true, false};
+
+beginfig(4);
+   current_picture := u;
+endfig with_focus f0 no_sort;
+
+beginfig(1004);
+   current_picture += v;
+   current_picture += crosshair_picture;
+endfig with_projection parallel_x_y no_sort;
+
+beginfig(2004);
+   current_picture += w;
+   current_picture += crosshair_picture;
+endfig with_projection parallel_x_y no_sort;
+
+beginfig(3004);
+   current_picture += text_picture;
+endfig with_projection parallel_x_y no_sort;
+
+beginfig(4004);
+   current_picture += dbl_tab_picture;
+endfig with_projection parallel_x_y no_sort;
+
+
+
+
+
+
+%% *** (3) End of 3DLDF code
+
+verbatim_metapost "end;";
+
+end;
+
+
+
+%% ** (2) 
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%       GNU Emacs editor.  The local variable list is not evaluated when an 
+%%       indirect buffer is visited, so it's necessary to evaluate the       
+%%       following s-expression in order to use the facilities normally      
+%%       accessed via the local variables list.                              
+%%       LDF 2004.02.12.
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% End:
+

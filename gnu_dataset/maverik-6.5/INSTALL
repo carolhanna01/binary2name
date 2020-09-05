@@ -1,0 +1,273 @@
+
+Building GNU Maverik on UNIX machines
+=====================================
+
+To build Maverik you need X11 and either OpenGL, Mesa (version 3.1 or
+above) or IrisGL.
+
+Untar the Maverik distribution file which creates the directory
+structure shown at the end of this document.
+
+Move into the Maverik directory and type "./setup" followed by
+"make". This will compile the Maverik library, example programs, and
+any demo programs present.
+
+The "setup" script generates a Makefile appropriate to your
+machine. Currently supported UNIX platforms are Irix, RedHat, FreeBSD
+and SunOS5. However, we believe that Maverik itself should compile on
+any UNIX platform with X11 and OpenGL/Mesa, so, if you are using a
+different platform, edit the script, fill in the appropriate values
+and mail us the amendments for inclusion in the next release.
+
+The setup script accepts the following command line options:
+
+--help - prints a help message detailing these arguments.
+--debug - to compile with "-g" rather than full optimization.
+--VRML97 - to specify that you want VRML97 support (requires a C++
+           compiler, flex and bison).
+--MESAPATH - to specify where Mesa is installed if it is not somewhere
+             where the compiler will automatically pick up. Also see
+             note below.
+--XLIBPATH - to specify where the X library is installed if not in
+             /usr/X11R6/lib.
+--IrisGL - to specify that you want an IrisGL based graphics module
+           (no longer actively supported).
+--GTK - to specify that you want a GTK based graphics module
+--QT - to specify that you want a Qt based graphics module
+--D3D - to specify that you want a Direct3D based graphics module
+        (Cygwin only and see http://www.jabadaw.co.uk/maverik)
+--D3DINCL - to specify the location of the Direct3D include files
+--TDMPATH - to specify the use and location of TDM (6 DOF input device
+            support).
+--TRINCL and --TRLIBS - to specify the use of the Tiled Rendering
+                        library and where to find its include and
+                        library file.
+--PNGINCL and --PNGLIBS - as above but for the PNG library
+                          (requires the zlib library)
+--VV - to specify that you want ViaVoice support (requires the
+       ViaVoice SDK)
+
+Not all options are applicable to all platforms.
+
+An Irix6.x complication use the n32 ABI and, if an R10k processor is
+detected, mips4 and r10000 options. 
+
+"-O2" optimization is used on Irix platforms, and "-O2
+-finline-functions -fomit-frame-pointer -funroll-loops -ffast-math -march=`uname -m`" 
+on RedHat and FreeBSD.
+
+If the Mesa library file is not installed somewhere where the compiler
+will automatically pick it up, RedHat users may need to add its
+location to their LD_LIBRARY_PATH in order to link and run the Maverik
+examples. This is not the case for an RPM installation of Mesa.
+
+FreeBSD users: run the setup script and compile as root. When
+compilation is complete type: ldconfig -m <Maverik path>/lib 
+If when compiling your own Maverik program an error message is
+produced for including the header files, the easiest solution is to: 
+mkdir /usr/include/maverik; cp <Maverik path>/incl/* /usr/local/include/maverik/ 
+Any questions on compiling and running Maverik on FreeBSD should be
+directed to Joe Topjian (kazar@telerama.com).
+
+
+
+Building GNU Maverik on Windows machines
+========================================
+
+There are two broad options for building Maverik on a Windows machine:
+(1) use Cygwin, or (2) use a native Windows compiler such as Microsoft
+Visual C++ or Borland C++ builder (we do not have access to other
+compilers to test the code with).
+
+Using Cygwin
+------------
+
+The Cygwin tools are ports of the popular GNU development tools and
+utilities for Windows 9x/ME/NT/2000. This provides a UNIX like
+environment in which to build Maverik. Version 1.1.6 or newer of
+Cygwin is required to compile Maverik. Cygwin can be downloaded for
+free from http://www.cygwin.com.
+
+To build Maverik using Cygwin start a bash shell and follow the Unix
+instructions given above (although not all of the options to the setup
+script are applicable).
+
+When building Maverik with Cygwin the libraries are statically linked
+and the kernel assumes that (at least) all of the standard modules are
+present. Because of this the kernel examples cannot be compiled.
+
+More information on installing Cygwin and Maverik can be found at 
+http://www.jabadaw.co.uk/maverik
+
+Using Visual C++
+----------------
+
+Workspace and project files for Microsoft Visual C++ (version 6.0) can
+be found in the vc++ sub-directory of the Maverik distribution. These
+compile the Maverik libraries and example programs.
+
+Move into the vc++ sub-directory and double-click on "maverik.dsw".
+This should launch Visual C++. Build the libraries and examples by
+selecting batch build (Build->Batch Build->Build).
+
+The executables for the examples are placed in the same sub-directory
+of the Maverik distribution as their respective source files,
+eg. examples/MPG, examples/misc/stereo. Some of the examples need to
+be executed from this location in order to correctly pick up texture
+and model files. Move into the directories and double-click on the
+relevant icons. Further, some examples need command line arguments so
+simply double-clicking the icon or executing them from Visual C++ will
+not work.
+
+As of version 6.2 the Maverik libraries are created as DLLs and
+therefore their location needs to be present in the PATH environment
+variable.
+
+The Maverik libraries are automatically built as needed by the
+examples and are placed in the lib sub-directory. The Maverik
+libraries are built using the "debug single-threaded" runtime
+libraries and thus may fail to link with code built using different
+versions of the runtime libraries.
+
+To build the Maverik demos (if present) double click on "demos.dsw".
+
+To build a Direct3D version of Maverik, instead of the default OpenGL,
+rename the libmaverik-d3d.dsp file in the vc++ sub-directory to be
+libmaverik.dsp.
+
+Using Borland C++ Builder
+-------------------------
+
+See http://www.jabadaw.co.uk/maverik/borland.html.
+
+
+
+Building GNU Maverik on a Macintosh
+===================================
+
+To be able to compile Maverik you must install Apple's implementation
+of OpenGL on your Mac (http://www.apple.com/opengl). The code has been
+tested with the Metrowerks Codewarrior compiler. To compile Maverik
+with this compiler: add all files in the src/kernel, src/callbacks,
+src/SMS, src/windows, src/navigation, and src/objects directories plus
+the src/gfx/mav_gfxOpenGL.c and src/gfx/mav_gfxWMOpenGLMacOS.c files
+to a new Codewarrior project; ensure that the "incl" directory is in
+the project's access paths, via the Project Settings dialog; and add
+the OpenGLStubLib and OpenGLStubUtilLib from Apple's OpenGL SDK to the
+project.
+
+By default a hardware accelerated OpenGL context is used, in order to
+use software rendering define MAV_MACNOACC during compiling.
+
+
+
+Testing the system
+==================
+
+To test that the Maverik libraries and examples have been successfully
+compiled, we suggest you try executing eg1 in the examples/MPG
+sub-directory of the Maverik distribution. You should see a window
+appear and display the Maverik welcome message (which consists of
+a spiraling Maverik logo with various copyright, version and contact
+information). When the message clears you should see an empty blue
+window. Press Shift-ESC to quit.
+
+Note that the Maverik libraries are dynamically linked so you may need
+to set your LD_LIBRARY_PATH (or LD_LIBRARYN32_PATH for Irix6) to
+include the Maverik library directory in order to run the example
+program, e.g. for a bash shell:
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/maverik-6.5/lib
+
+RedHat users may also need to add the location of the Mesa library to
+this line, see note in previous section. The location of the TDM
+libraries, if used, may also need to be added to the LD_LIBRARY_PATH
+environment variable.
+
+
+
+Compiling with Maverik
+======================
+
+The Makefiles for the example programs have been made as simple as
+possible so as to allow them to be used for compiling your own Maverik
+programs (or indeed versions of the examples that have been copied
+into a users workspace and modified). To use these Makefiles you
+will need to set the following environment variables:
+
+1) MAV_HOME to indicate where Maverik is installed
+   e.g. export MAV_HOME=/usr/local/maverik-6.5
+
+2) CC to specify the various compiler options
+   e.g. for RedHat
+   export CC="gcc -O2 -finline-functions -fomit-frame-pointer -funroll-loops -ffast-math -march=`uname -m`"
+
+   e.g. for Irix6 with an R10k processor
+   export CC="cc -n32 -mips4 -r10000 -O3"
+
+Both of these environment variables are correctly set for you when the
+example are automatically compiled.
+
+
+
+Contents
+========
+
+The Maverik distribution contains the source code, include files,
+worked example programs and documentation consisting of a Programmers
+Guide (to accompany the examples) and a Functional Spec. Also
+available via a separate download is a Maverik "demos" distribution
+which contains a number of applications that have been developed using
+Maverik.
+
+The tar file creates the following directory structure:
+
+ maverik-6.5
+    |
+    +-- demos (essentially empty, available as a separate download)
+    |
+    +-- doc
+    |    | 
+    |    +-- MPG (Maverik Programmers Guide)
+    |    |    |
+    |    |    +-- sub-directories for postscript and pdf versions
+    |    |
+    |    +-- MFS (Maverik Functional Specification)
+    |         |
+    |         +-- sub-directories for postscript, pdf, HTML and man page versions
+    |
+    +-- examples
+    |    |
+    |    +-- MPG
+    |    |
+    |    +-- kernel
+    |    |
+    |    +-- misc
+    |         |
+    |         +-- various sub-directories
+    |
+    +-- incl
+    |
+    +-- lib
+    |    
+    +-- src 
+    |    |
+    |    +-- SMS
+    |    | 
+    |    +-- callbacks
+    |    |
+    |    +-- extras
+    |    |    |
+    |    |    +-- various sub-directories
+    |    | 
+    |    +-- gfx
+    |    | 
+    |    +-- kernel
+    |    | 
+    |    +-- navigation
+    |    | 
+    |    +-- objects
+    |    | 
+    |    +-- windows   
+    |
+    +-- vc++ (workspace and project files for compiling with Visual C++)

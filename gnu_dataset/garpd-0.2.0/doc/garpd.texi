@@ -1,0 +1,263 @@
+\input texinfo @c -*-texinfo-*-
+@comment $Id$
+@c %**start of header
+@setfilename garpd.info
+@include version.texi
+@settitle Gratuitous ARP Daemon @value{VERSION}
+@syncodeindex pg cp
+@finalout
+@c %**end of header
+
+@copying
+This manual is for GNU Garpd (version @value{VERSION}, @value{UPDATED}).
+Copyright @copyright{} 2010 Gluster, Inc.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with the Front-Cover Texts being ``A GNU Manual,''
+and with the Back-Cover Texts as in (a) below.  A copy of the license
+is included in the section entitled ``GNU Free Documentation
+License.''
+
+(a) The FSF's Back-Cover Text is: ``You have freedom to copy and
+modify this GNU Manual, like GNU software.  Copies published by the
+Free Software Foundation raise funds for GNU development.''
+@end quotation
+@end copying
+
+@dircategory Network Applications
+@direntry
+* Garpd: (garpd).  Gratuitous ARP Daemon
+@end direntry
+
+@titlepage
+@title Gratuitous ARP Daemon
+@subtitle Version @value{VERSION}, @value{UPDATED}
+@author by Anand Babu Periasamy (@email{ab@@gluster.com})
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@ifnottex
+@node Top, Gratuitous ARP Theory, (dir), (dir)
+
+@top User's Guide for @strong{Gratuitous ARP Daemon}.
+
+This edition of the documentation was last updated on @today{} for
+release @value{VERSION} of the Garpd.
+@insertcopying
+@end ifnottex
+
+@c Output the table of contents at the beginning.
+@shortcontents
+@contents
+
+@menu
+* Gratuitous ARP Theory::       Gratuitous ARP Theory.
+* Installation::                How to compile and install garpd.
+* Garpd::                       Garpd daemon options and configuration.
+* Contact us::                  How to contact the authors.
+* Authors::                     Authors name and email ids.
+* Copying::                     License of Garpd.
+* Glossary::                    Glossary terms.
+* Concept Index::               
+* Program Index::               
+@end menu
+
+@node Gratuitous ARP Theory, Installation, Top, Top
+@chapter Gratuitous ARP Theory
+@cindex Gratuitous ARP Theory
+
+Gratuitous ARP: Usually ARP works as follows. Host A sends out an ARP
+request for the hardware address of an IP address on host B. Host B
+sees the request and sends an ARP reply containing the hardware
+address for the interface with the IP address in question.  Host A
+then records the hardware address in its ARP cache so it doesn't have
+to do an ARP request and wait for a reply each time it wants to send a
+packet.  Entries in an ARP cache typically expire after about two
+minutes. For more information on ARP, please see RFC 826.
+
+Request Based Gratuitous ARP: A gratuitous ARP request packet where
+the source and destination IP are both set to the IP of the machine
+issuing the packet and the destination MAC is the broadcast address
+ff:ff:ff:ff:ff:ff.  Ordinarily, no reply packet will occur.  And all
+hosts on the LAN will refresh their ARP caches using the source
+hardware address of this request.
+
+Response Based Gratuitous ARP: A gratuitous ARP reply packet without
+any ARP request where the ARP reply is addressed to the broadcast
+hardware address.  All hosts on the LAN will receive the ARP reply and
+refresh their ARP cache accordingly.
+
+@node Installation, Garpd, Gratuitous ARP Theory, Top
+@chapter Installing Garpd
+You can obtain copies of source, binary, documentation and other
+useful information from the
+@uref{http://www.gnu.org/software/garpd, Garpd Home Page}@.
+
+@menu
+* Build::                       Compile and install from the source.
+@end menu
+
+@node Build,  , Installation, Installation
+@section Building the source package.
+
+To compile the program, you must first run the @command{configure}
+script included with the source tar ball.  It works just like any other
+standard GNU @command{autoconf} created script.  See the more generic
+configure related installation instructions below.
+
+For complete list of options, try @command{configure --help}@.
+
+Note: Please run @command{./autogen.sh} script before
+@command{./configure}, if you are compiling Garpd from the source
+repository. 
+
+@cindex ./configure
+
+@example
+ # ./configure --prefix=/usr
+ # make
+ # make install
+@end example
+
+@node Garpd, Contact us, Installation, Top
+@chapter Gratuitous ARP Daemon
+
+``garpd'' daemon broadcasts request based gratuitous ARP packets with IP
+and MAC Address mappings from a configuration file.  GARPD is
+particularly useful for IPMI BMCs (mBMC) which do not support
+Gartuitous ARP. How ever there are other uses for GARP like IP address
+conflicts, IP address take over, ARP updates in a clustered
+environment, NIC link status updates. 
+
+Garpd was developed as a part of GNU FreeIPMI project. Some of the
+IPMI implementations didn't implement GARP broadcast functionality in
+their base board management controller (BMC) attached to the
+NICs. When the host OS is down and BMC is active listening for IPMI
+packets on the NIC, the router need to be informed through external
+Garpd to route packets to it. Because Garpd is also useful for other
+purposes like load balancing, IP conflict detection, router/switch ARP
+table updates, we decided to make it as a separate project.
+
+@subsection Gratuitous ARP Theory
+
+@menu
+* garpd options::               Command-line arguments.
+* garpd.conf::                  Example configuration file.
+@end menu
+
+@node garpd options, garpd.conf, Garpd, Garpd
+@section Command-line arguments
+garpd [OPTIONS...]
+
+The following options are available
+@itemize @bullet
+@item -b, --batch-delay=NUM @*
+      Delay between batch of broadcasts.
+
+@item -c, --config-file=FILE  @*
+      Configuration file.
+
+@item -D, --no-daemon @*
+      Do not become a daemon
+
+@item -i, --interval-delay=NUM @*
+      Delay between every broadcast within in a batch. Set this to
+      avoid network flooding effect.
+
+@item -o, --send-once=SPEC @*
+      Send GARP broadcast once in no-daemon mode and exit. Multiple
+      send-once arguments are allowed. Any meaningful entry in the
+      config file can be used as ``spec''. All Host/MAC pairs in the
+      config file are ignored. 
+
+@item -q, --quiet, --silent @*
+      Inhibit usual output
+
+@item -v, --verbose @*
+      Print more information
+
+@item -?, --help @*
+      Give this help list
+
+@item --usage @*
+      Give a short usage message
+@end itemize
+
+@node garpd.conf,  , garpd options, Garpd
+@section garpd configuration file
+Example ``garpd'' configuration file.
+@example
+# /usr/etc/garpd.conf: garpd configuration file.
+
+# Set default interface to eth0.
+default iface [eth0]
+# Send broadcasts every 500 milli seconds.
+batch-delay 500
+# Delay 200 milli seconds between every broadcast.
+interval-delay 200
+
+# host and MAC mappings to be broadcasted as Gratuitous ARP.
+host = node2  mac=aa:bb:cc:33:13:c2  iface=eth1
+host = 1.2.3.4  mac= aa:1b:cc:33:13:c2   iface=[eth2 eth3 eth4]
+host = 5.6.7.8  mac= aa:1b:cc:33:13:c2  iface = [ eth4 ]
+# Use default iface.
+host = 9.10.11.12  mac =aa:1b:cc:33:13:c2
+@end example
+
+@node Contact us, Authors, Garpd, Top
+@chapter Contact us
+
+@itemize @bullet
+@item Homepage:      @uref{http://www.gnu.org/software/garpd}
+@item Project Main:  @uref{https://savannah.gnu.org/projects/garpd/}
+@end itemize
+
+@subsection For everything else...
+Contact Anand Babu Periasamy @email{ab@@gluster.com}
+
+@node Authors, Copying, Contact us, Top
+@chapter Authors
+@include authors.texi
+
+@node Copying, Glossary, Authors, Top
+@chapter Copying
+@cindex Copying
+
+@menu
+* Garpd License::               
+* Garpd Documentation License::  
+@end menu
+
+@node Garpd License, Garpd Documentation License, Copying, Copying
+@section Garpd license
+@include gpl.texi
+
+@node Garpd Documentation License,  , Garpd License, Copying
+@section Garpd documentation license
+@include fdl.texi
+
+@node Glossary, Concept Index, Copying, Top
+@chapter Glossary
+@multitable @columnfractions 0.15 0.85
+@item ARP   @tab [A]ddress [R]esolution [P]rotocol.
+@item GARP  @tab [G]ratuitous [A]ddress [R]esolution [P]rotocol.
+@item IPMI  @tab [I]ntelligent [P]latform [M]anagement [I]nterface
+@item BMC   @tab [B]aseboard [M]anagement [C]ontroller.
+@item GPL   @tab GNU [G]eneral [P]ublic [L]icense.
+@item IP    @tab [I]nternet [P]rotocol.
+@end multitable
+
+@node Concept Index, Program Index, Glossary, Top
+@unnumbered Concept index
+@printindex cp
+
+@node Program Index,  , Concept Index, Top
+@unnumbered Program index
+@printindex pg
+
+@bye

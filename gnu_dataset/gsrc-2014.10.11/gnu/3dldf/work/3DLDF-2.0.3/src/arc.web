@@ -1,0 +1,1096 @@
+@q arc.web @>
+                       
+@q * (1) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing.  @>
+@q Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation  @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version.  @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details.  @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA@>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html.@>
+
+@q ("@@" stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de@>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single "at" sign.)@>
+
+        
+@q * (0) Arc.@>
+@** Arc\quad ({\tt arc\PERIOD web}).\hfil 
+
+\LOG
+\initials{LDF 2007.10.13.}
+Created this file.
+\ENDLOG
+
+
+@f Arc Shape  
+     
+
+@q * (1) Include files.@>
+@ Include files.
+
+@<Include files@>=
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"   
+#include "dashptrn.h++"
+#include "shapes.h++"
+#include "pictures.h++"
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++" 
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+
+@q * (1) Arc class definition.@>
+@* {\bf Arc} class definition.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+\ENDLOG
+
+@<Declare |class Arc|@>=
+
+class Arc : public Path
+{
+
+   Unsigned_Byte type;
+   
+   Point* focus_0;
+   Point* focus_1;
+   Point* center;
+
+   real increment_value;
+
+   public:
+
+      static const Unsigned_Byte NULL_ARC_TYPE;
+      static const Unsigned_Byte CIRCULAR_ARC_TYPE;
+      static const Unsigned_Byte ELLIPTICAL_ARC_TYPE;
+      static const Unsigned_Byte PARABOLIC_ARC_TYPE;
+      static const Unsigned_Byte HYPERBOLIC_ARC_TYPE;
+
+      @<Declare |Arc| functions@>@;
+};
+
+@q ** (2) Initialize |static const| data members.@> 
+@*1 Initialize {\bf static const} data members.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this section with the initializations of 
+the |const Unsigned_Bytes| |NULL_ARC_TYPE|,
+|CIRCULAR_ARC_TYPE|,
+|ELLIPTICAL_ARC_TYPE|,
+|PARABOLIC_ARC_TYPE| and
+|HYPERBOLIC_ARC_TYPE|.
+\ENDLOG
+
+@<Initialize |static const| |Arc| data members@>=
+
+const Unsigned_Byte Arc::NULL_ARC_TYPE        = 0;
+const Unsigned_Byte Arc::CIRCULAR_ARC_TYPE    = 1;
+const Unsigned_Byte Arc::ELLIPTICAL_ARC_TYPE  = 2;
+const Unsigned_Byte Arc::PARABOLIC_ARC_TYPE   = 3;
+const Unsigned_Byte Arc::HYPERBOLIC_ARC_TYPE  = 4;
+
+@q ** (2) Constructors and setting functions.@>
+@*1 Constructors and setting functions.@>
+\initials{LDF 2007.10.13.}
+
+@q *** (3) Default constructor.  No arguments.@>
+@*2 Default constructor. No arguments.
+@^\cfunc{Arc}{Arc}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+
+@q **** (4) Declaration.  @>
+
+@<Declare |Arc| functions@>=
+Arc(void);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Arc| functions@>= 
+Arc::Arc(void)
+{
+
+   focus_0 = 0;
+   focus_1 = 0;
+   center  = 0;
+
+   return;
+
+}
+
+@q *** (3) Set with |Arc_Options| and |Scanner_Node| arguments.@>
+@*2 Set {\bf arc\_options} and {\bf Scanner\_Node} arguments.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+int
+set(Arc_Options* options, Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Arc| functions@>= 
+int 
+Arc::set(Arc_Options* options, Scanner_Node scanner_node)
+{
+
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5)@>
+
+/* START HERE!!  LDF 2007.11.25.  */ 
+
+   delete options;
+
+   return 0;
+
+}  /* End of |Arc::set|  */
+
+@q *** (3) Destructor.@> 
+@*2 Destructor.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+virtual
+~Arc(void);
+
+@q *** (3) Definition.  @>
+
+@
+@<Define |Arc| functions@>= 
+Arc::~Arc(void)
+{
+  
+   delete focus_0;
+   delete focus_1;
+   delete center;
+
+   return;
+}
+
+@q ** (2) Pseudo-constructor for dynamic allocation.@>
+@*1 Pseudo-constructor for dynamic allocation.
+
+@q *** (3) Pointer argument.@>
+@*2 Pointer argument.
+@^\cfunc{Arc}{create\_new\_cone}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare non-member template functions for |Arc|@>=
+Arc* 
+create_new(const Arc* c, Scanner_Node scanner_node);
+
+@q *** (3) Reference argument.@>
+@*2 Reference argument.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare non-member template functions for |Arc|@>=
+Arc* 
+create_new(const Arc& c, Scanner_Node scanner_node);
+
+
+@q ** (2) Assignment.@> 
+@*1 Assignment.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Assignment from a |Arc|.@> 
+@*2 Assignment from a |Arc|.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+
+\initials{LDF 2007.11.25.}
+Added code for handling |Point* center|, |Point* focus_0|, 
+|Point* focus_1| and |real increment_value|.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Arc| functions@>=
+virtual
+Arc&
+operator=(const Arc& c);
+
+@q **** (4) Definition.@> 
+
+@
+@<Define |Arc| functions@>=
+
+Arc&
+Arc::operator=(const Arc& c)
+{
+
+@q ***** (5)@> 
+
+    if (this == &c) /* Make sure it's not self-assignment. */
+       return *this;
+
+@q ***** (5)@> 
+
+@q ****** (6)@>
+
+    if (center && c.center)
+       *center = *c.center;
+    else if (center && !c.center)
+    {
+        delete center;
+        center = 0;
+    }
+    else if (!center && c.center)
+    {
+        center = create_new<Point>(c.center);
+        *center = *c.center;
+    }
+
+@q ****** (6)@>
+
+    if (focus_0 && c.focus_0)
+       *focus_0 = *c.focus_0;
+    else if (focus_0 && !c.focus_0)
+    {
+        delete focus_0;
+        focus_0 = 0;
+    }
+    else if (!focus_0 && c.focus_0)
+    {
+        focus_0 = create_new<Point>(c.focus_0);
+        *focus_0 = *c.focus_0;
+    }
+
+
+@q ****** (6)@>
+
+    if (focus_1 && c.focus_1)
+       *focus_1 = *c.focus_1;
+    else if (focus_1 && !c.focus_1)
+    {
+        delete focus_1;
+        focus_1 = 0;
+    }
+    else if (!focus_1 && c.focus_1)
+    {
+        focus_1 = create_new<Point>(c.focus_1);
+        *focus_1 = *c.focus_1;
+    }
+
+@q ****** (6)@>
+
+   increment_value = c.increment_value;
+ 
+@q ****** (6)@>
+
+@q ***** (5)@> 
+
+    Path::operator=(c);
+
+
+@q ***** (5)@> 
+
+    return *this;
+
+}  /* End of |Arc::operator=(const Arc& h)| definition.  */
+
+@q ** (2) Returning elements and information.@>
+@*1 Returning elements and information.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Get |Shape| type.@> 
+@*1 Get {\bf Shape} type.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Arc| functions@>=
+virtual 
+inline
+unsigned short 
+get_shape_type(void) const
+{
+   return NULL_SHAPE_TYPE;
+
+}
+
+@q ** (2) Predicates.@> 
+@*1 Predicates.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Is |Arc|-type.@> 
+@*2 Is {\bf Arc}-type.
+@^\cfunc{Arc}{is\_arc\_type}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+virtual
+inline
+bool
+is_arc_type(void) const
+{
+   return true;
+}
+
+@q *** (3) Is arc.@> 
+@*2 Is arc.
+\initials{LDF 2007.10.13.}
+@^\cfunc{Arc}{is\_arc}@>
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+bool
+is_arc(void) const;
+
+@q **** (4) Definition.@>
+@
+@<Define |Arc| functions@>=
+bool
+Arc::is_arc(void) const
+{
+   return true;
+}
+
+@q ** (2) Transformations.@>
+@*1 Transformations. 
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Multiplication by a |Transform| with assignment.@>
+@*2 Multiplication by a |Transform| with assignment.
+@^\cofunc{Arc}{*=}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG 
+
+@<Declare |Arc| functions@>=
+virtual
+Transform
+operator*=(const Transform& t);
+
+@
+@<Define |Arc| functions@>=
+Transform
+Arc::operator*=(const Transform& t)
+{
+   return Path::operator*=(t);
+}
+
+@q ** (2) Rotatation around the main axes.@>
+@*1 Rotation  around the main axes. 
+@^\cfunc{Arc}{rotate}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+virtual
+Transform 
+rotate(const real x, const real y = 0, const real z = 0);
+
+@
+@<Define |Arc| functions@>=
+Transform 
+Arc::rotate(const real x, const real y, const real z)
+{
+  Transform t;
+  t.rotate(x, y, z);
+  return operator*=(t);
+}
+
+@q ** (2) Scale. @>
+@*1 Scale. 
+@^\cfunc{Arc}{scale}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+virtual
+Transform 
+scale(real x, real y = 1, real z = 1);
+
+@
+@<Define |Arc| functions@>=
+Transform 
+Arc::scale(real x, real y, real z)
+{
+   Transform t;
+   t.scale(x, y, z);
+   return operator*=(t);
+}
+
+@q ** (2) Shear.@>
+@*1 Shear. 
+@^\cfunc{Arc}{shear}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+
+@<Declare |Arc| functions@>=
+
+virtual
+Transform 
+shear(real xy, real xz = 0, real yx = 0, real yz = 0, 
+      real zx = 0, real zy = 0);
+
+@
+@<Define |Arc| functions@>=
+Transform 
+Arc::shear(real xy, real xz, real yx, real yz, 
+      real zx, real zy)
+{
+  Transform t;
+  t.shear(xy, xz, yx, yz, zx, zy);
+  return operator*=(t);
+
+}
+
+@q ** (2) Shift.@>
+@*1 Shift. 
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) |real| arguments.@>
+@*2 {\bf real} arguments. 
+@^\cfunc{Arc}{shift}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+virtual
+Transform 
+shift(real xx, real yy = 0, real zz = 0);
+
+@
+@<Define |Arc| functions@>=
+Transform
+Arc::shift(real xx, real yy, real zz)
+{
+  Transform t;
+  t.shift(xx, yy, zz);
+  return operator*=(t);
+}
+
+
+@q *** (3) Point argument.@>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Arc}{shift}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+virtual
+Transform 
+shift(const Point& p);
+
+@
+@<Define |Arc| functions@>=
+Transform 
+Arc::shift(const Point& p)
+{
+  return shift(p.get_x(), p.get_y(), p.get_z());
+}
+
+
+@q ** (2) Shift times. @>
+@*1 Shift times. 
+\initials{LDF 2007.10.13.}
+
+@q *** (3) real arguments. @>
+
+@*2 {\bf real} arguments. 
+@^\cfunc{Arc}{shift\_times}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.  It's commented-out, because 
+|Solid::shift_times()| currently doesn't exist.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+
+#if 0 
+
+virtual
+void 
+shift_times(real x, real y = 1, real z = 1);
+
+#endif 
+
+@
+@<Define |Arc| functions@>=
+
+#if 0 
+void 
+Arc::shift_times(real x, real y, real z)
+{
+
+    if (center != static_cast<Point*>(0))
+       center->shift_times(x, y, z);
+
+
+    Path::shift_times(x, y, z);
+  
+    return;
+}
+#endif 
+
+@q *** (3) Point argument. @>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Arc}{shift\_times}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+virtual
+void
+shift_times(const Point& p);
+
+@
+@<Define |Arc| functions@>=
+void
+Arc::shift_times(const Point& p)
+{
+  return Path::shift_times(p.get_x(), p.get_y(), p.get_z());
+}
+
+
+@q ** (2) Rotatation around an arbitrary axis.@>
+@*1 Rotatation around an arbitrary axis. 
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Point arguments.@>
+
+@*2 {\bf Point} arguments.
+@^\cfunc{Arc}{rotate}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+
+virtual
+Transform 
+rotate(const Point& p0, const Point& p1, const real angle = 180);
+
+@
+@<Define |Arc| functions@>=
+Transform 
+Arc::rotate(const Point& p0, const Point& p1, const real angle)
+{
+  Transform t;
+  t.rotate(p0, p1, angle);
+  return operator*=(t);
+}
+
+@q *** (3) Path argument.@>
+
+@*2 {\bf Path} arguments.
+@^\cfunc{Arc}{rotate}@>
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+\ENDLOG
+
+@<Declare |Arc| functions@>=
+
+virtual
+Transform 
+rotate(const Path& p, const real angle = 180);
+
+@
+@<Define |Arc| functions@>=
+
+Transform 
+Arc::rotate(const Path& p, const real angle)
+{
+   if (!p.is_linear())
+     {
+        return INVALID_TRANSFORM;
+     }
+
+   return rotate(p.get_point(0),
+                 p.get_last_point(), angle);  
+}   
+
+@q ** (2) Show.@> 
+@*1 Show.
+\initials{LDF 2007.10.13.}
+
+\LOG
+\initials{LDF 2007.10.13.}
+Added this function.
+
+\initials{LDF 2007.11.25.}
+Added code.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Arc| functions@>=
+
+virtual 
+void 
+show(string text = "", 
+     char coords = 'w',
+     const bool do_persp = true, 
+     const bool do_apply = true,
+     Focus* f = 0, 
+     const unsigned short proj = 0,
+     const real factor = 1) const;
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Arc| functions@>=
+void 
+Arc::show(string text, char coords,
+            const bool do_persp, const bool do_apply,
+            Focus* f, const unsigned short proj,
+            const real factor) const
+
+{
+
+   if (text == "")
+      cerr << "Arc:" << endl;
+   else
+      cerr << text << endl;
+
+   if (center == static_cast<Point*>(0))
+      cerr << "No `center'." << endl;
+   else
+      center->show("center:", coords, do_persp, do_apply, f, proj, factor);
+
+   if (focus_0 == static_cast<Point*>(0))
+      cerr << "No `focus_0'." << endl;
+   else
+      focus_0->show("focus_0:", coords, do_persp, do_apply, f, proj, factor);
+
+   if (focus_1 == static_cast<Point*>(0))
+      cerr << "No `focus_1'." << endl;
+   else
+      focus_1->show("focus_1:", coords, do_persp, do_apply, f, proj, factor);
+
+   cerr << "`increment_value' == " << increment_value << endl;
+
+   Path::show("Path:", coords, do_persp, do_apply,
+              f, proj, factor);
+
+   return;
+
+} /* End of |Arc::show| definition.  */
+
+@q ** (2) Clear.@> 
+@*1 Clear.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Arc| functions@>=
+
+virtual 
+void
+clear(void);
+
+
+@q *** (3) Definition.@> 
+@
+@<Define |Arc| functions@>=
+void
+Arc::clear(void)
+{
+   delete center;
+   center = 0;
+
+   delete focus_0;
+   focus_0 = 0;
+
+   delete focus_1;
+   focus_1 = 0;
+
+   increment_value = -1;
+
+   return;
+
+} /* End of |Arc::clear| definition.  */
+
+@q * (1) Arc_Options.@> 
+@* {\bf arc\_options}.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Struct definition.@> 
+@*1 Struct definition.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this |struct| definition.
+\ENDLOG
+
+@<Declare |struct Arc_Options|@>=
+
+struct
+Arc_Options
+{
+
+   Point* focus_0;
+   Point* focus_1;
+   real increment_value;
+
+   @<Declare |Arc_Options| functions@>@;
+
+};
+
+@q ** (2) |Arc_Options| functions.@> 
+@*1 {\bf arc\_options} functions.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) Constructors.
+@*2 Constructors.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Default constructor.@>   
+@*3 Default constructor.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@>  
+
+@<Declare |Arc_Options| functions@>=
+
+Arc_Options(void);
+
+@q ***** (5) Definition.@>  
+
+@
+@<Define |Arc_Options| functions@>=
+
+Arc_Options::Arc_Options(void) 
+{
+
+    focus_0 = 0;
+    focus_1 = 0;
+    increment_value = -1;
+
+    return;
+}
+
+@q *** (3) Destructor.@> 
+@*2 Destructor.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Arc_Options| functions@>=
+
+~Arc_Options(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Arc_Options| functions@>=
+
+Arc_Options::~Arc_Options(void) 
+{
+   if (focus_0)
+      delete focus_0;
+   if (focus_1)
+      delete focus_1;
+
+   return;
+
+}
+
+@q *** (3) Clear.@> 
+@*2 Clear.
+\initials{LDF 2007.11.25.}
+
+\LOG
+\initials{LDF 2007.11.25.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Arc_Options| functions@>=
+
+int 
+clear(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Arc_Options| functions@>=
+
+int
+Arc_Options::clear(void)
+{
+   if (focus_0)
+      delete focus_0;
+
+   if (focus_1)
+      delete focus_1;
+
+   focus_0 = 0;
+   focus_1 = 0;
+   
+   increment_value = -1;
+
+   return 0;
+
+}  /* End of |Arc_Options::clear()| definition.  */
+
+@q * (1) Putting Arc together. @>
+@* Putting {\bf Arc} together.
+
+This is what's compiled.
+@c
+@<Include files@>@;
+@<Declare |class Arc|@>@;
+@<Initialize |static const| |Arc| data members@>@;
+@<Declare non-member template functions for |Arc|@>@;
+@<Declare |struct Arc_Options|@>@;
+@<Define |Arc| functions@>@;
+@<Define |Arc_Options| functions@>@;
+
+@ This is what's written to \filename{arcs.h}.
+@(arc.h@>=
+@<Declare |class Arc|@>@;
+@<Declare |struct Arc_Options|@>@;
+@<Declare non-member template functions for |Arc|@>@;
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 70))    @>
+
+
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

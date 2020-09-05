@@ -1,0 +1,835 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class LEX_CONST is
+    const
+    -- Sather tokens
+	 eof_tok, null_tok, ident_tok, type_name_tok, and_tok, assert_tok,
+	 attr_tok, break_tok, case_tok, class_tok, const_tok, else_tok,
+	 elsif_tok, end_tok, exception_tok, external_tok, false_tok, 
+	 if_tok, include_tok, initial_tok, is_tok, ITER_tok, 
+	 loop_tok, new_tok, or_tok, post_tok, pre_tok, private_tok, 
+	 protect_tok, quit_tok, raise_tok, readonly_tok, result_tok, 
+	 return_tok, ROUT_tok, F_ROUT_tok, SAME_tok, self_tok,
+	 shared_tok, then_tok, true_tok, type_tok, typecase_tok, until_tok,
+	 abstract_tok, immutable_tok, value_tok, partial_tok, stub_tok, void_tok, when_tok, 
+	 while_tok, yield_tok, lint_tok, lflt_tok, lstr_tok, lchar_tok, 
+	 lparen_tok, rparen_tok, lbracket_tok, rbracket_tok, lbrace_tok, 
+	 rbrace_tok, comma_tok, dot_tok, semi_tok, colon_tok, under_tok, 
+	 plus_tok, minus_tok, times_tok, quotient_tok, is_lt_tok, is_gt_tok, 
+	 sharp_tok, bang_tok, iter_bang_tok, pow_tok, mod_tok, vbar_tok, 
+	 is_neq_tok, is_leq_tok, is_geq_tok, assign_tok, dcolon_tok, 
+	 transform_tok, is_eq_tok, not_tok, out_tok, inout_tok, once_tok,
+	 bind_tok,
+	 
+-- pSather tokens
+
+-- although it belongs to pSather the following keywords are made visible in
+-- serial Sather as well.
+	 cluster_tok, cluster_size_tok,
+
+-- Threaded extension
+         fork_tok, do_tok, par_tok, parloop_tok, 
+
+-- Synch extension
+         attach_tok, lock_tok, unlock_tok, cohort_tok, sync_tok, guard_tok,
+
+-- Distributed extension
+         with_tok, near_tok, far_tok, spread_tok, any_tok, cluster_bang_tok, 
+
+-- Distributed and with zones
+         at_tok, here_tok, where_tok, global_tok,
+
+-- special token (it is used as a keyword, although not reserved in
+-- the official langauge spec.
+	builtin_tok;
+    
+end; -- LEX_CONST
+    
+-------------------------------------------------------------------   
+immutable class TOKEN is
+    include LEX_CONST;
+    
+    attr val: INT;
+
+    create (val: INT): TOKEN is
+	t: TOKEN; t := t.val(val); return t
+    end;
+
+    is_eq (y: INT): BOOL is return val = y end;
+    is_eq (y: TOKEN): BOOL is return val = y.val end;
+    is_neq (y: INT): BOOL is return val /= y end;
+    is_neq (y: TOKEN): BOOL is return val /= y.val end;
+
+    str: STR is
+	-- A string version of the token.
+	res: STR;
+	case val
+	    -- Sather tokens
+	when eof_tok then res := "end of file"
+	when null_tok then res := "null character"
+	when ident_tok then res := "an identifier"
+	when type_name_tok then res := "an abstract type name"
+	when and_tok then res := "'and'"
+	when assert_tok then res := "'assert'"
+	when attr_tok then res := "'attr'"
+	when break_tok then res := "'break!'"
+	when case_tok then res := "'case'"
+	when class_tok then res := "'class'"
+	when const_tok then res := "'const'"
+	when else_tok then res := "'else'"
+	when elsif_tok then res := "'elsif'"
+	when end_tok then res := "'end'"
+	when exception_tok then res := "'exception'"
+	when external_tok then res := "'external'"
+	when false_tok then res := "'false'"
+	when if_tok then res := "'if'"
+	when include_tok then res := "'include'"
+	when initial_tok then res := "'initial'"
+	when is_tok then res := "'is'"
+	when ITER_tok then res := "'ITER'"
+	when loop_tok then res := "'loop'"
+	when new_tok then res := "'new'"
+	when or_tok then res := "'or'"
+	when post_tok then res := "'post'"
+	when pre_tok then res := "'pre'"
+	when private_tok then res := "'private'"
+	when protect_tok then res := "'protect'"
+	when quit_tok then res := "'quit'"
+	when raise_tok then res := "'raise'"
+	when readonly_tok then res := "'readonly'"
+	when return_tok then res := "'return'"
+	when ROUT_tok then res := "'ROUT'"
+	when F_ROUT_tok then res := "'F_ROUT'"
+	when SAME_tok then res := "'SAME'"
+	when self_tok then res := "'self'"
+	when shared_tok then res := "'shared'"
+	when stub_tok then res := "'stub'"
+	when then_tok then res := "'then'"
+	when true_tok then res := "true"
+	when type_tok then res := "type"
+	when typecase_tok then res := "'typecase'"
+	when abstract_tok then res := "'abstract'"
+	when immutable_tok then res := "'immutable'"
+	when value_tok then res := "'value'"
+	when partial_tok then res := "'partial'"
+	when void_tok then res := "'void'"
+	when when_tok then res := "'when'"
+	when while_tok then res := "'while!'"
+	when until_tok then res := "'until!'"
+	when yield_tok then res := "'yield'"
+	when lint_tok then res := "an integer literal"
+	when lflt_tok then res := "a floating point literal"
+	when lstr_tok then res := "a string literal"
+	when lchar_tok then res := "a character literal"
+	when lparen_tok then res := "a left parenthesis '('"
+	when rparen_tok then res := "a right parenthesis ')'"
+	when lbracket_tok then res := "a left bracket '['"
+	when rbracket_tok then res := "a right bracket ']'"
+	when lbrace_tok then res := "a left brace '{'"
+	when rbrace_tok then res := "a right brace '}'"
+	when comma_tok then res := "a comma ','"
+	when dot_tok then res := "a dot '.'"
+	when semi_tok then res := "a semicolon ';'"
+	when colon_tok then res := "a colon ':'"
+	when under_tok then res := "an underscore '_'"
+	when plus_tok then res := "a plus '+'"
+	when minus_tok then res := "a minus '-'"
+	when times_tok then res := "an asterisk '*'"
+	when quotient_tok then res := "a slash '/'"
+	when is_lt_tok then res := "a less than '<'"
+	when is_gt_tok then res := "a greater than '>'"
+	when sharp_tok then res := "a sharp '#'"
+	when bang_tok, iter_bang_tok then res := "an exclamation mark '!'"
+	when pow_tok then res := "a carat '^'"
+	when mod_tok then res := "a percent '%'"
+	when vbar_tok then res := "a vertical bar '|'"
+	when is_neq_tok then res := "a not equals '/='"
+	when is_leq_tok then res := "a less than or equals '<='"
+	when is_geq_tok then res := "a greater than or equals '>='"
+	when assign_tok then res := "an assign operator ' := '"
+	when transform_tok then res := "a transform '->'"
+	when is_eq_tok then res := "a equals '='"
+	when not_tok then res := "a not '~'"
+	when dcolon_tok then res := "a double colon '::'"
+	when out_tok then res := "'out'"
+	when inout_tok then res := "'inout'"
+	when once_tok then res := "'once'"
+	when bind_tok then res := "'bind'"
+	    
+	    -- pSather tokens
+	when attach_tok then res := "an attach ':-'"
+	when fork_tok then res := "'fork'"
+	when lock_tok then res := "'lock'"
+	when unlock_tok then res := "'unlock'"
+	when with_tok then res := "'with'"
+	when at_tok then res := "an at '@'"
+	when here_tok then res := "'here'"
+	when where_tok then res := "'where'"
+	when near_tok then res := "'near'"
+	when far_tok then res := "'far'"
+	when spread_tok then res := "'spread'"
+	when do_tok then res := "'do'"
+	when par_tok then res := "'par'"
+	when parloop_tok then res := "'parloop'"
+	when any_tok then res := "'any'"
+	when cluster_tok then res := "'clusters'"
+	when cluster_bang_tok then res := "'clusters!'"
+	when cluster_size_tok then res := "'cluster_size'"	   
+	when cohort_tok then res:= "'cohort'"
+	when sync_tok then res:="'sync'";
+	when guard_tok then res:="'guard'";
+	when global_tok then res:="'global'";
+
+	-- special token
+	when builtin_tok then res:="'builtin'";
+
+	else res := "unknown token"
+	end;
+	return res
+    end;
+    
+end; -- TOKEN
+
+----------------------------------------------------------------------
+
+immutable class SFILE_ID < $STR, $HASH is
+    -- A character position in a Sather source file. Used for 
+    -- generating error messages.  Maintains a shared list of already 
+    -- processed files, and provides the routines for reading a 
+    -- file. Non-reentrant.
+   include COMPARABLE;
+   
+    const eof_char: CHAR := '\0'; -- returned at end of file
+
+    private attr loc: INT;
+    private const B: INT := 1024; -- maximal line length
+    private const sentinel: INT := 2147483647;
+    readonly shared files: FLIST{STR}; -- list of registered file names
+    private shared lines: FLIST{INT}; -- list of accumulated lines (0 for first file)
+
+    shared source: FSTR; -- the current source file as a FSTR
+    shared pos: INT; -- the current position in source line
+    private shared column: INT; -- the current column
+    private shared line_pos: INT; -- the position of the first character in the line
+    private shared newline: BOOL; -- next character starts a new line
+    private shared line: INT := 0; -- current accumulated line number
+
+   
+    create (loc: INT): SFILE_ID is
+	r: SFILE_ID; r := r.loc(loc); return r
+    end;
+
+    is_eq (y: SFILE_ID): BOOL is return loc = y.loc end;
+    is_neq (y: SFILE_ID): BOOL is return loc /= y.loc end;
+    
+    hash:INT is return loc.hash end;
+
+    no_location: SFILE_ID is return #SFILE_ID(-1) end;
+
+    open_file (p: PROG, name: STR): BOOL is
+	file::=BFILE::open_for_read(name);
+	if ~file.error then source := file.fstr; file.close
+	else source := void
+	end;
+	if ~void(source) then
+	    if void(files) then
+		files := FLIST{STR}::create(64);
+		lines := FLIST{INT}::create(64);
+	    end;
+	    files := files.push(name);
+	    lines := lines.push(sentinel);
+	    pos := 0; column:=1; newline := true;
+	    return true
+	else
+	    p.set_eloc(no_location);
+	    p.err("couldn't read file: " + name);
+	    return false
+	end
+    end;
+
+    close_file is
+	if ~void(source) then lines[lines.size-1] := line; source := void end
+    end;
+
+    next: CHAR is
+	if pos < source.size then
+	    if newline then
+		line := line+1;
+		line_pos := pos;
+		newline := false;
+		column := 1;
+	    end;
+	    ch: CHAR := source[pos];
+	    pos := pos+1;
+	    case ch
+	    when '\t' then column:=column+8-(column-1).mod(8);
+	    when eof_char then ch := ' ' -- eof_char only at the end of the file
+	    when '\n' then newline := true;
+	    else newline:=false; column:=column+1;
+	    end;
+	    return ch
+	else return eof_char
+	end
+    end;
+
+    source_loc: SFILE_ID is
+	if ~void(source) then
+	    c: INT := (column-2).min(SFILE_ID::B-1).max(1);
+	    return #SFILE_ID(line*SFILE_ID::B + c)
+	else return no_location
+	end
+    end;
+
+---------------------------------
+-- The following routines operate on self
+---------------------------------
+
+    index: INT is
+	-- List index referred to encoded in loc
+	if ~void(lines) then
+	    i: INT := 0;
+	    l: INT := loc/SFILE_ID::B;
+	    p: INT := -1;
+	    loop while!(i < lines.size);
+		if (p < l) and (l <= lines[i]) then break! end;
+		p := lines[i]; i := i+1
+	    end;
+	    return i
+	else #OUT + "compiler error in SFILE_ID::index: no files\n";
+	    return 0
+	end
+    end;
+
+    file_in: STR is
+	-- File name encoded in loc
+	return files[index]
+    end;
+
+    line_num_in: INT is
+	-- Line number encoded in loc
+	i: INT := index;
+	if i > 0 then return loc/SFILE_ID::B - lines[i-1]
+	else return loc/SFILE_ID::B
+	end
+    end;
+
+    col_num_in: INT is
+	-- Column position encoded in loc
+	return loc.mod(SFILE_ID::B)
+    end;
+
+    str: STR is
+	-- Name of the file into which loc is pointing
+	if loc = -1 then return "at unknown location"
+	else return file_in + ':' + line_num_in + ':' + col_num_in
+	end
+    end;
+
+end; -- SFILE_ID
+
+-------------------------------------------------------------------
+
+class SCANNER is
+    -- Scanner for Sather 1.0.  Strategy: a big case statement.
+    -- Whitespace and comments are passed in tight loops.  Keywords
+    -- are distinguished from identifiers by switching on the first
+    -- character, followed by verification on the following characters
+    -- ordered by expected keyword frequency.
+
+    include LEX_CONST; -- consts for tokens
+    include CS_COMPONENT;
+
+-- Scan a string for Sather 1.0 tokens
+
+    attr lex_value:IDENT; -- ident token value
+    attr char_value:CHAR; -- character token value
+    attr num_value:RAT; -- numerical value
+    attr value_type: INT; -- one of the five floating_point types (see AS_FLT_LIT_EXPR)
+    -- AS_FLT_LIT_EXPR::flt and AS_FLT_LIT_EXPR::flti also used for
+    -- integers
+
+    attr next: CHAR;
+    attr buf: FSTR;
+    attr backed_up: BOOL;
+    attr last_char: CHAR;
+    attr pSather: BOOL;
+    attr zones: BOOL;
+
+    create (p: PROG, file: STR, pSather: BOOL):SAME is
+	-- initialize scanner, read f
+	res: SAME;
+	if SFILE_ID::open_file(p, file) then
+	    res := new;
+	    res.prog := p;
+	    res.next := SFILE_ID::next;
+	    res.buf := #FSTR(256);
+	    res.backed_up := false;
+	    res.pSather := pSather;
+	    res.zones := p.zones;
+	else res := void
+	end;
+	return res
+    end;
+
+    comment_here is end; -- Meant to be overridden if desired
+
+    close_file is
+	SFILE_ID::close_file                
+    end;
+
+    fetch is
+	if backed_up then
+	    c: CHAR := next;
+	    next := last_char;
+	    last_char := c;
+	    backed_up := false
+	else
+	    last_char := next;
+	    next := SFILE_ID::next
+	end 
+    end;
+
+    backup is
+	-- Backup one character at most.
+	--
+	c: CHAR := next;
+	next := last_char;
+	last_char := c;
+	backed_up := true end;
+
+    error (msg:STR) is
+	-- where errors during scanning go
+	--
+	prog.set_eloc(SFILE_ID::source_loc);
+	err(msg) end;
+    
+    character: CHAR is
+	-- value of something preceeded by a backslash
+	--
+	res: CHAR;
+	fetch;
+	case next
+	when '0','1','2','3','4','5','6','7' then -- octal character
+	    v: INT := 0; d: INT;
+	    loop d := next.hex_digit_value;
+		while!((0 <= d) and (d < 8));
+		v := v*8 + d;
+		fetch
+	    end;
+	    res := v.char
+	when 'a' then res := '\a'; fetch
+	when 'b' then res := '\b'; fetch
+	when 'f' then res := '\f'; fetch
+	when 'n' then res := '\n'; fetch
+	when 'r' then res := '\r'; fetch
+	when 't' then res := '\t'; fetch
+	when 'v' then res := '\v'; fetch
+	when '\\' then res := '\\'; fetch
+	when '\'' then res := '\''; fetch
+	when '\"' then res := '\"'; fetch
+	else res := next; fetch
+	end;
+	return res
+    end;
+
+    identifier: TOKEN is
+	-- Find out if ident or keyword.
+	--
+	buf.clear;
+	loop c::=next;
+	    while!(c.is_alphanum or (c = '_'));
+	    buf := buf.push(c);
+	    fetch;
+	end;
+	res ::= ident_tok;
+	case buf[0]
+	when 'a' then
+	   case buf
+	    when "abstract" then res := abstract_tok
+	    when "attr" then res := attr_tok
+	    when "and" then res := and_tok
+	    when "assert" then res := assert_tok
+	    when "any" then if pSather and ~zones then res := any_tok end
+	    else end;
+	when 'b' then
+	    if (buf = "break") and (next = '!') then fetch; res := break_tok end;
+	    case buf
+	    when "builtin" then res:=builtin_tok; 
+	    when "bind" then res:=bind_tok;
+	    else end;
+	when 'c' then
+	    case buf
+	    when "const" then res := const_tok
+	    when "class" then res := class_tok
+	    when "case" then res := case_tok
+	    when "cohort" then res := cohort_tok
+	    when "cluster_size" then res := cluster_size_tok	       
+	    when "clusters" then
+		res := cluster_tok;
+		nextc::=next;
+		if pSather and ~zones and nextc = '!' then
+		    fetch;
+		    res := cluster_bang_tok;
+		end;
+	    else end
+	when 'd' then
+	    --if pSather then
+		case buf
+		when "do" then res := do_tok
+		else end
+	    --end
+	when 'e' then
+	    case buf
+	    when "end" then res := end_tok
+	    when "elsif" then res := elsif_tok
+	    when "else" then res := else_tok
+	    when "exception" then res := exception_tok
+	    when "external" then res := external_tok
+	    else end
+	when 'f' then
+	    case buf
+	    when "false" then res := false_tok
+	    when "far" then
+		if pSather and ~zones then res := far_tok end
+	    when "fork" then
+		--if pSather then
+		res := fork_tok
+		--end
+	     else end
+	when 'F' then
+	    if buf = "F_ROUT" then res := F_ROUT_tok end	    
+	when 'g' then
+	    case buf
+	    when "guard" then if pSather then res:=guard_tok; end;
+	    when "global" then if zones then res:=global_tok; end;
+	    else end;
+	when 'h' then
+	    if (buf = "here") and (pSather or zones) then res := here_tok end
+	when 'i' then
+	    case buf
+	    when "is" then res := is_tok
+	    when "if" then res := if_tok
+	    when "inout" then res := inout_tok
+	    when "include" then res := include_tok
+	    when "immutable" then res := immutable_tok
+	    when "initial" then res := initial_tok
+	    else end
+	when 'I' then
+	    if buf = "ITER" then res := ITER_tok end
+	when 'l' then
+	    case buf
+	    when "loop" then res := loop_tok
+	    when "lock" then
+		if pSather then res := lock_tok end
+	    else end
+	when 'n' then
+	    case buf
+	    when "new" then res := new_tok
+	    when "near" then
+		if pSather and ~zones then res := near_tok end
+	    else end
+	when 'o' then
+	    case buf
+	    when "or" then res := or_tok 
+	    when "once" then res := once_tok 
+	    when "out" then res := out_tok 
+	    else end
+	when 'p' then
+	    case buf
+	    when "pre" then res := pre_tok
+	    when "private" then res := private_tok
+	    when "post" then res := post_tok
+	    when "protect" then res := protect_tok
+	    when "partial" then res := partial_tok
+	    when "par" then 
+		--if pSather then
+	        res := par_tok
+		--end;
+	    when "parloop" then
+		--if pSather then
+		res := parloop_tok 
+		--end;
+	    else end
+	when 'q' then
+	    if buf = "quit" then res := quit_tok end
+	when 'r' then
+	    case buf
+	    when "return" then res := return_tok
+	    when "raise" then res := raise_tok
+	    when "readonly" then res := readonly_tok
+	    when "result" then res := result_tok
+	    else end
+	when 'R' then
+	    if buf = "ROUT" then res := ROUT_tok end
+	when 's' then
+	    case buf
+	    when "self" then res := self_tok
+	    when "shared" then res := shared_tok
+	    when "spread" then if pSather and ~zones then res := spread_tok end
+	    when "stub" then res := stub_tok	    
+	    when "sync" then if pSather then res := sync_tok end
+	    else end
+	when 'S' then
+	    if buf = "SAME" then res := SAME_tok end
+	when 't' then
+	    case buf
+	    when "then" then res := then_tok
+	    when "true" then res := true_tok
+	    when "typecase" then res := typecase_tok
+	    when "type" then res := type_tok
+	    else end
+	when 'u' then
+	    case buf
+	    when "until" then
+		if next = '!' then fetch; res := until_tok end
+	    when "unlock" then
+		if pSather then res := unlock_tok end
+	    else end
+	when 'v' then
+	    case buf
+	    when "void" then res := void_tok
+	    when "value" then res := value_tok
+	    else end
+	when 'w' then
+	    case buf
+	    when "when" then res := when_tok
+	    when "while" then
+		if next = '!' then fetch; res := while_tok end
+	    when "where" then
+		if pSather or zones then res := where_tok end
+	    when "with" then
+		if pSather and ~zones then res := with_tok end
+	    else end
+	when 'y' then
+	    if buf = "yield" then res := yield_tok end
+	else end;
+	if res = ident_tok then add_buf_to_sym_table end;
+	return #TOKEN(res)
+    end;
+
+    add_buf_to_sym_table is
+	-- make sure in sym table, and set lex_value to id.
+	--
+	lex_value := #IDENT(buf.str)
+    end;
+
+    int_literal (base: INT): INTI is
+	b ::= #INTI(base); x ::= #INTI(0);
+	loop d ::= next.hex_digit_value;
+	    if next = '_' then fetch
+	    elsif (0 <= d) and (d < base) then fetch; x := x*b + #INTI(d)
+	    else break!
+	    end
+	end;
+	return x
+    end;
+
+    number: TOKEN is
+	res: INT := lint_tok; d ::= 10;
+	if next = '0' then fetch; -- check for special base
+	    if next = 'b' then fetch; d := 2
+	    elsif next = 'o' then fetch; d := 8
+	    elsif next = 'x' then fetch; d := 16 end
+	end;
+	m ::= int_literal(d); e ::= #INTI(0);
+	if (next = '.') and (d = 10) then fetch;
+	    d := next.digit_value;
+	    if d >= 0 then -- floating point number
+		ec ::= 0; ten ::= #INTI(10);
+		loop
+		    if next = '_' then fetch
+		    elsif d >= 0 then fetch; m := m*ten + #INTI(d); ec := ec-1
+		    else break!
+		    end;
+		    d := next.digit_value
+		end;
+		e := #INTI(ec);
+		if next = 'e' then fetch;
+		    neg ::= false;
+		    if next = '-' then fetch; neg := true end;
+		    d := next.digit_value;
+		    if d >= 0 then
+			if neg then e := e - int_literal(10)
+			else e := e + int_literal(10)
+			end
+		    else error("malformed floating point literal: e must be followed by - or a decimal digit")
+		    end
+		end;
+		res := lflt_tok
+	    else backup -- integer with a dot call
+	    end
+	end;
+	if e.is_neg then num_value := #RAT(m, #INTI(10) ^ (-e.int))
+	else num_value := #RAT(m * #INTI(10) ^ e.int)
+	end;
+	value_type := AS_FLT_LIT_EXPR::flt; -- ordinary case
+	if next = 'i' then fetch; value_type := AS_FLT_LIT_EXPR::flti
+	elsif res = lflt_tok then
+	    if next = 'd' then fetch;
+		if next = 'x' then fetch; value_type := AS_FLT_LIT_EXPR::fltdx
+		else value_type := AS_FLT_LIT_EXPR::fltd
+		end
+	    elsif next = 'x' then fetch; value_type := AS_FLT_LIT_EXPR::fltx
+	    end
+	end;
+	return #TOKEN(res)
+    end;
+    
+    skip_whitespace is
+	loop while!(next.is_space); fetch end
+    end;
+
+    comment is
+	n ::= 1;
+	loop
+	    while!((next /= SFILE_ID::eof_char) and (n > 0));
+	    if next = '(' then fetch;
+		if next = '*' then fetch; n := n+1 end
+	    elsif next = '*' then fetch;
+		if next = ')' then fetch; n := n-1 end
+	    else fetch
+	    end
+	end
+    end;
+    
+    is_class_name (s: STR): BOOL is
+	-- s is a legal identifier
+	--
+	loop if s.elt!.is_lower then return false end end;
+	return true 
+    end;
+
+    token: TOKEN is
+	-- next Sather token; eof_tok if at end.
+	--
+	whitespace ::= false;
+	res: INT := null_tok;
+	loop
+	    case next
+	    when SFILE_ID::eof_char then res := eof_tok
+	    when '\n', ' ', '\t', '\f', '\b', '\r', '\v' then
+		whitespace := true; skip_whitespace
+	    when 'a','b','c','d','e','f','g','h','i','j','k','l','m',
+		'n','o','p','q','r','s','t','u','v','w','x','y','z',
+		     'A','B','C','D','E','F','G','H','I','J','K','L','M',
+		     'N','O','P','Q','R','S','T','U','V','W','X','Y','Z' then
+		     res := identifier.val
+	    when '(' then fetch;
+		if next = '*' then comment_here; fetch; comment
+		else res := lparen_tok end
+	    when ')' then fetch; res := rparen_tok
+	    when '[' then fetch; res := lbracket_tok
+	    when ']' then fetch; res := rbracket_tok
+	    when '{' then fetch; res := lbrace_tok
+	    when '}' then fetch; res := rbrace_tok
+	    when ',' then fetch; res := comma_tok
+	    when '.' then fetch; res := dot_tok
+	    when ';' then fetch; res := semi_tok
+	    when '$' then fetch;
+		if next.is_upper then
+		    res := identifier.val;
+		    if (res = ident_tok) and is_class_name(lex_value.str) then
+			lex_value := #IDENT("$" + lex_value.str);
+			res := type_name_tok
+		    end
+		end;
+		if res /= type_name_tok then 
+		    error("'$' without type name")
+		end
+	    when '+' then fetch; res := plus_tok
+	    when '-' then fetch;
+		if next = '-' then -- skip comment
+		    comment_here;
+		    loop fetch;
+			until!((next = '\n') or (next = SFILE_ID::eof_char)) end;
+		    if next = '\n' then fetch
+		    else res := eof_tok end
+		elsif next = '>' then fetch; res := transform_tok
+		else res := minus_tok
+		end
+	    when '*' then fetch; res := times_tok
+	    when '#' then fetch; res := sharp_tok
+	    when '^' then fetch; res := pow_tok
+	    when '%' then fetch; res := mod_tok
+	    when '|' then fetch; res := vbar_tok
+	    when '!' then fetch;
+		if whitespace then res := bang_tok
+		else res := iter_bang_tok end
+	    when '_' then fetch; res := under_tok
+	    when '=' then fetch; res := is_eq_tok
+	    when ':' then -- one of :,  := , ::, :  :=, :- 
+		fetch;
+		if next = ':' then fetch;
+		    if next = '=' then        -- special case for " ::= "
+			     res := colon_tok;
+			backup
+		    else res := dcolon_tok end;
+		elsif next = '=' then fetch; res := assign_tok
+		elsif (next = '-') and pSather then fetch; res := attach_tok
+		else res := colon_tok end
+	    when '/' then -- one of /, /=
+		fetch;
+		if next = '=' then fetch; res := is_neq_tok
+		else res := quotient_tok end
+	    when '<' then -- one of <, <=
+		fetch;
+		if next = '=' then fetch; res := is_leq_tok
+		else res := is_lt_tok end
+	    when '>' then -- one of >, >=
+		fetch;
+		if next = '=' then fetch; res := is_geq_tok
+		else res := is_gt_tok end
+	    when '~' then fetch; res := not_tok
+		-- everything left is some kind of literal
+	    when '\'' then -- a CHAR literal
+		fetch;
+		if next = '\\' then -- something funny, have to decode
+		    char_value := character
+		else char_value := next; fetch
+		end;
+		if next /= '\'' then error("malformed character literal") end;
+		fetch; res := lchar_tok
+	    when '"' then -- a STR literal
+		fetch;
+		buf.clear;
+		loop -- collect adjacent strings
+		    loop until!(next = '"' or next = '\n');
+			if next = '\\' then buf := buf + character;
+			else buf := buf + next; fetch
+			end
+		    end;
+		    if next = '\n' then
+			error("unterminated STR literal");
+			break! end;
+		    fetch; skip_whitespace;
+		    if next /= '"' then break! end;
+			fetch -- go past next " mark
+		    end; -- outer loop
+		    add_buf_to_sym_table;
+		    res := lstr_tok
+		when '0','1','2','3','4','5','6','7','8','9' then res := number.val
+		when '@' then
+		    --if pSather then
+		       fetch; res := at_tok
+		    --else error("unknown character: '" + next + '\''); fetch
+		    --end;
+		else error("unknown character: '" + next + '\''); fetch
+		end;
+		while!(res = null_tok)
+	    end;
+	    return #TOKEN(res)
+	end
+	
+    end; -- SCANNER
+    

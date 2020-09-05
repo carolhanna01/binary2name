@@ -1,0 +1,4951 @@
+@q polygons.web @>
+   
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Polygon.@>
+@** Polygon\quad ({\tt polygons\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2003.07.18.}  
+Removed the transformation sections from
+|Reg_Polygon|, and made them members of |Polygon|.  Also, removed the
+|Rectangle| versions in \filename{rectangs.web}.  
+
+\initials{LDF 2003.11.12.}  
+Removed the version control identifiers from the CWEB
+files for the distribution of 3DLDF 1.1.  They're still used in my
+development versions.
+
+\initials{LDF 2003.12.10.}  
+Put the version control identifiers back
+into my release versions for 3DLDF 1.1.4.  I've already put some of
+them back in, now I'm doing the rest of them.  However, the release
+versions are now in their own RCS repository.
+\ENDLOG 
+
+@f Polygon Path
+
+@q * (1) Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.05.21.}  
+Now including \filename{pens.web}.
+\ENDLOG 
+
+@<Include files@>=
+
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++"
+#include "pictures.h++"
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+
+@q * (1) Polygon class definition.@>
+@* {\bf Polygon} class definition. 
+\initials{LDF Undated.} 
+
+|Polygon| is derived from |Path|.  
+This makes sense, because a |Polygon| is really just a kind of
+|Path|.  This way, we don't have to define the drawing and filling
+functions, or the transformations.  
+\initials{LDF Undated.} 
+
+|Polygon| is meant to be used primarily as a base class for more
+specialized types of polygons.  Currently, |Reg_Polygon| and
+|Rectangle| are defined.  I've added |Polygon| so that I can define
+intersection functions that will work for both |Reg_Polygon| and
+|Rectangle|. 
+\initials{LDF 2003.06.06.}
+
+\LOG
+\initials{LDF 2003.06.06.}  
+Added |class Polygon|.
+\ENDLOG 
+
+@<Define |class Polygon|@>=
+
+class Polygon : public Path
+{
+ protected:
+  Point center;
+ public:
+  @<Declare |Polygon| functions@>@;
+};
+
+
+@q * (1) Default constructor.@> 
+@* Default constructor.
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+
+\initials{LDF 2005.03.31.}
+Now setting |surface_hiding_ctr = 0|.
+
+\initials{LDF 2005.04.18.}
+Now setting |decomposition_level = 0|.
+
+\initials{LDF 2005.12.11.}
+Now setting |Point center| to |INVALID_POINT|.
+\ENDLOG
+
+@<Declare |Polygon| functions@>=
+Polygon(void);
+
+@ 
+@<Define |Polygon| functions@>=
+Polygon::Polygon(void)
+{
+   shape_type = POLYGON_TYPE;
+   surface_hiding_ctr = 0;
+   decomposition_level = 0;
+   center = INVALID_POINT;
+   return;
+}
+
+@q * (1) Get copy.@>
+@* Get copy.
+@^\cfunc{Polygon}{get\_copy}@>
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+\ENDLOG
+
+@<Declare |Polygon| functions@>=
+virtual
+Shape*
+get_copy() const;
+
+@
+@<Define |Polygon| functions@>=
+Shape*
+Polygon::get_copy() const
+{
+  Polygon* p = create_new<Polygon>(0);
+  *p = *this;
+  return static_cast<Shape*>(p);
+}
+
+@q * (1) Set |center|.@>
+@* Set {\bf center}.
+\initials{LDF 2007.08.20.}
+
+\LOG
+\initials{LDF 2007.08.20.}
+Added this function.
+\ENDLOG
+
+@q ** (2) Declaration.@>
+
+@<Declare |Polygon| functions@>=
+virtual
+void
+set_center(const Point& p);
+
+@q ** (2) Definition.@>
+
+@
+@<Define |Polygon| functions@>=
+void
+Polygon::set_center(const Point& p)
+{
+   center = p;
+   return;
+}
+
+@q * (1) Returning elements and information.@>
+@* Returning elements and information.
+\initials{LDF Undated.}
+
+@q ** (2) Get |Shape| type.@> 
+@*1 Get {\bf Shape} type.
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+virtual 
+inline
+unsigned short 
+get_shape_type(void) const
+{
+   return POLYGON_TYPE;
+}
+
+
+@q ** (2) Is |Polygon|.@> 
+@*1 Is {\bf Polygon}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+
+\initials{LDF 2005.04.04.}
+Made this function |const|
+\ENDLOG
+
+@<Declare |Polygon| functions@>=
+virtual
+inline
+bool
+is_polygon(void) const 
+{
+   return true;
+}
+
+
+@q ** (2) Get center.@>
+@*1 Get center.  
+\initials{LDF 2003.07.18.}  
+
+\LOG
+\initials{LDF 2003.07.18.}  
+Moved these functions from |Reg_Polygon| to |Polygon|.  
+Also removed the |Rectangle| versions, since |Rectangle| inherits 
+the |Polygon| versions. 
+\ENDLOG 
+
+@q *** (3) non-{\bf const} version.@>
+@*2 non-{\bf const} version.
+@^\cfunc{Polygon}{get\_center}@>
+\initials{LDF 2002.04.24.}  
+
+\LOG
+\initials{LDF 2002.04.24.}  
+Added this function.
+
+\initials{LDF 2003.05.09.}  Changed return value from |Point&| to |const
+Point&|. 
+\ENDLOG 
+
+@<Declare |Polygon| functions@>=
+virtual
+const Point&
+get_center(void);
+
+@ 
+@<Define |Polygon| functions@>=
+const Point&
+Polygon::get_center(void) 
+{
+
+  if (points.size() == 0)    /* LDF 2002.09.27.  Added this error
+                                handling code.  If the |Polygon|
+                                is empty, don't return |center|.*/ 
+    {
+      cerr << "WARNING! In Polygon::get_center():\n"
+        << "Polygon doesn't contain any Points, "
+        << "so it presumably doesn't have a center.\n"
+        << "Returning INVALID_POINT.\n\n";
+      return const_cast<Point&>(INVALID_POINT);
+    }
+  
+  center.apply_transform();
+  return center;
+}
+
+
+@q *** {\bf const} version.@>
+@ {\bf const} version.
+@^\cfunc{Polygon}{get\_center}@>
+\initials{LDF 2002.09.27.}  Note that this version returns a |Point| whereas the
+non-|const| version returns a |Point&|.  That's because |p| is a local
+variable in this function and it would be an error to return a
+reference to it.
+\initials{LDF 2002.04.24.}  Added this function.
+
+@<Declare |Polygon| functions@>=
+Point
+get_center() const;
+
+@ 
+@<Define |Polygon| functions@>=
+Point
+Polygon::get_center() const
+{
+  if (points.size() == 0)    /* LDF 2002.09.27.  Added this error
+                                handling code.  If the |Polygon|
+                                is empty, don't return |center|.*/ 
+    {
+      cerr << "WARNING! In Polygon::get_center():\n"
+        << "Polygon doesn't contain any Points, "
+        << "so it presumably doesn't have a center.\n"
+        << "Returning INVALID_POINT.\n\n";
+      return const_cast<Point&>(INVALID_POINT);
+    }
+
+  Point p(center);
+  p.apply_transform();
+  return p;
+}
+
+@q ** (2) Projections intersect.@>
+@*1 Projections intersect.  
+@^\cfunc{Polygon}{projections\_intersectradius}@>
+\initials{LDF 2005.04.18.}
+
+\LOG
+\initials{LDF 2005.04.18.}
+Added this function.
+
+\initials{LDF 2005.04.19.}
+@:BUG FIX@> BUG FIX:  Now testing the minimum and maximum x 
+and y-coordinates, and not just the z-coordinates.
+\ENDLOG 
+
+@q ** (2) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+
+virtual 
+Unsigned_Byte
+projections_intersect(Shape* s, Scanner_Node scanner_node = 0);
+
+@q ** (2) Definition.@> 
+@
+@<Define |Polygon| functions@>=
+Unsigned_Byte
+Polygon::projections_intersect(Shape* s, Scanner_Node scanner_node)
+{
+
+   real this_min_x = get_minimum_x();
+   real s_min_x = s->get_minimum_x();
+
+   real this_max_x = get_maximum_x();
+   real s_max_x = s->get_maximum_x();
+
+   real this_min_y = get_minimum_y();
+   real s_min_y = s->get_minimum_y();
+
+   real this_max_y = get_maximum_y();
+   real s_max_y = s->get_maximum_y();
+
+   real this_min_z = get_minimum_z();
+   real s_min_z = s->get_minimum_z();
+
+   real this_max_z = get_maximum_z();
+   real s_max_z = s->get_maximum_z();
+
+   if (   (   this_max_x < s_min_x
+           || this_min_x > s_max_x)
+       && (   this_max_y < s_min_y
+           || this_min_y > s_max_y)
+       && (   this_max_z < s_min_z
+           || this_min_z > s_max_z))
+
+      return 0;
+
+   else if (   (   this_min_x > s_min_x
+                || this_max_x < s_max_x)
+            && (   this_min_y > s_min_y
+                || this_max_y < s_max_y)
+            && (   this_min_z > s_min_z
+                || this_max_z < s_max_z))
+      {
+         /* !! START HERE.  Call |intersection|.  LDF 2005.04.19.  */@; 
+         
+         return 1;
+      }
+
+
+
+   else 
+      return 2;
+   
+
+}  /* End of |Polygon::projections_intersect| definition.  */
+
+
+@q * (1) Intersections.@>
+@* Intersections.
+
+@q ** (2) Intersection with a |Shape|.@>
+@*1 Intersection with a |Shape|.
+@^\cfunc{Polygon}{intersection}@>
+\initials{LDF 2005.03.23.}
+
+\LOG
+\initials{LDF 2005.03.23.}
+Added this function.
+
+\initials{LDF 2005.03.31.}
+Made this function a member of |class Polygon|.  Formerly, it
+was a member of |class Reg_Polygon|.
+
+\initials{LDF 2005.05.21.}
+Changed |Shape::NULL_TYPE| to |Shape::NULL_SHAPE_TYPE|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+
+virtual 
+Int_Void_Ptr
+intersection(Shape* s, Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Polygon| functions@>=
+
+Int_Void_Ptr
+Polygon::intersection(Shape* s, Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "Entering `Polygon::intersection(Shape*, "
+                  << "Scanner_Node)'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) @>   
+
+   Int_Void_Ptr ivp;
+
+   unsigned short s_type = s->get_shape_type();
+
+@q ***** (5) Two |Polygons|.@> 
+
+@ Two |Reg_Polygons|.
+\initials{LDF 2005.03.31.}
+
+@<Define |Polygon| functions@>=
+
+   if (s->is_polygon())
+      {
+
+@q ****** (6).@> 
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                cerr_strm << thread_name << "In `Polygon::intersection():"
+                          << endl 
+                          << "Both `Shapes' are `Polygons'.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str("");
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6).@> 
+ 
+
+         vector<Point> vp = intersection_points(*static_cast<Polygon*>(s));
+
+@q ******* (7) @> 
+
+         if (vp.size() > 0)
+            {
+ 
+                Pointer_Vector<Point>* pv = new Pointer_Vector<Point>;
+                *pv = vp;
+                ivp.v = pv;
+                ivp.i = Shape::POINT_POINTER_VECTOR_TYPE;
+
+                return ivp;
+
+            }  /* |if (vp.size() > 0)|  */
+
+@q ******* (7) @> 
+
+         else  /* |vp.size() <= 0|  */
+           {
+              ivp.v = 0;
+              ivp.i = Shape::NULL_SHAPE_TYPE;
+
+              return ivp;
+
+           }  /* |else| (|vp.size() <= 0|)  */
+            
+
+
+@q ****** (6).@> 
+          
+      }  /* |if (   shape_type == Shapes::REG_POLYGON_TYPE 
+                 && s_type     == Shapes::REG_POLYGON_TYPE)|  */   
+
+@q ***** (5).@> 
+
+
+@q ***** (5).@> 
+
+@q **** (4) @>   
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name 
+                  << "Exiting `Polygon::intersection(Shape*, "
+                  << "Scanner_Node)'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+   return ivp;
+
+}  /* End of |Polygon::intersection|.  */
+
+
+@q ** (2) Intersection with a line.@>
+@*1 Intersection with a line.
+
+A line can intersect with a |Polygon| at two points at most.  
+\initials{LDF 2003.06.13.}  
+
+
+@q *** (3) Point version.@>
+@*2 {\bf Point} version. 
+@^\cfunc{Polygon}{intersection\_points}@>
+
+\LOG
+\initials{LDF 2003.06.13.}  
+Added this function.
+
+\initials{LDF 2003.06.17.}  
+Minor change.  Now using |get_point(0)| and |center|
+instead of |get_point(0)| and\newline
+|get_last_point| to generate
+|surface_vector|. 
+
+\initials{LDF 2004.06.08.}  
+Changed |origin| to |origin_pt|, because I've
+removed the global variable |origin|.  I'm replacing it with a predefined
+variable defined in |Scanner_Type::create|.
+
+\initials{LDF 2005.02.23.}
+Made this function |virtual|.  
+Added the |Scanner_Node scanner_node| argument with the default 0.
+Made some debugging output thread-safe.
+@:BUG FIX@> BUG FIX:  In the coplanar case:  Now handling the case correctly, 
+that the first intersection is a vertex of the |Polygon|.
+
+\initials{LDF 2005.02.24.}
+@:BUG FIX@> BUG FIX:  Now calling |get_center| instead of 
+accessing |center| directly.  The way it was before failed when 
+calling this function on a |Triangle|.
+
+\initials{LDF 2005.12.09.}
+Added optional |bool suppress_warnings| argument with the default |false|.
+
+\initials{LDF 2007.09.24.}
+In the perpendicular and non-coplanar case, where the |Path|
+intersects the plane of the |Polygon| but not the |Polygon| itself, 
+this function now returns a |Bool_Point_Pair bpp| in which
+|bpp.first.b| is |false| and |bpp.first.pt| is the intersection point.
+\ENDLOG 
+
+@q **** (4) Declaration.@>
+
+@<Declare |Polygon| functions@>=
+
+virtual
+Bool_Point_Pair
+intersection_points(const Point& pt0, 
+                    const Point& pt1,
+                    Scanner_Node scanner_node = 0,
+                    bool suppress_warnings = false) const;
+
+@q **** (4) Definition.@>
+@
+@<Define |Polygon| functions@>=
+Bool_Point_Pair
+Polygon::intersection_points(const Point& pt0, 
+                             const Point& pt1,
+                             Scanner_Node scanner_node,
+                             bool suppress_warnings) const
+{
+
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5).@>
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "Entering `Polygon::intersection_points() "
+                   << "with two `Point&' arguments.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+     
+    Point origin_pt(0, 0, 0);
+
+
+    Bool_Point_Pair bpp = INVALID_BOOL_POINT_PAIR;  /* The return
+                                                       value.  */
+    Plane pl = get_plane();
+
+
+    Point pt_vector(pt1 - pt0);
+
+    Point temp_pt_0 = get_point(0);
+
+
+    Point temp_pt_1 = get_center();
+
+
+    Point surface_vector(get_point(0) - get_center());
+
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+      {
+          cerr_mutex.lock(); 
+          pl.point.show("pl.point");
+          pl.normal.show("pl.normal");
+          pt0.show("pt0");
+          pt1.show("pt1");
+          pt_vector.show("pt_vector");
+          surface_vector.show("surface_vector");
+          cerr_mutex.unlock(); 
+      }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+    Point cross = surface_vector.cross_product(pt_vector);
+    cross.unit_vector(true);
+
+    short distance = pl.get_distance(pt0).second;
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+      {
+          cerr_mutex.lock(); 
+          cross.show("cross");
+          pl.normal.show("pl.normal");
+          cerr << "`distance' == " << distance << "." << endl;
+          cerr_mutex.unlock(); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+@q ***** (5) Degenerate cases, error handling.@>
+@ Degenerate cases, error handling.
+\initials{LDF Undated.}
+
+@<Define |Polygon| functions@>=
+
+  if (pt_vector == INVALID_POINT || 
+      pl.normal == INVALID_POINT || 
+      pt_vector == origin_pt || 
+      pl.normal == origin_pt)
+    {
+        if (!suppress_warnings)
+           {
+               cerr_mutex.lock(); 
+               cerr << thread_name 
+                    << "ERROR!  "
+                    << "In `Polygon::intersection_points(const Point& pt0, "
+                    << "const Point& pt1,"
+                    << endl << "Scanner_Node scanner_node) const)':"
+                    << endl 
+                    << "Something is wrong with the normals:" << endl;
+
+               pt_vector.show("pt_vector:");
+               pl.normal.show("pl.normal");
+               cerr << "Returning INVALID_BOOL_POINT_PAIR." 
+                    << endl 
+                    << "Exiting function with return value "
+                    << "`INVALID_BOOL_POINT_PAIR'." << endl;
+               cerr_mutex.unlock(); 
+
+           }  /* |if (!suppress_warnings)|  */
+
+        return INVALID_BOOL_POINT_PAIR;
+
+    }  /* |if|  */
+    
+@q ***** (5) Parallel and coplanar cases.@>
+@ Parallel and coplanar cases.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2003.06.20.}  
+Now checking |surface_vector|
+against |pt_vector| in the following conditional.
+
+\initials{LDF 2004.11.09.}
+@:BUG FIX@> BUG FIX: 
+Now testing for |cross.magnitude() == 0|.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+else if (surface_vector == pt_vector || surface_vector == -pt_vector
+         || cross == pl.normal || cross == -pl.normal 
+         || cross.magnitude() == ZERO_REAL)
+  {
+
+@q ****** (6) Coplanar case.@>
+@ Coplanar case.
+\initials{LDF Undated.}
+
+Only those intersection points that are on the line
+segments making up the |Polygon| are returned in |bpp|.  If an
+intersection |Point| lies on both segments, the |bool| part of the
+|Bool_Point| will be |true|, otherwise |false|.  If a |Point| lies on
+a line segment belonging to the |Polygon|, but not to the line segment 
+$\overrightarrow{pt_0pt_1}$, the |Point| will be put into the
+|Bool_Point|, but the |bool| will be |false|.  The reason for this is,
+that the angles of the sides of the |Polygon| can cause intersection
+points to be found that the user probably won't want.
+\initials{LDF 2003.06.13.}  
+
+@<Define |Polygon| functions@>=
+
+
+  if (distance == ZERO_REAL)
+    {
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name << "Line and Polygon are coplanar.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+        bool found = false;
+        Bool_Point bp;
+
+        Point q0; 
+        Point q1;
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_mutex.lock(); 
+         show("this");
+         cerr_mutex.unlock(); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+@q ******* (7) @> 
+
+        for (vector<Point*>::const_iterator iter = points.begin(); 
+             iter != points.end();
+             ++iter)
+          {
+
+@q ******** (8) @> 
+
+              if ((iter + 1) == points.end())
+                {
+#if DEBUG_COMPILE
+                    if (DEBUG)
+                       {
+                           
+                           cerr_strm << thread_name 
+                                     << "Doing last segment.";
+
+                           log_message(cerr_strm);
+                           cerr_message(cerr_strm);
+                           cerr_strm.str("");         
+                       }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                  q0 = *(points.back());
+                  q1 = *(points.front());
+
+                }  /* |if ((iter + 1) == points.end())|  */
+
+@q ******** (8) @> 
+
+              else  /* |(iter + 1) != points.end|  */
+                {
+#if DEBUG_COMPILE
+                  if (DEBUG) 
+                    cerr << "Doing normal segment.\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                  q0 = **iter;
+                  q1 = **(iter + 1);
+
+                }   /* |else| (|(iter + 1) != points.end|)  */
+
+@q ******** (8) @> 
+
+              bp = Point::intersection_point(pt0, pt1, q0, q1);
+
+@q ******** (8) @> 
+
+
+              if (bp.b) /* Intersection point is on both segments.  */
+                {
+
+@q ********* (9) @> 
+
+                    if (!found)
+                       {
+                           bpp.first.b = true;
+                           bpp.first.pt = bp.pt;
+                           found = true;
+#if DEBUG_COMPILE
+                           if (DEBUG)
+                              {
+                                  cerr_strm << thread_name 
+                                            << "Found first intersection.";
+
+                                  log_message(cerr_strm);
+                                  cerr_message(cerr_strm);
+                                  cerr_strm.str("");               
+                              }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+                       }  /* |if (!found)|  */
+
+@q ********* (9) @> 
+
+@
+\LOG
+\initials{LDF 2005.02.23.}
+Added this section.  Now continuing if the second intersection 
+point is the same as the first.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+
+                    else if (found && bp.pt == bpp.first.pt)
+                      {
+                          continue;
+                      }
+
+@q ********* (9) @> 
+
+                    else  /* |(found && bp.pt != bpp.first.pt)|  */
+                      {
+                          bpp.second.b = true;
+                          bpp.second.pt = bp.pt;
+#if DEBUG_COMPILE
+                          if (DEBUG)
+                             {
+                                 cerr_strm << thread_name 
+                                           << "Found second intersection. Returning.";
+
+                                 log_message(cerr_strm);
+                                 cerr_message(cerr_strm);
+                                 cerr_strm.str("");               
+                             }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+                           return bpp;
+
+                      }
+@q ********* (9) @> 
+
+                }   /* |if (bp.b)| (Intersection point is on both segments.)  */
+
+@q ******** (8) @> 
+
+              else if (bp.pt != INVALID_POINT
+                       && bp.pt.is_on_segment(q0, q1).first)
+                {
+@q ********* (9) @> 
+
+                    if (!found)
+                      {
+                          bpp.first.b = false;
+                          bpp.first.pt = bp.pt;
+                          found = true;
+
+#if DEBUG_COMPILE
+                          if (DEBUG)
+                            cerr << "Found first intersection.\n";
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+                      } /* |!found|  */
+
+@q ********* (9) @> 
+
+@
+\LOG
+\initials{LDF 2005.02.23.}
+Added this section.  Now continuing if the second intersection 
+point is the same as the first.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+
+                    else if (found && bp.pt == bpp.first.pt)
+                      {
+                          continue;
+                      }
+
+
+@q ********* (9) @> 
+
+                    else  /* |found|  */
+                      {
+                          bpp.second.b = false;
+                          bpp.second.pt = bp.pt;
+#if DEBUG_COMPILE
+                          if (DEBUG)
+                             {
+                                 cerr_strm << thread_name 
+                                           << "Found second intersection. Returning.";
+
+                                 log_message(cerr_strm);
+                                 cerr_message(cerr_strm);
+                                 cerr_strm.str("");               
+                             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                          return bpp;
+
+                      }  /* |else| (|found|)  */
+@q ********* (9) @> 
+
+                }  /* |else if (   bp.pt != INVALID_POINT
+                                && bp.pt.is_on_segment(q0, q1).first)|  */
+
+@q ******** (8) @> 
+
+              else
+                continue;
+
+@q ******** (8) @> 
+
+          } /* |for|  */
+
+@q ******* (7) @> 
+
+        return bpp;
+
+@q ******* (7) @> 
+
+    } /* End of coplanar case.  */    
+
+@q ****** (6) Parallel case.@>
+@ Parallel case.
+@<Define |Polygon| functions@>=
+   else
+      {
+          if (!suppress_warnings)
+             {
+                 cerr_strm << thread_name << "WARNING!  In `Polygon::intersection_points():"
+                           << endl 
+                           << "Line and Polygon are in parallel planes.\n"
+                           << "No intersections. Returning INVALID_BOOL_POINT_PAIR.";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm, warning_stop_value);
+                 cerr_strm.str("");
+
+             }  /* |if (!suppress_warnings)|  */
+
+          return INVALID_BOOL_POINT_PAIR;
+      }
+      
+   } /* End of parallel and coplanar cases.  */
+  
+@q ***** (5) Perpendicular and non-coplanar cases.@>
+@ Perpendicular and non-coplanar cases.
+These cases are handled in exactly the same way.
+\initials{LDF 2003.06.13.}  
+
+\LOG
+\initials{LDF 2007.08.29.}
+Now passing the |bool suppress_warnings| argument to |Plane::intersection_point|.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+  else 
+    {
+        if (pl.normal == pt_vector || pl.normal == -pt_vector)
+          {
+#if DEBUG_COMPILE
+              if (DEBUG) 
+                cerr << "The line is perpendicular to the Polygon." << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          }
+
+        else
+          {
+#if DEBUG_COMPILE
+              if (DEBUG) 
+                cerr << "The line and the Polygon are non-coplanar.\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          }
+
+        Bool_Point bp = pl.intersection_point(pt0, pt1, suppress_warnings);
+        
+#if DEBUG_COMPILE
+        if (DEBUG)
+          {
+              cerr_mutex.lock(); 
+              cerr << "`bp.b' == " << bp.b << endl;
+              bp.pt.show("bp.pt");
+              cerr_mutex.unlock(); 
+          }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+        if (bp.pt == center)
+          {
+#if DEBUG_COMPILE
+            if (DEBUG)
+              {
+                cerr << "bp.pt == center." << endl;
+              }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+            bpp.first.pt = bp.pt;
+            bpp.first.b = bp.pt.is_on_segment(pt0, pt1).first;
+            return bpp;
+          }
+
+        Point r0;
+        Point r1;
+
+#if DEBUG_COMPILE
+        if (DEBUG)
+          {
+            show("this:");
+            center.show("center");
+            cerr << "points.size() == " << points.size() << endl;
+          }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6)@>
+
+        for (vector<Point*>::const_iterator iter = points.begin();
+             iter != points.end(); ++iter)
+          {
+              if ((iter + 1) == points.end())
+                {
+                    r0 = *(points.back());
+                    r1 = *(points.front());
+#if DEBUG_COMPILE
+                    if (DEBUG)
+                      {
+                        r0.show("r0");
+                        r1.show("r1");
+
+                      }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                }
+              else
+                {
+                    r0 = **iter;
+                    r1 = **(iter + 1);
+                }
+
+              if (bp.pt == r0 || bp.pt == r1)
+                {
+#if DEBUG_COMPILE
+                  if (DEBUG)
+                    {
+                      if (bp.pt == r0)
+                        cerr << "bp.pt == r0." << endl;
+                      else if (bp.pt == r1)
+                        cerr << "bp.pt == r1." << endl;
+                    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                  bpp.first.pt = bp.pt;
+                  bpp.first.b = bp.pt.is_on_segment(pt0, pt1).first;
+                  return bpp;
+                }
+              
+
+@q ******* (7)@>
+@ 
+\LOG
+\initials{LDF 2005.10.19.}
+Now passing |false| to |Point::is_in_triangle| instead of |DEBUG|.
+The latter is now only defined when |DEBUG_COMPILE| is non-zero.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+              else if (bp.pt.is_in_triangle(center, r0, r1, false))
+                {
+#if DEBUG_COMPILE
+                  if (DEBUG)
+                    cerr << "Intersection point is within triangle.\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                  bpp.first.pt = bp.pt;
+                  bpp.first.b = bp.pt.is_on_segment(pt0, pt1).first;
+                  return bpp;
+                }
+
+
+@q ******* (7)@>
+
+            }  /* |for|  */
+
+
+@q ****** (6)@>   
+@ 
+\LOG
+\initials{LDF 2007.09.24.}
+Added this section.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+
+#if DEBUG_COMPILE
+               if (DEBUG)
+               {
+                   cerr_mutex.lock(); 
+                   cerr << "Intersection point is in the plane, but not within the polygon.\n";
+                   cerr_mutex.unlock();  
+               }
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+               bpp.first.pt = bp.pt;
+               bpp.first.b = false;
+               return bpp;
+
+} /* End of ``Perpendicular and non-coplanar cases''.  */
+
+
+@q ***** (5) End of definition.@>
+@ End of definition.
+@<Define |Polygon| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr << "Exiting Polygon::intersection_points.\n\n";
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+   return bpp;
+
+}  /* End of |Polygon::intersection_points| definition.  */
+
+
+@q *** (3) Path version.@>
+@*2 {\bf Path} version.
+@^\cfunc{Polygon}{intersection\_points}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.12.09.}
+Made this function |virtual|.  Added optional |Scanner_Node scanner_node| 
+with the default 0.  Made error output thread-safe.
+
+\initials{LDF 2005.12.09.}
+Added optional |bool suppress_warnings| argument with the default |false|.
+\ENDLOG
+
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+virtual
+Bool_Point_Pair
+intersection_points(const Path& p, 
+                    Scanner_Node scanner_node = 0,
+                    bool suppress_warnings = false) const;
+
+@q **** (4) Definition.@> 
+
+@
+@<Define |Polygon| functions@>=
+Bool_Point_Pair
+Polygon::intersection_points(const Path& p, 
+                             Scanner_Node scanner_node,
+                             bool suppress_warnings) const
+{
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5).@>
+
+   if (!p.is_linear())
+     {
+         cerr_strm << thread_name 
+                   << "ERROR! In Polygon::intersection_points(const Path& p, [etc.]):"
+                   << endl 
+                   << "`Path p' is non-linear.  Can't handle this case yet."
+                   << endl 
+                   << "Exiting function unsuccessfully with return value "
+                   << "`INVALID_BOOL_POINT_PAIR'.";
+
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm, error_stop_value);
+         cerr_strm.str("");
+
+         return INVALID_BOOL_POINT_PAIR;
+
+     }  /* |if (!p.is_linear())|  */
+
+   return intersection_points(p.get_point(0), 
+                              p.get_last_point(), 
+                              scanner_node, 
+                              suppress_warnings);
+
+}  /* End of |Polygon::intersection_points| definition.  */
+
+  
+@q ** (2) Intersection with another Polygon.@>
+@*1 Intersection with another {\bf Polygon}.
+@^\cfunc{Polygon}{intersection\_points}@>
+@:!! TO DO@> TO DO:  Explain what this function does and how it
+works.  \initials{LDF 2003.06.29.}
+
+@:!! TO DO@> TO DO:  Find out where |unit_vector| gets called, when
+this function is called, and try to pass |true| as its |silent|
+argument. \initials{LDF 2003.07.16.}
+
+\LOG
+\initials{LDF 2003.06.29.}  
+Replaced the dummy definition of this function with a
+real one.
+\ENDLOG 
+
+@<Declare |Polygon| functions@>=
+vector <Point>
+intersection_points(const Polygon& r) const;
+
+@ 
+@<Define |Polygon| functions@>=
+vector<Point>
+Polygon::intersection_points(const Polygon& r) const
+{
+  bool DEBUG = false; /* |true|  */
+
+  vector<Point> v;
+  
+  Plane pl = get_plane();
+  Plane r_pl = r.get_plane();
+
+  if (DEBUG)
+    {
+      pl.normal.show("pl.normal");
+      r_pl.normal.show("r_pl.normal");
+      cerr << "pl.distance == " << pl.distance << endl;
+      cerr << "r_pl.distance == " << r_pl.distance << endl;
+    }
+  
+  real distance = fabs(fabs(pl.distance) - fabs(r_pl.distance));
+  
+  if (distance <  Point::epsilon())
+    distance = 0;
+
+  if (DEBUG) 
+    cerr << "distance == " << distance << endl;
+
+  if (pl.normal == r_pl.normal)
+    {
+
+@q *** (3) Coplanar case.@>
+@ Coplanar case.
+@<Define |Polygon| functions@>=
+      if (distance == ZERO_REAL)
+        {
+          if (DEBUG) 
+            cerr << "Coplanar.\n";
+
+          Bool_Point bp;
+          Point* ptr;
+          Point* r_ptr;
+          for (vector<Point*>::const_iterator iter = points.begin();
+               iter != points.end();
+               ++iter)
+            {
+              if ((iter + 1) == points.end())
+                ptr =  points.front();
+              else
+                ptr = *(iter + 1);
+
+              for (vector<Point*>::const_iterator r_iter = r.points.begin();
+                   r_iter != r.points.end();
+                   ++r_iter)
+                {
+
+                  if ((r_iter + 1) == r.points.end())
+                    r_ptr =  r.points.front();
+                  else
+                    r_ptr = *(r_iter + 1);
+
+                  bp = Point::intersection_point(**iter, *ptr,
+                                                 **r_iter, *r_ptr);
+                  if (bp.b)
+                    v.push_back(bp.pt);
+                }  /* Inner |for|  */
+            } /* Outer |for|  */
+          return v;
+        }
+@q *** (3) Parallel case.@>
+@ Parallel case.
+@<Define |Polygon| functions@>=
+      else /* Parallel.  */
+        {
+            cerr << "WARNING!  In Polygon::intersection_points():\n"
+                 << "The Polygons lie in parallel planes. "
+                 << "Returning empty vector<Point>.\n\n";
+            return v;
+        }
+    }
+@q *** (3) Non-parallel, non-coplanar case.@>
+@ Non-parallel, non-coplanar case.
+|v| will contain the intersection points of the |Line l| with |*this|
+and |r|, if any.  |v| can contain a maximum of four |Points| in this
+case. 
+|v[0]| and |v[1]| will be the intersection
+points of the |Line l| with |*this|, and |v[2]| and |v[3]| the
+intersection points of |l| and |r|, if they exist.  If any
+intersection point doesn't exist, |INVALID_POINT| will be stored in
+the corresponding element of |v| as a placeholder.  \initials{LDF 2003.06.29.}
+
+The values in |v| provide information about 
+the relative positions of the |Polygons|, e.g., whether they touch,
+whether lies within the perimeter of the other, etc.  
+However, it's not possible to include
+this information in the return value, since the latter is merely a
+|vector<Point>|.   
+The routine below may need to be put into another function 
+in order to use this information.  It may be of importance in breaking
+up |Polygons| and |Solids| for an improved 
+@^surface hiding@>
+surface hiding routine.
+\initials{LDF 2003.06.29.} 
+@<Define |Polygon| functions@>=
+  else
+    {
+      if (DEBUG) 
+        cerr << "Non-coplanar, non-parallel.\n";
+      Line l = pl.intersection_line(r_pl);
+      Bool_Point_Pair bpp = intersection_points(l.position,
+                                                (l.position + l.direction));
+
+
+      v.push_back(bpp.first.pt);
+
+      if (bpp.first.pt == bpp.second.pt)
+        {
+          if (DEBUG)
+            cerr << "bpp.first.pt and bpp.second.pt are equal for *this.\n";
+          v.push_back(INVALID_POINT);
+        }
+      else
+        v.push_back(bpp.second.pt);
+
+      bpp = r.intersection_points(l.position,
+                                  (l.position + l.direction));
+
+      v.push_back(bpp.first.pt);
+
+      if (bpp.first.pt == bpp.second.pt)
+        {
+          if (DEBUG)
+            cerr << "bpp.first.pt and bpp.second.pt are equal for r.\n";
+          v.push_back(INVALID_POINT);
+        }
+      else
+        v.push_back(bpp.second.pt);
+
+     if (!(v[0] != INVALID_POINT || v[1] != INVALID_POINT
+         || v[2] != INVALID_POINT || v[3] != INVALID_POINT))
+       {
+         if (DEBUG)
+           cerr << "No intersection points found.  "
+                << "Returning empty vector<Point>\n\n";
+         v.clear();
+         return v;
+       }
+        
+      Bool_Real br[4];
+
+      if (!(v[2] == INVALID_POINT || v[3] == INVALID_POINT))
+        {
+          if (v[0] != INVALID_POINT)  
+            br[0] = v[0].is_on_segment(v[2], v[3]);
+          else
+            {
+              br[0].first = false;
+              br[0].second = 0;
+            }
+          if (v[1] != INVALID_POINT)  
+            br[1] = v[1].is_on_segment(v[2], v[3]);
+          else
+            {
+              br[1].first = false;
+              br[1].second = 0;
+            }
+        }
+      if (!(v[0] == INVALID_POINT || v[1] == INVALID_POINT))
+        {
+          if (v[2] != INVALID_POINT)  
+            br[2] = v[2].is_on_segment(v[0], v[1]);
+          else
+            {
+              br[2].first = false;
+              br[2].second = 0;
+            }
+          if (v[3] != INVALID_POINT)  
+            br[3] = v[3].is_on_segment(v[0], v[1]);
+          else
+            {
+              br[3].first = false;
+              br[3].second = 0;
+            }
+        }
+      
+      if (br[0].first && br[1].first)
+        {
+          if (DEBUG) 
+            cerr << "The intersection of *this with l lies within "
+                 << "the intersection of r with l.\n";
+        }
+      else if (br[2].first && br[3].first)
+        {
+          if (DEBUG) 
+            cerr << "The intersection of r with l lies within "
+              << "the intersection of *this with l.\n";
+        }
+      else if (br[0].first || br[1].first || br[2].first ||
+               br[3].first)
+        {
+          if (DEBUG) 
+            cerr << "The intersections of *this and r with l overlap partially.\n";
+        }
+      else
+        {
+          if (DEBUG) 
+            cerr << "The intersections of *this and r with l don't overlap at all.\n";
+        }
+      return v;
+
+    } /* |else|.  End of non-parallel, non-coplanar case.  */
+
+}  /* End of |Polygon::intersection_points(const Polygon& r) const|
+      definition.  */
+
+@q * (1) Transformations.@>
+@* Transformations. 
+
+\LOG
+\initials{LDF 2002.08.07.}  
+Copied the entire ``Transformations'' section from
+\filename{ellipses.web} and made the appropriate changes.
+
+\initials{LDF 2003.04.27.}  The previous comment was out-of-date.  I may have
+removed the transformation functions.  At any rate, there were only a
+couple here.  I have now copied the rest of them from
+\filename{ellipses.web} and made the appropriate changes.  
+
+\initials{LDF 2003.07.18.}  \initials{LDF 2003.07.18.}  Moved
+``Transformations'' section, 
+including\newline
+|operator*=(const Transform&)| from 
+|Reg_Polygon| to |Polygon|.
+Also removed the |Rectangle| versions in 
+\filename{rectangs.web}.   
+The |Polygon| versions are now inherited by |Reg_Polygon| and
+|Rectangle|. 
+\ENDLOG 
+
+@q ** Applying a transformation. @>
+@ Applying a transformation.
+@^\cofunc{Polygon}{*=}@>
+\LOG
+\initials{LDF 2002.11.06.}  Now calling |Path::operator*=| instead of looping
+through |points|.  This way, if I change |Path::operator*=|, the
+change will automatically be reflected here.
+\ENDLOG 
+@<Declare |Polygon| functions@>=
+virtual
+Transform
+operator*=(const Transform& t);
+
+@
+@<Define |Polygon| functions@>=
+Transform
+Polygon::operator*=(const Transform& t)
+{
+   Path::operator*=(t);
+   return (center *= t);
+}
+
+@q ** Rotatation around the main axes. @>
+@ Rotatation around the main axes. 
+@^\cfunc{Polygon}{rotate}@>
+@<Declare |Polygon| functions@>=
+virtual
+Transform 
+rotate(const real x, const real y = 0, const real z = 0);
+
+@
+@<Define |Polygon| functions@>=
+Transform 
+Polygon::rotate(const real x, const real y, const real z)
+{
+  Transform t;
+  t.rotate(x, y, z);
+  return (*this *= t);
+}
+
+@q ** Rotatation around an arbitrary axis. @>
+@ Rotate around an arbitrary axis. 
+
+@q *** Point arguments. @>
+@ {\bf Point} arguments. 
+@^\cfunc{Polygon}{rotate}@>
+\LOG
+\initials{LDF 2003.05.02.}  Changed name of this function from |rotate_around|
+to |rotate|.  This function now overloads |rotate| with three
+|real| arguments.
+\ENDLOG 
+@<Declare |Polygon| functions@>=
+virtual
+Transform 
+rotate(const Point& p0, const Point& p1, const real angle = 180);
+
+@
+@<Define |Polygon| functions@>=
+Transform 
+Polygon::rotate(const Point& p0, const Point& p1,
+                       const real angle)
+{
+  Transform t;
+  t.rotate(p0, p1, angle);
+  return (*this *= t);
+}
+
+@q *** Path argument. @>
+@ {\bf Path} argument. 
+@^\cfunc{Polygon}{rotate}@>
+\LOG
+\initials{LDF 2003.05.02.}  Changed name of this function from |rotate_around|
+to |rotate|.  This function now overloads |rotate| with three
+|real| arguments.
+\ENDLOG 
+@<Declare |Polygon| functions@>=
+virtual
+Transform 
+rotate(const Path& p, const real angle = 180);
+
+@
+@<Define |Polygon| functions@>=
+Transform 
+Polygon::rotate(const Path& p, const real angle)
+{
+  if (!p.is_linear())
+    {
+      cerr << "ERROR! In Ellipse::rotate(Path, real).\n"
+        << "Path is not a line.  Returning INVALID_TRANSFORM.\n\n";
+      return INVALID_TRANSFORM;
+    }
+  return rotate(p.get_point(0),
+                       p.get_last_point(), angle);  
+}   
+
+
+@q ** Scale. @>
+@ Scale. 
+@^\cfunc{Polygon}{scale}@>
+@<Declare |Polygon| functions@>=
+virtual
+Transform 
+scale(real x, real y = 1, real z = 1);
+
+@
+@<Define |Polygon| functions@>=
+Transform 
+Polygon::scale(real x, real y, real z)
+{
+  Transform t;
+  t.scale(x, y, z);
+  return (*this *= t);
+}
+
+@q ** Shear.@>
+@ Shear. 
+@^\cfunc{Polygon}{shear}@>
+@<Declare |Polygon| functions@>=
+virtual
+Transform 
+shear(real xy, real xz = 0, real yx = 0, real yz = 0, 
+      real zx = 0, real zy = 0);
+
+@
+@<Define |Polygon| functions@>=
+Transform 
+Polygon::shear(real xy, real xz, real yx, real yz, 
+      real zx, real zy)
+{
+  Transform t;
+  t.shear(xy, xz, yx, yz, zx, zy);
+  return (*this *= t);
+}
+
+@q ** Shift. @>
+@ Shift. 
+
+@q *** real arguments. @>
+@ {\bf real} arguments. 
+@^\cfunc{Polygon}{shift}@>
+@<Declare |Polygon| functions@>=
+virtual
+Transform 
+shift(real x, real y = 0, real z = 0);
+
+@
+@<Define |Polygon| functions@>=
+Transform
+Polygon::shift(real x, real y, real z)
+{
+  Transform t;
+  t.shift(x, y, z);
+  return (*this *= t);
+}
+
+
+@q *** Point argument. @>
+@ {\bf Point} argument. 
+@^\cfunc{Polygon}{shift}@>
+@<Declare |Polygon| functions@>=
+virtual
+Transform 
+shift(const Point& p);
+
+@
+@<Define |Polygon| functions@>=
+Transform 
+Polygon::shift(const Point& p)
+{
+  return shift(p.get_x(), p.get_y(), p.get_z());
+}
+  
+
+@q ** Shift times. @>
+@ Shift times. 
+
+@q **** (4) real arguments. @>
+@ {\bf real} arguments. 
+@^\cfunc{Polygon}{shift\_times}@>
+@<Declare |Polygon| functions@>=
+virtual
+void 
+shift_times(real x, real y = 1, real z = 1);
+
+@
+@<Define |Polygon| functions@>=
+void 
+Polygon::shift_times(real x, real y, real z)
+{
+ Path::shift_times(x, y, z);
+ center.shift_times(x, y, z);
+ return;
+}
+
+@q *** Point argument. @>
+@ {\bf Point} argument. 
+@^\cfunc{Polygon}{shift\_times}@>
+@<Declare |Polygon| functions@>=
+virtual
+void
+shift_times(const Point& p);
+
+@
+@<Define |Polygon| functions@>=
+void
+Polygon::shift_times(const Point& p)
+{
+  return shift_times(p.get_x(), p.get_y(), p.get_z());
+}
+
+@q * (1) Reflection in a |Plane|.@> 
+@ Reflection in a |Plane|.
+\initials{LDF 2004.10.03.}
+@^\cfunc{Polygon}{reflect\_in}@>
+
+Please note that this function tries to allocate memory on the free 
+store for the |Polygon| pointed to by the pointer to |Shape| which is 
+its return value.  Therefore, programmers who use this function must 
+ensure that this memory is freed.
+\initials{LDF 2004.10.03.}
+
+If allocation fails, this function throws a |bad_alloc| exception.  
+If the reflection of |*this| cannot be found in the |Plane|, 
+this function returns 0.
+\initials{LDF 2004.10.03.}
+
+\LOG
+\initials{LDF 2004.10.03.}
+Added this function.
+
+\initials{LDF 2004.10.12.}
+Rewrote this function.
+Following a system update, 
+having |Shape*| as the return value no longer worked.
+\ENDLOG
+
+@q ** (2) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+virtual
+int
+reflect_in(const Plane& p, 
+           void* v,
+           const Scanner_Node scanner_node = 0) const;
+
+
+@q ** (2) Definition.@>
+
+@
+@<Define |Polygon| functions@>=
+int
+Polygon::reflect_in(const Plane& p, 
+                    void* v,
+                    const Scanner_Node scanner_node) const
+
+
+{
+
+@q *** (3) Preliminaries.@> 
+
+  bool DEBUG = false; /* |true|  */
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+  if (scanner_node)
+     scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                   &error_stop_value,
+                                                   &warning_stop_value);
+
+
+@q *** (3).@> 
+
+  Polygon* polygon_reflection = static_cast<Polygon*>(v);  
+
+@q *** (3) If |polygon_reflection == 0|, try to allocate memory @>
+@q *** (3) on the free store for it.                           @> 
+
+@ If |polygon_reflection == 0|, try to allocate memory 
+on the free store for it.                            
+\initials{LDF 2004.10.12.}
+
+@<Define |Polygon| functions@>=
+
+ if (polygon_reflection == static_cast<Polygon*>(0))
+ {
+  try
+     {
+       polygon_reflection = create_new<Polygon>(0, scanner_node);
+     }
+
+@q **** (4) Error handling:  |new Polygon| failed.  Rethrow |bad_alloc|.@> 
+
+@ Error handling:  |new Polygon| failed.  Rethrow |bad_alloc|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Polygon| functions@>=
+
+
+  catch (bad_alloc)
+     {
+
+       cerr_strm << thread_name << "ERROR! In `Point::reflect_in():" 
+                 << endl
+                 << "`create_new<Polygon>() failed. "
+                 << "Rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       throw;
+
+       
+     } /* |catch (bad_alloc)|  */
+
+  
+@q *** (3).@> 
+
+  } /* |if (polygon_reflection == 0)|  */
+
+@q *** (3) Call |Path::reflect_in|.@> 
+
+@ Call |Path::reflect_in|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Polygon| functions@>=
+
+  Path path_reflection;
+
+  int status;
+
+
+  try
+     {
+       status = Path::reflect_in(p,
+                            static_cast<void*>(&path_reflection),
+                            scanner_node);  
+     }
+
+@q **** (4) Error handling:  |Path::reflect_in| threw |bad_alloc|.@> 
+
+@ Error handling:  |Path::reflect_in| threw |bad_alloc|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Polygon| functions@>=
+
+  catch (bad_alloc)
+     {
+       cerr_strm << thread_name << "ERROR! In `Polygon::reflect_in():'"
+                 << endl 
+                 << "`Path::reflect_in() threw `bad_alloc'."
+                 << endl << "Deleting `polygon_reflection' and "
+                 << "rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       delete polygon_reflection;
+
+       throw;
+
+     } /* |catch (bad_alloc)|  */
+
+@q **** (4) Error handling:  |Path::reflect_in| returned 1.@> 
+
+@ Error handling:  |Path::reflect_in| returned 1.
+\initials{LDF 2004.10.12.}
+
+@<Define |Polygon| functions@>=
+
+  if (status == 1)
+    {
+
+      cerr_strm << thread_name << "ERROR! In `Polygon::reflect_in():'"
+                << endl 
+                << "`Path::reflect_in() failed and returned 1."
+                << endl << "Deleting `polygon_reflection' "
+                << "and exiting function with return value 1.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm, error_stop_value);
+      cerr_strm.str("");
+  
+      delete polygon_reflection;
+
+      return 1;
+
+      
+    }  /* |if (status == 1)|  */
+
+@q **** (4) |Path::reflect_in| succeeded.@> 
+
+@ |Path::reflect_in| succeeded.
+\initials{LDF 2004.10.05.}
+
+@<Define |Polygon| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name << "In `Polygon::reflect_in():"
+                  << endl << "`Path::reflect_in() succeeded.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */ 
+
+   polygon_reflection->Path::operator=(
+                            path_reflection);
+
+@q *** (3) Set other data members of |*polygon_reflection|.@> 
+
+@ Set other data members of |*polygon_reflection|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Polygon| functions@>=
+
+  polygon_reflection->center  = center; 
+
+@q *** (3) Exit function successfully with   @> 
+@q *** (3) return value 0.@> 
+
+@ Exit function successfully with return value 0.
+\initials{LDF 2004.10.05.}
+
+@<Define |Polygon| functions@>= 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name << "In `Polygon::reflect_in():"
+                  << endl << "Exiting function successfully with "
+                  << "return value 0.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */ 
+
+  return 0;
+
+} /* End of |Polygon::reflect_in| definition.  */
+
+@q * (1) Reflection off of a |Plane|.@> 
+@* Reflection off of a |Plane|.
+\initials{LDF 2004.12.14.}
+@^\cfunc{Polygon}{reflect\_off}@>
+
+\LOG
+\initials{LDF 2004.12.14.}
+Added this function.
+\ENDLOG
+
+@q ** (2) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+virtual
+int
+reflect_off(const Plane& p, 
+            Point direction,
+            void* v,
+            const Scanner_Node scanner_node = 0) const;
+
+
+@q ** (2) Definition.@>
+
+@
+@<Define |Polygon| functions@>=
+int
+Polygon::reflect_off(const Plane& p, 
+                     Point direction,
+                     void* v,
+                     const Scanner_Node scanner_node) const
+
+
+{
+
+@q *** (3) Preliminaries.@> 
+
+   bool DEBUG = false; /* |true|  */
+
+   using namespace Scan_Parse;
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+@q *** (3).@> 
+
+   if (v == static_cast<void*>(0))
+      {
+          cerr_strm << thread_name << "ERROR!  In `Polygon::reflect_off():"
+                    << endl << "`void* v' argument is null.  "
+                    << "Exiting function with return value 1.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return 1;
+
+      } /* |if (v == 0)|  */
+
+
+  Pointer_Vector<Polygon>* polygon_ptr_vector 
+     = static_cast<Pointer_Vector<Polygon>*>(v);
+
+@q *** (3) Call |Path::reflect_off|.@> 
+
+@ Call |Path::reflect_off|.
+\initials{LDF 2004.12.14.}
+
+@<Define |Polygon| functions@>=
+
+   int status = Path::reflect_off(p, direction, polygon_ptr_vector, scanner_node);
+
+@q **** (4) Error handling:  |Path::reflect_off| failed.@>   
+@ Error handling:  |Path::reflect_off| failed.
+\initials{LDF 2004.12.14.}
+
+@<Define |Polygon| functions@>=
+
+   if (status != 0)
+      {
+          cerr_strm << thread_name << "ERROR!  In `Polygon::reflect_off():"
+                    << endl << "`Path::reflect_off() failed.   "
+                    << "Exiting function with return value 1.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return 1;
+
+      }  /* |if (status != 0)|  */
+
+
+@q *** (3)  Try to allocate memory for a pointer to |Point_Vector<Point>|.@> 
+
+@ Try to allocate memory for a pointer to |Point_Vector<Point>|.
+\initials{LDF 2004.12.14.}
+
+@<Define |Polygon| functions@>=
+
+   Pointer_Vector<Point>* cvp;  
+
+   try 
+      {
+          cvp  = new Pointer_Vector<Point>;
+      }
+
+@q **** (4) Error handling:  |new Pointer_Vector<Point>| failed.@>   
+@ Error handling:  |new Pointer_Vector<Point>| failed.
+\initials{LDF 2004.12.14.}
+
+@<Define |Polygon| functions@>=
+
+   catch (bad_alloc) 
+      {
+
+          cerr_strm << thread_name << "ERROR!  In `Polygon::reflect_off():"
+                    << endl << "`new Pointer_Vector<Point>' failed.  "
+                    << "Rethrowing `bad_alloc'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          throw;
+         
+      }  /* |catch (bad_alloc)|  */
+
+
+@q *** (3) Set up |Point_Vector<Point>| object.@> 
+
+@ Set up |Point_Vector<Point>| object.
+\initials{LDF 2004.12.14.}
+
+@<Define |Polygon| functions@>=
+
+
+   for (int i = 0; i < 4; ++i)
+      {
+         *cvp += &(polygon_ptr_vector->v[i]->center);
+      }  /* |for|  */
+
+
+@q *** (3)  Call |Point::reflect_off| on |center|.@> 
+
+@ Call |Point::reflect_off| on |center|.
+Return 1 upon error.
+\initials{LDF 2004.12.14.}
+
+@<Define |Polygon| functions@>=
+
+@q **** (4) @>   
+
+   status = center.reflect_off(p, direction, cvp, scanner_node);
+
+   if (status != 0)
+      {
+          cerr_strm << thread_name << "ERROR!  In `Polygon::reflect_off():"
+                    << endl << "`Point::reflect_off() failed.   "
+                    << "Exiting function with return value 1.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return 1;
+
+      }  /* |status != 0|  */
+
+@q *** (3) Exit function successfully with return value 0.@> 
+
+@ Exit function successfully with return value 0.
+\initials{LDF 2004.12.14.}
+
+@<Define |Polygon| functions@>=
+   
+   return 0;
+
+} /* End of |Polygon::reflect_off| definition.  */
+
+
+@q * (1) Disentangling.@> 
+@* Disentangling.
+\initials{LDF 2006.01.20.}
+
+\LOG
+\initials{LDF 2006.01.20.}
+Added this section.
+\ENDLOG
+
+@q ** (2) |void*| argument.@> 
+@*1 Pointer to {\bf void} argument.
+\initials{LDF 2006.01.20.}
+
+\LOG
+\initials{LDF 2006.01.20.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+static
+void*
+disentangle(void* v,
+            void* parameter = 0,
+            bool suppress_warnings = false);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Polygon| functions@>=
+void*
+Polygon::disentangle(void* v,
+                     void* parameter,
+                     bool suppress_warnings)
+{
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+
+   using namespace Scan_Parse;
+
+@q **** (4) @>
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+    {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "Entering `Polygon::disentangle'."
+             << endl;
+        cerr_mutex.unlock(); 
+
+    }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+@q **** (4).@>
+
+   if (v == static_cast<void*>(0))
+      {
+          cerr_strm << thread_name << "ERROR!  In `Polygon::disentangle():"
+                    << endl 
+                    << "`void* v' is null.  Exiting function unsuccessfully "
+                    << "with return value 0.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          return 0;
+
+      }  /* |if (v == 0)|  */
+
+@q **** (4)@> 
+
+   Pointer_Vector<Point>* qv = static_cast<Pointer_Vector<Point>*>(v); 
+
+    if (qv->ctr < 3)
+       {
+           if (!suppress_warnings)
+              {
+                 cerr_strm << thread_name 
+                            << "WARNING!  In `Polygon::disentangle():"
+                            << endl 
+                            << "`Pointer_Vector<Point>' has fewer than 3 points."
+                            << endl 
+                            << "Can't create `Polygon'.  Exiting function "
+                            << "with return value 0.";
+
+                  log_message(cerr_strm);
+                  cerr_message(cerr_strm, warning_stop_value);
+                  cerr_strm.str("");
+
+              }  /* |if (!suppress_warnings)|  */
+
+           delete qv;
+           qv = 0;
+           v = 0;
+                  
+           return 0;
+
+       }  /* |if (qv->ctr < 3)|  */     
+
+@q **** (4)@> 
+@
+@<Define |Polygon| functions@>=
+
+    vector<Point> pv;
+
+    for (vector<Point*>::iterator iter = qv->v.begin();
+         iter != qv->v.end();
+         ++iter)
+       pv.push_back(**iter);
+
+    qv->clear();
+    delete qv;
+    qv = 0;
+
+@q **** (4)@> 
+@
+@<Define |Polygon| functions@>=
+
+    Point cmp_pt = pv[0];
+
+    vector<Point>::iterator pv_iter;
+    vector<Point>::iterator dups_iter;
+
+    Compare_Magnitudes cmp_mag(cmp_pt);
+    Compare_Points cmp_pts;
+
+    sort(pv.begin(), pv.end(), cmp_mag);
+
+    dups_iter = unique(pv.begin(), pv.end(), cmp_pts);
+    pv.erase(dups_iter, pv.end());
+
+    Polygon* poly = create_new<Polygon>(0);
+
+    Point mid_pt = pv.front().mediate(pv.back());
+
+    Path ppath;
+
+    ppath += pv[0];
+    ppath += pv[1];
+    ppath += pv[2];
+
+    Point normal = ppath.get_normal();
+    normal.shift(mid_pt);
+
+    Transform t;
+
+    ppath *= t.align_with_axis(mid_pt, normal, 'y');
+  
+    real angle = ppath.get_point(0).angle(Point(1, 0, 0));
+
+    ppath *= t.rotate(0, angle);
+
+    if (ppath.get_point(0).get_x() < 0)
+       {
+           ppath *= t.rotate(0, 2 * -angle);
+       }
+
+    for (pv_iter = pv.begin(); pv_iter != pv.end(); ++pv_iter)
+       {
+          *pv_iter *= t;
+       }
+
+    vector<Point> quad[4];
+   
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+    {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "In `Polygon::disentangle':"
+             << endl
+             << "`pv.size()' == " << pv.size()
+             << endl;
+        cerr_mutex.unlock(); 
+
+    }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+    for (pv_iter = pv.begin(); pv_iter != pv.end(); ++pv_iter)
+       {
+           
+           if (pv_iter->get_x() >= 0 && pv_iter->get_z() >= 0)
+              quad[0].push_back(*pv_iter);
+           else if (pv_iter->get_x() < 0 && pv_iter->get_z() >= 0)
+              quad[1].push_back(*pv_iter);
+           else if (pv_iter->get_x() < 0 && pv_iter->get_z() < 0)
+              quad[2].push_back(*pv_iter);
+           else if (pv_iter->get_x() >= 0 && pv_iter->get_z() < 0)
+              quad[3].push_back(*pv_iter);
+       }   
+
+
+    Transform t_inverse = t.inverse();
+
+    Point pos_x_axis_point(1, 0, 0);
+    Point neg_x_axis_point(-1, 0, 0);
+
+    Compare_Angles cmp_ang_pos(&ORIGIN, &pos_x_axis_point);
+    Compare_Angles cmp_ang_neg(&ORIGIN, &neg_x_axis_point);
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+    {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "In `Polygon::disentangle':"
+             << endl
+             << "Before `for' loop."
+             << endl;
+        cerr_mutex.unlock(); 
+
+    }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+    for (int i = 0; i < 4; ++i)
+      { 
+
+          sort(quad[i].begin(), quad[i].end(), cmp_mag);
+          dups_iter = unique(quad[i].begin(), quad[i].end(), cmp_pts);
+          quad[i].erase(dups_iter, quad[i].end()); 
+
+          if ((i % 2))
+             sort(quad[i].begin(), quad[i].end(), cmp_ang_neg);
+          else
+             sort(quad[i].begin(), quad[i].end(), cmp_ang_pos);
+
+          dups_iter = unique(quad[i].begin(), quad[i].end(), cmp_pts);
+          quad[i].erase(dups_iter, quad[i].end()); 
+
+      }  /* |for|  */
+
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+    {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "In `Polygon::disentangle':"
+             << endl
+             << "After `for' loop."
+             << endl;
+        cerr_mutex.unlock(); 
+
+    }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+
+    pv.clear();
+
+    for (vector<Point>::iterator iter = quad[0].begin(); iter != quad[0].end(); ++iter)
+       {
+           pv.push_back(*iter);
+       }
+
+    for (vector<Point>::iterator iter = quad[1].begin();
+         iter != quad[1].end(); ++iter)
+       {
+          pv.push_back(*iter);
+       }
+
+    for (vector<Point>::reverse_iterator iter = quad[2].rbegin();
+         iter != quad[2].rend(); ++iter)
+       {
+          pv.push_back(*iter);
+       }
+
+    for (vector<Point>::reverse_iterator iter = quad[3].rbegin();
+         iter != quad[3].rend(); ++iter)
+       {
+          pv.push_back(*iter);
+       }
+
+@q **** (4)@>
+@ 
+@<Define |Polygon| functions@>=
+
+    Point temp_pt;
+
+    int pv_size = pv.size();
+
+    int i;
+    int j;
+    int k;
+    int m;
+
+    bool repeat = false;
+
+    Bool_Point bp;
+
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+    {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "In `Polygon::disentangle':"
+             << endl
+             << "Before `do' loop."
+             << endl;
+        cerr_mutex.unlock(); 
+
+    }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+    do
+       {
+          repeat = false;
+
+          for (i = 0; i < pv_size - 2; ++i)
+             {
+
+                 j = (i + 1);
+
+                 for (k = (i + 1); k < pv_size; ++k)
+                    {
+
+                       m = (k + 1) % pv_size;
+
+#if DEBUG_COMPILE
+                        if (DEBUG)   
+                        {
+                            cerr_mutex.lock(); 
+                            cerr << "`i' == " << i << endl
+                                 << "`j' == " << j << endl 
+                                 << "`i' == " << k << endl 
+                                 << "`m' == " << m << endl 
+                                 << endl;
+                            cerr_mutex.unlock(); 
+
+                        }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+                       bp = Point::intersection_point(pv[i], pv[j],
+                                                      pv[k], pv[m % pv_size]);
+
+                       if (bp.b && !(   bp.pt == pv[i] 
+                                     || bp.pt == pv[j] 
+                                     || bp.pt == pv[k] 
+                                     || bp.pt == pv[m % pv_size]))
+                         {
+                              temp_pt = pv[j];
+                              pv[j] = pv[k];
+                              pv[k] = temp_pt;
+                              repeat = true;
+                          }
+
+                    }  /* Inner |for|  */
+
+             }  /* Outer |for|  */
+ 
+      }  while (repeat);
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+    {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "In `Polygon::disentangle':"
+             << endl
+             << "After `do' loop."
+             << endl;
+        cerr_mutex.unlock(); 
+
+    }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+
+@q **** (4)@> 
+
+    Point* new_pt;
+
+    for (vector<Point>::iterator iter = pv.begin();
+         iter != pv.end(); ++iter)
+       {
+          new_pt = create_new<Point>(*iter);
+          *new_pt *= t_inverse;
+          *poly += new_pt;
+       }
+
+
+@q **** (4) @>
+
+#if DEBUG_COMPILE
+    if (DEBUG)
+    {
+        cerr_mutex.lock(); 
+        cerr << thread_name << "Exiting `Polygon::disentangle' successfully "
+             << "with return value `poly'."
+             << endl;
+        cerr_mutex.unlock(); 
+
+    }  /* |if (DEBUG)|  */
+#endif  /* |DEBUG_COMPILE|  */ 
+
+
+
+    poly->set_cycle();
+
+    v = 0;
+
+    return poly;
+
+@q **** (4)@> 
+
+}  /* End of |Polygon::disentangle(void*, void*)| definition.  */
+
+@q * (1) Decomposing.@> 
+@* Decomposing.
+\initials{LDF 2005.02.21.}
+
+\LOG
+\initials{LDF 2005.02.21.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Two |Point*| arguments.@> 
+@*1 Two {\bf Point*} arguments.
+\initials{LDF 2005.02.21.}
+
+\LOG
+\initials{LDF 2005.02.21.}
+Added this function.
+
+\initials{LDF 2005.02.21.}
+Made this function and the |Scanner_Node| argument |const|.
+
+\initials{LDF 2005.02.22.}
+Removed this function from |class Rectangle| in
+\filename{rectangs.web} and put it into |class Polygon| in this file
+(\filename{polygons.web}). 
+
+\initials{LDF 2005.02.24.}
+Now passing |Pointer_Vector<Polygon>* pv| as an argument.  
+Memory must have already been allocated for it.  Previously, this 
+was done in this function.  Now deleting it and setting it to 0 
+upon error.
+
+\initials{LDF 2005.02.24.}
+No longer deleting the arguments 
+|Point* p0|, |Point* p1|, and |Pointer_Vector<Polygon>* pv|.
+
+\initials{LDF 2005.02.24.}
+Changed return value from |Pointer_Vector<Polygon>*| to |int|.
+
+\initials{LDF 2005.04.05.}
+Made the |Scanner_Node| argument, and this function itself, 
+non-|const|.
+
+\initials{LDF 2005.04.05.}
+Added code for handling |draw_color_vector|, |pen_vector|, and
+|dash_pattern_vector|.  It seems to work for the |Colors| 
+and |Pens|, but I haven't tested it for |Dash_Patterns| yet.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+virtual 
+int
+decompose(Point* p0, 
+          Point* p1, 
+          Pointer_Vector<Polygon>* pv,
+          Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Polygon| functions@>=
+
+int
+Polygon::decompose(Point* p0, 
+                   Point* p1, 
+                   Pointer_Vector<Polygon>* pv,
+                   Scanner_Node scanner_node)
+
+
+{
+   
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+   int status;
+
+
+@q **** (4) @>   
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "Entering `Polygon::decompose(Point* p0, "
+                   << "Point* p1, Pointer_Vector<Polygon>* pv, "
+                   << endl 
+                   << "const Scanner_Node scanner_node) const'.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) @>   
+@
+@<Define |Polygon| functions@>=
+
+   if (   p0 == static_cast<Point*>(0) 
+       || p1 == static_cast<Point*>(0) 
+       || pv == static_cast<Pointer_Vector<Polygon>*>(0))
+      {  
+          cerr_strm << thread_name << "ERROR!  "
+                    << endl 
+                    << "In `Polygon::decompose(Point* p0, "
+                    << "Point* p1, Pointer_Vector<Polygon>* pv,"
+                    << endl << "const Scanner_Node scanner_node)':"
+                    << endl 
+                    << "`p0' == 0,  `p1' == 0, and/or `pv' == 0.  "
+                    << "Can't decompose `*this'.  "
+                    << endl 
+                    << "Exiting function with return value 1.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+          
+          return 1;
+
+      }  /* |if (p0 == 0 || p1 == 0 || pv == 0)|  */
+
+
+@q **** (4) @>   
+@
+@<Define |Polygon| functions@>=
+
+   if (!is_convex_polygonal())
+      {
+         
+          cerr_strm << thread_name << "ERROR!  "
+                    << endl 
+                    << "In `Polygon::decompose(Point* p0, "
+                    << "Point* p1, Pointer_Vector<Polygon>* pv,"
+                    << endl << "const Scanner_Node scanner_node)':"
+                    << endl 
+                    << "`*this' is non-convex and/or non-polygonal.  "
+                    << "Can't decompose `*this'.  "
+                    << "Exiting function with return value 1.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+          
+          return 1;
+    
+      }  /* |if (!is_convex_polygonal())|  */
+
+
+@q **** (4) @>   
+
+@
+\LOG
+\initials{LDF 2005.02.25.}
+Added this section.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+
+   int i;
+   int j;
+
+   for (i = 0; i < points.size();  ++i)
+      {
+         j = (i + 1) % points.size();
+
+         if (   p0->is_on_line(*points[i], *points[j]).first
+             && p1->is_on_line(*points[i], *points[j]).first)
+            {
+
+                cerr_strm << thread_name << "WARNING!  "
+                          << "In `Polygon::decompose(Point* p0, "
+                          << "Point* p1, Pointer_Vector<Polygon>* pv,"
+                          << endl << "const Scanner_Node scanner_node)':"
+                          << endl 
+                          << "`p0' and `p1' lie on one of the sides of "
+                          << "the `Polygon'.  "
+                          << "Can't decompose `*this'.  "
+                          << endl 
+                          << "Exiting function with return value 1.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm, warning_stop_value);
+                cerr_strm.str("");
+          
+                return 1;
+
+            }  /* |if|  */
+
+
+      }  /* |for|  */
+
+@q **** (4) @>   
+
+
+  Bool_Point_Pair bpp = Polygon::intersection_points(*p0, *p1, scanner_node);
+    
+
+@q **** (4) @>   
+@
+@<Define |Polygon| functions@>=
+
+   if (   bpp.first.pt == INVALID_POINT
+       || bpp.second.pt == INVALID_POINT)
+
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+
+                cerr_strm << thread_name << "WARNING!  "
+                          << endl 
+                          << "In `Polygon::decompose(Point* p0, "
+                          << "Point* p1, Pointer_Vector<Polygon>* pv,"
+                          << endl << "const Scanner_Node scanner_node)':"
+                          << endl 
+                          << "`Polygon::intersection_points(const Point&, "
+                          << "const Point&)' "
+                          << "failed:  "
+                          << "`bpp.first.pt == INVALID_BOOL_POINT_PAIR || "
+                          << "bpp.second.pt == INVALID_BOOL_POINT_PAIR'."
+                          << endl 
+                          << "Can't decompose `*this'.  Exiting function with "
+                          << "return value 1.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm, warning_stop_value);
+                cerr_strm.str("");
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          return 1;
+
+      }  /* |if (   bpp.first.pt == INVALID_POINT
+                 && bpp.second.pt == INVALID_POINT)|  */
+
+@q **** (4) @>   
+@
+@<Define |Polygon| functions@>=
+
+   
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_mutex.lock(); 
+         cerr << thread_name 
+              << "In `Polygon::decompose(Point* p0, "
+              << "Point* p1, Pointer_Vector<Polygon>* pv,"
+              << endl << "const Scanner_Node scanner_node)':"
+              << endl 
+              << "`Polygon::intersection_points(const Point&, const Point&)' "
+              << "succeeded."
+              << endl 
+              << "`bpp.first.b' == " << bpp.first.b 
+              << endl;
+         
+         bpp.first.pt.show("bpp.first.pt:");
+
+         cerr << "`bpp.second.b' == " << bpp.second.b 
+              << endl;
+
+         bpp.second.pt.show("bpp.second.pt:");
+
+         cerr_mutex.unlock(); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+@q **** (4) @>   
+@
+
+\LOG
+\initials{LDF 2005.02.28.}
+Moved this code.  Previously, it was before the call to 
+|Polygon::intersection_points(const Point&, const Point&)|.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+   Polygon* q[2];
+
+   try 
+      {
+         q[0] = create_new<Polygon>(0);
+         q[1] = create_new<Polygon>(0);
+      }
+
+@q ***** (5).@> 
+@
+@<Define |Polygon| functions@>=
+   
+   catch (bad_alloc)
+      {
+          cerr_strm << thread_name << "ERROR!  "
+                    << endl 
+                    << "In `Polygon::decompose(Point* p0, "
+                    << "Point* p1, Pointer_Vector<Polygon>* pv,"
+                    << endl << "const Scanner_Node scanner_node)':"
+                    << endl 
+                    << "`create_new<Polygon>() failed, "
+                    << "throwing `bad_alloc'.  "
+                    << "Rethrowing.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+          
+          throw;
+
+      }  /* |catch (bad_alloc)|  */
+    
+
+@q **** (4) @>   
+
+@
+\LOG
+\initials{LDF 2005.04.02.}
+Now setting |q[0]->surface_hiding_ctr| and |q[1]->surface_hiding_ctr|
+to |surface_hiding_ctr|.
+
+\initials{LDF 2005.04.04.}
+Now setting |q[0]->fill_draw_value| and |q[1]->fill_draw_value| to |fill_draw_value|.
+
+\initials{LDF 2005.04.18.}
+Now setting |q[0]->decomposition_level| and |q[1]->decomposition_level|
+to |decomposition_level + 1|.
+\ENDLOG  
+
+@<Define |Polygon| functions@>=
+
+   q[0]->set_surface_hiding_ctr(surface_hiding_ctr);
+   q[1]->set_surface_hiding_ctr(surface_hiding_ctr);
+
+   q[0]->set_decomposition_level(decomposition_level + 1);
+   q[1]->set_decomposition_level(decomposition_level + 1);
+
+   q[0]->fill_draw_value = q[1]->fill_draw_value = fill_draw_value;
+
+
+@q **** (4).@> 
+@
+\LOG
+\initials{LDF 2005.04.04.}
+Added this section.  Now copying |fill_color_vector| to |*q[0]| and |*q[1]|, 
+if this vector isn't empty.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+   if (   fill_color_vector != static_cast<Pointer_Vector<Color>*>(0) 
+       && fill_color_vector->ctr > 0)
+      {
+          for (vector<Color*>::iterator iter = fill_color_vector->v.begin();
+               iter != fill_color_vector->v.end();         
+               ++iter)
+             {
+                 q[0]->push_fill_color(*iter);
+                 q[1]->push_fill_color(*iter);
+
+             }  /* |for|  */
+
+      }  /* |if (fill_color_vector != 0 && fill_color_vector->ctr > 0)|  */
+
+
+@q **** (4) @>   
+@
+@<Define |Polygon| functions@>=
+
+
+   bool copy_pens          = (adjust_pen_vector() == 0)          ? true : false;
+
+   bool copy_draw_colors   = (adjust_draw_color_vector() == 0)   ? true : false;
+
+   bool copy_dash_patterns = (adjust_dash_pattern_vector() == 0) ? true : false;
+
+
+   q[0]->pen_vector = new Pointer_Vector<Pen>;
+   q[1]->pen_vector = new Pointer_Vector<Pen>;
+
+   if (copy_draw_colors)
+      {
+         q[0]->draw_color_vector = new Pointer_Vector<Color>;
+         q[1]->draw_color_vector = new Pointer_Vector<Color>;
+      }
+
+   if (copy_dash_patterns)
+      {
+         q[0]->dash_pattern_vector = new Pointer_Vector<Dash_Pattern>;
+         q[1]->dash_pattern_vector = new Pointer_Vector<Dash_Pattern>;
+      }
+   
+
+@q **** (4) @>   
+
+   Point** r;
+ 
+@q **** (4) @>   
+@
+
+\LOG
+\initials{LDF 2005.02.22.}
+@:BUG FIX@> BUG FIX: 
+Now allocating memory for |Point** r|.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+   vector<Point*>::size_type size = points.size();
+
+   r = new Point*[size];
+
+   vector<Point*>::size_type offset;
+
+
+   for (i = 0; i < size; i++)
+      {
+
+
+@q ***** (5).@> 
+
+          if (bpp.first.pt.is_on_segment(*(points[i]), 
+                                         *(points[(i + 1) % size])).first)
+             {
+
+
+@q ****** (6).@> 
+                 if (bpp.second.pt.is_on_segment(
+                        *points[i], *points[(i + 1) % size]).first)
+                    {
+                        cerr_strm << thread_name << "ERROR!  "
+                                  << endl 
+                                  << "In `Polygon::decompose(Point* p0, "
+                                  << "Point* p1, Pointer_Vector<Polygon>* pv,"
+                                  << endl << "const Scanner_Node scanner_node)':"
+                                  << endl 
+                                  << "`bpp.first.pt' and `bpp.second.pt' "
+                                  << "are both between `*points[" << i
+                                  << "]' and `*points[" << (i + 1) % size
+                                  << "]'." << endl
+                                  << "Can't decompose `*this'.  "
+                                  << "Deleting `q[0]' and `q[1]' "
+                                  << "and exiting function with "
+                                  << "return value 1.";
+
+                        log_message(cerr_strm);
+                        cerr_message(cerr_strm, error_stop_value);
+                        cerr_strm.str("");
+          
+                        delete q[0];
+                        delete q[1];
+
+                        return 1;                                
+                                   
+                    }  /* |if (bpp.second.pt.is_on_segment(*points[i], 
+                                                 *points[(i + 1) % size]).first)|  */
+         
+
+@q ****** (6).@> 
+                 for (j = 0; j < size; ++j)
+                    r[j] = points[(i + j) % size];
+
+                 offset = i;
+
+                 break;   
+                  
+
+             }  /* |if (bpp.first.pt.is_on_segment(*points[i], 
+                                                   *points[(i + 1) % size]).first)|  */
+ 
+@q ***** (5).@> 
+
+      }  /* |for|  */
+
+
+@q **** (4) @>   
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr << "`offset' == " << offset << endl;
+
+        for (i = 0; i < size; ++i)
+           r[i]->show("r[i]:");
+     
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+@q **** (4) @>   
+
+   unsigned short index;
+
+   for (i = 1; i < size; ++i)
+      {
+         if (bpp.second.pt.is_on_segment(*r[i], *r[(i + 1) % size]).first)
+            {
+                index = i + 1;
+                break;
+            }
+
+      }  /* |for|  */
+
+
+@q **** (4) @>   
+
+@
+\LOG
+\initials{LDF 2005.02.21.}
+Added code to avoid duplicate |Points| on the |Polygons| pointed to by
+|q[0]| and |q[1]|.
+
+\initials{LDF 2005.04.05.}
+Removed the |try| block.  No longer catching |bad_alloc|.
+
+\initials{LDF 2005.04.07.}
+@:BUG FIX@> BUG FIX:  Now initializing |temp_ctr| to |offset|.  
+Previously, it was initialized to itself.
+
+\initials{LDF 2005.04.07.}
+@:BUG FIX@> BUG FIX:  Changed the way the |Colors| on 
+|q[0]->draw_color_vector| are set.  It seems to work now.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+
+         unsigned int temp_ctr = offset;
+
+         *q[0] += *r[0];
+
+         if (bpp.first.pt != *r[0])
+            {
+               *q[0] += bpp.first.pt;
+
+
+                if(copy_draw_colors)
+                   {
+                      q[0]->draw_color_vector->append_copy(
+                         draw_color_vector->v[offset]);
+
+                   } 
+
+                if(copy_dash_patterns)
+                   {
+                      q[0]->dash_pattern_vector->append_copy(
+                         dash_pattern_vector->v[offset]);
+                   } 
+
+
+                if (copy_pens)
+                   q[0]->pen_vector->append_copy(
+                      pen_vector->v[offset]);
+         
+                ++temp_ctr;
+            }
+
+   
+         if (bpp.first.pt != bpp.second.pt)
+            {
+               *q[0] += bpp.second.pt;
+
+   /* !! START HERE.  Use null color, etc.  LDF 2005.04.07.  */@; 
+
+                if(copy_draw_colors)
+                   {
+                      q[0]->draw_color_vector->append_copy(
+                         draw_color_vector->v[offset]);
+                   } 
+
+
+                if(copy_dash_patterns)
+                   {
+                      q[0]->dash_pattern_vector->append_copy(
+                         dash_pattern_vector->v[offset]);
+                   } 
+
+
+
+               Pen* p = new Pen;
+               p->set_type(Pen::NULL_PEN);
+               
+               *(q[0]->pen_vector) += p;
+               
+            }
+         
+         temp_ctr += index - 1;
+
+
+         if (index != size)
+            {
+                for (i = index; i < size; ++i)
+                   {
+     /* !! START HERE.  LDF 2005.04.07.  See if I can use a counter instead of
+        comparing |Points| in this conditional.  */@; 
+
+                      if (q[0]->get_last_point() != *r[i])
+                         {
+                            *q[0] += *r[i];
+
+                            if(copy_draw_colors)
+                               {
+                                  q[0]->draw_color_vector->append_copy(
+                                     draw_color_vector->v[(offset + i - 1)
+                                        % draw_color_vector->ctr]);
+                               } 
+ 
+                            if(copy_dash_patterns)
+                               {
+                                  q[0]->dash_pattern_vector->append_copy(
+                                     dash_pattern_vector->v[(offset + i - 1)
+                                       % dash_pattern_vector->ctr]);
+                               }  
+
+
+                            if (copy_pens)
+                              q[0]->pen_vector->append_copy(
+                                  pen_vector->v[(offset + i - 1) 
+                                    % pen_vector->ctr]);
+                       
+                            ++temp_ctr;
+                         }
+
+                   }  /* |for|  */
+
+            }  /* |if (index != size)|  */
+
+
+   /* !! START HERE.  LDF 2005.04.07.  Do the same for |Pens| and 
+      |Dash_Patterns|.  */@; 
+
+         if(copy_draw_colors)
+            q[0]->draw_color_vector->append_copy(
+                                          draw_color_vector->v[
+                                             (draw_color_vector->ctr - 1 + offset)
+                                                % draw_color_vector->ctr]);
+         temp_ctr = offset;
+
+
+         *q[1] += bpp.first.pt;
+
+
+         if(copy_draw_colors)
+            {
+               q[1]->draw_color_vector->append_copy(
+                  draw_color_vector->v[temp_ctr % draw_color_vector->ctr]);
+
+            }     
+
+          if(copy_dash_patterns)
+             {
+                q[1]->dash_pattern_vector->append_copy(
+                   dash_pattern_vector->v[temp_ctr % dash_pattern_vector->ctr]);
+             } 
+
+         if (copy_pens)
+            q[1]->pen_vector->append_copy(
+               pen_vector->v[temp_ctr % pen_vector->ctr]);
+
+         ++temp_ctr;
+
+           
+
+          for (i = 1; i < index; ++i)
+             {
+                if (q[1]->get_last_point() != *r[i])
+                    {
+
+
+                         if(copy_draw_colors)
+                            {
+                               q[1]->draw_color_vector->append_copy(
+                                  draw_color_vector->v[temp_ctr % draw_color_vector->ctr]);
+                            }
+
+
+                         if(copy_dash_patterns)
+                            {
+                               q[1]->dash_pattern_vector->append_copy(
+                                  dash_pattern_vector->v[temp_ctr 
+                                     % dash_pattern_vector->ctr]);
+                            }     
+
+
+                         if (copy_pens)
+                           q[1]->pen_vector->append_copy(
+                              pen_vector->v[temp_ctr % pen_vector->ctr]);
+
+                         ++temp_ctr;
+
+                         *q[1] += *r[i];
+                     }
+
+             }  /* |for|  */
+
+         if (q[1]->get_last_point() != bpp.second.pt)
+            {
+               *q[1] += bpp.second.pt;
+
+
+               if(copy_dash_patterns)
+                  {
+                     q[1]->dash_pattern_vector->append_copy(
+                        dash_pattern_vector->v[temp_ctr % dash_pattern_vector->ctr]);
+                  } 
+
+
+               if(copy_draw_colors)
+                  {
+                     q[1]->draw_color_vector->append_copy(
+                        draw_color_vector->v[temp_ctr % draw_color_vector->ctr]);
+                  }
+
+               Pen* p = new Pen;
+               p->set_type(Pen::NULL_PEN);
+                
+               *(q[1]->pen_vector) += p;
+
+            }
+
+         q[0]->set_cycle(true);
+         q[1]->set_cycle(true);
+         
+@q **** (4) @>   
+   
+
+   *pv += q[0];
+   *pv += q[1];
+
+@q **** (4) @>   
+
+@
+\LOG
+\initials{LDF 2005.02.22.}
+Now deleting |Point** r|.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+   delete[] r;
+
+   return 0;
+
+}  /* End of |Polygon::decompose(Point* p0, 
+                                 Point* p1, 
+                                 Pointer_Vector<Polygon>* pv,
+                                 Scanner_Node scanner_node)| 
+      definition.  */
+
+
+
+
+@q ** (2) |Polygon*| argument.@> 
+@ {\bf Polygon*} argument.
+\initials{LDF 2005.02.21.}
+
+\LOG
+\initials{LDF 2005.02.21.}
+Started working on this function.
+
+\initials{LDF 2005.02.24.}
+Changed return value from |Pointer_Vector<Polygon>*| to |int|.
+
+\initials{LDF 2005.02.28.}
+This function now works.
+
+\initials{LDF 2005.04.04.}
+Made the |Polygon*| argument |const|.
+
+\initials{LDF 2005.04.05.}
+Made the |Polygon*| argument non-|const| again.
+Also made the |Scanner_Node| argument non-|const|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+virtual
+int
+decompose(Polygon* p,
+          Pointer_Vector<Polygon>* pv,
+          bool top_level,
+          Scanner_Node scanner_node = 0);
+
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Polygon| functions@>=
+int
+Polygon::decompose(Polygon* p,
+                   Pointer_Vector<Polygon>* pv,
+                   bool top_level,
+                   Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@> 
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true|  */
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+   using namespace Scan_Parse;
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name << "Entering "
+                   << "`Polygon::decompose(Polygon*, Scanner_Node)'.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) No intersections.  Return 0 immediately.@>   
+@ No intersections.  Return 0 immediately.
+\initials{LDF 2005.02.28.}
+
+\LOG
+\initials{LDF 2005.02.28.}
+Added this section.
+
+\initials{LDF 2005.03.01.}
+Now returning 0 rather than 1.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+
+   vector<Point> vp = intersection_points(*p);
+
+   if (vp.size() == 0)
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name 
+                           << "In `Polygon::decompose(Polygon*, Scanner_Node)':"
+                           << endl 
+                           << "The `Polygons' don't intersect.  "
+                           << "Exiting function with return value 0.";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      return 0;
+
+      }  /* |if (vp.size() == 0)|  */
+
+
+@q **** (4) Coplanar case.@>   
+@ Coplanar case.
+\initials{LDF 2005.02.21.}
+
+@<Define |Polygon| functions@>=
+
+   if (is_coplanar(*p, scanner_node))
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+                cerr_strm << thread_name << "In "
+                          << "`Polygon::decompose(Polygon*, Scanner_Node)':"
+                          << "`*this' and `*p' are coplanar.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str("");
+            }    
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ***** (5).@>  
+
+   Pointer_Vector<Polygon>* temp_pv;
+
+
+   try 
+      {
+          temp_pv = new Pointer_Vector<Polygon>;
+      }
+@q ***** (5).@> 
+
+   catch (bad_alloc)
+      {
+          cerr_strm << thread_name << "ERROR!  In "
+                    << "`Polygon::decompose(Polygon*, Scanner_Node)':"
+                    << endl 
+                    << "`new Pointer_Vector<Polygon>' failed, throwing "
+                    << "`bad_alloc'.  Rethrowing.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, error_stop_value);
+          cerr_strm.str("");
+
+          throw;
+
+      }  /* |catch (bad_alloc)|  */
+
+@q ***** (5).@> 
+
+   list<Polygon*> polygon_list;
+
+   polygon_list.push_back(const_cast<Polygon*>(this));
+
+   vector<Point*> point_vector;
+
+   Polygon* curr_polygon;
+
+   list<Polygon*>::size_type polygon_list_size;
+
+   int i;
+   int j;
+   int k;
+   int m;
+
+   for (vector<Point*>::const_iterator iter = p->points.begin();
+        iter != p->points.end();
+        ++iter)
+      {  
+         point_vector.push_back(*iter);
+      }
+
+   
+   for (i = 0; i < point_vector.size(); ++i)
+      {
+
+          j = (i + 1) % point_vector.size();
+
+          polygon_list_size = polygon_list.size();
+
+          for (m = 0; m < polygon_list_size; ++m) 
+             {
+
+                curr_polygon = polygon_list.front();
+                polygon_list.pop_front();          
+
+                temp_pv->clear(false);
+
+                k = curr_polygon->decompose(point_vector[i], 
+                                            point_vector[j], 
+                                            temp_pv, scanner_node);
+                if (k == 0)
+                   {
+                      polygon_list.push_back(temp_pv->v[0]);
+                      polygon_list.push_back(temp_pv->v[1]);
+                   }  
+                else 
+                    polygon_list.push_back(curr_polygon);
+
+              }  /* |for|  */
+
+      }  /* |for|  */
+        
+
+   for (list<Polygon*>::const_iterator iter = polygon_list.begin();
+        iter != polygon_list.end();
+        ++iter)
+      {
+
+         *pv += *iter;
+      }
+
+          temp_pv->clear(false);
+          delete temp_pv;
+
+@q ***** (5).@> 
+
+          return 0;
+   
+@q ***** (5) End of coplanar case.@>  
+
+      }  /* |if (is_coplanar(*p, scanner_node))|  */
+
+
+@q **** (4) Non-coplanar case.@>   
+@ Non-coplanar case.
+\initials{LDF 2005.02.21.}
+
+
+\LOG
+\initials{LDF 2005.02.25.}
+Now calling |Polygon::decompose| on |*p|.  This now works when 
+|*p| is a |Triangle|.  Previously, it failed, because |class Triangle|
+wasn't derived from |class Polygon|.
+\ENDLOG 
+
+@<Define |Polygon| functions@>=
+
+   else /* |!is_coplanar(*p, scanner_node)|  */
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+                cerr_strm << thread_name << "In "
+                          << "`Polygon::decompose(Polygon*, Scanner_Node)':"
+                          << "`*this' and `*p' are non-coplanar.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str("");
+            }    
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+          Line isect_line = get_plane().intersection_line(p->get_plane());
+
+          Point* pt0 = create_new<Point>(0);
+          Point* pt1 = create_new<Point>(0);
+
+          *pt0 = *pt1 = isect_line.position; 
+
+          *pt1 += isect_line.direction;
+
+          decompose(pt0, pt1, pv, scanner_node);
+          p->decompose(pt0, pt1, pv, scanner_node);
+
+          return 0;
+
+@q ***** (5) End of non-coplanar case.@>  
+
+
+      }  /* |else| (|!is_coplanar(*p, scanner_node)|)  */
+
+
+@q **** (4) @>   
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name << "Exiting "
+                   << "`Polygon::decompose(Polygon*, Scanner_Node)'.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) @>   
+
+   return 1;
+
+
+}  /* End of |Polygon::decompose(Polygon* p, 
+                                 const Scanner_Node)| definition.  */
+
+@q ** (2) |Shape*| argument.@> 
+@ {\bf Shape*} argument.
+\initials{LDF 2005.04.01.}
+
+\LOG
+\initials{LDF 2005.04.01.}
+Added this function.
+
+\initials{LDF 2005.04.04.}
+Made the |Shape*| argument and this function itself |const|.
+
+\initials{LDF 2005.04.05.}
+Made the |Shape*| argument, and this function itself, non-|const| again.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Polygon| functions@>=
+virtual
+Pointer_Vector<Shape>*
+decompose(Shape* s, Scanner_Node scanner_node = 0);
+
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Polygon| functions@>=
+Pointer_Vector<Shape>*
+Polygon::decompose(Shape* s, Scanner_Node scanner_node) 
+{
+
+@q **** (4) Preliminaries.@> 
+
+   bool DEBUG = false; /* |true|  */
+
+   using namespace Scan_Parse;
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+   int status;
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name << "Entering "
+                   << "`Polygon::decompose(Shape*, Scanner_Node)'.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) @>   
+@
+\LOG
+\initials{LDF 2005.04.02.}
+Added this section.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+
+   unsigned short s_type = s->get_shape_type();
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name 
+                   << "In `Polygon::decompose(Shape*, Scanner_Node)':"        
+                   << endl << "`s_type' == " << Shape::type_name_map[s_type] << endl;
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) @>   
+@
+\LOG
+\initials{LDF 2005.04.02.}
+Added this section.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+ 
+   if (s->is_polygon())
+      {
+   
+#if DEBUG_COMPILE
+          if (DEBUG)
+              {
+                  cerr_strm << thread_name 
+                            << "In `Polygon::decompose(Shape*, Scanner_Node)':"
+                            << endl << "`*s' is a `Polygon'.";
+
+                  log_message(cerr_strm);
+                  cerr_message(cerr_strm);
+                  cerr_strm.str("");
+
+            }   
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+         Pointer_Vector<Polygon>* pvp = new Pointer_Vector<Polygon>;
+
+         status = decompose(static_cast<Polygon*>(s), pvp, true, scanner_node);
+
+@q ***** (5).@> 
+
+         if (pvp != static_cast<Pointer_Vector<Polygon>*>(0))
+            {
+
+                Pointer_Vector<Shape>* pvs = new Pointer_Vector<Shape>;
+
+                pvs->ctr = 0;
+
+                for (vector<Polygon*>::const_iterator iter = pvp->v.begin();
+                     iter != pvp->v.end();
+                     ++iter)
+                   {
+                      
+                      pvs->v.push_back(static_cast<Shape*>(*iter));
+                      ++(pvs->ctr);
+                   }
+
+                pvp->clear(false);
+                delete pvp;
+
+
+                return pvs;
+
+           }  /* |if (pvp != 0)|  */
+                
+@q ***** (5).@> 
+   
+      }  /* |if (s->is_polygon())|  */
+   
+@q **** (4) @>   
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+         cerr_strm << thread_name << "Exiting "
+                   << "`Polygon::decompose(Shape*, Scanner_Node)'.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+@q **** (4) @>   
+
+   return 0;
+
+} /* End of |Polygon::decompose(Shape* s, Scanner_Node scanner_node)|
+     definition.  */
+
+@q ** (2) Self-decomposition.@> 
+@*1 Self-decomposition.
+\initials{LDF 2005.04.13.}
+
+\LOG
+\initials{LDF 2005.04.13.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Decompose.@> 
+@*2 Decompose.
+
+\LOG
+\initials{LDF 2005.04.13.}
+Added this function.
+
+\initials{LDF 2005.04.14.}
+Added the optional argument |const bool use_rectangles| with the 
+default |false|.
+
+\initials{LDF 2005.04.14.}
+Changed the return value of this function 
+from a |Pointer_Vector<Polygon>*| to a |Pointer_Vector<Shape>*|.
+
+\initials{LDF 2005.04.14.}
+Made this function virtual.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Polygon| functions@>=
+
+@q **** (4) Declaration.@> 
+virtual
+Pointer_Vector<Shape>*
+decompose(const unsigned short limit, 
+          const bool use_rectangles = false,
+          Scanner_Node scanner_node = 0);
+
+@q **** (4) Definition.@>   
+
+@
+@<Define |Polygon| functions@>=
+Pointer_Vector<Shape>*
+Polygon::decompose(const unsigned short limit, 
+                   const bool use_rectangles,
+                   Scanner_Node scanner_node)
+{
+
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ***** (5)@>  
+
+   Pointer_Vector<Polygon>* pv0 = new Pointer_Vector<Polygon>;
+   Pointer_Vector<Polygon>* pv1;
+   Pointer_Vector<Polygon>* pv2 = new Pointer_Vector<Polygon>;
+
+   *pv0 += create_new<Polygon>(this);
+
+   for (unsigned short i = 0; i < limit; ++i)
+      {
+         for(vector<Polygon*>::iterator iter = pv0->v.begin();
+             iter != pv0->v.end();
+             ++iter)
+            {
+                pv1 = (**iter).sub_decompose(use_rectangles, scanner_node);
+
+                *pv2 += *pv1;
+        
+                pv1->clear(false);
+      
+
+            }  /* |for|  */
+
+         pv0->clear(true);
+
+         Pointer_Vector<Polygon, Polygon>::assign_same_pointers(pv2, pv0);
+
+         pv2->clear(false);
+           
+      }  /* |for|  */
+
+   delete pv2;
+
+@q ***** (5)@>  
+@ 
+\LOG
+\initials{LDF 2005.04.14.}
+Now converting the return value from a |Pointer_Vector<Polygon>*|
+to a |Pointer_Vector<Shape>*|.
+\ENDLOG
+
+@<Define |Polygon| functions@>=
+
+   Pointer_Vector<Shape>* pvs 
+      = Pointer_Vector<Shape, Polygon>::convert(pv0);
+
+   return pvs;
+
+}  /* End of |Pointer_Vector<Shape>*
+              Polygon::decompose(const unsigned short u, 
+              Scanner_Node scanner_node)|
+      definition.  */
+
+@q *** (3) Sub-decompose.@> 
+@*2 Sub-decompose.
+
+\LOG
+\initials{LDF 2005.04.13.}
+Added this function.
+
+\initials{LDF 2005.04.13.}
+After much difficulty, I've managed to get a single level of 
+decomposition to work.
+
+\initials{LDF 2005.04.13.}
+Renamed this function |sub_decompose|.  It was formerly called 
+|decompose|.  Also removed the |const unsigned short| argument.
+This function only performs a single level of decomposition.
+
+\initials{LDF 2005.04.14.}
+Moved the definition of this function to 
+\filename{rectangs.web}.  This was necessary, because I want to 
+refer to |class Rectangle| and |class Triangle| in it.
+\ENDLOG
+
+@q **** (4) Declaration.@>
+
+@<Declare |Polygon| functions@>=
+
+Pointer_Vector<Polygon>*
+sub_decompose(const bool use_rectangles = false,
+              Scanner_Node scanner_node = 0);
+
+
+@q * (0) Reg_Polygon.@>
+@** Reg\_Polygon\quad ({\tt polygons\PERIOD web}).\hfil
+\initials{LDF 2003.04.15.}  @:!! TO DO@> TO DO:  It will be necessary to supply
+|Reg_Polygon| with a complete set of transformation functions, so that |center| will
+be transformed along with the |Points| pointed to by the pointers on
+|points|.  Some are present already, but not all.
+
+\initials{LDF 2003.04.15.}  @:!! TO DO@> TO DO:  Add |in_circle|,
+|out_circle|.  Align a line from 
+|center| in the direction of a normal with the y-axis.  Use the
+inverse of the |Transform| to transform the |Circle|.  
+
+@f Reg_Polygon Polygon
+
+@q * (1) Reg_Polygon class definition.@>
+@* {\bf Reg\_Polygon} class definition. |Reg_Polygon| is derived from 
+|Polygon|.  
+
+\LOG
+\initials{LDF 2003.04.15.}  
+Changed, so that |Reg_Polygon| is derived from
+|Path|.  Previously, it was derived from |Reg_Cl_Plane_Curve|. 
+
+\initials{LDF 2003.04.27.}  
+Changed |protected| data members to |private|.  They
+no longer need to be |protected|, because |Rectangle| is no longer
+derived from |Reg_Polygon|.  
+
+\initials{LDF 2003.06.06.}  
+Changed, so that |Reg_Polygon| is derived from
+|Polygon|, which I've just added above.
+\ENDLOG 
+      
+@<Define |class Reg_Polygon|@>=
+class Reg_Polygon : public Polygon
+{
+    real internal_angle;
+    real radius;
+    unsigned short sides;
+  public:
+    @<Declare |Reg_Polygon| functions@>@;
+};
+
+
+@q * (1) Assignment.@>
+@* Assignment.
+@^\cofunc{Reg\_Polygon}{=}@>
+\initials{LDF 2002.12.18.}
+
+\LOG
+\initials{LDF 2002.12.18.}  
+Moved here.  With the DEC compiler under Compaq Tru64
+on the DEC Alpha computer, it worked to have the assignment operators
+following the constructors.  With the GNU \CPLUSPLUS/ compiler (GCC)
+under GNU/Linux on the Intel i686 computer, it didn't.  See
+|Path::operator=| in \filename{paths.web} for more information. 
+\ENDLOG 
+
+@<Declare |Reg_Polygon| functions@>=
+
+const
+Reg_Polygon&
+operator=(const Reg_Polygon& p);
+
+@
+@<Define |Reg_Polygon| functions@>=
+const 
+Reg_Polygon&
+Reg_Polygon::operator=(const Reg_Polygon& p)
+{
+  clear();
+  Path::operator=(p);
+  internal_angle = p.internal_angle;
+  radius = p.radius;
+  sides = p.sides;
+  center = p.center;
+  return *this;
+}
+
+
+@q * (1) Constructors and setting functions. @>
+@* Constructors and setting functions.
+
+@q ** (2) Default constructor. No arguments.@>
+@*1 Default constructor. No arguments.
+@^\cfunc{Reg\_Polygon}{Reg\_Polygon}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.01.24.}
+Now setting |shape_type = REG_POLYGON_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Now setting |surface_hiding_ctr = 0|.
+
+\initials{LDF 2005.04.18.}
+Now setting |decomposition_level = 0|.
+\ENDLOG 
+
+@<Declare |Reg_Polygon| functions@>=
+Reg_Polygon();
+
+@
+@<Define |Reg_Polygon| functions@>= 
+ Reg_Polygon::Reg_Polygon()
+{
+  
+   shape_type = REG_POLYGON_TYPE;
+   surface_hiding_ctr = 0;
+   decomposition_level = 0;
+   line_switch = false;
+   cycle_switch = true;
+   projective_extremes.resize(6, 0); /* LDF 2003.04.09.  Added this
+                                       line.  */
+}
+
+
+
+@q ** (2) Center, sides, diameter, and angles. @>
+@*1 Center, sides, diameter, and angles.
+
+@q *** (3) Constructor.@>
+@*2 Constructor.
+@^\cfunc{Reg\_Polygon}{Reg\_Polygon}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2003.08.27.}  
+Reversed the order of the initializations following
+``|:|'', because GCC with the ``{\tt --Wall}'' option issued the
+following warning:\newline
+``{}`|Reg_Polygon::sides|' will be initialized after
+`|real Reg_Polygon::radius|'{}''.
+
+\initials{LDF 2005.01.24.}
+Now setting |shape_type = REG_POLYGON_TYPE|.
+
+\initials{LDF 2005.03.31.}
+Now setting |surface_hiding_ctr = 0|.
+
+\initials{LDF 2005.04.18.}
+Now setting |decomposition_level = 0|.
+\ENDLOG 
+
+@<Declare |Reg_Polygon| functions@>=
+
+Reg_Polygon(const Point& ccenter, 
+            const unsigned short ssides,
+            const real ddiameter,
+            const real angle_x = 0, 
+            const real angle_y = 0, 
+            const real angle_z = 0);
+        
+@
+@<Define |Reg_Polygon| functions@>=
+
+Reg_Polygon::Reg_Polygon(const Point& ccenter,
+                                 const unsigned short ssides,
+                                 const real ddiameter,
+                                 const real angle_x, 
+                                 const real angle_y, 
+                                 const real angle_z)
+                         : radius(ddiameter / 2), sides(ssides)
+  
+{
+  bool DEBUG = false; /* |true|  */ 
+  if (DEBUG)
+    cerr << "Entering Reg_Polygon::Reg_Polygon() "
+         << "(center, sides, diameter, angles).\n";
+
+  shape_type = REG_POLYGON_TYPE;
+  surface_hiding_ctr = 0;
+  decomposition_level = 0;  
+  center = ccenter, 
+  internal_angle = 360.0 / sides;  
+
+  cycle_switch = true;
+
+  projective_extremes.resize(6, 0); /* LDF 2003.04.09.  Added this
+                                       line.  */
+
+
+  center.apply_transform();
+
+  
+@ For regular polygons with an even number of sides, we rotate them so
+that a flat side is at the ``top'' (in the direction of the positive
+z-axis, if |angle_x|, |angle_y|, and |angle_z| are all 0). 
+@<Define |Reg_Polygon| functions@>=
+  for (int i = 0; i < sides; i++)
+    {
+      Point* vertex = create_new<Point>(0); 
+      vertex->set(0, 0, radius);
+
+      if (sides % 2 == 0)
+        vertex->rotate(0, internal_angle / 2, 0);
+
+      
+      if ( i > 0)  /* \initials{LDF 2002.11.06.}  Only rotate if the angle $\neq
+                      0$, i.e., don't rotate the first time.  */
+        vertex->rotate(0, i*internal_angle, 0);
+
+      
+      /* Rotation around the x-axis, y-axis, and z-axis, if applicable. */ 
+
+      if (angle_x != ZERO_REAL || angle_y != ZERO_REAL || angle_z != ZERO_REAL) 
+        vertex->rotate(angle_x, angle_y, angle_z);
+
+      vertex->shift(center);  /* Put in position around |center|. */
+      points.push_back(vertex);
+    }
+  if (DEBUG)
+    cerr << "Exiting Reg_Polygon::Reg_Polygon() "
+         << "(center, sides, diameter, angles).\n";
+  return;
+}
+
+
+@q *** (3) Setting function.@>
+@*2 Setting function.
+@^\cfunc{Reg\_Polygon}{set}@>
+\initials{LDF Undated.}
+
+@ @:??@> ?? \initials{LDF 2002.10.07.}  See below.
+
+@<Declare |Reg_Polygon| functions@>=
+
+void
+set(const Point& ccenter, const unsigned short ssides,  const real ddiameter,
+        const real angle_x = 0, const real angle_y = 0, const real angle_z = 0);
+        
+@
+@<Define |Reg_Polygon| functions@>=
+void
+Reg_Polygon::set(const Point& ccenter, const unsigned short ssides,
+                     const real ddiameter,
+                     const real angle_x, const real angle_y, const real angle_z)
+{
+  bool DEBUG = false; /* |true|  */ 
+  if (DEBUG)
+    cerr << "Entering Reg_Polygon::set() "
+         << "(center, sides, diameter, angles).\n";
+
+@ @:??@> ?? \initials{LDF 2002.10.07.}  At exactly this place, |Path::Path| (the 
+default version with no arguments) is invoked.  When |set|
+exits, |~Path| is called on the empty |Path|.  When 
+|DEBUG == true|, the following message is printed before 
+|~Path| is entered.  I don't know why |Path| is invoked 
+and this bothers me a bit.  However, it's destroyed cleanly, so
+I don't have to worry about leakage.  
+@<Define |Reg_Polygon| functions@>=
+
+  Reg_Polygon p(ccenter, ssides, ddiameter, angle_x, angle_y, angle_z);
+  *this = p;
+  if (DEBUG)
+    cerr << "Exiting Reg_Polygon::set() "
+         << "(center, sides, diameter, angles).\n";
+  return;
+
+}
+
+@q * Pseudo-constructor for dynamic allocation.@>
+@* Pseudo-constructor for dynamic allocation.
+
+@q ** (2) Pointer argument.@>
+@*1 Pointer argument.@>
+
+\LOG
+\initials{LDF 2002.11.06.}  
+Added optional |Reg_Polygon| pointer argument.
+Made non-|inline|.
+
+\initials{LDF 2003.12.30.}  
+Replaced |Reg_Polygon::create_new_reg_polygon|
+with a specialization of |template <class C> C* create_new| for
+|Reg_Polygon|. 
+
+\initials{LDF 2004.10.11.}
+Added |Scanner_Node scanner_node| argument.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Reg_Polygon|@>=
+Reg_Polygon* 
+create_new(const Reg_Polygon* r, Scanner_Node scanner_node);
+
+@q ** (2) Reference argument.@>
+@*1 Reference argument.@>
+
+\LOG
+\initials{LDF 2002.11.06.}  
+Added this function.
+
+\initials{LDF 2003.12.30.}  
+Replaced |Reg_Polygon::create_new_reg_polygon|
+with a specialization of |template <class C> C* create_new| for
+|Reg_Polygon|. 
+
+\initials{LDF 2004.10.11.}
+Added |Scanner_Node scanner_node| argument.
+\ENDLOG 
+
+@<Declare non-member template functions for |Reg_Polygon|@>=
+
+Reg_Polygon* 
+create_new(const Reg_Polygon& r, Scanner_Node scanner_node);
+
+@q * (1) Destructor.@>
+@* Destructor. 
+
+\LOG
+\initials{LDF 2002.10.09.}  
+Removed the destructor.  |Path::~Path| or
+|Path::clear|\newline
+should be used instead, unless I add dynamically
+allocated data members to |Reg_Polygon| (rather than |Path|).
+\ENDLOG 
+
+@q * (1) Get copy.@>
+@* Get copy.
+@^\cfunc{Reg\_Polygon}{get\_copy}@>
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+\ENDLOG
+
+@<Declare |Reg_Polygon| functions@>=
+virtual
+Shape*
+get_copy() const;
+
+@
+@<Define |Reg_Polygon| functions@>=
+Shape*
+Reg_Polygon::get_copy() const
+{
+  Reg_Polygon* p = create_new<Reg_Polygon>(0);
+  *p = *this;
+  return static_cast<Shape*>(p);
+}
+
+@q * (1) Returning elements and information.@>
+@* Returning elements and information.
+
+\LOG
+\initials{LDF 2002.11.03.}  
+Removed |Reg_Polygon::is_planar|.  A |Reg_Polygon| can be
+manipulated into a non-planar state, so it's safer to use the |Path|
+version, which tests whether it's really planar or not.  
+\ENDLOG 
+
+
+
+@q ** (2) Get |Shape| type.@> 
+@*1 Get {\bf Shape} type.
+\initials{LDF 2005.03.18.}
+
+\LOG
+\initials{LDF 2005.03.18.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Reg_Polygon| functions@>=
+virtual 
+inline
+unsigned short 
+get_shape_type(void) const
+{
+   return REG_POLYGON_TYPE;
+}
+
+
+@q ** (2) Is |Reg_Polygon|.@> 
+@*1 Is {\bf Reg\_Polygon}.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this function.
+\ENDLOG
+
+@<Declare |Reg_Polygon| functions@>=
+virtual
+inline
+bool
+is_reg_polygon(void)
+{
+   return true;
+}
+
+
+
+@q ** (2) Is regular and polygonal.@>
+@*1 Is regular and polygonal.
+@^\cfunc{Reg\_Polygon}{is\_reg\_polygonal}@>
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF Undated.}
+Make log entry.  Also add |location(const Point&)|.
+\ENDTODO 
+
+@<Declare |Reg_Polygon| functions@>=
+bool
+is_reg_polygonal(void);
+
+
+
+@
+@<Define |Reg_Polygon| functions@>=
+bool
+Reg_Polygon::is_reg_polygonal(void)
+{
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+  if (!is_planar())
+    return false;
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr << "internal_angle == " << internal_angle << endl;
+       cerr << "sides == " << sides << endl;
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return true;
+
+}
+
+
+@q ** (2) Get radius.@>
+@*1 Get radius.  
+@^\cfunc{Reg\_Polygon}{get\_radius}@>
+
+\LOG
+\initials{LDF 2003.06.13.}  
+Added this function.
+\ENDLOG 
+
+@<Declare |Reg_Polygon| functions@>=
+inline
+real
+get_radius() const {return radius;}
+
+
+@q * (1) Reflection in a |Plane|.@> 
+@ Reflection in a |Plane|.
+\initials{LDF 2004.10.03.}
+@^\cfunc{Reg\_Polygon}{reflect\_in}@>
+
+Please note that this function tries to allocate memory on the free 
+store for the |Reg_Polygon| pointed to by the pointer to |Shape| which is 
+its return value.  Therefore, programmers who use this function must 
+ensure that this memory is freed.
+\initials{LDF 2004.10.03.}
+
+If allocation fails, this function throws a |bad_alloc| exception.  
+If the reflection of |*this| cannot be found in the |Plane|, 
+this function returns 0.
+\initials{LDF 2004.10.03.}
+
+\LOG
+\initials{LDF 2004.10.03.}
+Added this function.
+
+\initials{LDF 2004.10.12.}
+Rewrote this function.
+Following a system update, 
+having |Shape*| as the return value no longer worked.
+\ENDLOG
+
+@q ** (2) Declaration.@> 
+
+@<Declare |Reg_Polygon| functions@>=
+virtual
+int
+reflect_in(const Plane& p, 
+           void* v,
+           const Scanner_Node scanner_node = 0) const;
+
+
+@q ** (2) Definition.@>
+
+@
+@<Define |Reg_Polygon| functions@>=
+int
+Reg_Polygon::reflect_in(const Plane& p, 
+                        void* v,
+                        const Scanner_Node scanner_node) const
+
+
+{
+
+@q *** (3) Preliminaries.@> 
+
+  bool DEBUG = false; /* |true|  */
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+  if (scanner_node)
+     scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                   &error_stop_value,
+                                                   &warning_stop_value);
+
+
+@q *** (3).@> 
+
+  Reg_Polygon* reg_polygon_reflection = static_cast<Reg_Polygon*>(v);  
+
+@q *** (3) If |reg_polygon_reflection == 0|, try to allocate memory @>
+@q *** (3) on the free store for it.                           @> 
+
+@ If |reg_polygon_reflection == 0|, try to allocate memory 
+on the free store for it.                            
+\initials{LDF 2004.10.12.}
+
+@<Define |Reg_Polygon| functions@>=
+
+ if (reg_polygon_reflection == static_cast<Reg_Polygon*>(0))
+ {
+  try
+     {
+       reg_polygon_reflection = create_new<Reg_Polygon>(0, scanner_node);
+     }
+
+@q **** (4) Error handling:  |new Reg_Polygon| failed.  Rethrow |bad_alloc|.@> 
+
+@ Error handling:  |new Reg_Polygon| failed.  Rethrow |bad_alloc|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Polygon| functions@>=
+
+
+  catch (bad_alloc)
+     {
+
+       cerr_strm << thread_name << "ERROR! In `Point::reflect_in():" 
+                 << endl
+                 << "`create_new<Reg_Polygon>() failed. "
+                 << "Rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       throw;
+
+       
+     } /* |catch (bad_alloc)|  */
+
+  
+@q *** (3).@> 
+
+  } /* |if (reg_polygon_reflection == 0)|  */
+
+@q *** (3) Call |Polygon::reflect_in|.@> 
+
+@ Call |Polygon::reflect_in|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Polygon| functions@>=
+
+  Polygon polygon_reflection;
+
+  int status;
+
+
+  try
+     {
+       status = Polygon::reflect_in(p,
+                            static_cast<void*>(&polygon_reflection),
+                            scanner_node);  
+     }
+
+@q **** (4) Error handling:  |Polygon::reflect_in| threw |bad_alloc|.@> 
+
+@ Error handling:  |Polygon::reflect_in| threw |bad_alloc|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Polygon| functions@>=
+
+  catch (bad_alloc)
+     {
+       cerr_strm << thread_name << "ERROR! In `Reg_Polygon::reflect_in():'"
+                 << endl 
+                 << "`Polygon::reflect_in() threw `bad_alloc'."
+                 << endl << "Deleting `reg_polygon_reflection' and "
+                 << "rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       delete reg_polygon_reflection;
+
+       throw;
+
+     } /* |catch (bad_alloc)|  */
+
+@q **** (4) Error handling:  |Polygon::reflect_in| returned 1.@> 
+
+@ Error handling:  |Polygon::reflect_in| returned 1.
+\initials{LDF 2004.10.12.}
+
+@<Define |Reg_Polygon| functions@>=
+
+  if (status == 1)
+    {
+
+      cerr_strm << thread_name << "ERROR! In `Reg_Polygon::reflect_in():'"
+                << endl 
+                << "`Polygon::reflect_in() failed and returned 1."
+                << endl << "Deleting `reg_polygon_reflection' "
+                << "and exiting function with return value 1.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm, error_stop_value);
+      cerr_strm.str("");
+  
+      delete reg_polygon_reflection;
+
+      return 1;
+
+      
+    }  /* |if (status == 1)|  */
+
+@q **** (4) |Polygon::reflect_in| succeeded.@> 
+
+@ |Polygon::reflect_in| succeeded.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Polygon| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name << "In `Reg_Polygon::reflect_in():"
+                  << endl << "`Polygon::reflect_in() succeeded.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */ 
+
+   reg_polygon_reflection->Polygon::operator=(
+                            polygon_reflection);
+
+@q *** (3) Set other data members of |*reg_polygon_reflection|.@> 
+
+@ Set other data members of |*reg_polygon_reflection|.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Polygon| functions@>=
+
+  reg_polygon_reflection->internal_angle = internal_angle;
+  reg_polygon_reflection->radius = radius;
+  reg_polygon_reflection->sides = sides;
+
+@q *** (3) Exit function successfully with   @> 
+@q *** (3) return value 0.@> 
+
+@ Exit function successfully with return value 0.
+\initials{LDF 2004.10.05.}
+
+@<Define |Reg_Polygon| functions@>= 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+        cerr_strm << thread_name << "In `Reg_Polygon::reflect_in():"
+                  << endl << "Exiting function successfully with "
+                  << "return value 0.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */ 
+
+  return 0;
+
+} /* End of |Reg_Polygon::reflect_in| definition.  */
+
+
+
+
+
+
+@q * (1) Circles.@>
+@* Circles.
+\initials{LDF 2003.06.13.}  The functions in this section are all defined in
+\filename{circles.web}, because |Circle| is an incomplete type in this
+file. 
+\LOG
+\initials{LDF 2003.06.13.}  Added this section.
+\ENDLOG
+
+
+@q ** (2) Enclosed circle.@>
+@*1 Enclosed circle.
+@^\cfunc{Reg\_Polygon}{in\_circle}@>
+
+\LOG
+\initials{LDF 2003.06.13.}  
+Added this function.
+\ENDLOG 
+
+@<Declare |Reg_Polygon| functions@>=
+
+Circle
+in_circle() const;
+
+
+@q ** (2) Draw enclosed circle.@>
+@*1 Draw enclosed circle.
+@^\cfunc{Reg\_Polygon}{draw\_in\_circle}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2003.07.04.}  
+Removed default argument for |picture|.  Having one
+made it impossible for the compiler to resolve calls to
+|draw_in_circle| with no arguments.
+
+\initials{LDF 2004.06.02.}  
+Removed the version of this function with the
+|Picture| argument last.
+Changed |const Color& ddraw_color| to |const Color* ddraw_color|
+and |const string ppen| to |const Pen* ppen|.
+
+\initials{LDF 2004.06.03.}  
+Changed default for |ddraw_color| from
+|Colors::default_color| to 0, since I've gotten rid of the former.
+
+\initials{LDF 2004.06.07.}  
+Changed |const string ddashed = ""| to 
+|const Dash_Pattern* ddash_pattern = 0|.
+
+\initials{LDF 2005.03.15.}
+Replaced the optional argument |const Color* ddraw_color|, 
+with default 0, with the optional argument 
+|Pointer_Vector<Color>* ddraw_color_vector|, also with default 0.
+
+\initials{LDF 2005.03.18.}
+Replaced the optional argument |const Pen* ppen = 0| 
+with the optional argument |Pointer_Vector<Pen>* ppen_vector = 0|.
+
+\initials{LDF 2005.03.18.}
+Replaced the optional argument |const Dash_Pattern* ddash_pattern = 0| 
+with the optional argument 
+|Pointer_Vector<Dash_Pattern>* ddash_pattern_vector = 0|.
+\ENDLOG 
+
+@<Declare |Reg_Polygon| functions@>=
+
+Circle
+draw_in_circle(Picture& picture,
+               Pointer_Vector<Color>* ddraw_color_vector = 0,
+               Pointer_Vector<Dash_Pattern>* ddash_pattern_vector = 0,
+               Pointer_Vector<Pen>* ppen_vector = 0) const;
+
+
+@q ** (2) Surrounding circle.@>
+@*1 Surrounding circle.
+@^\cfunc{Reg\_Polygon}{out\_circle}@>
+\initials{LDF Undated.}
+
+@<Declare |Reg_Polygon| functions@>=
+
+Circle
+out_circle(void) const;
+
+
+@q ** (2) Draw surrounding circle.@>
+@*1 Draw surrounding circle.
+@^\cfunc{Reg\_Polygon}{draw\_out\_circle}@>
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2003.07.04.}  
+Removed default argument for |picture|.  Having one
+made it impossible for the compiler to resolve calls to
+|draw_out_circle| with no arguments.
+
+\initials{LDF 2004.06.02.}  
+Removed the version of this function with the
+|Picture| argument last.
+Changed |const Color& ddraw_color| to |const Color* ddraw_color|
+and |const string ppen| to |const Pen* ppen|.
+
+\initials{LDF 2004.06.03.}  
+Changed default for |ddraw_color| from
+|Colors::default_color| to 0, since I've gotten rid of the former.
+
+\initials{LDF 2004.06.07.}  
+Changed |const string ddashed = ""| to 
+|const Dash_Pattern* ddash_pattern = 0|.
+
+\initials{LDF 2005.03.15.}
+Replaced the optional argument |const Color* ddraw_color|, 
+with default 0, with the optional argument 
+|Pointer_Vector<Color>* ddraw_color_vector|, also with default 0.
+
+\initials{LDF 2005.03.18.}
+Replaced the optional argument |const Pen* ppen = 0| 
+with the optional argument |Pointer_Vector<Pen>* ppen_vector = 0|.
+
+\initials{LDF 2005.03.18.}
+Replaced the optional argument |const Dash_Pattern* ddash_pattern = 0| 
+with the optional argument 
+|Pointer_Vector<Dash_Pattern>* ddash_pattern_vector = 0|.
+\ENDLOG 
+
+@<Declare |Reg_Polygon| functions@>=
+
+Circle
+draw_out_circle(Picture& picture,
+                Pointer_Vector<Color>* ddraw_color_vector = 0,
+                Pointer_Vector<Dash_Pattern>* ddash_pattern_vector = 0,
+                Pointer_Vector<Pen>* ppen_vector = 0) const;
+
+@q * (1) Putting polygons together. @>
+@* Putting polygons together.
+\initials{LDF Undated.}
+
+This is what's compiled.     
+\initials{LDF Undated.}
+
+@c
+@<Include files@>@;
+@<Define |class Polygon|@>@;
+@<Define |class Reg_Polygon|@>@;
+@<Define |Reg_Polygon| functions@>@;
+@<Define |Polygon| functions@>@;
+@<Declare non-member template functions for |Reg_Polygon|@>@;
+
+@ This is what's written to \filename{polygons.h}.
+\initials{LDF Undated.}
+
+@(polygons.h@>=
+@<Define |class Polygon|@>@;
+@<Define |class Reg_Polygon|@>@;
+@<Declare non-member template functions for |Reg_Polygon|@>@;
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 80))    @>
+
+  
+@q * Local variables for Emacs.@>
+
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

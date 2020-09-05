@@ -1,0 +1,231 @@
+%%% dodec_03.lmc
+%%%% Created by Laurence D. Finston (LDF) Fri Oct 26 23:09:21 CEST 2007
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Created:       November 8, 2007
+%% Last updated:  November 8, 2007
+
+% * (1) Beginning of 3DLDF code.
+
+%% ** (2) draw_dodecahedron_net
+
+%% *** (3) Declaration (draw_dodecahedron_net)
+
+macro draw_dodecahedron_net;
+
+
+%% *** (3) Definition (draw_dodecahedron_net)
+
+%% !!TODO:  Find out why I couldn't make `path_pen' and `dot_pen' as typed
+%%          arguments!
+%%          LDF 2007.10.16.
+
+def draw_dodecahedron_net {numeric diameter,
+                           boolean do_stitch_lines,
+                           numeric stitch_divisions,
+                           numeric path_diam,
+                           numeric dot_diam,
+                           transform label_transform} :=
+
+%% **** (4) Declarations and initializations inside draw_dodecahedron_net
+
+point p[][]; %% points on pentagons
+point k[][]; %% corners of tabs
+point n[];   %% normals
+point c[];   %% centers
+
+reg_polygon r[];
+
+path_vector @pv;
+reg_polygon_vector @rpv;
+string s;
+
+pen dot_pen;
+pen path_pen;
+
+dot_pen := pencircle scaled (dot_diam, dot_diam);
+path_pen := pencircle scaled (path_diam, path_diam);
+
+pickup path_pen;
+
+%% **** (4) Get net 
+
+@rpv := get_net dodecahedron with_diameter diameter;
+
+%% @rpv needs to be rotated because the routines for "folding"
+%% the net to make polyhedra in 3DLDF fold upwards, whereas
+%% a cardboard model is folded downwards.
+%% LDF 2007.10.13.
+
+for i = 0 upto size @rpv - 1:
+   rotate @rpv[i] (180, 180);
+   c[i] := get_center @rpv[i];
+   for j = 0 upto 4:
+      p[i][j] := get_point (j) @rpv[i];
+   endfor;
+   s := decimal i;
+   label(s, c[i]) transformed label_transform;
+endfor;
+
+%% **** (4) Label net
+
+if false: 
+
+   label.lft("$\downarrow \overline{\strut 9_29_3}$", 
+              mediate(get_point 3 @rpv2, get_point 4 @rpv2))
+      rotated (0, 0, 72);
+
+   label.bot("$\downarrow \overline{\strut 2_32_4}$", 
+              mediate(get_point 2 @rpv9, get_point 3 @rpv9, .667)) 
+      rotated (0, 0, -36);
+
+   label.top("$\downarrow \overline{\strut 10_210_3}$", 
+              mediate(get_point 0 @rpv2, get_point 4 @rpv2));
+
+
+   label.bot("$\downarrow \overline{\strut 2_02_4}$", 
+              mediate(get_point 2 @rpv10, get_point 3 @rpv10))
+      rotated (0, 0, -36);
+fi; 
+
+%% **** (4) Get tabs
+
+if do_stitch_lines:
+   @pv := get_tabs dodecahedron with_diameter diameter 
+                  with_stitch_divisions stitch_divisions;
+   temp_size := size @pv / 2 - 1;
+else:
+   @pv := get_tabs dodecahedron with_diameter diameter 
+                  with_no_stitch_lines;
+   temp_size := size @pv - 1;
+fi;
+
+for i = 0 upto temp_size:
+   for j = 0 upto 3:
+      k[i][j] := get_point (j) @pv[i];
+   endfor;
+endfor;
+
+%% **** (4) Draw tabs
+
+for i = 0 upto size @pv / 2:
+   draw @pv[i];
+endfor;
+
+%% **** (4) Draw stitch lines.
+
+if do_stitch_lines:
+for i = size @pv / 2 upto size @pv - 1:
+   draw @pv[i];
+   for j = 1 upto stitch_divisions - 1:
+      drawdot get_point (j) @pv[i] with_pen dot_pen;
+   endfor;
+endfor;
+fi;
+
+%% **** (4) Draw outline.
+%%          Lines to be cut are solid, lines to be scored are dashed evenly.
+
+%    draw @pv[2] with_color green;
+
+draw @rpv;  %%  dashed evenly;
+ 
+%label.bot(0, @rpv1) with_text_color blue;
+%label.top(0, @pv0);
+
+draw p[1][0] -- k[0][0];
+draw k[0][2] -- p[1][1];
+
+%label.top(0, @rpv2);
+%label.top(0, @rpv3);
+%label.top(0, @rpv4);
+
+%label.top(0, @rpv5);
+%label.top(0, @rpv7);
+%label.top(0, @rpv8);
+
+%label.top(0, @rpv9);
+%label.top(0, @rpv10);
+%label.top(0, @rpv11);
+
+%% **** (4) End of draw_dodecahedron_net definition.
+
+drop_pen;
+
+enddef;
+
+
+
+%% *** (3) 
+
+endinput;
+
+%% ** (2) End of GNU 3DLDF code
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%   	 GNU Emacs editor.  The local variable list is not evaluated when an 
+%%   	 indirect buffer is visited, so it's necessary to evaluate the       
+%%   	 following s-expression in order to use the facilities normally      
+%%   	 accessed via the local variables list.                              
+%%   	 \initials{LDF 2004.02.12}.                                          
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80))    
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% End:
+
+
+

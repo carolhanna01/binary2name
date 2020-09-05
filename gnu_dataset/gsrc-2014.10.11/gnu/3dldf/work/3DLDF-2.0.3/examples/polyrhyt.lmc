@@ -1,0 +1,298 @@
+%% polyrhyt.lmc
+%% Created by Laurence D. Finston (LDF) Fri May 11 15:56:39 CEST 2012
+
+
+%% * (1) Top
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Created:       May 11, 2012
+%% Last updated:  May 11, 2012
+
+
+verbatim_metapost "verbatimtex \font\small=cmr5 etex ";
+
+%% ** (2) Declarations
+
+point p[];
+
+%% *** (3) Macro polyrhythm
+
+macro polyrhythm;
+
+def polyrhythm {numeric width, numeric height, numeric cell_width, numeric upper, 
+                numeric lower, numeric lcm, numeric uppera} = 
+
+   point p[];
+   path q;
+   numeric j;
+   numeric k;
+   numeric m;
+   numeric n;
+   string s;
+
+   numeric temp_val;
+
+   % message "width:";       
+   % show width;
+
+   % message "cell_width:";       
+   % show cell_width;
+
+   % message "height:";       
+   % show height;
+
+   if width == 0:
+     % message "width == 0:"; 
+     if cell_width == 0:
+        % message "cell_width == 0";
+        if upper > lower:
+           width := height * upper;
+        else:
+           width := height * lower;
+        fi;
+        % message "Calculated width:"; 
+        % show width;
+     else:
+        % message "cell_width <> 0";
+        if upper > lower:
+           width := cell_width * upper;
+        else:
+           width := cell_width * lower;
+        fi;
+        % message "Calculated width:"; 
+        % show width;
+     fi;
+   % else:
+   %   message "width <> 0:"; 
+   fi;
+
+   boolean do_labels;
+
+   do_labels := false; % true
+
+   p0 := (0, 0);
+
+   s := "";
+
+   j := 1;
+
+   p1 := p0 shifted (0, -height);
+
+   p2 := p1 shifted (width, 0);
+
+   p3 := (xpart p2, ypart p0);
+
+   if do_labels: dotlabel.llft("$p_0$", p0); dotlabel.llft("$p_1$", p1);
+      dotlabel.lrt("$p_2$", p2); dotlabel.lrt("$p_3$", p3); fi;
+
+%% **** (4) Optionally draw lines for lcm (lowest common multiplier.
+
+   if lcm > 0:
+
+     pickup pencircle scaled (1pt, 1pt, 0pt);
+
+     j := 2; 
+     k := 2; 
+     m := 2;
+     n := 2;
+
+     for i = width/lcm step width/lcm until width - .5 * width/lcm:
+
+       draw p1 shifted (i, 0) -- p1 shifted (i, 2 * height) with_color dark_gray;
+
+       if (j - 1) == (lcm / lower):
+          j := 1;
+       else:
+          s := "{\small " & decimal j & "}";
+          label(s, mediate(p1 shifted (i, 0), p1 shifted (i, height)));
+          s := "{\small " & decimal m & "}";
+          label.bot(s, p1 shifted (i, 0));
+       fi;
+
+       if (k - 1) == (lcm / upper):
+          k := 1;
+       else:
+          s := "{\small " & decimal k & "}";
+          label(s, mediate(p1 shifted (i, 0), p1 shifted (i, 3 * height)));
+
+          if uppera == 0:
+             s := "{\small " & decimal m & "}";
+             label.top(s, p1 shifted (i, 2 * height));  
+          fi;
+
+       fi;
+
+       if uppera <> 0:
+          draw p1 shifted (i, 2 * height) -- p1 shifted (i, 3 * height) with_color dark_gray;
+       	  if (n - 1) == (lcm / uppera):
+       	     n := 1;
+       	  else:
+       	     s := "{\small " & decimal n & "}";
+       	     label(s, mediate(p1 shifted (i, height), p1 shifted (i, 4 * height)));
+             s := "{\small " & decimal m & "}";
+             label.top(s, p1 shifted (i, 3 * height));         
+       	  fi;
+       fi;
+
+       j += 1;
+       k += 1;
+       m += 1;
+       n += 1;
+
+     endfor;     
+
+   fi;
+
+%% **** (4) Draw upper and lower box outlines
+
+   pickup pensquare scaled (2pt, 2pt, 0pt);
+
+   q := p0 -- p1 -- p2 -- p3 -- cycle;  % lower box
+
+   draw q;  
+   draw q shifted (0, height); % upper box
+
+   if uppera <> 0:
+     %message "uppera <> 0";
+
+     draw q shifted (0, 2 * height); % additional upper box
+
+   % else:
+     % message "uppera == 0";
+   fi;
+
+
+%% **** (4) Draw vertical lines for upper box
+
+   j := 1;
+
+   for i := 0 step width/upper until width + .00001:
+      draw p0 shifted (i, 0) -- p0 shifted (i, height);
+      s := decimal j;
+      if j <> (upper + 1):
+         if uppera == 0:
+            label.top(s, p0 shifted (i, height));
+         else:
+            label.urt(s, p0 shifted (i, 0));
+         fi;
+      else:
+         if uppera == 0:
+            label.top("1", p0 shifted (i, height));
+         else:
+            label.urt("1", p0 shifted (i, 0));
+         fi;
+      fi;
+      j := j + 1;
+   endfor;
+
+%% **** (4) Draw vertical lines for lower box
+
+   j := 1;
+
+   for i = 0 step width/lower until width + .00001:
+      draw p1 shifted (i, 0) -- p1 shifted (i, height);
+      s := decimal j;
+      if j <> (lower + 1):
+         label.bot(s, p1 shifted (i, 0));
+      else:
+         label.bot("1", p1 shifted (i, 0));
+      fi;
+
+      j := j + 1;
+   endfor;
+
+
+%% **** (4) Draw vertical lines for second upper box
+
+   if uppera <> 0:
+
+       j := 1;
+
+       for i = 0 step width/uppera until width + .00001:
+
+          s := decimal j;
+          if j <> (uppera + 1):
+             if i <> 0:
+                 draw p1 shifted (i, 2 * height) -- p1 shifted (i, 3 * height);
+             fi;
+             label.top(s, p1 shifted (i, 3 * height));
+          else:
+             label.top("1", p1 shifted (i, 3 * height));
+          fi;
+
+          j := j + 1;
+       endfor;
+
+   fi;
+
+
+
+%% **** (4) 
+
+%% *** (3) End of macro polyrhythm definition
+
+enddef;
+
+%% ** (2) Macro A
+
+macro A;
+
+def A {numeric fig_counter, numeric wd, numeric cell_wd, numeric upp, numeric low, numeric llcm} = 
+
+beginfig(fig_counter);
+   polyrhythm {wd, 1, cell_wd, upp, low, llcm, 0};
+endfig with_projection parallel_x_y no_sort;
+
+beginfig(fig_counter + 1);
+   polyrhythm {wd, 1, cell_wd, low, upp, llcm, 0};
+endfig with_projection parallel_x_y no_sort;
+
+enddef;
+
+%% *** (3) End of macro A definition

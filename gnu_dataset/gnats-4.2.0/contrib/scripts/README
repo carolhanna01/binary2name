@@ -1,0 +1,67 @@
+Brian Abernathy <cba@wscoe1.atl.hp.com>
+
+check-categories -
+	This script does several functions.  They are:
+ 	  - Pending check.  It will look in the 'pending' directory,
+	    displaying a message if it finds any files.
+	  - Category check.  Each PR in every active category is examined,
+	    looking at the '>Category' line, verifying that the category
+	    matches the actual directory name.  If there is a mismatch,
+	    the script attempts to move the PR to the proper 
+	    category (directory).  Note:  If the category does not exist,
+	    the PR is moved to the GNATS_ROOT directory.
+	  - Unresolved check.  The gnats-queue directory is examined, and
+	    if files are found that have a prefix of a period, then a
+	    message is displayed.
+
+
+cross-check -
+	This script performs cross-checks between the category, responsible
+	and submitters files.  This is the sequence of events:
+	  - First, it examines the categories file, and compares any 
+	    uncommented lines against directories in GNATS_ROOT.  It is
+	    considered an error if a live category appears in the file
+	    with no corresponding directory in GNATS_ROOT.
+	  - Next, it insures that any submitters appearing in the
+	    categories file are also in the categories file.
+	  - After that, it performs the same check against the responsible
+	    file.
+	  - Finally, it gathers a list of all responsible parties, and
+	    insures that they are either a valid userid on the system, 
+	    or they are a valid e-mail alias.  (This check might not be
+	    possible on some systems.)
+
+display-config -
+	The display-config script decodes the config file into a more
+	readable format.  Each line of the config file is displayed,
+	followed by the decoded explaination.  Several lines may be
+	grouped together if it makes sense.  For example, the following
+	partial explaination is displayed for my configuration:
+7:NOTIFY=1
+Automatic reminders are enabled. (default)
+This means that if a call is not changed out of the 'open' state
+after a predefined period of time, a reminder is e-mailed to the
+maintainer(s) of the PR.
+11:BDAY_START=8
+12:BDAY_END=17
+13:BWEEK_START=1
+14:BWEEK_END=5
+Business hours are:
+      Monday through Friday 8 am to 5 pm
+
+	Since Automatic reminders are enabled, the start/stop of the
+	business week is needed, so all those lines are displayed, and
+	decoded.
+
+reset-gnats -
+	This script should be used with extreme caution!  In fact, I 
+	put several queries into it, to make sure the user knew what
+	they were asking for.  Basically, this is what it does:
+	  - It asks twice if the user really wants to go through with it.
+	  - Locks the database
+	  - Write a zero into the $GNATS_ROOT/gnats-adm/current file.
+	  - Cycles through all of the categories, erasing all files in 
+	    each directory.
+	  - Regenerates the index.
+	  - Unlocks the database.
+

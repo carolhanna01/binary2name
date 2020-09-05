@@ -1,0 +1,680 @@
+%%%% dodec_03.ldf
+%%%% Created by Laurence D. Finston (LDF) Thu Nov  8 21:21:51 CET 2007
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Last updated:  November 8, 2007
+
+%% Run like this:
+
+%% 3dldf dodec_03.ldf 
+%% mpost dodec_03.mp 
+%% tex dodec_03.txt 
+%% dvips -o dodec_03.ps dodec_03.dvi
+
+%% All on one line:
+if false:
+3dldf dodec_03.ldf; mpost dodec_03.mp; tex dodec_03.txt; \
+dvips -o dodec_03.ps dodec_03.dvi
+fi;
+
+%% View using Ghostview like this:
+%% gv dodec_03.ps &
+
+% * (1) Beginning of 3DLDF code.
+
+%% ** (2) draw_dodecahedron_net
+
+input "dodec_03.lmc";
+
+%% ** (2) Plan for dodecahedron with sundial faces.
+%%        So far, I've only one face.
+%%        LDF 2007.11.08.
+
+%% *** (3) Global declarations and initializations
+
+focus f;
+set f with_position (7, 8, -20) 
+      with_direction (7, 8, 10) with_distance 20; 
+
+pen hour_line_pen;
+pen path_pen;
+
+hour_line_pen := pencircle scaled (.0333, .0333);
+path_pen := pencircle scaled (.0333, .0333);
+
+polyhedron d[];
+
+point p[][];  %% Points on pentagons of d0
+point n[];    %% normals
+point c[];    %% centers
+point q[];    %% Scratch points
+
+point g[];    %% Points on gnomen
+
+point_vector pv;  %% Scratch point vector
+
+reg_polygon_vector rpv; %% The faces of the dodecahedron net
+
+reg_polygon r[];
+
+circle k[];
+
+point K[];  %% Points on k1
+
+point E[];  %% Points on equatorial dial
+
+plane epsilon[];
+plane rho[];
+
+path h[][];  %% The hour lines on the pentagonal faces of the dodecahedron
+
+point H[][]; %% One point on each of the `h[][]' paths.
+
+path m[];    %% The hour lines on the net
+
+string s;
+
+transform t[];
+
+%% Greenwich, England:  Latitude 51 deg. 28' 38'' N 
+%% (+ 51 (/ 28.0 60) (/ 38.0 3600))  51.4772
+
+%% *** (3) Figure 1 has been moved to the bottom, in order to be able to
+%%         move the hour lines for face 10 (r10) to the net.
+
+%% *** (3) Figure 2
+
+beginfig(2);
+d0 := unit_dodecahedron scaled 2;
+%draw d0;
+
+for i = 0 upto 11:
+   r[i] := get_reg_polygon (i) d0;
+   c[i] := get_center r[i];
+   if false: 
+      s := decimal i;
+      label(s, c[i]);
+   fi; 
+endfor;
+
+rho10 := get_plane r10;
+
+draw r10;
+
+p[1][3] := get_point 3 r1;
+
+
+set k0 with_diameter 10 with_point_count 32;
+
+shift k0 (0, ypart p[1][3]);
+
+if false:  
+   for i = 0 upto 4:
+      s := "$2_" & decimal i & "$";
+      label.top(s, get_point (i) r2);
+   endfor;
+
+   for i = 0 upto 4:
+      s := "$9_" & decimal i & "$";
+      label.lft(s, get_point (i) r9);
+   endfor;
+
+   for i = 0 upto 4:
+      s := "$10_" & decimal i & "$";
+      label.rt(s, get_point (i) r10);
+   endfor;
+fi; 
+
+
+
+%label(2, c2) with_text_color red;
+%label.bot(1, c1) with_text_color blue;
+
+%label.lft(0, r1);
+
+% filldraw r1 with_draw_color blue;
+% filldraw r2;
+% filldraw r0;
+% filldraw r6;
+
+%% **** (4) Compass rose
+
+point north, south, east, west;
+
+point c_k;
+
+c_k := get_center k0;
+
+y_val := ypart c_k;
+diam := get_diameter k0;
+
+direction_val := .6 * diam;
+
+north := ( 0,  y_val,  direction_val);
+south := ( 0,  y_val, -direction_val);
+east :=  (direction_val,  y_val,   0);
+west :=  (-direction_val, y_val,   0);
+
+label.lft("W", west);
+label.rt("E", east);
+label.bot("S", south);
+
+g0 := south shifted (0, 0, 1);
+q0 := south shifted(-1, 0, 0);
+
+curr_latitude := 51.4772;  %% Greenwich, England
+
+rotate_around g0 (q0, south) curr_latitude;
+
+%dotlabel.lft("$q_{0}$", q0);
+
+%% This doesn't work, because the same `vector<real>' is
+%% used to store the `numeric' values for the coordinates
+%% as is used for the subscripts of the variable `g0'.
+%% This will require some effort to fix.
+%% LDF 2007.11.04.
+
+%%g1 := (xpart g0, ypart south, zpart g0);  
+
+%% This is a workaround.  
+%% LDF 2007.11.04.
+
+a := xpart g0;
+b := ypart south;
+g := zpart g0;
+
+g1 := (a, b, g);
+ 
+draw south -- g0 -- g1 -- cycle;
+
+%message "g1:"; 
+%show g1;
+
+dotlabel.lft("$g_{0}$", g0);
+dotlabel.rt("$g_{1}$", g1);
+
+
+%% **** (4) Gnomon on r10
+
+n10 := (get_normal r10) shifted c10 scaled 3;
+
+for i = 0 upto 4:
+   p[10][i] := get_point (i) r10;
+endfor;
+
+q0 := mediate(p[10][0], p[10][4]);
+
+dotlabel.top("$q_{0}$", q0);
+
+q1 := p[10][2] shifted (0, 0, 25);
+
+dotlabel.rt("$q_{1}$", q1);
+
+q3 := mediate(c10, q0, .75);
+
+dotlabel.rt("$q_{3}=g_2$", q3);
+
+
+g2 := g0;
+g3 := south;
+
+t0 := identity shifted by (q3 - g0);  %% `by' is necessary, because without it,
+                                      %% a `point_variable' would need to be used
+                                      %% instead of a `point_primary'.  I can't change
+                                      %% the parser rule without `by', because this causes
+                                      %% over 200 shift/reduce conflicts.
+                                      %% LDF 2007.11.08.
+g2 *= g3 *= t0;
+
+g4 := mediate(g2, g3, 1.5);
+
+g5 := get_perpendicular_base g4, r10;
+
+
+%% **** (4) Equatorial dial
+
+t0 := align (g4 -- g2) with_axis y_axis;
+
+invert t0;
+
+set k1 with_diameter 1 with_point_count 32;
+
+k1 *= t0;
+
+draw k1 with_color blue with_pen path_pen;
+
+size_k1 := size k1;
+
+for i = 0 upto size_k1 - 1:
+   K[i] := get_point (i) k1;
+endfor;
+
+if false: 
+   message "K0:";  %% K0 and K[size_k1 / 2] lie over the z-axis, i.e., their
+                   %% x-component is 0.
+   show K0;
+
+   message "K[size_k1 / 2]:";  
+   show K[size_k1 / 2];
+fi; 
+
+%% g4 is the center of k1
+
+for i = 0 step 15 until 180:
+   E[i] := K[3 * size_k1 / 4] rotated_around (g2, g4) i;
+endfor;
+
+%% **** (4) The hour lines on r10
+
+epsilon[0] := get_plane (g2 -- g4 -- E[0]);
+h[10][0] := epsilon[0] intersection rho10;
+clear pv;
+pv := h[10][0] intersection_points r10;
+
+draw pv0 -- pv1 with_color red;
+
+if xpart pv0 > xpart pv1:
+   H[10][0]   := pv0;
+   H[10][180] := pv1;
+else:
+   H[10][0]   := pv1;
+   H[10][180] := pv0;
+fi;
+
+for i = 15 step 15 until 165:
+   epsilon[i] := get_plane (g2 -- g4 -- E[i]);
+   h[10][i] := epsilon[i] intersection rho10;
+   clear pv;
+   pv := h[10][i] intersection_points r10;
+   if zpart pv0 < zpart pv1:
+      H[10][i] := pv0;
+   else:
+      H[10][i] := pv1;
+   fi;
+   draw g2 -- H[10][i] with_color red;
+endfor;
+
+dotlabel.rt("\uppercase\expandafter{\romannumeral 18}  $(0^\circ)$",  H[10][0]);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 16} $(30^\circ)$",  H[10][30]);
+dotlabel.lrt("\uppercase\expandafter{\romannumeral 14} $(60^\circ)$", H[10][60]);
+dotlabel.bot("\uppercase\expandafter{\romannumeral 12} $(90^\circ)$", H[10][90]);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 10} $(120^\circ)$", H[10][120]);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 8} $(150^\circ)$", H[10][150]);
+
+dotlabel.lft("\uppercase\expandafter{\romannumeral 6} $(180^\circ)$", H[10][180]);
+
+
+
+%% **** (4) Drawing commands
+
+draw north -- south;
+draw west -- east;
+
+if false: 
+   draw k0 with_color blue;
+
+   filldraw r1;
+   filldraw r2;
+   filldraw r6;
+   filldraw r9;
+   filldraw r10;
+   filldraw r11;
+fi; 
+
+% filldraw r10;
+% filldraw r11;
+
+%n1 := ((get_normal r1) * -1) shifted c1;
+%label.urt("$n_1$", n1) with_text_color blue;
+%drawarrow c1 -- n1 with_color blue;
+
+%drawarrow c10 -- n10;
+
+draw p[10][2] -- q0 dashed evenly;
+
+draw p[10][2] -- q1 dashed evenly;
+
+%message "(q0 - p[10][2]) angle (q1 - p[10][2]):"; 
+%show (q0 - p[10][2]) angle (q1 - p[10][2]);
+
+
+label.lft("$g_{4}$", g4);
+label.rt("$g_{5}$", g5);
+
+draw g2 -- g4 -- g5 -- cycle with_pen path_pen;
+
+
+g6 := mediate(g2, g4);
+
+%% **** (4) Labels
+
+if false: 
+   label( 1, c1);
+   label( 2, c2);
+   label( 6, c6);
+   label( 9, c9);
+   label(11, c11);
+fi; 
+
+%dotlabel.lrt("$c_{10}$", c10);
+
+dotlabel.top(0, p[10][0]);
+dotlabel.urt(1, p[10][1]);
+dotlabel.top(2, p[10][2]);
+dotlabel.lft(3, p[10][3]);
+dotlabel.top(4, p[10][4]);
+
+%label.bot("$n_{10}$", n10);
+
+
+
+%% **** (4) End of figure 2
+
+endfig with_focus f no_sort;  
+
+%% *** (3) Figure 3
+
+beginfig(3);
+draw d0;
+%draw r6 with_color red;
+%draw r7 with_color blue;
+%draw r8 with_color cyan;
+draw r10 with_color green;
+
+%draw k0 with_color blue;
+
+draw north -- south;
+draw west -- east;
+
+%label.lrt("$r_{6}$", c6) with_text_color red;
+%label.lrt("$r_{7}$", c7) with_text_color blue;
+%label.lrt("$r_{8}$", c8) with_text_color cyan;
+label.lrt("$r_{10}$", c10) with_text_color green;
+
+label.lft("W", west);
+label.rt("E", east);
+label.bot("S", south);
+label.top("N", north);
+
+
+endfig with_projection parallel_x_z;
+
+%% *** (3) Figure 4
+
+beginfig(4); 
+
+draw d0;
+%draw r10 with_color red;
+
+%drawarrow c10 -- n10;
+
+draw north -- south;
+
+q2 := mediate(p[10][2], q1, .333);
+label.rt("$q_{2}$", q2);
+
+draw p[10][2] -- q2 dashed evenly;
+
+draw g2 -- g4 -- g5 -- cycle with_pen path_pen;
+
+draw k1 with_color blue with_pen path_pen;
+
+label.lft("$g_{2}$", g2);
+label.lft("$g_{4}$", g4);
+label.rt("$g_{5}$", g5);
+
+%dotlabel.rt("$g_{6}$", g6);
+
+
+%label.lrt("$c_{10}$", c10) with_text_color red;
+%label.top("$n_{10}$", n10);
+
+label.bot("S", south);
+label.bot("N", north);
+
+rotate current_picture (0, -90);
+%scale current_picture (.5, .5, .5);
+
+%% **** (4) End of figure 4
+
+endfig with_projection parallel_x_y with_factor 1 no_sort;
+
+%% *** (3) Figure 5
+
+beginfig(5);
+
+draw g2 -- g4 with_color green;
+draw r10;
+
+%dotlabel.top(0, k1);
+
+%% **** (4) Labels on r10
+
+dotlabel.bot(0, p[10][0]);
+dotlabel.lrt(1, p[10][1]);
+dotlabel.lrt(2, p[10][2]);
+dotlabel.llft(3, p[10][3]);
+dotlabel.bot(4, p[10][4]);
+
+%% **** (4) 
+
+dotlabel.lrt("$g_{4}$", g4);
+
+if false: 
+   message "g2"; 
+   show g2;
+   message "g4"; 
+   show g4;
+   message "g2 - g4:"; 
+   show g2 - g4;
+fi; 
+
+%% **** (4) 
+
+if false: 
+   message "g4 is_in_plane rho10:";  %% g4 does not lie in rho10.  It just looks like
+                                     %% it in the diagram.
+                                     %% LDF 2007.11.08.
+   show g4 is_in_plane rho10;
+fi; 
+
+%% **** (4) The hour lines on r10
+
+draw H[10][0] -- H[10][180] with_color red;
+
+dotlabel.rt("\uppercase\expandafter{\romannumeral 18} $(0^\circ)$", H[10][0]);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 6} $(180^\circ)$", H[10][180]);
+
+for i = 15 step 15 until 165:
+   draw g2 -- H[10][i] with_color red;
+endfor;
+
+draw k1 with_color blue;
+
+%% **** (4) Labels for the hour points on r10
+
+dotlabel.rt("\uppercase\expandafter{\romannumeral 18}  $(0^\circ)$",  H[10][0]);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 17}  $(15^\circ)$",  H[10][15]);
+dotlabel.lrt("\uppercase\expandafter{\romannumeral 16} $(30^\circ)$",  H[10][30]);
+dotlabel.rt("\uppercase\expandafter{\romannumeral 15} $(45^\circ)$",  H[10][45]);
+dotlabel.urt("\uppercase\expandafter{\romannumeral 14} $(60^\circ)$", H[10][60]);
+dotlabel.top("\uppercase\expandafter{\romannumeral 13} $(75^\circ)$", H[10][75]);
+
+dotlabel.top("\vbox{}", H[10][90]);
+q5 := mediate(g5, H[10][90], 1.333);
+
+label("\uppercase\expandafter{\romannumeral 12} $(90^\circ)$", q5);
+
+draw q5 -- H[10][90] dashed evenly;
+
+dotlabel.top("\uppercase\expandafter{\romannumeral 11} $(105^\circ)$", H[10][105]);
+dotlabel.ulft("\uppercase\expandafter{\romannumeral 10} $(120^\circ)$", H[10][120]);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 9} $(135^\circ)$", H[10][135]);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 8} $(150^\circ)$", H[10][150]);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 7} $(165^\circ)$", H[10][165]);
+dotlabel.lft("\uppercase\expandafter{\romannumeral 6} $(180^\circ)$", H[10][180]);
+
+%% ***** (5) Transform current_picture
+
+t0 := align (g4 -- g2) with_axis y_axis;
+
+rotate t0 (0, 90);
+
+current_picture *= t0;
+
+%draw g4 -- g4 shifted (1, 0);
+%dotlabel.top("$+x$", g4 shifted (1, 0));
+
+%% **** (4) End of figure 5
+ 
+endfig with_projection parallel_x_z with_factor 5 no_sort;
+
+
+%% *** (3) Figure 1
+
+beginfig(1); 
+
+draw_dodecahedron_net {4, true, 6, .375mm, .75mm, identity};
+
+rpv := get_net dodecahedron with_diameter 4;
+
+rotate rpv10 (180, 180);  %% This is the rotation performed in draw_dodecahedron_net.
+
+q6 := get_center rpv10;
+q7 := q6 shifted (0, 1);
+
+t2 := align (c10 -- n10) with_axis y_axis;
+rotate t2 (0, 90);
+shift t2 by q6;
+
+m0 := (H[10][0] -- H[10][180]) transformed t2;
+
+draw m0 with_pen hour_line_pen;
+
+for i = 15 step 15 until 165:
+   draw (g2 -- H[10][i]) transformed t2 with_pen hour_line_pen;
+endfor;
+
+label(10, q6 shifted (1, 0, .75));
+
+
+dotlabel.ulft(0, get_point 0 rpv[10]);
+dotlabel.rt(1, get_point 1 rpv[10]);
+dotlabel.bot(2, get_point 2 rpv[10]);
+dotlabel.lft(3, get_point 3 rpv[10]);
+dotlabel.urt(4, get_point 4 rpv[10]);
+
+endfig with_projection parallel_x_z no_sort; 
+
+%% *** (3) Figure 6
+
+beginfig(6); 
+
+q22 := g2;
+q24 := g4;
+q25 := g5;
+
+t3 := identity rotated (0, -90);
+
+q22 *= q24 *= q25 *= t3;
+
+q26 := mediate(q22, q25) shifted .333;
+
+s := "\setbox0=\hbox{2.\space}\vbox{\hbox{2.  Gnomon for latitude of Greenwich, England}"
+     & "\hbox{\hskip\wd0($51^\circ$ $28'$ $38''$ N)}}";
+
+label.rt(s, q26);
+
+if false: 
+   message "q22:"; 
+   show q22;
+
+   message "q24:"; 
+   show q24;
+
+   message "q25:"; 
+   show q25;
+fi;
+
+label.top("$g_{2}$", q22);
+label.lft("$g_{4}$", q24);
+label.rt("$g_{5}$", q25);
+
+draw q22 -- q24 -- q25 -- cycle;
+
+endfig with_projection parallel_x_y; 
+
+%% *** (3) End of 3DLDF code
+
+verbatim_metapost "end;";
+
+end;
+
+%% ** (2) 
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%   	 GNU Emacs editor.  The local variable list is not evaluated when an 
+%%   	 indirect buffer is visited, so it's necessary to evaluate the       
+%%   	 following s-expression in order to use the facilities normally      
+%%   	 accessed via the local variables list.                              
+%%   	 \initials{LDF 2004.02.12}.                                          
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% End:
+

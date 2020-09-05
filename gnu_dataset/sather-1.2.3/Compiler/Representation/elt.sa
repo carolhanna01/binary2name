@@ -1,0 +1,266 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- elt.sa: Class elements.
+
+-------------------------------------------------------------------
+-- ELT: An element of a class in the Sather compiler. 
+-- ELT_TBL: A table of class elements retrievable by name.
+-------------------------------------------------------------------
+class ELT is
+   -- An element of a class in the Sather compiler. We avoid copying
+   -- any source trees and computing much for code which isn't used.
+   
+   attr sig:SIG;		-- The signature of the element.
+   attr srcsig:SIG;		-- The signature of this routine or iter
+      -- in the class it originally came from. Used to detect built-in ops.
+   attr as:$AS_CLASS_ELT;	-- The source tree for this element.
+      -- This may be a routine or iter definition or an attribute
+      -- definition. Whether this refers to the reader or the writer
+      -- is determined from the signature. The element may have a 
+      -- different name or "private" status from the source because
+      -- of renaming. 
+   attr con:TP_CONTEXT;		-- The context within which the types in
+      -- this element should be resolved. The same context can be shared
+      -- between elements. An element finds its prog here, too.
+   attr is_private:BOOL;	-- True if private. Explicit because of 
+      -- "private" and "readonly" includes.
+   attr is_external:BOOL;	-- True if this is in an external 
+      -- class (with or without a body).
+
+   create(sig:SIG, srcsig:SIG, as:$AS_CLASS_ELT, con:TP_CONTEXT, 
+      is_private:BOOL):SAME 
+      -- A new element with the specified attributes. If any of the 
+      -- attributes is void then prints an error message and returns
+      -- void.
+      pre ~void(sig) and ~void(srcsig) and ~void(as) and ~void(con) is
+      r::=new; r.sig:=sig; r.srcsig:=srcsig; r.as:=as;
+      r.con:=con; r.is_private:=is_private; return r end;
+   
+
+   prog:PROG 
+      -- The program that this element belongs to.
+      pre ~void(self) is      
+      return con.prog end;
+   
+   name:IDENT 
+      -- The name of the feature represented by this element.
+      pre ~void(self) is
+      return sig.name end;
+   
+   ret:$TP 
+      -- The return type, if any.
+      pre ~void(self) is      
+      return sig.ret end;
+
+   tp:$TP 
+      -- The type this element comes from.
+      pre ~void(self) and ~void(sig) is      
+      return sig.tp end;
+
+   impl:IMPL 
+      -- The implementation object for this element.
+      pre ~void(self) is
+      r::=tp.impl;
+      if void(r) then
+	 #OUT + "Compiler error, ELT::impl with sig: " + sig.str +
+	 "returns void."; return void end; 
+      return r end;
+   
+   is_iter:BOOL 
+      -- True if self is an iter.
+      pre ~void(self) is
+      return sig.is_iter end;
+
+   is_shared_writer:BOOL is
+      -- True if self is the writer routine for a shared attribute.
+      if ~sig.is_shared_writer_sig then return false end;
+      las::=as;
+      typecase las
+      when AS_SHARED_DEF then return true
+      else return false end end;
+   
+   is_attr_writer:BOOL is
+      -- True if self is the writer routine for an object attribute.
+      if ~sig.is_attr_writer_sig then return false end;
+      las::=as;
+      typecase las
+      when AS_ATTR_DEF then return true
+      else return false end end;
+
+   is_attr_reader:BOOL is
+      -- True if self is the reader routine for an object attribute.
+      if ~sig.is_reader_sig then return false end;
+      las::=as;
+      typecase las
+      when AS_ATTR_DEF then return true
+      else return false end end;
+      
+   is_const_reader:BOOL is
+      -- True if self is the reader routine for a constant attribute.
+      if ~sig.is_reader_sig then return false end;
+      las::=as;
+      typecase las
+      when AS_CONST_DEF then return true
+      else return false end end;
+
+   is_shared_reader:BOOL is
+      -- True if self is the reader routine for a shared attribute.
+      if ~sig.is_reader_sig then return false end;
+      las::=as;
+      typecase las
+      when AS_SHARED_DEF then return true
+      else return false end end;
+   
+   is_abstract:BOOL is 
+      -- True if this element is a routine or iter without a body.
+      las::=as;
+      typecase las
+      when AS_ROUT_DEF then return las.is_abstract 
+      else return false end end;
+      
+   is_attr_access:BOOL is
+      -- True if this element is a reader or a writer for a 
+      -- constant, shared, or object attribute.
+      las::=as;      
+      typecase las
+      when AS_SHARED_DEF then return true
+      when AS_CONST_DEF then return true
+      when AS_ATTR_DEF then return true
+      else return false end end;
+
+   is_invariant:BOOL is
+      -- True if this element describes a routine of the form
+      -- `invariant:BOOL'.
+      return sig.is_invariant end;
+   
+   conflicts_with(e:SAME):BOOL is
+      -- True if the signature of self conflicts with the signature of
+      -- `e'. This is a symmetric relationship.
+      return sig.conflicts_with(e.sig) end;
+
+   as_tp:AS_TYPE_SPEC is   
+      clelt ::= as;  -- CLASS_ELT
+      res : AS_TYPE_SPEC;
+      typecase clelt
+      when AS_CONST_DEF then 
+	 if ~void(clelt.tp) then 
+	    res := clelt.tp
+	 else 
+	    res := #AS_TYPE_SPEC;
+	    res.name := #IDENT("INT");
+	 end;
+      when AS_SHARED_DEF then res := clelt.tp;
+      when AS_ATTR_DEF then res := clelt.tp;
+      else
+      end;
+      return res;
+   end;
+
+end; -- class ELT
+
+-------------------------------------------------------------------
+class ELT_TBL < $STR is
+   -- A table of class elements retrievable by name.
+   -- 
+   -- `get_query!(i:IDENT):ELT' yields each element named by `i'.
+   -- `test(e:ELT):BOOL' tests for the given element.
+   -- `insert(e:ELT):SAME' inserts an element.
+   -- `delete(e:ELT):SAME' deletes an element.
+   -- `elt!:ELT' yields each element.
+   
+   include FQSET{IDENT,ELT};
+   
+   -- the following attrs are used as cache by the optimizer.
+   attr aref_asize:INT;
+   attr aref_set:INT;
+   attr aref_get:INT;
+
+   str:STR is
+      tp:$TP;
+
+      a:ARRAY{STR}:=#(size);
+      i::=0;
+      loop
+	 sg::=elt!.sig;
+	 st::=sg.str;
+	 tp:=sg.tp;
+	 if ~void(sg.srcsig) then
+            st:=st+"  ["+sg.srcsig.str+"]";
+	 end;
+         a.set!(st);
+      end;
+      s:STR:="interface of class "+tp.str+" is\n";
+      a.sort;
+      loop
+         s:=s+"   "+a.elt!+"\n";
+      end;
+      s:=s+"end;\n";
+      return s; 
+   end;
+
+   query_test(name:IDENT, e:ELT):BOOL is
+      -- True if `e' is an element with the name `name'.
+      if void(e) then return false end;
+      return e.sig.name=name end;
+   
+   query_hash(i:IDENT):INT is
+      -- A hash value computed from the name `i'.
+      return i.hash end;
+
+   elt_hash(e:ELT):INT is
+      -- A hash value computed from the name of an element.
+      
+      return e.sig.name.hash end;
+
+   elt_conflicting_with(e:ELT):ELT 
+      -- Returns an element of self that conflicts with `e' if one 
+      -- exists, otherwise returns void.
+      pre ~void(e) is
+      loop r::=get_query!(e.name);
+	 if r.conflicts_with(e) then return r end end;
+      return void end;
+
+   elt_same_name_as(e:ELT):ELT 
+      -- Returns an element of self that has the same name as `e' if one 
+      -- exists, otherwise returns void.
+      pre ~void(e) is
+      loop return get_query!(e.name) end;
+      return void end;
+   
+   ifc:IFC is
+      -- The interface of this set of elements.
+      if void(self) or hsize=0 then return void end;
+      st:SIG_TBL; sig:SIG;
+      loop sig:=elt!.sig; st:=st.insert(sig) end;
+      return #(st,sig.tp) end;
+   
+   public_ifc:IFC is
+      -- The public interface of this set of elements.
+      st:SIG_TBL; if void(self) or hsize=0 then return void end;
+      e:ELT;
+      loop e:=elt!;
+	 if ~e.is_private then st:=st.insert(e.sig) end end;
+      return #(st,e.sig.tp) end;
+
+   elt_with_sig(s:SIG):ELT 
+      -- Return an element from this table with the signature `s'
+      -- if present, void if not.
+      pre ~void(s) is
+      loop r::=get_query!(s.name);
+	 if s.is_eq(r.sig) then return r end end;
+      return void end;
+
+end; -- class ELT_TBL
+   
+-------------------------------------------------------------------

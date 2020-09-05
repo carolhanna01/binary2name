@@ -1,0 +1,237 @@
+<html lang="en">
+<head>
+<title>Picture Output Functions - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Outputting-Pictures.html#Outputting-Pictures" title="Outputting Pictures">
+<link rel="prev" href="Picture-Output-Namespaces.html#Picture-Output-Namespaces" title="Picture Output Namespaces">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Picture-Output-Functions"></a>
+<p>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Picture-Output-Namespaces.html#Picture-Output-Namespaces">Picture Output Namespaces</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Outputting-Pictures.html#Outputting-Pictures">Outputting Pictures</a>
+<hr>
+</div>
+
+<h4 class="subsection">21.8.2 Output Functions</h4>
+
+<div class="defun">
+&mdash; Function: void <b>output</b> (<var>const Focus&amp; f, </var>[<var>const unsigned short projection = </var><code>Projections::PERSP</code><var>, </var>[<var>real factor = 1, </var>[<var>const unsigned short sort_value = </var><code>Sorting::MAX_Z</code><var>, </var>[<var>const bool do_warnings = </var><code>true</code><var>, </var>[<var>const real min_x_proj = -40, </var>[<var>const real max_x_proj = 40, </var>[<var>const real min_y_proj = -40, </var>[<var>const real max_y_proj = 40, </var>[<var>const real min_z_proj = -40, </var>[<var>const real max_z_proj = 40</var>]]]]]]]]]])<var><a name="index-output-335"></a></var><br>
+&mdash; Function: void <b>output</b> ([<var>const unsigned short projection = </var><code>Projections::PERSP</code><var>, </var>[<var>real factor = 1, </var>[<var>const unsigned short sort_value = </var><code>Sorting::MAX_Z</code><var>, </var>[<var>const bool do_warnings = </var><code>true</code><var>, </var>[<var>const real min_x_proj = -40, </var>[<var>const real max_x_proj = 40, </var>[<var>const real min_y_proj = -40, </var>[<var>const real max_y_proj = 40, </var>[<var>const real min_z_proj = -40, </var>[<var>const real max_z_proj = 40</var>]]]]]]]]]])<var><a name="index-output-336"></a></var><br>
+<blockquote><p>These functions create a two-dimensional projection of the objects on the
+<code>Picture</code> and write MetaPost code to <code>out_stream</code> for
+drawing it.
+
+        <p>The arguments:
+
+          <dl>
+<dt><code>const Focus&amp;</code> <var>f</var><dd>The <code>Focus</code> used for projection, also known as the center of
+projection, or the camera. 
+This argument is used in the first version only. 
+The second version, without a <code>const Focus&amp;</code> <var>f</var> argument,
+merely calls the first version and passes it the global variable
+<code>default_focus</code> as its first argument, so <code>default_focus</code> is
+effectively the default for <var>f</var>.  Defining two versions in this way makes it
+possible to call
+<code>output()</code> with <code>projection</code> as its first (and possibly only)
+argument.  If instead, <var>f</var> were an optional argument with
+<code>default_focus</code> as its default, this wouldn't have been possible.  It
+also wouldn't be possible to have <var>f</var> have a default in the first
+version, and to retain the second version, because the compiler wouldn't
+be able to resolve a call to <code>output()</code> with no arguments.
+
+          <br><dt><code>const unsigned short</code> <var>projection</var><dd>Default: <code>Projections::PERSP</code>. 
+The type of projection.  Valid values are <code>const unsigned shorts</code>
+defined in <code>namespace Projections</code>
+(see <a href="Namespace-Projections.html#Namespace-Projections">Namespace Projections</a>):<br>
+<code>PERSP</code> for the perspective projection,<br>
+<code>PARALLEL_X_Y</code> for parallel projection onto the x-y plane,<br>
+<code>PARALLEL_X_Z</code> for parallel projection onto the x-z plane, and<br>
+<code>PARALLEL_Z_Y</code> for parallel projection onto the z-y plane. 
+%% !! TO DO:
+I plan to add isometric and axionometric projections soon.
+
+          <br><dt><code>real</code> <var>factor</var><dd>Default: 1. 
+Passed from <code>output()</code> to
+<code>extract()</code> and from there to <code>project()</code>.  The
+<code>world_coordinates</code> of the <code>Points</code> that are projected are
+multiplied by <var>factor</var>, which enlarges or shrinks the projected
+image without altering the <code>Picture</code> itself.  <var>factor</var>
+is probably most useful for parallel projections, where the <code>Focus</code>
+<var>f</var> isn't used;  with a perspective projection, the parameters of
+the <code>Focus</code> can be used to influence the size of the projected
+image.
+
+          <br><dt><code>const unsigned short</code> <var>sort_value</var><dd>Default: <code>Sorting::MAX_Z</code>. 
+The value used should be one of the constants defined in
+<code>namespace Sorting</code>, See <a href="Namespace-Sorting.html#Namespace-Sorting">Namespace Sorting</a>, above. 
+If <code>MAX_Z</code> (the default) is used, the <code>Shapes</code> on the
+<code>Picture</code> are sorted according to the maximum z-value of the
+<code>projective_extremes</code> of the <code>Points</code> belonging to the
+<code>Shape</code>.  If <code>MIN_Z</code> is used,
+they are sorted according to the minimum z-value, and
+if <code>MEAN_Z</code> is used, they are sorted according to the  mean of
+the maximum and minimum z-values.  If <code>NO_SORT</code> is used, the
+<code>Shapes</code> are output in the order in which they were put onto the
+<code>Picture</code>.
+
+          <p>The surface hiding algorithm
+implemented in 3DLDF is quite primitive, and doesn't always work right. 
+For <code>Shapes</code> that intersect, it <em>can't</em> work right. 
+<!-- !! TO DO: -->
+I plan to work on improving the surface hiding algorithm soon.  This is
+not a trivial problem.  To solve it properly, each <code>Shape</code> on a
+<code>Picture</code> must be tested for intersection with every other
+<code>Shape</code> on the <code>Picture</code>.  If two or more <code>Shapes</code> intersect,
+they must be broken up into smaller objects until there are no more
+intersections.  I don't expect to have a proper solution soon, but I
+expect that I will be able to make some improvements. 
+See <a href="Surface-Hiding.html#Surface-Hiding">Surface Hiding</a>.
+
+          <br><dt><code>const bool</code> <var>do_warnings</var><dd>Default: <code>true</code>.  If <code>true</code>, <code>output()</code> issues warnings
+to <code>stderr</code> (standard error output) if a <code>Shape</code> cannot be
+output because it lies
+outside the limits set by the following arguments.  Sometimes, a user
+may only want to project a portion of a <code>Picture</code>, in which case
+such warnings would not be helpful.  In this case, <var>do_warnings</var>
+should be <code>false</code>.
+
+          <br><dt><code>const real</code> <var>min_x_proj</var><dd>Default: -40.  The minimum x-coordinate of the projection of a
+<code>Shape</code> such that the <code>Shape</code> can be output. 
+If <code>projective_coordinates[0]</code> of any <code>Point</code> on a
+<code>Shape</code> is less than <var>min_x_proj</var>, the <code>Shape</code> will not be
+projected at all.
+
+          <br><dt><code>const real</code> <var>max_x_proj</var><dd>Default: 40. 
+The maximum x-coordinate of the projection of a
+<code>Shape</code> such that the <code>Shape</code> can be output. 
+If <code>projective_coordinates[0]</code> of any <code>Point</code> on a
+<code>Shape</code> is greater than <var>max_x_proj</var>, the <code>Shape</code> will not be
+projected at all.
+
+          <br><dt><code>const real</code> <var>min_y_proj</var><dd>Default: -40. 
+The minimum y-coordinate of the projection of a
+<code>Shape</code> such that the <code>Shape</code> can be output. 
+If <code>projective_coordinates[1]</code> of any <code>Point</code> on a
+<code>Shape</code> is less than <var>min_y_proj</var>, the <code>Shape</code> will not be
+projected at all.
+
+          <br><dt><code>const real</code> <var>max_y_proj</var><dd>Default: 40. 
+The maximum y-coordinate of the projection of a
+<code>Shape</code> such that the <code>Shape</code> can be output. 
+If <code>projective_coordinates[1]</code> of any <code>Point</code> on a
+<code>Shape</code> is greater than <var>max_y_proj</var>, the <code>Shape</code> will not be
+projected at all.
+
+          <br><dt><code>const real</code> <var>min_z_proj</var><dd>Default: -40. 
+The minimum z-coordinate of the projection of a
+<code>Shape</code> such that the <code>Shape</code> can be output. 
+If <code>projective_coordinates[2]</code> of any <code>Point</code> on a
+<code>Shape</code> is less than <var>min_z_proj</var>, the <code>Shape</code> will not be
+projected at all.
+
+          <br><dt><code>const real</code> <var>max_z_proj</var><dd>Default: 40. 
+The maximum z-coordinate of the projection of a
+<code>Shape</code> such that the <code>Shape</code> can be output. 
+If <code>projective_coordinates[2]</code> of any <code>Point</code> on a
+<code>Shape</code> is greater than <var>max_z_proj</var>, the <code>Shape</code> will not be
+projected at all. 
+</dl>
+        </p></blockquote></div>
+
+<div class="defun">
+&mdash; Function: void <b>suppress_labels</b> (<var>void</var>)<var><a name="index-suppress_005flabels-337"></a></var><br>
+<blockquote><p>Suppresses output of the <code>Labels</code> on a <code>Picture</code> when
+<code>output()</code> is called.  This can be useful when a <code>Picture</code> is
+output, transformed, and output again, one or more times, in a single figure. 
+Usually, it will not be desirable to have the <code>Labels</code> output more
+than once.
+
+        <p>In [next figure]
+, <code>current_picture</code> is output three times, but the
+<code>Labels</code> on it are only output once.
+
+     <pre class="example">          Ellipse e(origin, 3, 5);
+          e.label();
+          e.draw();
+          Point pt0(-3);
+          Point pt1(3);
+          pt0.draw(pt1);
+          Point pt2(0, 0, -4);
+          Point pt3(0, 0, 4);
+          pt2.draw(pt3);
+          pt0.dotlabel("0", "lft");
+          pt1.dotlabel("1", "rt");
+          pt2.dotlabel("2", "bot");
+          pt3.dotlabel("3");
+          current_picture.output(Projections::PARALLEL_X_Z);
+          current_picture.rotate(0, 60);
+          current_picture.suppress_labels();
+          current_picture.output(Projections::PARALLEL_X_Z);
+          current_picture.rotate(0, 60);
+          current_picture.output(Projections::PARALLEL_X_Z);
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF79.png"
+alt="[Figure 79. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 79. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<div class="defun">
+&mdash; Inline function: void <b>unsuppress_labels</b> (<var>void</var>)<var><a name="index-unsuppress_005flabels-338"></a></var><br>
+<blockquote><p>Sets <code>do_labels</code> to <code>true</code>.  If a <code>Picture</code> contains
+<code>Labels</code>, <code>unsuppress_labels()</code> ensures that they will be
+output, when <code>Picture::output()</code> is called, so long as there is no
+intervening call to <code>suppress_labels()</code> or <code>kill_labels()</code>. 
+</p></blockquote></div>
+
+<!-- point.texi -->
+<!-- This file is part of the 3DLDF User and Reference Manual. -->
+<!-- Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation -->
+<!-- See the section "GNU Free Documentation License" in the file -->
+<!-- fdl.texi for copying conditions. -->
+   </body></html>
+

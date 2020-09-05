@@ -1,0 +1,194 @@
+#!/usr/bin/tclsh
+#------------------------------>  Tcl - script  <-----------------------------#
+#- Copyright (C) 199x by International Computer Science Institute            -#
+#- This file is part of the GNU Sather package. It is free software; you may -#
+#- redistribute  and/or modify it under the terms of the  GNU General Public -#
+#- License (GPL)  as  published  by the  Free  Software  Foundation;  either -#
+#- version 3 of the license, or (at your option) any later version.          -#
+#- This  program  is distributed  in the  hope that it will  be  useful, but -#
+#- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY -#
+#- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        -#
+#- The license text is also available from:  Free Software Foundation, Inc., -#
+#- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     -#
+#------------->  Please email comments to <bug-sather@gnu.org>  <-------------#
+
+# Called by gen_html. Generates a class listing
+# Classes_index.html
+
+set loadInfo true
+set programName "gen_html_class_index"
+source "$env(SATHER_HOME)/Browser/Web/common_funcs"
+
+proc run { } {
+    global infoFile gAllClasses argv
+    global gContainedModules
+    global dirname
+    # Laziness hack. There is no easy way to get information
+    # about what the module containement structure is.
+    # So just provide a way for the user to supply this
+    # information in a file called ModuleNestingInfo
+
+
+    # Create gModToClasses and gContainedModules
+    makeModToClassesTable ${gAllClasses} 
+    if [file exists "ModuleNestingInfo"] {
+	puts "Sourcing the file ModuleNestingInfo to get information about modules"
+	source "ModuleNestingInfo"
+    }
+
+    genClassList "Classes_index.html"
+}
+
+
+########################################################################
+#                   Generating the module/class directory
+########################################################################
+proc genClassList { fileName } {
+    # Generate the file "gIndexFile" which contains
+    # a list of all html top level classes
+    # This file has a list of module and beneath each module
+    # the module comment and a list
+    # of the classes in that module and the class comment.
+    global gIndexFile
+
+    global gContainedModules
+    global gModToClasses
+    global gClassDef
+    debugPuts "starting to generate."
+    showContainedModules
+    set mainfl [open ${fileName} w]
+    puts ${mainfl} "<body bgcolor=#ffffff>"
+
+    debugPuts "Before generating class list"
+    #    puts $mainfl "<body background=\"bluestone.gif\" >"
+    # puts $mainfl "<H1><a href=\"http://www.icsi.berkeley.edu/~sather\"><iMG SRC=\"campanile_smaller.gif\"></a>Library</H1>"
+    debugPuts "Done header"
+    set classes [array names gClassDef]
+    debugPuts "All classes: ${classes}."
+    set unsortedModules [array names gModToClasses]
+    set sortedModules [lsort -increasing -ascii $unsortedModules ]
+    puts $mainfl "<a href=about.html target=\"source\">About</a><hr>"
+    puts $mainfl "<font size=+1 color=Red><b>Modules</b></font><br>"
+    puts $mainfl "<pre>"
+    foreach module ${sortedModules} {
+	set textNameForModule [getModuleName ${module}]
+	debugPuts "Module name:${textNameForModule}"
+	puts $mainfl "<a href=#${textNameForModule}>${textNameForModule}</a>"
+    }
+    puts $mainfl "</pre>"
+    # Loop over all classes and dump the
+    # associated comments to a file...
+    debugPuts "Sorted modules: ${sortedModules}"
+    foreach module $sortedModules {
+	debugPuts "Dealing with module: $module"
+	set textNameForModule [getModuleName ${module}]
+	puts $mainfl ""
+	puts $mainfl "<hr><a name=\"${textNameForModule}\"></a><font size=+1 color=Red><b><a href=\"module-${textNameForModule}.module.html\" target=\"source\">${textNameForModule}</a></b></font><br>"
+	puts $mainfl "<pre>"
+	set classes [lsort -increasing -ascii $gModToClasses($module)]
+	set containedModules $gContainedModules($textNameForModule)
+	debugPuts "Contained modules:${containedModules}"
+	foreach mod ${containedModules} {
+	    puts $mainfl "<a href=#${mod}>${mod}</a>"
+	}
+	foreach cl ${classes} {
+	    # debugPuts "Processing ${cl}..."
+	    set classNm ${cl}
+	    if { [isAbstract ${classNm}]} {
+		set plainClassNm [string range ${classNm} 1 end]
+		set cdef $gClassDef(${classNm})
+	    } else {
+		set cdef $gClassDef(${classNm})
+	    }
+	    set classFileName [lindex ${cdef} 0]
+	    set classFileOnly [getFileName ${classFileName}]
+	    set classLineOffset [lindex ${cdef} 1] 
+	    # puts "Class def: ${cdef}"
+	    if { [isAbstract ${cl}]} {
+		set plainClass [string range ${cl} 1 end]
+		set plainClass "dol${plainClass}"
+		} else {
+		    set plainClass ${cl}
+		}
+		set matchtest [regexp {TEST.*} $plainClass]
+		if { ${matchtest} == 1 } {
+		    set cleanName [satherCleanName ${classNm}]
+		    puts $mainfl "<a href=\"short-${plainClass}.html\" target=\"source\">${classNm}</a>"
+		} else {
+		    set cleanName [satherCleanName ${classNm}]
+		    puts $mainfl "<a href=\"short-${plainClass}.html\" target=\"source\">${classNm}</a>"
+		}
+	}
+	
+    }
+    puts $mainfl "</pre>"
+    puts $mainfl "<hr>"
+    debugPuts "Done with modules"
+    #    puts $mainfl "
+
+    set abtfl [open "about.html" w]
+    puts ${abtfl} "
+<body bgcolor=#ffffff>
+<h1> <center><font face=helvetica>The Online Sather Code Browser</font></center></h1><hr>
+<p>
+<font face=helvetica><b> Author:</b> </font><em> <a href=\"mailto:gomes@icsi.berkeley.edu\">Ben Gomes </em> </a></h2> 
+<multicol cols=2>
+These pages were generated by the HTML based Sather browser tool.
+Please contact the author for more details.
+Suggestions, bug reports and contributions are always welcome
+
+<p>
+<hr>
+<h2><font face=helvetica>Viewing Class Definitions</font></h2>
+
+<p> Clicking on a <font color=red>concrete class</font> name will
+take you to a short, flat listing of the class i.e. a listing with all
+the signatures and comments in the class
+interface.
+
+<p> Clicking on an <font color=red>abstract class</font> will take you
+to a listing of the class i.e. it will only contain signatures defined
+by that abstraction, and not the signatures of its supertypes.
+Abstract classes have a type graph below the short flat
+listing. Occassionally, an abstract class has no subtypes, leading to
+an empty image. <p> Clicking on a <font color=red>signature</font> in
+the short form takes you to the full routine definition.
+
+<hr>
+<h2><font face=helvetica>Viewing Flattened Classes</font></h2>
+<p> The beginning of each concrete class says \"Flattened version
+<font color=re>here</font>\". Click on the word \"here\" to view the
+flattened version of the class i.e. the class with all its included
+routines.  Included routines are marked, along with their new name
+if they were renamed during inclusion.  Flattened listings are not
+available for abstract classes.
+
+<hr>
+<h2><font face=helvetica>Viewing Modules</font></h2>
+<p> Clicking on a <font color=red>Module</font> name in the class
+listing will take you to
+the corresponding module file which may have useful comments regarding
+the structure of that module 
+<p> 
+You can get back to this page by clicking on the
+<font color=red>About</font> item at the head of the class listing
+
+</multicol>
+<hr>
+<a href=http://www.icsi.berkeley.edu/~sather/index.html target=\"_top\"><b>The Sather Home Page</b></a>
+"
+    close $abtfl
+    close $mainfl
+}
+
+proc showContainedModules { } {
+    global gContainedModules
+    set mnames [array names gContainedModules]
+    foreach mod ${mnames} {
+	debugPuts "Module:${mod} Contains: $gContainedModules(${mod})"
+    }
+}
+
+
+
+run

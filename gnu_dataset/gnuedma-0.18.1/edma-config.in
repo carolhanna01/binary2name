@@ -1,0 +1,130 @@
+#!/bin/sh
+#
+#   EDMA: Entorno de Desarrollo Modular y Abierto
+#   Object Oriented and Componentware Framework  
+#
+#   Copyright (C) 1998, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2010
+#             by David Martínez Oliveira
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+THE_COMPILER=GCC	# FIXME: Get this from configure
+THE_OS=LINUX		# FIXME: Get this from configure
+BASEDIR=@prefix@
+LIBDIR=${BASEDIR}/lib
+INCDIR=${BASEDIR}/include
+SYSDIR=${BASEDIR}/etc
+IDFDIR=${BASEDIR}/share/edma/idf
+DOCDIR=${BASEDIR}/share/edma/doc
+SHAREDIR=${BASEDIR}/share/edma
+REPODIR=${BASEDIR}/share
+
+
+# Main code for edma-config script
+
+usage()
+{
+#    exit_code=$1
+
+echo $THISVERSION
+echo
+    cat <<EOF
+Usage: edma-config [OPTION]...
+
+Generic options
+  --version	output edma version information
+  --help	display this help and exit
+
+Compilation support options
+  --cflags-exe      print pre-processor and compiler flags for executables
+  --cflags-class    print pre-processor and compiler flags for EDMA classes
+  --libs-exe	    print library linking information for executables
+  --libs-exe1	    print library linking information for executables 1
+  --libs-class      print library linking information for EDMA classes
+
+Installation support options
+  --dir-base        print directory for GNU/EDMA installation
+  --dir-impl        print directory for installing class implementation
+  --dir-int         print directory for installing class interface
+  --dir-doc	    print directory for installing class documentation
+  --dir-share       print directory for installing shared files
+  --dir-repo        print directory for standard repositories
+EOF
+
+}
+
+THISVERSION="@VERSION@"
+
+if test $# -eq 0; then
+    usage 
+fi
+
+while test $# -gt 0; do
+    case "$1" in
+    -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+    *) optarg= ;;
+    esac
+
+    case $1 in
+    --version)
+	echo "GNU EDMA $THISVERSION"
+	exit 0
+	;;
+    --help)
+	usage
+	exit 0
+	;;
+    --cflags-exe)
+	echo "-D$THE_COMPILER -D$THE_OS -fPIC -rdynamic -I$INCDIR"
+	exit 0
+	;;
+    --cflags-class)
+	echo "-D$THE_COMPILER -D$THE_OS -fPIC -I$INCDIR -c "
+	exit 0
+	;;
+    --libs-exe)
+	echo "-lEDMA -ldl -lm -L$LIBDIR"
+	exit 0
+	;;
+    --libs-class)
+	#echo "$LIBDIR/dynlink.o $LIBDIR/cdlink.o"
+	exit 0
+	;;
+    --dir-base)
+	echo "$BASEDIR"
+	exit 0
+	;;
+    --dir-impl)
+	echo "$LIBDIR"
+	exit 0
+	;;
+    --dir-doc)
+	echo "$DOCDIR"
+	exit 0
+	;;
+    --dir-share)
+	echo "$SHAREDIR"
+	exit 0
+	;;
+    --dir-int)
+	echo "$IDFDIR"
+	;;
+    --dir-repo)
+	echo "$REPODIR"
+	exit 0
+	;;
+    esac
+    shift
+done

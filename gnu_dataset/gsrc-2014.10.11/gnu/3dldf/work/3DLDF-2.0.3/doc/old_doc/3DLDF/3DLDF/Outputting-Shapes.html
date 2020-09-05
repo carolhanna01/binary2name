@@ -1,0 +1,134 @@
+<html lang="en">
+<head>
+<title>Outputting Shapes - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Shape-Reference.html#Shape-Reference" title="Shape Reference">
+<link rel="prev" href="Showing-Shapes.html#Showing-Shapes" title="Showing Shapes">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Outputting-Shapes"></a>
+<p>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Showing-Shapes.html#Showing-Shapes">Showing Shapes</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Shape-Reference.html#Shape-Reference">Shape Reference</a>
+<hr>
+</div>
+
+<h3 class="section">18.10 Outputting</h3>
+
+<div class="defun">
+&mdash; Pure virtual function: void <b>output</b> (<var>void</var>)<var><a name="index-output-253"></a></var><br>
+<blockquote><p>Called by <code>Picture::output()</code> for writing MetaPost code to
+<code>out_stream</code> for a <code>Shape</code> pointed to by a pointer on the
+<code>vector&lt;Shape*&gt; shapes</code> belonging to the <code>Picture</code>.  Such
+a <code>Shape</code> will have been created by a drawing or filling
+function. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Pure virtual function: vector&lt;Shape*&gt; <b>extract</b> (<var>const Focus&amp; f, const unsigned short proj, real factor</var>)<var><a name="index-extract-254"></a></var><br>
+<blockquote><p>Called in <code>Picture::output()</code>.  It determines whether a
+<code>Shape</code> can be output.  If it can, and an <code>output()</code> function
+for the type of the <code>Shape</code> exists, a <code>vector&lt;Shape*&gt;</code>
+containing a pointer to the <code>Shape</code> is returned.
+
+        <p>On the other
+hand, it is possible to define a type derived from <code>Shape</code>, without
+an <code>output()</code> function of its own, and not derived from a type that
+has one.  It may then consist of one or more objects of types that do
+have <code>output()</code> functions.  In this case, the <code>vector&lt;Shape*&gt;</code>
+returned by <code>extract()</code> will contain pointers to all of these
+subsidiary <code>Shapes</code>, and <code>Picture::output()</code> will treat them
+as independent objects.  In particular, if any one of them cannot be
+projected using the arguments passed to <code>Picture::output()</code>, this
+will have no effect on whether the others are outputted or not.
+
+        <p>Currently, there are no <code>Shapes</code> without an <code>output()</code>
+function, either belonging to the class, or inherited.  However, it's
+useful to be able to define <code>Shapes</code> in this way, so that they can
+be tested without having to define an <code>output()</code> function first. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Pure virtual function: bool <b>set_extremes</b> (<var>void</var>)<var><a name="index-set_005fextremes-255"></a></var><br>
+<blockquote><p>Sets the values of <code>projective_extremes</code> for the <code>Shape</code>. 
+This is needed in <code>Picture::output()</code> for determining the order in
+which objects are output. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> pure virtual functions: real <b>get_minimum_z</b> (<var>void</var>)<var><a name="index-get_005fminimum_005fz-256"></a></var><br>
+&mdash; : real <b>get_maximum_z</b> (<var>void</var>)<var><a name="index-get_005fmaximum_005fz-257"></a></var><br>
+&mdash; : real <b>get_mean_z</b> (<var>void</var>)<var><a name="index-get_005fmean_005fz-258"></a></var><br>
+<blockquote><p>These functions return the minimum, maximum, and mean z-value
+respectively of the projected <code>Points</code> belonging to
+the <code>Shape</code>, i.e., from <code>projective_extremes</code>.  The values for
+the <code>Shapes</code> on the <code>Picture</code> are used for determining the
+order in which they are output
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> pure virtual function: const valarray&lt;real&gt; <b>get_extremes</b> (<var>void</var>)<var><a name="index-get_005fextremes-259"></a></var><br>
+<blockquote><p>Returns <code>projective_extremes</code>. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Pure virtual function: void <b>suppress_output</b> (<var>void</var>)<var><a name="index-suppress_005foutput-260"></a></var><br>
+<blockquote><p>Sets <code>do_output</code> to <code>false</code>.  This function is called in
+<code>Picture::output()</code>, if a <code>Shape</code> on a <code>Picture</code> cannot
+be output using the arguments passed to <code>Picture::output()</code>. 
+</p></blockquote></div>
+
+<div class="defun">
+&mdash; Pure virtual function: void <b>unsuppress_output</b> (<var>void</var>)<var><a name="index-unsuppress_005foutput-261"></a></var><br>
+<blockquote><p>Sets <code>do_output</code> to <code>true</code>.  Called in
+<code>Picture::output()</code> after <code>output()</code> is called on the <code>Shapes</code>. 
+This way, output of <code>Shapes</code> that couldn't be output when
+<code>Picture::output()</code> was called with a particular set of arguments
+won't necessarily be suppressed when
+<code>Picture::output()</code> is called again with different arguments. 
+</p></blockquote></div>
+
+   <p>f<!-- transfor.texi -->
+
+<!-- This file is part of the 3DLDF User and Reference Manual. -->
+<!-- Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation -->
+<!-- See the section "GNU Free Documentation License" in the file -->
+<!-- fdl.texi for copying conditions. -->
+   </body></html>
+

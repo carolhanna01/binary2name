@@ -1,0 +1,191 @@
+#! @AWK@ -f
+
+# Copyright (C) 2014, 2016 Free Software Foundation, Inc.
+
+# This file is part of GNUnited Nations.
+
+# GNUnited Nations is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# GNUnited Nations is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with GNUnited Nations.  If not, see <https://www.gnu.org/licenses/>.
+
+# This script outputs differences between two msgcatted PO files
+# in the format of HTML table rows.  It is invoked from gnun-diff-po.
+
+function escape_chars(x) {
+  gsub(/&/, "\\&amp;", x)
+  gsub(/>/, "\\&gt;", x)
+  gsub(/</, "\\&lt;", x)
+  return x
+}
+
+function print_entry() {
+  if(comment_no || msgstr_no)
+    {
+      no_head = "<td rowspan=\"3\" class=\"modified\"><strong>"
+      no_tail = "</strong></td>"
+    }
+  else
+    {
+      no_head = "<td rowspan=\"3\">"
+      no_tail = "</td>"
+    }
+  print "<tr>" no_head msg_no no_tail
+  if(comment_no)
+    print "<td class=\"modified\"><strong>*</strong></td>"
+  else
+    print "<td>&nbsp;</td>"
+  print "<td class=\"comment\">"
+              
+  wdiff_cmd = "@WDIFF@ " \
+    "--start-delete \"<span class=\\\"removed\\\"><del><strong>\" " \
+    "--end-delete \"</strong></del></span>\" " \
+    "--start-insert \"<span class=\\\"inserted\\\"><ins><em>\" " \
+    "--end-insert \"</em></ins></span>\" " tmp_file[0] " " tmp_file[1]
+  if(comment_no)
+    {
+      print escape_chars(comment[1]) > tmp_file[0]
+      close(tmp_file[0])
+      print escape_chars(comment[2]) > tmp_file[1]
+      close(tmp_file[1])
+      while((wdiff_cmd | getline) > 0)
+        {
+          sub(/^[ \t\r\n]*$/, "\\&nbsp;")
+          print $0 "<br />"
+        }
+      close(wdiff_cmd)
+    }
+  else
+    {
+      if(comment[0] != "")
+        {
+          comment[0] = escape_chars(comment[0])
+          gsub(/\n/, "<br />\n", comment[0])
+        }
+      else
+        comment[0] = "&nbsp;"
+      print comment[0]
+    }
+  print "</td></tr>"
+  print "<tr><td class=\"msgid\">&nbsp;</td><td class=\"msgid\"><code>"
+  print escape_chars(msgid) "&nbsp;"
+  print "</code></td></tr>"
+  print "<tr>"
+  if(msgstr_no)
+    print "<td class=\"modified\"><strong>*</strong></td>"
+  else
+    print "<td>&nbsp;</td>"
+  print "<td class=\"msgstr\">"
+  if(msgstr_no)
+    {
+      sub(/\\n$/, "", msgstr[1])
+      print escape_chars(msgstr[1]) > tmp_file[0]
+      close(tmp_file[0])
+      print escape_chars(msgstr[2]) > tmp_file[1]
+      close(tmp_file[1])
+      while((wdiff_cmd | getline) > 0)
+        {
+          gsub(/\\n/, "<br />\n")
+          print
+        }
+      close(wdiff_cmd)
+      print "&nbsp;"
+    }
+  else
+    {
+      msgstr[0] = escape_chars(msgstr[0])
+      gsub(/\\n/, "<br />\n", msgstr[0])
+      print msgstr[0] "&nbsp;"
+    }
+  print "</td></tr>"
+  comment_no = 0
+  msgstr_no = 0
+  for(i = 0; i < 3; i++)
+    {
+      comment[i] = ""
+      msgstr[i] = ""
+    }
+}
+
+function output_entry() {
+  if(comment_no || msgstr_no || !no_common)
+    print_entry()
+  msg_no++
+}
+
+BEGIN {
+  msg_no = 0;
+  comment_no = 0;
+  msgstr_no = 0;
+  mktemp_cmd = "@MKTEMP@ diff-po-tmp.XXXXXXXXXX"
+  mktemp_cmd | getline tmp_file[0]
+  close(mktemp_cmd)
+  mktemp_cmd | getline tmp_file[1]
+  close(mktemp_cmd)
+}
+
+END {
+ if(msgstr[0] msgstr[1] msgstr[2] != "")
+   output_entry()
+ system("rm " tmp_file[0] " " tmp_file[1])
+}
+
+/^msgid "/ {
+  state = "msgid"
+  sub(/^msgid "/, "")
+  sub(/"[ \t\r\n]*$/, "")
+  msgid = $0
+  next
+}
+
+/^msgstr "/ {
+  state = "msgstr"
+  sub(/^msgstr "/, "")
+  sub(/"[ \t\r\n]*$/, "")
+  msgstr[0] = $0
+  next
+}
+
+/^[ \t\r\n]*$/ {
+  output_entry()
+  next
+}
+
+/^# #-#-#-#-# .* #-#-#-#-#$/ {
+  comment_no++
+  next
+}
+
+/^# type: (Content|Attribute .*) of: / { next }
+/^# / {
+  sub(/# /, "")
+  if(comment[comment_no] == "")
+    comment[comment_no] = $0
+  else
+    comment[comment_no] = comment[comment_no] "\n" $0
+  next
+}
+
+/^"#-#-#-#-# .* #-#-#-#-#\\n"$/ {
+  msgstr_no++
+  next
+}
+
+/^"/ {
+  sub(/^"/, "")
+  sub(/"[ \t\r\n]*$/, "")
+  if(state == "msgid")
+    msgid = msgid $0
+  else
+    msgstr[msgstr_no] = msgstr[msgstr_no] $0
+}
+
+{ next }

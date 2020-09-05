@@ -1,0 +1,50 @@
+
+/* The flat-file datastore configuration options... */
+
+dsDescription   : indexDescription
+		;
+
+indexDescription: indexheader '{' indexlist '}' {
+		    setIndexDesc (databaseBeingDefined, indexEntry);
+		    indexEntry = NULL;
+		}
+		| indexheader '{' parseError '}' {
+		    freeIndexDesc (indexEntry);
+		    indexEntry = NULL;
+		}
+		| parseError
+		;
+
+indexheader	: INDEXTOK {
+		    indexEntry = newIndexDesc (databaseBeingDefined);
+		}
+		;
+
+indexlist	: indexEnt
+		| indexlist indexEnt
+		;
+
+indexEnt	: PATHTOK QSTRING {
+		    setIndexDescPath (indexEntry, qStrVal ($2));
+		}
+		| FIELDSTOK '{' indexFieldList '}'
+		| FIELDSTOK '{' parseError '}'
+		| indexSep
+		;
+
+indexFieldList	: FieldListMember {
+		    addFieldToIndex (indexEntry, $1);
+		}
+		| indexFieldList FieldListMember {
+		    addFieldToIndex (indexEntry, $2);
+		}
+		;
+
+indexSep	: SEPARATORTOK QSTRING {
+		    setIndexDescSeparator (indexEntry, takeQString ($2));
+		}
+		| BINARYINDEXTOK booleanVal {
+		    setIndexDescBinary (indexEntry, $2);
+		}
+		;
+

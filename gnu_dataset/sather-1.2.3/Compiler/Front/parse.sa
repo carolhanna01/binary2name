@@ -1,0 +1,2398 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- parse.sa: 1.1 version of parser for 1.1 Sather compiler.
+
+class PARSE_TEST is
+   -- Test the parser out.
+
+   main(arg: ARRAY{STR}) is
+      if arg.size < 2 then #OUT + "Usage: " + arg[0] + " [-pSather] <files>\n" end;
+      #OUT + "Sather/pSather 1.0 parser - 9 Aug 94\n";
+      pSather: BOOL; i: INT;
+      if (arg.size > 1) and (arg[1] = "-pSather") then pSather := true; i := 2
+      else pSather := false; i := 1
+      end;
+      p ::= PROG::create;
+      t ::= p.parse;
+      parse:PARSE;
+      typecase t 
+      when PARSE then parse := t;
+      end;
+      loop while!(i < arg.size);
+         parser ::= PARSER::create(p, arg[i], pSather, parse.convert_files.test(arg[i]), parse.version_1_0);
+         if ~void(parser) then
+            #OUT + "In file " + arg[i] + ":\n";
+            tcd: AS_CLASS_DEF := parser.source_file;
+            #OUT + "\n";
+            loop until!(void(tcd));
+               #OUT + ' ' + tcd.name.str + '\n';
+               tcd := tcd.next
+            end
+         end;
+         #OUT + "\n\n";
+         i := i+1
+      end
+   end
+
+end; -- PARSE_TEST
+   
+class CONVERT is
+   -- the following attributes are needed for translation from pre 1.1 syntax
+   -- to 1.1 syntax. 
+   
+   -- This class was designed in a such a way so that after the transition
+   -- period is over, it could be deleted along with all calls to its
+   -- method. The only other remaining thing that would need to be taken
+   -- care of is -convert option.
+   attr start_pos:INT;
+   attr end_pos:INT;
+   attr need_to_convert:BOOL;
+   attr file:BFILE;
+   
+   create(parser:PARSER, conv:BOOL, fname:STR):SAME is
+      res ::= new;
+      header_label:STR := 
+	    "---------------------------> Sather 1.1 source file <--------------------------\n";
+      -- check of the file has been already converted
+      already_converted:BOOL;	    
+      if SFILE_ID::source.length >= header_label.length then
+	 already_converted := true;
+	 loop	    
+	    if SFILE_ID::source.elt! /= header_label.elt! then
+	       already_converted := false;
+	       break!;
+	    end;
+	 end;
+      else
+	 already_converted := false;
+      end;
+
+      res.need_to_convert := conv and ~already_converted;
+      
+      if conv and already_converted then
+	 parser.prog.set_eloc(parser.source_loc);
+	 parser.prog.warning(fname + " has been converted to 1.1 syntax previouly\n");
+	 parser.version_1_0 := false;	 
+      end;
+      
+      if parser.version_1_0 and already_converted then
+	 parser.prog.set_eloc(parser.source_loc);	 
+	 parser.prog.warning(fname + " has been converted to 1.1 syntax previouly. Avoid -V1.0\n");
+	 parser.version_1_0 := false;	 
+      end;      
+      
+      if res.need_to_convert then
+	 -- Save the 1.0 file in filename.1.0
+	 fp::=BFILE::open_for_write(fname+".1.0");
+	 if fp.error then
+	    parser.prog.barf("Cannot create " + fname + ".1.0");
+	    return void;
+	 end;
+	 fp + SFILE_ID::source;
+	 fp.close;
+	 -- now, open a new file
+	 res.file := BFILE::open_for_write(fname);
+	 if res.file.error then
+	    parser.prog.barf("Cannot open " + fname + " for writing");
+	    return void;
+	 end;
+	 res.file + header_label;
+      end;
+      return res;
+   end;
+   
+   set_start is
+      if need_to_convert then
+	 start_pos := SFILE_ID::pos-1;
+      end;
+   end;
+   
+   set_start(i:INT) is
+      if need_to_convert then
+	 start_pos := 0;
+      end;
+   end;
+   
+   set_end is
+      if need_to_convert then
+	 end_pos := SFILE_ID::pos-1;
+	 write_chunk;
+      end;
+   end;
+   
+   set_end(i:INT) is
+      if need_to_convert then
+	 end_pos := i;
+	 write_chunk;
+      end;
+   end;
+	
+   write_chunk is
+      loop
+	 i::=start_pos.upto!(end_pos);
+	 file + SFILE_ID::source[i];
+      end;
+      file.flush;
+   end;
+   
+   convert_iter_def(feature_name:IDENT) is
+      -- converts 1.0 syntax for iter defs to 1.1 syntax
+      -- More precisely, ``once'' is added for once args
+      -- and ``!'' is removed from hot args
+      -- No changes for function calls
+  
+      if need_to_convert then
+	 -- first, back up to the opening ``(''
+	 i:INT := SFILE_ID::pos;
+	 loop
+	    while!( SFILE_ID::source[i] /= '(');
+	    i := i - 1;
+	 end;
+	 
+	 set_end(i);
+	 i:=i+1;
+	 
+	 done:BOOL:=false;
+	 loop
+	    while!(~done);
+	    start::=i;
+	    hot:BOOL:=false;
+	    
+	    c:CHAR;
+	    loop
+	       c:=SFILE_ID::source[i];
+	       if c = '{' then
+		  -- skip parametrizations
+		  in_param::=1;
+		  loop
+		     while!(in_param /= 0);
+		     i := i + 1;
+		     c := SFILE_ID::source[i];
+		     if c = '{' then in_param := in_param + 1;
+		     elsif c = '}' then in_param := in_param - 1;
+		     end;
+		  end;
+	       end;
+	       while! (~((c=',') or (c=')')));
+	       if c = '!' then
+		  hot:=true;
+	       end;
+	       i := i + 1;
+	    end;
+	    if c=')' then done := true; end;
+	    if ~hot then
+	       file + "once ";
+	    end;
+	    loop
+	       j::=start.upto!(i);
+	       if SFILE_ID::source[j] /= '!' then
+		  file + SFILE_ID::source[j];
+	       end;
+	    end;
+	    i:=i+1;
+	 end;
+	 file.flush;
+      end;
+   end;
+   
+   back_to(ch:CHAR) is
+      i::=SFILE_ID::pos;
+      
+      loop 
+	 while!(SFILE_ID::source[i] /= ch); 
+	 i := i - 1;
+      end;
+      
+      set_end(i-1);
+   end;
+   
+   convert_type_def is
+      -- converts ``type'' to ``abstract class'' according to 1.1 spec
+      
+      -- output preceding stuff
+      if need_to_convert then
+	 back_to('t');
+	 file + "abstract class";
+	 set_start;
+	 file.flush;
+      end;
+   end;
+   
+   convert_value is
+      -- converts ``value'' to ``immutable'' according to 1.1 spec
+      
+      -- output preceding stuff
+      if need_to_convert then
+	 back_to('v');
+	 file + "immutable class";
+	 set_start;
+	 file.flush;
+      end;
+   end;
+
+   convert_bind is
+      -- converts "#ROUT" and "F_ITER" to "bind"
+      
+      -- output preceding stuff
+      if need_to_convert then
+	 back_to('#');
+	 file + "bind";
+	 set_start;
+	 file.flush;
+      end;
+   end;
+end;   
+----------------------------------------------------------------------
+class PARSER is
+   include LEX_CONST;
+   include CS_COMPONENT;
+   
+   attr scanner: SCANNER;
+   attr next: TOKEN;
+   attr entered: FLIST{STR}; -- stack of grammatical procedure calls
+   attr convert: CONVERT;
+   attr version_1_0:BOOL;    -- true if the file has a 1.0 syntax
+   
+   create (p: PROG, file: STR, pSather: BOOL, 
+	   conv_to_1_1:BOOL, version_1_0:BOOL): PARSER is
+      res: PARSER;
+      s ::= SCANNER::create(p, file, pSather); 
+      if ~void(s) then
+         res := new;
+         res.prog := p;
+         res.scanner := s;
+         res.next := res.scanner.token;
+	 res.entered := FLIST{STR}::create(64);
+	 res.version_1_0 := version_1_0;
+	 res.convert := #CONVERT(res, conv_to_1_1, file);
+	 if void(res.convert) then
+	    res := void;
+	 end;
+      else res := void
+      end;
+      return res
+   end;
+
+   close_file is
+      scanner.close_file
+   end;
+   
+   source_loc: SFILE_ID is
+      return SFILE_ID::source_loc
+   end;
+
+   error (msg: STR) is
+      -- where errors during parsing go
+      prog.set_eloc(source_loc);
+      err(msg + " (in " + entered.top + ')')
+   end;
+   
+   warning (msg: STR) is
+      -- where errors during parsing go
+      prog.set_eloc(source_loc);
+      prog.warning(msg + " (in " + entered.top + ')')
+   end;   
+
+   exp_error (msg: STR) is
+      error(msg + " expected, but found " + next.str)
+   end;
+
+   fetch is
+      next := scanner.token
+   end;
+
+   match (t: INT) is
+      if next /= t then exp_error(#TOKEN(t).str) end;
+      fetch
+   end;
+
+   check (t: INT): BOOL is
+      if next = t then fetch; return true
+      else return false
+      end
+   end;
+
+   enter (s: STR) is
+   -- announce beginning of syntactic structure (for nice errors)
+   --
+      entered := entered.push(s)
+   end;
+
+   exit is
+   -- exit from syntactic structure
+   --
+      s ::= entered.pop
+   end;
+
+   ident: IDENT is
+      return scanner.lex_value
+   end;
+
+   append_bang (arg: IDENT): IDENT is
+      -- make new version with trailing bang
+      return #IDENT(arg.str + "!")
+   end;    
+
+   is_type_or_class_start (t: TOKEN): BOOL is
+      case t.val
+      when abstract_tok, type_tok, spread_tok, immutable_tok, value_tok,
+	       partial_tok, external_tok, class_tok 
+      then
+	  return true
+      else return false
+      end
+   end;
+      
+   source_file: AS_CLASS_DEF is
+   -- source_file =>
+   -- [abstract_class_def | class] {';' [abstract_class_def | class]}
+   --
+      res: AS_CLASS_DEF;
+      enter("source file");
+
+      convert.set_start(0);
+      loop
+         if is_type_or_class_start(next) then
+            if (next = type_tok) or (next = abstract_tok) then
+	       if (next = type_tok) and ~version_1_0 then
+		  error("keyword ``type'' has been replaced with ``abstract class'' in Sather 1.1.Please, convert your file to 1.1 syntax (use -convert), or use -V1.0 option");
+	       end;
+	       if (next=abstract_tok) and version_1_0 then
+		  error("keyword ``abstract'' first appeared in Sather 1.1. Please, compile without -V1.0");
+	       end;
+	       convert.convert_type_def;
+	       if void(res) then res:=abstract_class_def
+	       else res.append(abstract_class_def) end;
+	    else 
+	       if void(res) then res:=class_def
+	       else res.append(class_def) end end end;
+	 if check(semi_tok) then -- ok
+	 elsif is_type_or_class_start(next) then exp_error("semicolon")
+         else
+            if next /= eof_tok then exp_error("end of file") end;
+            break! end end;
+      convert.set_end;
+      
+      close_file;
+      exit; return res
+   end;
+
+   abstract_class_def: AS_CLASS_DEF is
+   -- abstract_class_def =>
+   -- 'abstract' 'class' abstract_class_name
+   -- ['{' param_dec {',' param_dec}'}']
+   -- ['<' type_spec_list] ['>' type_spec_list]
+   -- 'is' [abstract_signature] {';' [abstract_signature]} 'end'
+   --
+      enter("abstract type definition");
+      res ::= #AS_CLASS_DEF; res.source := source_loc; res.kind := res.abs;
+
+      if version_1_0 then
+	 match(type_tok);
+      else
+	 match(abstract_tok);
+	 match(class_tok);
+      end;
+      
+      if check(type_name_tok) then --ok
+      else exp_error("abstract type name");
+         if next = ident_tok then fetch end
+      end;
+      res.name := ident;
+      if check(lbrace_tok) then
+         loop until!(next /= ident_tok);
+	    if void(res.params) then res.params:=param_dec
+	    else res.params.append(param_dec) end;
+            if ~check(comma_tok) then break! end end;
+         match(rbrace_tok) end;
+      if check(is_lt_tok) then res.under := type_spec_list end;
+      if check(is_gt_tok) then res.over := type_spec_list end;
+      match(is_tok);
+      res.body := abstract_signature_list;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   abstract_signature_list: $AS_CLASS_ELT is
+   -- abstract_signature_list => 
+   -- [abstract_signature] {';' [abstract_signature]}
+   --
+      res: $AS_CLASS_ELT;
+      enter("list of abstract signatures");
+      loop
+         if (next = ident_tok) or (next = bang_tok) or
+            (next = iter_bang_tok) then
+            if void(res) then res := abstract_signature
+            else res.append(abstract_signature) end
+         end;
+         if check(semi_tok) then -- ok
+         elsif next = ident_tok then exp_error("semicolon")
+         else break!
+         end
+      end;
+      if next /= end_tok then
+         exp_error("semicolon");
+         loop while!((next /= end_tok) and (next /= eof_tok)); fetch end
+      end;
+      exit;
+      return res
+   end;
+
+   abstract_signature: AS_ROUT_DEF is
+   -- abstract_signature =>
+   -- (ident | iter_name)
+   -- ['(' abstract_argument {',' abstract_argument} ')']
+   -- [':' type_spec]
+   --
+      enter("abstract signature");
+      res ::= #AS_ROUT_DEF; res.source := source_loc; res.is_abstract := true;
+      res.name := rout_or_iter_name;
+      if check(lparen_tok) then
+         enter("abstract arguments");
+	 if res.name.is_iter then
+	    convert.convert_iter_def(res.name);
+	 end;	 
+         loop
+	    if void(res.args_dec) then 
+	       res.args_dec:=abstract_argument(res.name.is_iter);
+	    else res.args_dec.append(
+	       abstract_argument(res.name.is_iter)) end;
+            while!(check(comma_tok)) 
+	 end;
+	 if res.name.is_iter then
+	    convert.set_start;
+	 end;
+         match(rparen_tok);
+         exit 
+      end;
+      if check(colon_tok) then 
+         enter("return type specification");
+         res.ret_dec := type_spec; 
+         exit end;
+      exit;
+      return res
+   end;
+
+    get_mode (is_iter: BOOL):AS_ARG_MODE is
+	mode: INT;
+	
+	if check(out_tok) then
+	    mode := AS_ARG_MODE::out_mode;
+	elsif check(inout_tok) then mode := AS_ARG_MODE::inout_mode
+	elsif check(once_tok) then 
+	    if ~is_iter then
+		error("once arguments are not allowed in routine declarations")
+	    end;
+	    mode := AS_ARG_MODE::once_mode
+	else
+	    mode := AS_ARG_MODE::in_mode;
+	end;
+	return #AS_ARG_MODE(mode);
+    end;
+    
+   abstract_argument (is_iter: BOOL): AS_ARG_DEC is
+   -- arg_dec => [mode ident {',' ident} ':'] type_spec ['!']
+   --
+      res: AS_ARG_DEC;
+      mode: AS_ARG_MODE;
+      enter("abstract argument");
+
+      loop
+	 mode := get_mode(is_iter);
+         newa ::= #AS_ARG_DEC; newa.source := source_loc;
+         match(ident_tok);
+         newa.name := ident;
+	 newa.mode := mode;
+         if void(res) then res := newa 
+         else res.append(newa)
+         end;
+         while!(check(comma_tok))
+      end;
+      match(colon_tok);
+      -- the following is temporarily kept to parse the pre 1.1 programs
+      -- it will have to change when the transition to 1.1 is complete
+      -- Boris
+      tp:AS_TYPE_SPEC := type_spec;
+      hot:BOOL; 
+      
+      if version_1_0 then
+	 hot := check(bang_tok) or check(iter_bang_tok);
+	 if hot and ~is_iter then
+	    error("hot arguments not allowed in routine declarations")
+	 end;
+      end;
+      
+      p: AS_ARG_DEC := res;
+      loop until!(void(p)); 
+	 p.tp := tp; 
+	 if version_1_0 then
+	    p.is_hot := hot; 
+	 else
+	    if is_iter then
+	       p.is_hot := (p.mode.mod /= AS_ARG_MODE::once_mode)
+	    end;
+	 end;
+	 p := p.next 
+      end;
+      exit;
+      return res
+   end;
+
+   class_def: AS_CLASS_DEF is
+   -- class =>
+   --        ['spread' | 'value' | 'partial' | 'external (C | FORTAN)'] 
+   --               'class' uppercase_ident
+   --        ['{' param_dec {',' param_dec}'}']
+   --        ['<' type_spec_list]
+   --        'is' class_elt_list 'end'
+   --
+      enter("class");
+      res ::= #AS_CLASS_DEF; res.source := source_loc;
+      case next.val
+      when spread_tok then fetch; res.kind := res.spr; match(class_tok);
+      when immutable_tok then 
+	 fetch; 
+	 res.kind := res.imm; 
+	 match(class_tok);
+      when value_tok then 
+	 if version_1_0 then
+	    fetch; 
+	    res.kind := res.imm; 
+	    convert.convert_value;
+	    match(class_tok);	 
+	 else
+	    error("keyword ``value'' is replaced with ``immutable'' in Sather 1.1. Please use -V1.0 or convert the source using -convert");
+	 end;
+      when partial_tok then fetch; res.kind := res.part; match(class_tok);
+	 
+      when external_tok then fetch; 
+	 if check(ident_tok) then
+	    if ident.str = "FORTRAN" then
+	       res.kind := res.fortran_ext;
+	       match(class_tok);
+	    elsif ident.str = "C" then
+	       res.kind := res.c_ext;
+	       match(class_tok);
+	    end;
+	 elsif check(class_tok) then  -- to preserve compatibility with pre 1.1
+	    res.kind := res.c_ext;    -- C by default
+	 else
+	    exp_error("extern class name");
+	 end;
+      else 
+	 res.kind := res.ref;
+	 match(class_tok);
+      end;
+      if check(ident_tok) then
+         if ~is_class_name(ident) then
+            exp_error("class name")
+         end
+      else exp_error("concrete class name");
+         if next = type_name_tok then fetch end
+      end;
+      res.name := ident;
+      if check(lbrace_tok) then
+         loop until!(next /= ident_tok);
+	    if void(res.params) then res.params:=param_dec
+	    else res.params.append(param_dec) end;
+            if ~check(comma_tok) then break! end end;
+         match(rbrace_tok) end;
+      if check(is_lt_tok) then res.under := type_spec_list end;
+      match(is_tok);
+      res.body := class_elt_list;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   is_class_name (x: IDENT): BOOL is
+      return scanner.is_class_name(x.str)
+   end;
+
+   param_dec: AS_PARAM_DEC is
+   -- param_dec => uppercase_ident ['<' type_spec]
+   --
+      enter("parameter declaration");
+      res ::= #AS_PARAM_DEC; res.source := source_loc;
+      match(ident_tok); res.name := ident;
+      if ~is_class_name(res.name) then 
+         exp_error("class name") end;
+      if check(is_lt_tok) then res.type_constraint := type_spec end;
+      exit;
+      return res
+   end;
+
+   is_class_elt_start (t: TOKEN): BOOL is
+      case t.val
+      when private_tok, readonly_tok, const_tok, shared_tok, stub_tok,
+         attr_tok, include_tok, ident_tok, bang_tok, iter_bang_tok
+      then return true
+      else return false
+      end
+   end;
+
+   class_elt_list: $AS_CLASS_ELT is
+   -- class_elt_list => [class_elt] {';' [class_elt]}
+   --
+      res: $AS_CLASS_ELT;
+      enter("list of class elements");
+      loop
+         if is_class_elt_start(next) then
+            if void(res) then res := class_elt
+            else res.append(class_elt) end end;
+         if check(semi_tok) then -- ok
+         elsif is_class_elt_start(next) then exp_error("semicolon")
+         else break! end end;
+      if next /= end_tok then
+      exp_error("semicolon");
+      loop while!((next /= end_tok) and (next /= eof_tok)); fetch end end;
+      exit;
+      return res
+   end;
+
+   class_elt: $AS_CLASS_ELT is
+   -- class_elt => include_clause | const_def | shared_def | attr_def | 
+   --    rout_def | iter_def | stub_def
+   --
+      res: $AS_CLASS_ELT;
+      enter("class element");
+      
+      mode ::= #TOKEN(null_tok);
+      if (next = private_tok) or (next = readonly_tok) then mode := next; fetch end;
+      case next.val
+      when include_tok then res := include_clause(mode)
+      when const_tok then res := const_def(mode)
+      when shared_tok then res := shared_def(mode)
+      when attr_tok then res := attr_def(mode)
+      when stub_tok then res := stub_def(mode)
+      else res := rout_def(mode)
+      end;
+      
+      exit;
+      return res
+   end;
+
+   include_clause (mode: TOKEN): $AS_CLASS_ELT is
+   -- include_clause => 'include' type_spec [feat_mod {',' feat_mod}]
+   -- feat_mod => ident '->' [['private' | 'readonly'] ident]
+   --
+   -- 'private' already seen and stripped if present.
+   --
+      res: $AS_CLASS_ELT;
+      enter("include clause");
+      if mode = readonly_tok then 
+         error("readonly not allowed for includes") end;
+      match(include_tok);
+      incl ::= #AS_INCLUDE_CLAUSE; incl.source := source_loc;
+      incl.is_private := mode = private_tok;
+      incl.tp := type_spec;
+      res := incl;
+      if (next = ident_tok) or (next = bang_tok) or (next = iter_bang_tok) then
+         loop
+            newm ::= #AS_FEAT_MOD; newm.source := source_loc;
+            newm.name := rout_or_iter_name;
+            match(transform_tok);
+            case next.val
+            when private_tok then fetch;
+               newm.is_private := true;
+               newm.new_name := rout_or_iter_name
+            when readonly_tok then fetch;
+               newm.is_readonly := true;
+               newm.new_name := rout_or_iter_name
+            when ident_tok, bang_tok, iter_bang_tok then 
+               newm.new_name := rout_or_iter_name
+            else end;
+            if ~void(newm.new_name) then
+               if newm.name.is_iter /= newm.new_name.is_iter then
+                  error("routine can't become an iter or vice versa")
+               end
+            end;
+	    if void(incl.mods) then incl.mods:=newm
+	    else incl.mods.append(newm) end;
+            while!(check(comma_tok))
+         end
+      end;
+      exit;
+      return res
+   end;
+
+   const_def (mode: TOKEN): $AS_CLASS_ELT is
+   -- const_def =>
+   --        ['private'] 'const' ident
+   --        (':' type_spec ' := ' expr | [' := ' expr][',' ident_list])
+   --
+   -- private_tok already seen and stripped if present.
+   --
+      res: $AS_CLASS_ELT;
+      enter("const definition");
+      if mode = readonly_tok then 
+         error("readonly not allowed for constants") end;
+      match(const_tok);
+      con ::= #AS_CONST_DEF; con.source := source_loc;
+      con.is_private := mode = private_tok;
+      res := con;
+      match(ident_tok);
+      con.name := ident;
+      if check(colon_tok) then
+         con.tp := type_spec; match(assign_tok); con.init := expr
+      else
+         if check(assign_tok) then con.init := expr
+         else zero ::= #AS_INT_LIT_EXPR; zero.source := source_loc; zero.val := #INTI(0); 
+            con.init := zero
+         end;
+         counter: INT := 1;
+         loop while!(check(comma_tok));
+            -- new constant
+            newc ::= #AS_CONST_DEF; newc.source := source_loc;
+            newc.is_private := mode = private_tok;
+            match(ident_tok);
+            newc.name := ident;
+               -- new value
+            arg ::= #AS_INT_LIT_EXPR; arg.source := source_loc; arg.val := #INTI(counter);
+            ex ::= #AS_CALL_EXPR; ex.source := source_loc;
+            ex.ob := con.init;
+            ex.name := IDENT_BUILTIN::plus_ident;
+	    ex.args := arg;
+	    ex.modes := #AS_ARG_MODE(AS_ARG_MODE::in_mode); 
+            newc.init := ex;
+	    if void(res) then res:=newc
+	    else res.append(newc) end;
+            counter := counter+1
+         end
+      end;
+      exit;
+      return res
+   end;
+
+   shared_def (mode: TOKEN): $AS_CLASS_ELT is
+   -- shared_def =>
+   --        'shared' (ident ':' type_spec ':=' expr | 
+   --        ident_list ':' type_spec)
+   --
+   -- private or readonly already stripped if present.
+   --
+      res: $AS_CLASS_ELT;
+      enter("shared definition");
+      match(shared_tok);
+      loop
+         newid ::= #AS_SHARED_DEF; newid.source := source_loc;
+         newid.is_private := mode = private_tok;
+         newid.is_readonly := mode = readonly_tok;
+         match(ident_tok);
+         newid.name := ident;
+         if void(res) then res := newid
+         else res.append(newid)
+         end;
+         while!(check(comma_tok)) end;
+      match(colon_tok);
+      tp: AS_TYPE_SPEC := type_spec;
+      p: $AS_CLASS_ELT := res;
+      loop until!(void(p));
+         typecase p when AS_SHARED_DEF then p.tp := tp end;
+         p := p.next
+      end;
+      if check(assign_tok) then
+         typecase res when AS_SHARED_DEF then res.init := expr end;
+         if ~void(res.next) then
+            error("only single shareds may be initialized") end end;
+      exit;
+      return res
+   end;
+   
+   attr_def (mode: TOKEN): $AS_CLASS_ELT is
+   -- attr_def =>  'attr' ident_list ':' type_spec
+   --
+   -- private or readonly already stripped if present.
+   --
+      res: $AS_CLASS_ELT;
+      enter("attribute definition");
+      match(attr_tok);
+      loop
+         newid ::= #AS_ATTR_DEF; newid.source := source_loc;
+         newid.is_private := mode = private_tok;
+         newid.is_readonly := mode = readonly_tok;
+         match(ident_tok);
+         newid.name := ident;
+         if void(res) then res := newid
+         else res.append(newid)
+         end;
+         while!(check(comma_tok)) end;
+      match(colon_tok);
+      tp:AS_TYPE_SPEC := type_spec;
+      p: $AS_CLASS_ELT := res;
+      loop until!(void(p));
+         typecase p when AS_ATTR_DEF then p.tp := tp end;
+         p := p.next
+      end;
+      exit;
+      return res
+   end;
+
+   stub_def (mode: TOKEN): $AS_CLASS_ELT is
+   -- stub_def =>  abstract_signature
+   --
+      res: $AS_CLASS_ELT;
+      enter("stub feature definition");
+      if mode = readonly_tok then 
+         error("readonly not allowed for stubs") end;
+      
+      match(stub_tok);
+      res := abstract_signature;
+      res.is_private := mode = private_tok;
+      exit;
+      return res;
+   end;
+
+   
+   type_spec: AS_TYPE_SPEC is
+   -- type_spec =>
+   --        class_name ['{' type_spec_list '}'] |
+   --        ('ROUT' | 'ITER' | 'F_ROUT') ['{' mode type_spec ['!'] 
+   --                {',' mode type_spec } '}'] [':' type_spec] |
+   --        'SAME'
+   --
+      enter("type specification");
+      res ::= #AS_TYPE_SPEC; res.source := source_loc;
+      if check(SAME_tok) then res.kind := AS_TYPE_SPEC::same
+      elsif (next = type_name_tok) or (next = ident_tok) then
+         if (next = ident_tok) and ~is_class_name(ident) then
+            error("class name must be all upper_case") end;
+         res.kind := AS_TYPE_SPEC::ord;
+         res.name := ident; fetch;
+         if check(lbrace_tok) then
+            res.params := type_spec_list;
+            match(rbrace_tok) end
+      else
+         if check(ROUT_tok) then res.kind := AS_TYPE_SPEC::rt
+         elsif check(ITER_tok) then res.kind := AS_TYPE_SPEC::it
+	 elsif check(F_ROUT_tok) then res.kind := AS_TYPE_SPEC::f_rt
+         else exp_error("type specifier") end;
+         if check(lbrace_tok) then
+	   loop
+	       isiter:BOOL := (res.kind = AS_TYPE_SPEC::it);
+	       m::= get_mode(isiter);
+               tp:AS_TYPE_SPEC := type_spec;
+	       tp.mode := m;
+
+	       if version_1_0 then
+		  if check(bang_tok) or check(iter_bang_tok) then
+		     if res.kind = AS_TYPE_SPEC::it then tp.is_hot := true
+		     else error("no hot arguments in bound routine") end end;
+	       else
+		  tp.is_hot := (tp.mode.mod /= AS_ARG_MODE::once_mode);
+	       end;
+	       if void(res.params) then res.params:=tp
+	       else res.params.append(tp) end;
+               while!(check(comma_tok)) end;
+            match(rbrace_tok) end;
+         if check(colon_tok) then res.ret := type_spec end end;
+      exit;
+      return res
+   end;
+
+   type_spec_list: AS_TYPE_SPEC is
+   -- type_spec_list => type_spec {',' type_spec}
+   --
+      enter("list of type specifications");
+      res ::= type_spec;
+      loop while!(next = comma_tok);
+         fetch; res.append(type_spec)
+      end;
+      exit;
+      return res
+   end;
+
+   rout_or_iter_name: IDENT is
+   -- rout_or_iter_name => ident | [ident] '!'
+   --
+      res: IDENT;
+      if next = ident_tok then res := ident; fetch;
+         if next = iter_bang_tok then fetch;
+            res := append_bang(res)
+         elsif next = bang_tok then fetch;
+            res := append_bang(res); error("not a correct iter_name")
+         end
+      elsif (next = bang_tok) or (next = iter_bang_tok) then fetch;
+	  res := IDENT_BUILTIN::bang_ident;
+      else exp_error("routine or iter name"); res := #IDENT("a")
+      end;
+      return res
+   end;
+
+   rout_def (mode: TOKEN): AS_ROUT_DEF is
+   -- rout_def =>
+   --        (ident | iter_name) ['(' arg_dec {',' arg_dec} ')'] 
+   --        [':' type_spec]
+   --        ['pre' expr] ['post' expr]
+   --        ['is' (stmt_list | builtin ident [;]) 'end']
+   --
+   -- private already stripped if present.
+   --
+      res: AS_ROUT_DEF;
+      enter("routine or iter definition");
+      if mode = readonly_tok then 
+         error("readonly not allowed for routines or iters") end;
+      res := #AS_ROUT_DEF; res.source := source_loc;
+      res.name := rout_or_iter_name;
+      res.is_private := mode = private_tok;
+      if check(lparen_tok) then
+         enter("arguments");
+	 if res.name.is_iter then
+	    convert.convert_iter_def(res.name);
+	 end;
+         loop
+	    if void(res.args_dec) then 
+	       res.args_dec:=arg_dec(res.name.is_iter)
+	    else res.args_dec.append(arg_dec(res.name.is_iter)) end;
+            while!(check(comma_tok)) end;
+	 if res.name.is_iter then
+	    convert.set_start;
+	 end;
+	 
+         match(rparen_tok);
+         exit 
+      end;
+      
+      if check(colon_tok) then 
+         enter("return type specification");
+         res.ret_dec := type_spec; 
+         exit end;
+      if check(pre_tok) then 
+         enter("precondition declaration");
+         res.pre_e := expr; 
+         exit end;
+      if check(post_tok) then 
+         enter("postcondition declaration");
+         res.post_e := expr; 
+         exit end;
+      if check(is_tok) then
+	 if check(builtin_tok) then
+	    enter("builtin routine/iter body");
+	    res.is_builtin:=true;
+            res.builtin_name:=ident;
+	    match(ident_tok);
+	    if check(semi_tok) then end;
+	    match(end_tok);
+	    exit;
+	 else
+            enter("routine/iter body");
+            res.body := stmt_list; res.is_abstract := false;
+            match(end_tok);
+            exit
+	 end;
+      else res.is_abstract:=true end;
+      exit;
+      return res
+   end;
+
+	 
+   arg_dec (is_iter: BOOL): AS_ARG_DEC is
+   -- arg_dec => mode ident {',' ident} ':' type_spec 
+   --
+      res: AS_ARG_DEC;
+      mode: AS_ARG_MODE;
+
+      enter("routine/iter argument declaration");
+      loop
+         newa ::= #AS_ARG_DEC; newa.source := source_loc;
+	 mode := get_mode(is_iter);
+         match(ident_tok);
+         newa.name := ident;
+	 newa.mode := mode;
+	 if (newa.mode.mod = AS_ARG_MODE::once_mode) and ~is_iter then
+	    error("once arguments not allowed in routine declarations");
+	 end;	 
+	 if void(res) then res:=newa
+	 else res.append(newa) end;
+         while!(check(comma_tok)) 
+      end;
+      match(colon_tok);
+      tp:AS_TYPE_SPEC := type_spec;
+      hot:BOOL;
+      if version_1_0 then
+	 hot := check(bang_tok) or check(iter_bang_tok);
+	 if hot and ~is_iter then
+	    error("hot arguments not allowed in routine declarations") end;
+      end;
+
+      p:AS_ARG_DEC := res;
+      loop until!(void(p)); 
+	 p.tp := tp; 
+	 if version_1_0 then
+	    p.is_hot := hot; 
+	 else
+	    if is_iter then
+	       p.is_hot := (p.mode.mod /= AS_ARG_MODE::once_mode)
+	    end;
+	 end;
+	 
+	 if is_iter then
+	    if ~p.is_hot and p.mode.is_out_inout then
+	       error("once arguments cannot have out/inout mode");
+	    end;
+	 end;
+	 p := p.next 
+      end;
+      exit;
+      return res
+   end;
+
+   ident_of (x: $AS_EXPR): IDENT is
+   -- make sure x consists of an ident only
+   --
+      typecase x when AS_CALL_EXPR then
+      	if void(x.ob) and ~void(x.name) and void(x.args) then return x.name end
+      else end;
+      error("identifier only expected");
+      return void
+   end;
+      
+   break_stmt:AS_EXPR_STMT is
+      res ::= #AS_EXPR_STMT; res.source := source_loc; res.e := #AS_BREAK_EXPR;
+      return res
+   end;
+
+   make_if_stmt (test: $AS_EXPR, then_part, else_part: $AS_STMT): AS_IF_STMT is
+      res ::= #AS_IF_STMT; res.source := source_loc; res.test := test; 
+      res.then_part := #AS_STMT_LIST;
+      if ~void(then_part) then
+        then_part.surr_stmt_list := res.then_part;
+        res.then_part.stmts := then_part;
+      end;
+      if ~void(else_part) then
+         res.else_part := #AS_STMT_LIST;
+	 else_part.surr_stmt_list := res.else_part;
+	 res.else_part.stmts := else_part;
+      end;
+      return res
+   end;
+
+   stmt: $AS_STMT is
+   -- stmt =>
+   -- dec_stmt | assign_stmt | expr_stmt |
+   -- if_stmt | loop_stmt | return_stmt | yield_stmt | quit_stmt |
+   -- case_stmt | typecase_stmt | assert_stmt | protect_stmt | raise_stmt
+   -- while!_expr | until!_expr | break!_expr |
+   -- lock_stmt | unlock_stmt | with_near_stmt |
+   -- par_stmt | parloop_stmt | fork_stmt | sync_stmt
+   --
+   -- (while!_expr's and until!_expr's are transformed into aquivalent
+   -- if statements and break!'s)
+   --
+      res: $AS_STMT;
+      enter("statement");
+      was_at: SFILE_ID := source_loc;
+      case next.val
+      when if_tok then fetch; res := if_stmt
+      when loop_tok then res := loop_stmt
+      when return_tok then res := return_stmt
+      when yield_tok then res := yield_stmt
+      when quit_tok then fetch; res := #AS_QUIT_STMT; res.source := source_loc;
+      when case_tok then res := case_stmt
+      when typecase_tok then res := typecase_stmt
+      when assert_tok then res := assert_stmt
+      when protect_tok then res := protect_stmt
+      when raise_tok then res := raise_stmt
+      when par_tok then res := par_stmt
+      when parloop_tok then res := parloop_stmt
+      when lock_tok then res := lock_stmt
+      when unlock_tok then res := unlock_stmt
+      when with_tok then res := with_near_stmt
+      when fork_tok then res := fork_stmt
+      when sync_tok then res := sync_stmt
+      when while_tok then
+         enter("while! expression");
+         fetch; match(lparen_tok);
+         res := make_if_stmt(expr, void, break_stmt);
+         match(rparen_tok);
+         exit
+      when until_tok then
+         enter("until! expression");
+         fetch; match(lparen_tok);
+         res := make_if_stmt(expr, break_stmt, void);
+         match(rparen_tok);
+         exit
+      when break_tok then
+         fetch; res := break_stmt
+      else
+         -- must be one of:dec_stmt, assign_stmt, fork_stmt (with lhs) or expr_stmt:
+         --                
+         -- dec_stmt => ident_list ':' type_spec
+         -- assign_stmt => (expr | ident ':' [type_spec]) ' := ' expr
+         -- expr_stmt => expr
+         -- attach_stmt => expr ':-' expr
+         --
+         -- none of these can be easily distinguished; all may start
+         -- with identifiers.  However, all look like they start
+         -- with expr's, so do that and then patch up.
+         x: $AS_EXPR := expr;
+         if check(colon_tok) then -- ident ':'
+            tp: AS_TYPE_SPEC;
+            if next /= assign_tok then tp := type_spec end;
+            if check(assign_tok) then -- ident ':' [type_spec] ' := '
+               enter("assignment with declaration");
+               r ::= #AS_ASSIGN_STMT; r.source := source_loc;
+               r.name := ident_of(x); r.tp := tp; r.rhs := expr; res := r;
+               exit
+            else -- ident ':' type_spec
+               enter("single variable declaration");
+               sdecl_res ::= #AS_DEC_STMT; sdecl_res.source := source_loc;
+               sdecl_res.name := ident_of(x);
+               sdecl_res.tp := tp;
+               res := sdecl_res;
+               exit
+            end
+         elsif check(assign_tok) then -- expr ':='
+            enter("assignment");
+            r ::= #AS_ASSIGN_STMT; r.source := source_loc;
+            r.lhs_expr := x; r.rhs := expr; res := r;
+            exit
+         elsif check(attach_tok) then -- expr ':-'
+            enter("fork statement (with LHS)");
+            r ::= #AS_ATTACH_STMT; r.source := source_loc;
+            r.lhs := x; r.rhs := expr; res := r;
+            exit
+         elsif next = comma_tok then -- ident ','
+            enter("declaration");
+            decl_res ::= #AS_DEC_STMT; decl_res.source := source_loc;
+            decl_res.name := ident_of(x);
+            res := decl_res;
+            loop while!(check(comma_tok));
+               newdec ::= #AS_DEC_STMT;
+               newdec.source := source_loc;
+               match(ident_tok);
+               newdec.name := ident;
+               if void(res) then res := newdec
+               else res.append(newdec) end
+            end;
+            match(colon_tok);
+            tp2: AS_TYPE_SPEC := type_spec;
+            p: $AS_STMT := decl_res;
+            loop until!(void(p));
+               typecase p when AS_DEC_STMT then p.tp := tp2 end;
+               p := p.next
+            end;
+            exit
+         else -- expr
+            r ::= #AS_EXPR_STMT; r.source := source_loc;
+            r.e := x; res := r
+         end
+      end;
+      res.source := was_at;
+      
+      exit;
+      return res
+   end;
+
+   is_expr_start (t:TOKEN):BOOL is
+      case t.val
+      when self_tok, ident_tok, bang_tok, iter_bang_tok, SAME_tok, void_tok,
+         minus_tok, not_tok, new_tok, sharp_tok, vbar_tok, exception_tok, 
+         initial_tok, result_tok, while_tok, until_tok, break_tok, 
+         true_tok, false_tok, lchar_tok, lstr_tok, lint_tok, lflt_tok, 
+         lparen_tok, lbracket_tok,
+      -- pSather tokens
+         here_tok, where_tok, near_tok, far_tok, cluster_tok, 
+	 cluster_bang_tok, cluster_size_tok, cohort_tok, global_tok
+      then return true
+      else return false
+      end
+   end;
+
+   is_stmt_start (t:TOKEN):BOOL is
+      case t.val
+      when ident_tok, if_tok, loop_tok, yield_tok, quit_tok, return_tok,
+         case_tok, typecase_tok, assert_tok, protect_tok, raise_tok,
+         while_tok, until_tok, break_tok,
+      -- pSather tokens
+         fork_tok, lock_tok, unlock_tok, with_tok,
+         par_tok, parloop_tok, cohort_tok, sync_tok
+      then return true
+      else return is_expr_start(t)
+      end
+   end;
+
+   stmt_list: AS_STMT_LIST is
+   -- stmt_list => [stmt] {';' [stmt]}
+   --
+      list ::= #AS_STMT_LIST;
+      res : $AS_STMT;
+      enter("list of statements");
+      loop
+         if is_stmt_start(next) then
+	    s ::= stmt; s.surr_stmt_list := list; nx::=s.next;
+	    loop while!(~void(nx)); nx.surr_stmt_list:=list; nx:=nx.next end;
+            if void(res) then res := s
+            else res.append(s) end end;
+         if check(semi_tok) then -- ok
+         elsif is_stmt_start(next) then exp_error("semicolon")
+         else break! end end;
+      exit;
+      list.stmts := res;
+      return list;
+   end;
+
+   if_stmt: AS_IF_STMT is
+   -- if_stmt =>
+   --        'if' expr 'then' stmt_list {'elsif' expr 'then' stmt_list}
+   --        ['else' stmt_list] 'end'
+   --
+   -- if_tok already fetched
+   --
+      enter("if statement");
+      res ::= #AS_IF_STMT; res.source := source_loc;
+      res.test := expr; match(then_tok); res.then_part := stmt_list;
+      if check(elsif_tok) then 
+	 res.else_part := #AS_STMT_LIST;
+	 ifstmt ::= if_stmt;
+	 ifstmt.surr_stmt_list := res.else_part;
+	 res.else_part.stmts := ifstmt;
+      else
+         if check(else_tok) then res.else_part := stmt_list end;
+         match(end_tok) end;
+      exit;
+      return res
+   end;
+
+   loop_stmt: AS_LOOP_STMT is
+   -- loop_stmt => 'loop' stmt_list 'end'
+   --
+      enter("loop statement");
+      match(loop_tok);
+      res ::= #AS_LOOP_STMT; res.source := source_loc;
+      res.body := stmt_list;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   case_stmt: AS_CASE_STMT is
+   -- case_stmt =>
+   --        'case' expr
+   --        {'when' expr {',' expr} ' then' stmt_list}
+   --        ['else' stmt_list] 'end'
+   --
+      enter("case statement");
+      match(case_tok);
+      res ::= #AS_CASE_STMT; res.source := source_loc;
+      res.test := expr;
+      loop while!(check(when_tok));
+         first, this:AS_CASE_WHEN;
+         first := void;
+         loop
+            this := #AS_CASE_WHEN; this.source := source_loc;
+            if void(first) then first := this end;
+            this.val := expr;
+	    if void(res.when_part) then res.when_part:=this
+	    else res.when_part.append(this) end;
+            while!(check(comma_tok)) end;
+         match(then_tok);
+         st: AS_STMT_LIST := stmt_list; this := first;
+         loop until!(void(this)); this.then_part := st; 
+            this := this.next end end;
+      if check(else_tok) then 
+         res.else_part := stmt_list; res.no_else := false
+      else res.no_else := true end;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   typecase_stmt: AS_TYPECASE_STMT is
+   -- typecase_stmt =>
+   --        'typecase' ident
+   --        {'when' type_spec 'then' stmt_list}
+   --        ['else' stmt_list] 'end'
+   --
+      enter("typecase statement");
+      match(typecase_tok);
+      res ::= #AS_TYPECASE_STMT; res.source := source_loc;
+      match(ident_tok);
+      res.name := ident;
+      loop while!(check(when_tok));
+         this ::= #AS_TYPECASE_WHEN; this.source := source_loc;
+         this.tp := type_spec;
+         match(then_tok);
+         this.then_part := stmt_list;
+	 if void(res.when_part) then res.when_part:=this
+	 else res.when_part.append(this) end end;
+      if check(else_tok) then 
+         res.else_part := stmt_list; res.no_else := false
+      else res.no_else := true end;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   return_stmt: AS_RETURN_STMT is
+   -- return_stmt => 'return' [expr]
+   --
+      enter("return statement");
+      res ::= #AS_RETURN_STMT; res.source := source_loc;
+      match(return_tok);
+      if is_expr_start(next) then res.val := expr end;
+      exit;
+      return res
+   end;
+   
+   yield_stmt: AS_YIELD_STMT is
+   -- return_stmt => 'yield' [expr]
+   --
+      enter("yield statement");
+      res ::= #AS_YIELD_STMT; res.source := source_loc;
+      match(yield_tok);
+      if is_expr_start(next) then res.val := expr end;
+      exit;
+      return res
+   end;
+
+   assert_stmt: AS_ASSERT_STMT is
+   -- assert_stmt => 'assert' expr 'end'
+   --
+      enter("assert statement");
+      res ::= #AS_ASSERT_STMT; res.source := source_loc;
+      match(assert_tok);
+      res.test := expr;
+      exit;
+      return res
+   end;
+
+   raise_stmt: AS_RAISE_STMT is
+   -- raise_stmr => 'raise' expr
+   --
+      enter("raise statement");
+      res ::= #AS_RAISE_STMT; res.source := source_loc;
+      match(raise_tok);
+      res.val := expr;
+      exit;
+      return res
+   end;
+
+   protect_stmt: AS_PROTECT_STMT is
+   -- protect_stmt =>
+   --        'protect' stmt_list
+   --        {'when' type_spec_list 'then' stmt_list}
+   --        ['else' stmt_list] 'end'
+   --
+      enter("protect statement");
+      match(protect_tok);
+      res ::= #AS_PROTECT_STMT; res.source := source_loc;
+      res.body := stmt_list;
+      loop while!(check(when_tok));
+         first, this:AS_PROTECT_WHEN;
+         first := void;
+         loop
+            this := #AS_PROTECT_WHEN; this.source := source_loc;
+            if void(first) then first := this end;
+            this.tp := type_spec;
+	    if void(res.when_part) then res.when_part:=this
+	    else res.when_part.append(this) end;
+            while!(check(comma_tok)) end;
+         match(then_tok);
+         st: AS_STMT_LIST := stmt_list; this := first;
+         loop until!(void(this)); this.then_part := st; 
+            this := this.next end end;
+      if check(else_tok) then 
+         res.else_part := stmt_list; res.no_else := false
+      else res.no_else := true end;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   par_stmt: AS_PAR_STMT is
+   -- par_stmt => 'par' stmt_list 'end'
+   -- (pSather construct)
+   --
+      enter("par statement");
+      match(par_tok);
+      res ::= #AS_PAR_STMT; res.source := source_loc;
+      res.body := stmt_list;
+      match(end_tok);
+      exit;
+      return res
+   end;
+   
+   parloop_stmt: AS_PAR_STMT is
+   -- parloop_stmt => 'parloop' stmt_list 'do' stmt_list 'end'
+   -- (pSather construct)
+   
+      enter("parloop statement");
+      match(parloop_tok);
+      res ::= #AS_PAR_STMT; res.source := source_loc;
+      lp ::= #AS_LOOP_STMT; lp.source := source_loc;
+      res.body := #AS_STMT_LIST;
+      lp.surr_stmt_list := res.body;
+      res.body.stmts := lp;
+      lp.body := stmt_list;
+      match(do_tok);
+      forkt ::= #AS_FORK_STMT;
+      forkt.surr_stmt_list := lp.body;
+      forkt.source := source_loc;
+      -- optional at expression
+      if check(at_tok) then
+        forkt.at := expr;
+--        match(semi_tok);
+--    else
+--      forkt.at := #AS_ANY_EXPR; -- default;
+      end;
+      forkt.body := stmt_list;
+      match(end_tok);
+      if void(lp.body.stmts) then 
+        lp.body.stmts := forkt;
+      else 
+        lp.body.stmts.append(forkt);
+      end;
+      exit;
+      return res
+   end;
+
+   fork_stmt: AS_FORK_STMT is
+   -- fork_stmt => 'fork' ['@' expr;] stmt_list 'end'
+   -- (pSather construct)
+   --
+      enter("fork statement");
+      match(fork_tok);
+      res ::= #AS_FORK_STMT; res.source := source_loc;
+      
+      -- optional at expression
+      if check(at_tok) then
+        res.at := expr;
+   --     match(semi_tok);
+--    else
+--      res.at := #AS_ANY_EXPR; -- default;
+      end;
+      
+      res.body := stmt_list;
+
+      match(end_tok);
+      exit;
+      return res
+   end;
+   
+   sync_stmt: AS_SYNC_STMT is
+      -- sync_stmt => 'sync'
+   -- (pSather construct)
+   --
+      enter("sync statement");
+      match(sync_tok);
+      res ::= #AS_SYNC_STMT; res.source := source_loc;
+      exit;
+      return res
+   end;
+    
+   lock_stmt: AS_LOCK_STMT is
+   -- lock_stmt => 'lock' 
+   --              { ['if' expr] 'when' expr {',' expr} 'then' stmt_list }
+   --              [ 'else' stmt_list] 'end'
+   -- (pSather construct)
+   --
+      enter("lock statement");
+      res ::= #AS_LOCK_STMT; res.source := source_loc;
+      match(lock_tok);
+      with_guard : BOOL;
+      with_guard := false;
+      if check(guard_tok) then with_guard := true end;
+      only_one::=false;
+      if ~with_guard then 
+	 if ~check(when_tok) then 
+	    only_one:=true; 
+	 end; 
+      end;
+      loop 
+	 this ::= #AS_LOCK_IF_WHEN; this.source := source_loc;
+         if with_guard then this.val := expr
+	 else r::= #AS_BOOL_LIT_EXPR; r.val := true; this.val := r end;
+	 if void(res.if_when_part) then res.if_when_part := this
+	 else res.if_when_part.append(this) end;
+	 if with_guard then match(when_tok) end;
+	 this.e_list := expr_list(false);
+	 match(then_tok);
+	 this.then_part := stmt_list;
+	 -- match(end_tok);
+	 with_guard := false;
+	 if check(guard_tok) then with_guard := true end;
+	 if only_one or ~(with_guard or check(when_tok)) then break! end;      
+      end;
+      if check(else_tok) then
+	 res.else_part := stmt_list; res.no_else := false
+      else res.no_else := true end;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   unlock_stmt: AS_UNLOCK_STMT is
+   -- unlock_stmt => 'unlock' expr
+   -- (pSather construct)
+   --
+      enter("unlock statement");
+      res ::= #AS_UNLOCK_STMT; res.source := source_loc;
+      match(unlock_tok); res.e := expr;
+      exit;
+      return res
+   end;
+
+   ident_list(t:$AS_NODE): AS_IDENT_LIST is
+   -- ident_list => ident {',' ident}
+   -- in pSather with-near-mode `self' is allowed. The occurence of 
+   -- 'self' is marked in t
+   --
+   
+      enter("identifier list");
+      res, id: AS_IDENT_LIST;
+      loop
+         if next = ident_tok then
+            id := #AS_IDENT_LIST; id.name := ident; id.source := source_loc;
+         elsif next = self_tok then
+           typecase t
+           when AS_WITH_NEAR_STMT then
+             t.self_occurred := true;
+           else
+             exp_error("identifier");
+           end;
+         else exp_error("identifier")
+         end;
+         if next = ident_tok then
+           fetch;
+           if void(res) then res := id
+           else res.append(id)
+           end;
+         else
+           fetch;
+         end;
+         while!(check(comma_tok))
+      end;
+      exit;
+      return res
+   end;
+
+   with_near_stmt: AS_WITH_NEAR_STMT is
+   -- with_near_stmt =>
+   --   'with'  ident_list 'near' stmt_list
+   --   ['else' stmt_list] 'end'
+   -- (pSather construct)
+   --
+      enter("with_near statement");
+      res ::= #AS_WITH_NEAR_STMT; res.source := source_loc;
+      match(with_tok); res.idents := ident_list(res);
+      -- count elements of ident list
+      res.elts_size := 0;
+      id ::= res.idents;
+      loop while!(~void(id)); 
+        res.elts_size := res.elts_size + 1; 
+        id := id.next;
+      end;
+      if res.self_occurred then
+        res.elts_size := res.elts_size + 1;
+      end;
+      match(near_tok); res.near_part := stmt_list;
+      if check(else_tok) then res.else_part := stmt_list end;
+      match(end_tok);
+      exit;
+      return res
+   end;
+
+   expr: $AS_EXPR is
+   -- expr => expr7 {'@' [expr 7 | any]}
+   --
+      enter("expression (prec = 8)");
+      res ::= expr7;
+
+      --pSather
+      loop while!(next = at_tok);
+         fetch;
+         h ::= #AS_AT_EXPR; h.source := source_loc;
+         h.e := res; 
+         if next = any_tok then
+	   h.at := #AS_ANY_EXPR;
+	   fetch;
+	 else
+           h.at := expr7; 
+	 end;
+  	 res := h;
+      end;
+      exit;
+      return res 
+   end;
+
+   expr7: $AS_EXPR is
+   -- expr7 => expr6 {('and' | 'or') expr6}
+   --
+      enter("expression (prec = 7)");
+      res ::= expr6;
+      loop
+         if check(and_tok) then
+            a ::= #AS_AND_EXPR; a.source := source_loc;
+            a.e1 := res; a.e2 := expr6; res := a
+         elsif check(or_tok) then
+            o ::= #AS_OR_EXPR; o.source := source_loc;
+            o.e1 := res; o.e2 := expr6; res := o
+         else break! end end;
+      exit;
+      return res
+   end;
+
+   -- No mode specifiers allowed in sugared expressions
+   -- All args silently have ``in'' mode
+   expr6: $AS_EXPR is
+   -- expr6 => expr5 {('=' | '/=' | '<' | '<=' | '>=' | '>') expr5}
+   --
+      enter("expression (prec = 6)");
+      res ::= expr5;
+      loop
+         name: IDENT;
+	  if check(is_eq_tok) then
+	     c::=#AS_CALL_EXPR; c.source:=source_loc;
+	     c.name:=IDENT_BUILTIN::is_eq_ident; c.ob:=res; c.args:=expr5; 
+	     c.modes:=set_arg_modes(c,AS_ARG_MODE::in_mode);
+	     res := c;
+	  elsif check(is_neq_tok) then
+	     c::=#AS_CALL_EXPR; c.source:=source_loc;
+	     c.name:=IDENT_BUILTIN::is_eq_ident; c.ob:=res; c.args:=expr5; 
+	     c.modes:=set_arg_modes(c,AS_ARG_MODE::in_mode);
+	     c2 ::= #AS_CALL_EXPR; c2.source := source_loc;
+	     c2.name := IDENT_BUILTIN::not_ident;
+	     c2.ob := c; res := c2
+	  elsif check(is_lt_tok) then 
+	     c::=#AS_CALL_EXPR; c.source:=source_loc;
+	     c.name:=IDENT_BUILTIN::is_lt_ident; c.ob:=res; c.args:=expr5; 
+	     c.modes:=set_arg_modes(c,AS_ARG_MODE::in_mode);
+	     res := c;
+	  elsif check(is_geq_tok) then
+	     c::=#AS_CALL_EXPR; c.source:=source_loc;
+	     c.name:=IDENT_BUILTIN::is_lt_ident; c.ob:=res; c.args:=expr5; 
+	     c.modes:=set_arg_modes(c,AS_ARG_MODE::in_mode);
+	     c2 ::= #AS_CALL_EXPR; c2.source := source_loc;
+	     c2.name := IDENT_BUILTIN::not_ident;
+	     c2.ob := c; res := c2
+	  elsif check(is_gt_tok) then
+	     c::=#AS_CALL_EXPR; c.source:=source_loc;
+	     c.name:=IDENT_BUILTIN::is_lt_ident; c.ob:=res; c.args:=expr5; 
+	     c.modes:=set_arg_modes(c,AS_ARG_MODE::in_mode);
+	     c.flip:=true;
+	     res := c;
+	  elsif check(is_leq_tok) then
+	     c::=#AS_CALL_EXPR; c.source:=source_loc;
+	     c.name:=IDENT_BUILTIN::is_lt_ident; c.ob:=res; c.args:=expr5; 
+	     c.modes:=set_arg_modes(c,AS_ARG_MODE::in_mode);
+	     c.flip:=true;
+	     c2 ::= #AS_CALL_EXPR; c2.source := source_loc;
+	     c2.name := IDENT_BUILTIN::not_ident;
+	     c2.ob := c; res := c2
+	  else break!
+	  end;
+      end;
+      exit;
+      return res
+   end;
+
+   set_arg_modes(c: AS_CALL_EXPR, m: INT): AS_ARG_MODE is
+	res: AS_ARG_MODE;
+	mode:AS_ARG_MODE;
+	a::=c.args;
+	loop while!(~void(a));
+	    mode := #AS_ARG_MODE(m);
+	    if void(res) then
+		res := mode
+	    else
+		res.append(mode)
+	    end;
+	    a := a.next;
+	end;
+	return res;
+   end;
+
+   expr5: $AS_EXPR is
+   -- expr5 => expr4 {('+' | '-') expr4}
+   --
+      enter("expression (prec = 5)");
+      res ::= expr4;
+      loop
+         name:IDENT;
+         if check(plus_tok) then name := IDENT_BUILTIN::plus_ident
+         elsif check(minus_tok) then name := IDENT_BUILTIN::minus_ident
+         else break! end;
+         c ::= #AS_CALL_EXPR; c.source := source_loc; c.name := name;
+	 c.ob := res; c.args := expr4; 
+	 -- set ``in'' arg modes
+	 c.modes := set_arg_modes(c, AS_ARG_MODE::in_mode);
+	 res := c end;
+      exit;
+      return res
+   end;
+   
+   expr4: $AS_EXPR is
+   -- expr4 => expr3 {('*' | '/' | '%') expr3}
+   --
+      enter("expression (prec = 4)");
+      res ::= expr3;
+      loop
+         name:IDENT;
+         if check(times_tok) then name := IDENT_BUILTIN::times_ident
+         elsif check(quotient_tok) then name := IDENT_BUILTIN::div_ident
+         elsif check(mod_tok) then name := IDENT_BUILTIN::mod_ident
+         else break! end;
+         c ::= #AS_CALL_EXPR; c.source := source_loc; c.name := name;
+	 c.ob := res; c.args := expr3; 
+	 -- set ``in'' arg modes
+	 c.modes := set_arg_modes(c, AS_ARG_MODE::in_mode);
+	 res := c end;
+      exit;
+      return res
+   end;
+
+   expr3: $AS_EXPR is
+   -- expr3 => '-' expr3 | '~' expr3 | exp2.
+   --
+   -- in case of literals and '-' do the negation directly to prevent
+   -- overflow in case of minint (e.g. -5 gets translated into 5.negate)
+   --
+      x: $AS_EXPR; c: AS_CALL_EXPR;
+      res: $AS_EXPR;
+      enter("expression (prec = 3)");
+      if next = minus_tok then 
+	 fetch; 
+	 followed_by_literal:BOOL := (next=lint_tok or next=lflt_tok);
+	 x := expr3;
+	 typecase x
+         when AS_INT_LIT_EXPR then
+            i ::= #AS_INT_LIT_EXPR; i.source := source_loc;
+            i.val := -x.val; res := i
+         when AS_FLT_LIT_EXPR then
+            f ::= #AS_FLT_LIT_EXPR; f.source := source_loc;
+            f.val := -x.val; f.tp := x.tp; res := f
+         else
+	    if followed_by_literal then
+	       error("Use parens to disambiguate unary minus from negative literals");
+	    end;
+            c := #AS_CALL_EXPR; c.source := source_loc;
+            c.name := IDENT_BUILTIN::negate_ident;
+            c.ob := x; res := c
+         end
+      elsif next = not_tok then fetch; x := expr3;
+         c := #AS_CALL_EXPR; c.source := source_loc;
+         c.name := IDENT_BUILTIN::not_ident;
+         c.ob := x; res := c
+      else res := expr2
+      end;
+      exit;
+      return res
+   end;
+
+   expr2: $AS_EXPR is
+   -- expr2 => exp1 ['^' exp2]
+   --
+      enter("expression (prec = 2)");
+      res ::= expr1(false);
+      if check(pow_tok) then
+         c ::= #AS_CALL_EXPR; c.source := source_loc;
+         c.name := IDENT_BUILTIN::pow_ident;
+	 c.ob := res; c.args := expr2; 
+	 -- set ``in'' arg modes
+	 c.modes := set_arg_modes(c, AS_ARG_MODE::in_mode);
+	 res := c end;
+      exit;
+      return res
+   end;
+
+   expr_list (underscore_args:BOOL): $AS_EXPR is
+   -- expr_list => bound_arg {',' bound_arg}
+   -- bound_arg => expr | '_' [':' type_spec]
+   --
+      res: $AS_EXPR;
+      if underscore_args then enter("list of bound arguments")
+      else enter("list of expressions")        end;
+      loop x: $AS_EXPR;
+         if check(under_tok) then
+            u ::= #AS_UNDERSCORE_ARG; u.source := source_loc;
+            u.source := source_loc; x := u;
+            if check(colon_tok) then u.tp := type_spec end;
+            if ~underscore_args then
+               error("no underscore arguments allowed") end
+         else x := expr end;
+         if void(res) then res := x
+         else res.append(x) end;
+         while!(check(comma_tok)) end;
+      exit;
+      return res
+   end;
+
+   mode_expr_list (underscore_args:BOOL, is_iter:BOOL): TUP{$AS_EXPR, AS_ARG_MODE} is
+   -- mode_expr_list => bound_arg {',' bound_arg}
+   -- bound_arg => mode (expr | '_') [':' type_spec]
+   --
+      exprs: $AS_EXPR;
+      modes: AS_ARG_MODE;
+      m: AS_ARG_MODE;
+	
+      if underscore_args then enter("list of bound arguments")
+      else enter("list of expressions with modes")        end;
+      loop x: $AS_EXPR;
+	 m := get_mode(is_iter);
+         if check(under_tok) then
+            u ::= #AS_UNDERSCORE_ARG; u.source := source_loc;
+            u.source := source_loc; x := u;
+	    if check(colon_tok) then 
+	       u.tp := type_spec;  
+	       u.tp.mode := m; 
+	       warning("Sather 1.1 disallows type specification for unbound arguments. The type is inferred from the context.");
+	    end;
+            if ~underscore_args then
+               error("no underscore arguments allowed")
+	    end
+         else
+	    -- if an iter and inside create (underscores allowed), then
+	    -- must be a bound arg, so set mode to "once"
+	    x := expr;
+	    if underscore_args and m.is_out_inout then
+	       error("out/inout arguments must be unbound");
+	    end;
+--	    if underscore_args and is_iter  then
+--	       m := #AS_ARG_MODE(AS_ARG_MODE::once_mode);
+--	    end;
+	 end;
+	 if void(exprs) then 
+	     exprs := x;
+	     modes := m;
+	  else 
+	      exprs.append(x);
+	      modes.append(m);
+	 end;
+         while!(check(comma_tok)) end;
+      exit;
+      t:TUP{$AS_EXPR, AS_ARG_MODE} := #(exprs, modes);
+      return t;
+   end;
+
+   call_expr (ob: $AS_EXPR, tp: AS_TYPE_SPEC, underscore_args: BOOL): AS_CALL_EXPR is
+   -- call_expr => (ident | [ident] '!') ['(' mode_expr_list ')']
+   --
+      res: AS_CALL_EXPR;
+      enter("call expressions");
+      res := #AS_CALL_EXPR; res.source := source_loc; res.ob := ob; res.tp := tp;
+      res.name := rout_or_iter_name;
+      if check(lparen_tok) then 
+	  -- always allow once? Check later? (Boris)
+	  t ::= mode_expr_list(underscore_args, res.name.is_iter); 
+	  res.args := t.t1;
+	  res.modes := t.t2;
+	  match(rparen_tok) 
+      end;
+      exit;
+      return res
+   end;
+
+   type_of (x: $AS_EXPR): AS_TYPE_SPEC is
+   -- make sure x could be a type_spec
+   --
+      typecase x when AS_CALL_EXPR then
+         if void(x.ob) then
+            if void(x.tp) then
+               if is_class_name(x.name) then
+                  tp ::= #AS_TYPE_SPEC; tp.source := x.source;
+                  tp.kind := AS_TYPE_SPEC::ord;
+                  tp.is_hot := false;
+                  tp.name := x.name;
+		  tp.params := void;
+--		  tp.mode := void;
+                  tp.ret := void;
+                  return tp
+               end
+            else return x.tp
+            end
+         end
+      else end;
+      error("type specifier expected");
+      return void
+   end;
+
+   expr1 (underscore_args:BOOL): $AS_EXPR is
+   -- expr1 =>
+   --        (expr0 '.' call_expr | type_spec '::' call_expr | 
+   --               call_expr | expr0 '[' expr_list ']')
+   --        {"." call_expr | '[' expr_list ']'}
+   --
+   -- (expr0 accepts type_specs for local_exprs)
+   --
+      enter("expression (prec = 1)");
+      res ::= expr0;
+      c:AS_CALL_EXPR;
+      if check(dot_tok) then -- expr0 '.'
+         res := call_expr(res, void, underscore_args)
+      elsif check(dcolon_tok) then -- type_spec '::'
+         res := call_expr(void, type_of(res), underscore_args)
+      elsif check(iter_bang_tok) then -- part of call_expr: ident '!'
+         c := #AS_CALL_EXPR; c.source := source_loc;
+         c.name := append_bang(ident_of(res));
+	 if check(lparen_tok) then 
+	     t::= mode_expr_list(underscore_args, true); 
+	     c.args := t.t1;
+	     c.modes := t.t2;
+	     match(rparen_tok) 
+	 end;
+         res := c
+      elsif check(lparen_tok) then -- part of call_expr: ident '('
+         c := #AS_CALL_EXPR; c.source := source_loc;
+         c.name := ident_of(res);
+	 t ::= mode_expr_list(underscore_args, false); 
+	 c.args := t.t1; c.modes := t.t2;
+	 match(rparen_tok);
+         res := c
+      elsif check(lbracket_tok) then -- part of call_expr: expr0 '['
+	 -- Only ``in'' arguments for array references (Boris)
+         c := #AS_CALL_EXPR; c.source := source_loc;
+	 c.ob := res; c.args := expr_list(false); c.is_array := true;
+	 -- set ``in'' arg modes
+	 c.modes := set_arg_modes(c, AS_ARG_MODE::in_mode);
+         match(rbracket_tok);
+         res := c
+      end;
+      loop
+         if check(dot_tok) then
+            res := call_expr(res, void, underscore_args)
+         elsif check(lbracket_tok) then
+            c := #AS_CALL_EXPR; c.source := source_loc;
+	    c.ob := res; c.args := expr_list(false); c.is_array := true;
+	    -- set ``in'' arg modes
+	    c.modes := set_arg_modes(c, AS_ARG_MODE::in_mode);
+            match(rbracket_tok);
+            res := c
+         else break! end end;
+      exit;
+      return res
+   end;
+
+   expr0: $AS_EXPR is
+   -- expr0 =>
+   --      self_expr | local_expr | void_expr | new_expr |
+   --      create_expr | array_expr | bound_create_expr |
+   --      except_expr | initial_expr | result_expr | while!_expr |
+   --      until!_expr | break!_expr | bool_lit_expr | char_lit_expr |
+   --      str_lit_expr | int_lit_expr | flt_lit_expr | '(' expr ')' |
+   --      '[' expr_list ']' |
+   --      here_expr | where_expr | near_expr | far_expr | any_expr |
+   --      cluster_expr | cluster_bang_expr | | cluster_size| cohort_expr |
+   --      global_expr
+   --
+   -- local_expr accepts also type_spec, filtered out here or in expr1
+   --
+      enter("expression (prec = 0)");
+      res: $AS_EXPR;
+      case next.val
+      when self_tok then
+         fetch; res := #AS_SELF_EXPR; res.source := source_loc
+      when ident_tok then
+         call_exp ::= #AS_CALL_EXPR; call_exp.source := source_loc;
+         if is_class_name(ident) then call_exp.tp := type_spec;
+	    -- DPS changed from this
+            --if (call_exp.tp.kind = AS_TYPE_SPEC::ord) and void(call_exp.tp.params) then -- maybe ordinary call
+            --   call_exp.name := call_exp.tp.name;
+            --   call_exp.tp := void
+            --end
+            if (call_exp.tp.kind = AS_TYPE_SPEC::ord) then
+		if void(call_exp.tp.params) then -- ordinary call
+		    call_exp.name := call_exp.tp.name;
+		    call_exp.tp := void;
+		elsif next/=dcolon_tok then
+	          error("This typespec neither preceeds '::' nor follows '#'");
+		end
+            end
+         else call_exp.name := ident; fetch end;
+         res := call_exp
+      when bang_tok then
+         r ::= #AS_CALL_EXPR; r.source := source_loc;
+         r.name := IDENT_BUILTIN::bang_ident; fetch;
+         res := r
+      when iter_bang_tok then
+         r ::= #AS_CALL_EXPR; r.source := source_loc;
+         r.name := IDENT_BUILTIN::bang_ident; fetch;
+         res := r
+      when SAME_tok then
+         r ::= #AS_CALL_EXPR; r.source := source_loc;
+         r.tp := type_spec;
+	 if next/=dcolon_tok then
+	     error("`SAME' neither preceeds '::' nor follows '#'");
+	 end;
+         res := r
+      when void_tok then
+         enter("void expressions");
+         fetch;
+         if next = lparen_tok then fetch;
+            vtest ::= #AS_IS_VOID_EXPR; vtest.source := source_loc;
+            vtest.arg := expr; res := vtest;
+            match(rparen_tok)
+         else res := #AS_VOID_EXPR; res.source := source_loc
+         end;
+         exit
+      when new_tok then
+         enter("new expression");
+         fetch;
+         new_ex ::= #AS_NEW_EXPR; new_ex.source := source_loc;
+         res := new_ex;
+         if check(lparen_tok) then
+            new_ex.arg := expr;
+            match(rparen_tok) end;
+         exit
+      when sharp_tok then fetch;
+         if (next = ROUT_tok) or (next = ITER_tok) or (next = F_ROUT_tok) then
+            res := bound_create_expr
+         else res := create_expr end
+      when bind_tok then res := bound_create_expr 
+      when vbar_tok then
+         enter("array expression");
+         fetch;
+         arr_ex ::= #AS_ARRAY_EXPR; arr_ex.source := source_loc;
+         res := arr_ex;
+         arr_ex.elts := expr_list(false); 
+         match(vbar_tok);
+         exit
+      when exception_tok then
+         fetch; res := #AS_EXCEPT_EXPR; res.source := source_loc;
+      when initial_tok then
+         enter("initial expression");
+         fetch; match(lparen_tok);
+         init_ex ::= #AS_INITIAL_EXPR; init_ex.source := source_loc;
+         res := init_ex;
+         init_ex.e := expr;
+         match(rparen_tok);
+         exit
+      when result_tok then
+         fetch; res := #AS_RESULT_EXPR; res.source := source_loc;
+      when while_tok then
+         enter("while! expression");
+         fetch; match(lparen_tok); res := expr; match(rparen_tok);
+         error("while! expression must stand alone");
+         exit
+      when until_tok then
+         enter("until! expression");
+         fetch; match(lparen_tok); res := expr; match(rparen_tok);
+         error("until! expression must stand alone");
+         exit
+      when break_tok then
+         fetch; res := #AS_BOOL_LIT_EXPR; res.source := source_loc;
+         error("break! expression must stand alone")
+      when true_tok then
+         r ::= #AS_BOOL_LIT_EXPR; r.source := source_loc;
+         r.val := next = true_tok; res := r; fetch
+      when false_tok then
+         r ::= #AS_BOOL_LIT_EXPR; r.source := source_loc;
+         r.val := next = true_tok; res := r; fetch
+      when lchar_tok then
+         c ::= #AS_CHAR_LIT_EXPR; c.source := source_loc;
+         c.val := scanner.char_value.int; 
+         res := c; fetch
+      when lstr_tok then
+         s ::= #AS_STR_LIT_EXPR; s.source := source_loc;
+         s.s := ident.str; res := s; fetch
+      when lint_tok then
+         assert scanner.num_value.is_int;
+         i ::=  #AS_INT_LIT_EXPR; i.source := source_loc;
+         i.val := scanner.num_value.floor;
+         i.is_inti := (scanner.value_type = AS_FLT_LIT_EXPR::flti);
+         res := i; 
+         fetch
+      when lflt_tok then
+         f ::= #AS_FLT_LIT_EXPR; f.source := source_loc;
+         f.val := scanner.num_value;
+         f.tp := scanner.value_type;
+         res := f; fetch
+      when lparen_tok then
+         fetch; res := expr; match(rparen_tok)
+      when lbracket_tok then
+         fetch; a ::= #AS_CALL_EXPR; a.source := source_loc;
+	 a.args := expr_list(false); a.is_array := true; 
+	 -- set ``in'' arg modes
+	 a.modes := set_arg_modes(a, AS_ARG_MODE::in_mode);
+	 res := a;
+         match(rbracket_tok)
+      when here_tok then
+         fetch; res := #AS_HERE_EXPR; res.source := source_loc
+      when global_tok then
+         fetch; res := #AS_GLOBAL_EXPR; res.source := source_loc
+--      when any_tok then
+--         fetch; res := #AS_ANY_EXPR; res.source := source_loc
+      when cluster_tok then
+         fetch; res := #AS_CLUSTER_EXPR; res.source := source_loc
+      when cluster_size_tok then
+         fetch; res := #AS_CLUSTER_SIZE_EXPR; res.source := source_loc	 
+      when cluster_bang_tok then
+         fetch; r ::= #AS_CALL_EXPR; r.source := source_loc;
+         r.tp := #AS_TYPE_SPEC;
+         r.tp.name := IDENT_BUILTIN::SYS_ident;
+         r.name := #IDENT("builtin_clusters!");
+         res := r;
+      when cohort_tok then
+         fetch; res := #AS_COHORT_EXPR; res.source := source_loc;
+      when where_tok then
+         enter("where expression");
+         r ::= #AS_WHERE_EXPR; r.source := source_loc; res := r;
+         fetch; match(lparen_tok); r.e := expr; match(rparen_tok);
+         exit
+      when near_tok then
+         enter("near expression");
+         r ::= #AS_NEAR_EXPR; r.source := source_loc; res := r;
+         fetch; match(lparen_tok); r.e := expr; match(rparen_tok);
+         exit
+      when far_tok then
+         enter("far expression");
+         r ::= #AS_FAR_EXPR; r.source := source_loc; res := r;
+         fetch; match(lparen_tok); r.e := expr; match(rparen_tok);
+         exit
+      else exp_error("expression"); res := #AS_VOID_EXPR; res.source := source_loc end;
+      exit;
+      return res
+   end;
+
+   check_underscores (call:AS_CALL_EXPR, is_iter:BOOL) is
+      if void(call) then return; end;
+      if call.name.is_iter /= is_iter then
+         if is_iter then error("bound routine must be an iter")
+         else error("bound routine must not be an iter") end end;
+      if call.is_array then
+         error("only call expressions allowed") end;
+      ob: $AS_EXPR := call.ob;
+      loop until!(void(ob));
+         this: $AS_EXPR := ob;
+         typecase this when AS_CALL_EXPR then
+            ob := this.ob;
+            arg: $AS_EXPR := this.args;
+            loop until!(void(arg));
+               typecase arg when AS_UNDERSCORE_ARG then
+                  error("illegal underscore arguments");
+                  return
+               else end;
+               arg := arg.next
+            end
+         else
+            typecase ob when AS_UNDERSCORE_ARG then
+               if ~SYS::ob_eq(ob, call.ob) then
+                  error("illegal underscore arguments")
+               end
+            else end;
+            return
+         end
+      end
+   end;
+
+   bound_create_expr: AS_BOUND_CREATE_EXPR is
+   -- bound_create_expr =>
+   --        'bind' '('
+   --        ('_' [':' type_spec] '.' call_expr | expr1)
+   --        [':' type_spec] ')'
+   --
+   -- '#' already seen and stripped away
+   -- next is one of ROUT_tok, bind_tok, ITER_tok, F_ROUT_tok (guaranteed)
+   --
+      enter("bound create expression");
+      if next = ITER_tok then
+	 convert.convert_bind;
+	 if ~version_1_0 then
+	    prog.set_eloc(source_loc);
+	    prog.warning("#ITER() is obsolete. Use bind() instead.");
+	 end;
+      else
+	 if next=ROUT_tok then
+	    convert.convert_bind;	    
+	    if ~version_1_0 then
+	       prog.set_eloc(source_loc);
+	       prog.warning("#ROUT() is obsolete. Use bind() instead.");
+	    end;
+	 end;
+      end;
+      res ::= #AS_BOUND_CREATE_EXPR; res.source := source_loc;
+      
+      if next = F_ROUT_tok then
+	 res.is_f_rout := true;
+      end;
+      
+      fetch;
+      match(lparen_tok);
+      if check(under_tok) then
+         u ::= #AS_UNDERSCORE_ARG; u.source := source_loc;
+         if check(colon_tok) then 
+	    u.tp := type_spec;
+	    warning("Sather 1.1 disallows type specification for unbound arguments. The type is inferred from the context.");	    
+	 end;
+         match(dot_tok);
+         res.call := call_expr(u, void, true)   --later prohibit once? (Boris)
+      else -- hack: should be improved
+         x ::= expr1(true);
+         typecase x 
+	 when AS_CALL_EXPR then res.call := x 
+	 else error("bound create must have a routine");
+	 end
+      end;
+
+      res.is_iter := res.call.name.is_iter;
+      
+      check_underscores(res.call, res.is_iter);
+      if check(colon_tok) then res.ret := type_spec end;
+      match(rparen_tok);
+      exit;
+      return res
+   end;
+
+   
+   create_expr: AS_CREATE_EXPR is
+   -- create_expr => '#' [type_spec] ['(' mode_expr_list ')']
+   --
+   -- '#' already seen and stripped away
+   --
+      enter("create expression");
+      res ::= #AS_CREATE_EXPR; res.source := source_loc;
+      if (next = ident_tok) or (next = SAME_tok) then res.tp := type_spec
+      elsif next = type_name_tok then res.tp := type_spec;
+         error("no abstract types allowed")
+      end;
+      if check(lparen_tok) then
+	  t::= mode_expr_list(false, false);
+	  res.elts := t.t1; res.modes := t.t2;
+	  match(rparen_tok) 
+      end;
+      exit;
+      return res
+    end;
+
+end; -- PARSER
+   
+
+-------------------------------------------------------------------
+class PARSE < $PARSE is
+    -- The phase in which all files are parsed and tree forms built.
+    -- This phase catches both syntactic errors and multiply defined
+    -- classes. 
+
+    include CS_COMPONENT;
+
+    attr parsed:FSET{STR};	-- Table of already parsed files.
+    attr has:FMAP{STR,STR};	-- Files containing classes given by -has
+    attr known_files:FSET{STR};	-- Files that we know all classes by -has
+    attr convert_files:FSET{STR}; -- Files needed to convert to 1.1 syntax
+    attr convert_all:BOOL;      -- true if all files are to be converted to 1.1
+    attr version_1_0:BOOL;       -- true if Sather 1.0 source is compiled
+
+    private attr missing_classes: FSET{STR};
+        -- Names of classes which were not found.
+
+    create(p:PROG):SAME
+    is
+	r::=new; r.prog:=p; return r
+    end;
+
+    tree_for(nm:IDENT, num:INT):AS_CLASS_DEF is
+	-- Return the code tree for the class with name `nm' and the 
+	-- number of type parameters `num'. Return void if no such class. 
+        searchtag ::= #TUP{IDENT,INT}(nm,num);
+	r ::= prog.as_tbl.get_query(searchtag);
+        if ~void(r) then return r end;
+
+        -- If we haven't found it, try the -has files
+        fn::=has.get(nm.str);
+        if ~void(fn) then
+	   if prog.show_types then
+	      (#OUT+"Found the class in a has clause:"+nm.str).flush;
+	   end;
+            perform_parse(fn);
+	    r := prog.as_tbl.get_query(searchtag);
+        end;
+        
+	if void(r) then
+	   if prog.show_types then
+	      (#OUT+"Did not find the class in a has clause:"+nm.str).flush;
+	   end;
+            class_name: STR := nm.str(num);
+            if ~missing_classes.test(class_name) then
+                prog.err("There is no class named " + class_name + ".");
+                missing_classes := missing_classes.insert(class_name);
+            end;
+	end;
+	return r;
+    end;
+
+    parse(f:STR) is
+
+	-- We can check out known files later; don't bother parsing now.
+	-- This avoids parsing files that aren't referenced and even
+	-- if they are, speeds up the presentation of semantic errors
+	-- that would otherwise have to wait for parsing everything to
+	-- finish.
+
+	if known_files.test(f) then return;
+	else perform_parse(f);
+	end;
+    end;
+
+    private perform_parse(f:STR) is
+	-- Tell the parser to parse the file `f', put the tree in `as_tbl'.
+
+        -- If we've already done it
+        if parsed.test(f) then return; end;
+       
+        parsed:=parsed.insert(f);
+        if prog.show_parse_file then #OUT + "(Parse " + f + ") " end;
+
+	parser ::= #PARSER(prog, f, prog.psather, (convert_files.test(f) or convert_all), version_1_0 or convert_files.test(f) or convert_all);
+        if ~void(parser) then
+            tcd: AS_CLASS_DEF := parser.source_file;
+            loop until!(void(tcd)); 
+            if prog.show_as_insert then
+                #OUT+"(Tree for "+tcd.name.str+"("+tcd.params.size+")) ";
+            end;
+            ntcd:AS_CLASS_DEF:=tcd.next; tcd.next:=void;
+            typetag ::= #TUP{IDENT,INT}(tcd.name,tcd.params.size);
+            if prog.as_tbl.test_query(typetag) then
+	       other_class:AS_CLASS_DEF := prog.as_tbl.get_query(typetag);
+	       dup_class_err(tcd,other_class);
+            else
+                prog.as_tbl := prog.as_tbl.insert(tcd)
+            end;
+            tcd:=ntcd
+        end
+    end;
+
+	-- pSather
+	-- create AS_ROUT_DEF for clusters! here
+	-- clusters! cannot be provided by sys.sa, since, clusters! is
+	-- a keyword.
+--	if f=has.get("SYS") and prog.psather then
+--	    sysclass::=prog.as_tbl.get_query(#(#IDENT("SYS"),0));
+--	    body::=sysclass.body;
+--	    loop
+--		until!(void(body.next));
+--		body := body.next;
+--	    end;
+--
+--	    cl_it::=#AS_ROUT_DEF;
+--	    cl_it.name:=#IDENT("clusters!");
+--	    cl_it.ret_dec:=#AS_TYPE_SPEC;
+--	    cl_it.ret_dec.name :=#IDENT("INT");
+-- 	    cl_it.body:=#AS_STMT_LIST;
+--	    cl_it_r ::= #AS_RAISE_STMT;
+--	    cl_it_r.surr_stmt_list := cl_it.body;
+--	    cl_it.body.stmts := cl_it_r;
+--	    body.append(cl_it);
+--	end;  -- pSather
+
+    end; -- of parse
+
+    private dup_class_err(this_class,other_class:AS_CLASS_DEF) is
+	err_loc(this_class);
+	err("There are two classes with the name " + this_class.name.str +
+	    " and " + this_class.params.size + " parameters.\n\t" 
+	    "The other one is at:"+other_class.source.str ) 
+   end;
+    
+end; -- class PARSE

@@ -1,0 +1,202 @@
+\section{The Code Browser}
+\subsection{Starting the Browser}
+	The sather compiler comes with a graphical class browser which
+is written in a combination of Tcl and Sather.  It makes use of the
+front end of the compiler; hence invoking the browser is identical to
+invoking the compiler.  You can use any of the flags that you could
+use with the compiler, though most of them will not be meaningful.
+Furthermore, the browser will often work on partially correct code,
+since it ignores as many compiler errors as possible. To invoke the
+browser with the hello world program simply enter:
+{\tt sabrowse hello.sa}.  
+	After the front end has been run (a preliminary window will
+inform you of the progress of the browser if you use the -verbose
+flag) the Tcl-based user interface will appear. It may take you
+longer to run the browser than the compiler since the browser ignores
+-has clauses so as to make the entire sather library available to
+you while browsing.  
+
+\subsection{Browser Layout}
+	In its standard configuration, the user interface consists of
+4 panes:
+\begin{description}
+\item [Graph Pane] This pane will display the graph of the class or module 
+currently being viewed. Normally, all ancestors and descendants of the
+current class are displayed, but the display can be restricted in various
+ways by using the graph menu.
+\item [Class/Module Pane] This pane displays a list of the modules that
+comprise your current system. Below each module are the classes that
+are found in that module. Classes found in files that are specified on
+the command line (such as the MAIN class in hello.sa) will appear
+under the special module called ``CommandLine''.
+\item [Feature Pane] The feature pane shows a list of the features of the
+current class. Normally all features are visible, but the display can be
+restricted by using the ``Features'' menu.
+\item [Text Pane] This pane displays the text of the current class, module or 
+particular routine being viewed.
+\end{description}
+	At the bottom of the screen is a one-line ``information'' pane
+that prints out helpful information, including current browser actions
+and what each mousebutton does as soon as you enter a pane. Note that
+you can obtain detailed (and possibly more up-to-date) help on various
+topics from the Help menu.
+
+	Since hello world is too limited to be interesting, in order
+to explore the browser's capabilities, we will need to run the browser
+on the full example:
+\tt{sabrowse SChessD.module}
+
+\subsection{Browsing the Class Graph}
+	After the browser appears, go down to the pane titled
+``Modules and Classes''. Scroll downward until you find SChessD and
+click on it with the left mouse button. This should bring up the
+display shown below.  At the apex of the graph is the containing
+module, SChessD, below which are all the concrete, abstract and value
+classes that it contains (value classes are treated like concrete classes 
+by the browser). As you can see, the graph contains three
+different types of edges to denote module containment, subtyping and
+code inclusion - depending on whether your display is monochrome or
+color, they will either be shaded or colored differently. Note that
+the text pane displays the text of SChess.module
+
+	You can now browse through the components of your code
+(modules and classes) by either selecting items in the graph pane or
+in the Module/Class pane.  Try, for instance, clicking on the abstract
+class $CHESS_DISPLAY. This brings up a graph that consists of all
+ancestors (the SChess module) and descendants (the CHESS_DISPLAY and
+ASCII_DISPLAY classes) of $CHESS_DISPLAY.  The feature list pane holds
+a list of the features of the current abstract class, such as close
+and getmove.  Clicking on any of these features, such as
+ask_pawn_xchg, will cause that feature to be displayed and highlighted
+in the text pane. In a concrete class, such as BISHOP, you will see
+not just the features in class features, but the included features as
+well, such as ``is_king''. Clicking on this feature will take you to
+the appropriate line in the PIECE class where this feature is actually
+defined.
+
+	The following sections introduce special features of each of
+the panes.
+
+\subsection{The Graph Pane}
+	You can choose what kinds of components and edges are visible
+in the graph pane through the graph menu. 
+\begin{description}
+\item[Hiding/Showing nodes] You can choose to hide or
+display concrete classes, abstract classes or modules. In particular
+you can hide class names that begin with C_ or TEST_ from the graph menu.
+\item[Hiding/Showing edges] You can also
+choose to hide or view subtyping, code inclusion and module inclusion
+edges.  In very complex class hierarchies, hiding some of these edges
+may enable you to reduce the complexity of the graph sufficiently to
+show you the aspect you are interested in.  In some cases, hiding
+edges will cause the graph of the ancestors and descendants of the
+current class to become disconnected, frequently with a lot of
+singletons.  
+\item[Singletons] You can toggle whether singletons are visible or not by
+default using the ``Singletons'' check box in the graph menu. 
+\item[Horizontal Graph]  This check box determines whether the graph will be
+displayed from top to bottom or from left to right.
+\item[Update Graph] Since updating the graph may be slighly slow,
+for faster text-only browsing you can choose to not view changes to 
+the graph by toggling the ``Update Graph'' menu item.
+\item[Dump Current Graph] Dumps a postscript version of the current graph
+into a user specified file. If you do not like the default layout,
+you can move nodes around by dragging with the middle mouse button.
+\end{description}
+	The graph pane also has a scaling widget at its side. By default,
+when the graph comes up the browser tries to fit it in the current viewing
+area by adjusting the scale. If this graph is very large, the font used
+will be unreadable. You can expand the graph by using the scale widget
+and then scrolling around to find the portion that you want. 
+	
+	An interesting class to look at is $PIECE. The graph clearly
+shows how Sather's subtyping and code-inclusion can be used in close
+conjunction, in a manner similar to the single notion of
+``inheritance'' you may be used to in other object oriented languages.
+Clicking now on the KING class will display in the feature pane not
+just the features of the KING class, but all the myriad features
+inherited from PIECE as well.
+
+\subsection{The Class/Module Pane}
+	This pane always shows all classes and modules in the system.
+As mentioned before, selecting a class will display its
+ancestor/descendant graph in the graph pane, its features in the
+feature pane, and the class definition text in the text pane. Clicking
+with the middle mouse button on a class definition such as
+ASCII_DISPLAY will display a {\em description} of the class in the
+text pane, which consists of all the class routines and the routine
+comments which extracted from the code.  The quality of the extracted
+description depends on whether the programmer has commented his code
+in the standard sather library style. This feature is implemented in
+Tcl and can be slow - please be patient.
+
+\subsection{The Feature Pane}
+	The feature pane shows the alphabetically ordered list of
+features of the currently selected class.  In the case of non-abstract
+classes, the {\em flattened} list of features will be shown, taking
+into account code inclusion and renaming. Note that attributes and
+shared are shown as their component reader/writer routines, which may
+have different levels of protection.  You can toggle which features
+are visible from the Features menu.  For instance, toggling private
+features causes all private features to not be shown. If a feature has
+multiple relevant facets, it will be shown only if {\em all} the
+relevant attributes are enabled. For instance, if we turn of constants
+,privates and attributes features when viewing, all we are left with
+are the public routines and iters of the class: create, move!,
+update_position and valid_move. 
+
+	Selecting a particular feature brings up it's definition in
+the text pane.
+	
+\subsection{The Text Pane}
+	The text pane provides very simple editing/saving facilities,
+which should improve once we switch to Tk 4.0. Comments will be
+highlighted if the user selects Highlight Comments from the text
+menu. Since highlighting is slow, the user can set a maximum file size
+for which highlighting will be used.  For browsing combined with more
+sophisticated editing, we highly recommend that you use the sather
+mode under emacs. Please consult the sather-mode documentation to get
+started with the sather mode.  Once you have started up the sather
+emacs mode in an emacs buffer on the same display, you can run the
+function M-x server-start under emacs. Then go to the browser window,
+and choose ``Use Emacs'' from the text window.  If everything is set
+up correctly, for all further browsing you should see the text appear
+in the Emacs window rather than the text pane, and you can edit it
+there as you please.  Remember that the browser does not know about
+your changes to the text, and they can render it's file indices
+inaccurate.
+
+\subsection{Configuration}
+	You can save all the menu choices you have made by choosing
+``Save Configuration'' from the configuration menu. This saves a file
+called .bsConfig.tcl in your home directory, which will be
+automatically read in the next time you use the browser.  The
+configuration menu also allows you to resize the relative proportions
+of the top and bottom halves of the window.  Furthermore, an entirely
+different ``Multi-Window'' configuration can be chosen from the
+configuration menu, which separates out the graph pane into its own
+window, giving the other panes more space.  In order for this change
+of configuration to take effect, you will need to restart the browser.
+        It is also possible for the user to customize the colors
+and fonts that the browser uses by defining a file called .bsCustom.tcl
+in your home directory.  For more information, see the customization
+item under the help menu.
+ 
+\subsection{Conclusion}
+	The browser can be quite a useful tool in understanding your
+own or someone else's library.  In particular, it is very useful for
+browsing the Sather class library - it lets you easily find out what
+classes are available and what their interfaces are.  Other tools
+are available which will allow you to generate html versions of
+your library using the browser. For an example, see:
+http://www.icsi.berkeley.edu/~gomes/Sather/library.html
+
+	
+
+
+
+ 	
+	
+	
+
+

@@ -1,0 +1,315 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- $AS_EXPR: Supertype of all expression nodes.
+-- AS_EXPR: Implementation to be included by $AS_EXPR nodes.   
+-- AS_SELF_EXPR, AS_CALL_EXPR, AS_VOID_EXPR, AS_IS_VOID_EXPR, AS_ARRAY_EXPR, 
+-- AS_CREATE_EXPR, AS_BOUND_CREATE_EXPR, AS_UNDERSCORE_ARG, AS_AND_EXPR, 
+-- AS_OR_EXPR, AS_EXCEPT_EXPR, AS_NEW_EXPR, AS_INITIAL_EXPR, 
+-- AS_BREAK_EXPR, AS_RESULT_EXPR, AS_BOOL_LIT_EXPR, AS_CHAR_LIT_EXPR,
+-- AS_STR_LIT_EXPR, AS_INT_LIT_EXPR, AS_FLT_LIT_EXPR, AS_HERE_EXPR,
+-- AS_WHERE_EXPR, AS_NEAR_EXPR, AS_FAR_EXPR, AS_AT_EXPR, AS_ANY_EXPR,
+-- AS_CLUSTER_EXPR, AS_CLUSTER_SIZE_EXPR, AS_COHORT_EXPR, AS_GLOBAL_EXPR
+-- 
+-------------------------------------------------------------------      
+abstract class $AS_EXPR < $AS_NODE, $NEXT{$AS_EXPR} is
+   -- Supertype of all expression nodes.
+end;
+   
+-------------------------------------------------------------------      
+class AS_EXPR < $AS_EXPR is
+   -- Supertype of all expression nodes.
+   include AS_NODE;
+   include NEXT{$AS_EXPR};
+end;
+   
+-------------------------------------------------------------------
+class AS_SELF_EXPR < $AS_EXPR is
+   -- A "self" expression.
+   include AS_EXPR;
+end;
+   
+-------------------------------------------------------------------   
+class AS_CALL_EXPR < $AS_EXPR is
+   -- Expressions which directly make a call. The parser should convert
+   -- sugar expressions into these as well (except for /= which should
+   -- be converted into an "=" expression and a call on "not"). 
+   include AS_EXPR;
+   
+   attr ob:$AS_EXPR;		-- The expr the call is made on, if any.
+   attr tp:AS_TYPE_SPEC;	-- The class the call is made on, if any.
+   attr name:IDENT;		-- The name of the call.
+   attr args:$AS_EXPR;		-- The arguments, if any.
+   attr modes: AS_ARG_MODE;     -- Modes of these arguments (if present)
+   attr is_array:BOOL;		-- True if this is a call with square
+      -- brackets. "a(1,2)[3,4]" gets turned into 2 AS_CALL_EXPR
+      -- objects, one for a(1,2), and one for [3,4].
+   attr flip:BOOL;		-- True if need to flip order of evaluation
+      -- of arguments because orginated in a ">" or "<=" sugar expr.
+   
+   args_size:INT is
+      if void(args) then return 0
+      else return args.size
+      end
+   end;
+
+end;
+
+-------------------------------------------------------------------
+class AS_VOID_EXPR < $AS_EXPR is
+   -- The void expression.
+   include AS_EXPR;
+end;
+
+-------------------------------------------------------------------
+class AS_IS_VOID_EXPR < $AS_EXPR is
+   -- The void expression.
+   include AS_EXPR;
+   
+   attr arg:$AS_EXPR;		-- The argument to test.
+end;
+   
+-------------------------------------------------------------------
+class AS_ARRAY_EXPR < $AS_EXPR is
+   -- array expressions.
+   include AS_EXPR;
+
+   attr elts:$AS_EXPR;		-- The elements.
+   
+   elts_size:INT is
+      if void(elts) then return 0
+      else return elts.size
+      end
+   end;   
+   
+end;
+
+-------------------------------------------------------------------
+class AS_CREATE_EXPR < $AS_EXPR is
+   -- Reference and value object constructor expressions.
+   include AS_EXPR;
+   
+   attr tp:AS_TYPE_SPEC;	-- The type, if any.
+   attr elts:$AS_EXPR;		-- The arguments, if any.
+   attr modes:AS_ARG_MODE;      -- Modes of the arguments
+   
+   elts_size:INT is
+      if void(elts) then return 0
+      else return elts.size
+      end
+   end;   
+
+end;
+
+-------------------------------------------------------------------
+class AS_BOUND_CREATE_EXPR < $AS_EXPR is
+   -- Bound object constructor expressions.
+   include AS_EXPR;
+   
+   attr call:AS_CALL_EXPR;	-- The call.
+   attr is_iter:BOOL;		-- True for iter creation.
+   attr is_f_rout:BOOL;         -- true for #F_ROUT 
+   attr ret:AS_TYPE_SPEC;	-- Return type, void if none specified.
+end;
+
+-------------------------------------------------------------------
+class AS_UNDERSCORE_ARG < $AS_EXPR is
+   -- An underscore argument in a bound routine or iter creation
+   -- expression.
+   include AS_EXPR;
+   
+   attr tp:AS_TYPE_SPEC;	-- Type if specified.
+end;
+
+-------------------------------------------------------------------
+class AS_AND_EXPR < $AS_EXPR is
+   -- "and" expressions.
+   include AS_EXPR;
+   
+   attr e1,e2:$AS_EXPR;		-- The two expressions.
+end;
+
+-------------------------------------------------------------------
+class AS_OR_EXPR < $AS_EXPR is
+   -- "or" expressions.
+   include AS_EXPR;
+   
+   attr e1,e2:$AS_EXPR;		-- The two expressions.
+end;
+   
+-------------------------------------------------------------------
+class AS_EXCEPT_EXPR < $AS_EXPR is
+   -- "exception" expressions.
+   include AS_EXPR;
+end;   
+   
+-------------------------------------------------------------------
+class AS_NEW_EXPR < $AS_EXPR is
+   -- "new" expressions.
+   include AS_EXPR;
+   
+   attr arg:$AS_EXPR;		-- The argument, if any
+end;
+
+-------------------------------------------------------------------
+class AS_INITIAL_EXPR < $AS_EXPR is
+   -- "initial" expressions.
+   include AS_EXPR;
+   
+   attr e:$AS_EXPR;		-- The expression to pre-evaluate.
+end;
+
+-------------------------------------------------------------------
+class AS_BREAK_EXPR < $AS_EXPR is
+   -- "break!" expressions.
+   include AS_EXPR;
+end;   
+      
+-------------------------------------------------------------------
+class AS_RESULT_EXPR < $AS_EXPR is
+   -- "result" expressions.
+   include AS_EXPR;
+end;   
+      
+-------------------------------------------------------------------
+class AS_BOOL_LIT_EXPR < $AS_EXPR is
+   -- A boolean literal expression.
+   include AS_EXPR;
+   
+   attr val:BOOL;		-- The value.
+end;
+
+-------------------------------------------------------------------
+class AS_CHAR_LIT_EXPR < $AS_EXPR is
+   -- A character literal expression.
+   include AS_EXPR;
+   
+   attr val:INT;		-- Integer value of char.
+end;
+
+-------------------------------------------------------------------
+class AS_STR_LIT_EXPR < $AS_EXPR is
+   -- A string literal expression.
+   include AS_EXPR;
+   
+   attr s:STR;			-- String form of the literal.
+end;
+
+-------------------------------------------------------------------
+class AS_INT_LIT_EXPR < $AS_EXPR is
+   -- An integer literal expression.
+   include AS_EXPR;
+   
+   attr val:INTI;		-- Integer value of the expression.
+   attr is_inti:BOOL;		-- Is an infinite precision literal.
+   
+end;
+
+-------------------------------------------------------------------
+class AS_FLT_LIT_EXPR < $AS_EXPR is
+   -- A floating point literal expression.
+   include AS_EXPR;
+
+   const flt, fltd, fltx, fltdx, flti;   
+   
+   attr val:RAT;		-- Rational with value.
+   attr tp:INT;			-- One of the five types of float.
+end;
+
+-------------------------------------------------------------------
+class AS_HERE_EXPR < $AS_EXPR is
+   -- A "here" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+end;
+
+-------------------------------------------------------------------
+class AS_GLOBAL_EXPR < $AS_EXPR is
+   -- A "global" expression.
+   -- (zones construct).
+   include AS_EXPR;
+
+end;
+
+-------------------------------------------------------------------
+class AS_ANY_EXPR < $AS_EXPR is
+   -- An "any" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+end;
+
+-------------------------------------------------------------------
+class AS_CLUSTER_EXPR < $AS_EXPR is
+   -- An "clusters" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+end;
+
+-------------------------------------------------------------------
+class AS_CLUSTER_SIZE_EXPR < $AS_EXPR is
+   -- A "cluster_size" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+end;
+
+-------------------------------------------------------------------
+class AS_COHORT_EXPR < $AS_EXPR is
+   -- An "cohort" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+   attr name_after_pSather_trafo:IDENT;
+end;
+
+
+-------------------------------------------------------------------
+class AS_WHERE_EXPR < $AS_EXPR is
+   -- A "where" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+   attr e: $AS_EXPR;
+end;
+
+-------------------------------------------------------------------
+class AS_NEAR_EXPR < $AS_EXPR is
+   -- A "near" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+   attr e: $AS_EXPR;
+end;
+
+-------------------------------------------------------------------
+class AS_FAR_EXPR < $AS_EXPR is
+   -- A "far" expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+   attr e: $AS_EXPR;
+end;
+
+-------------------------------------------------------------------
+class AS_AT_EXPR < $AS_EXPR is
+   -- A '@' expression.
+   -- (pSather construct).
+   include AS_EXPR;
+
+   attr e, at: $AS_EXPR;
+end;
+
+-------------------------------------------------------------------

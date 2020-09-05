@@ -1,0 +1,117 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class ARR_ALG{ETP,ATP<$ARR{ETP}} is
+   -- Miscellaneous array algorithms
+   -- Usage:
+   --     a: ARRAY{FLT} := |1.0,2.0,3.0,3.0|;
+   --     arr_alg: ARR_ALG{INT,ARRAY{INT}}; -- dummy variable
+   --     Counting 3s in the array
+   --       number_of_threes: INT := arr_alg.count(a,3.0);
+   --     Getting an array of indices
+   --       index_array:ARRAY{INT} := arr_alg.inds(a);
+   include COMPARE{ETP};
+   
+   equals(a: ATP,e: $ARR{ETP}): BOOL is
+      -- Returns true if all of "e"'s elements are equal to a's elts
+      if e.size /= a.size then return false end;
+      i ::= 0; sz ::= a.size; loop until!(i = sz);
+	 if ~elt_eq(e[i],a[i]) then return false end ;
+	 i := i + 1;
+      end;   
+      return true
+   end;
+
+   count(a: ATP,v:ETP):INT is
+      -- The number of elements that are `elt_eq' to `v'.
+      r::=0; 
+      i ::= 0; sz ::= a.size; loop until!(i = sz);
+	 if elt_eq(a[i],v) then r := r + 1; end;
+	 i := i + 1;
+      end;      
+      return r 
+   end;
+
+   inds(a: ATP): ARRAY{INT} is
+      -- Return an index array which is the same size as self and
+      -- is set to the values of the indices
+      sz: INT := a.size;
+      res: ARRAY{INT} := #(sz);
+      i: INT := 0; loop until!(i >= sz); res[i] := i; i := i + 1; end;
+      return res
+   end;
+   
+   replace_if(a: ATP,test: ROUT{ETP}:BOOL,replacement_value: ETP) is
+      i:INT :=0; asz ::= a.size; loop until!(i>=asz);
+	 if test.call(a[i]) then a[i] := replacement_value; end;
+	 i := i + 1;
+      end;
+   end;
+   
+   replace(a: ATP, old_elt,new_replacement: ETP) is
+      -- Replace elements that are `elt_eq' to `o' by `n' wherever it occurs
+      i:INT :=0; asz ::= a.size; loop until!(i>=asz);
+	 if elt_eq(a[i],old_elt) then a[i] := new_replacement end;
+	 i := i + 1;
+      end;
+   end;
+   
+   mismatch(a:ATP,pattern: ARRAY{ETP}):INT is
+      -- The index of the first element of self which differs from 
+      -- `a'. -1 if self is a prefix of `a' or self is void.
+      if void(a) then return -1 end;
+      loop r::=a.ind!; if ~elt_eq(a[r],pattern.elt!) then return r end end;
+      return -1 
+   end;
+
+   -- Applicative functions on arrays
+   map(a: ATP,r:ROUT{ETP}:ETP) is
+      -- Set each element of self to the result of applying `r' to it.
+      i ::= 0; sz ::= a.size; loop until!(i = sz);
+	 a[i] := r.call(a[i]);
+	 i := i + 1;
+      end;
+   end;
+
+   reduce(a:ATP, r:ROUT{ETP,ETP}:ETP, start_value:ETP) :ETP is
+      -- Combine all the elements of self by applying `r' over elements
+      -- in the order determined by ind!
+      res: ETP := start_value;
+      i ::= 0; sz ::= a.size;
+      loop until!(i = sz);
+	 res := r.call(res,a[i]);  
+	 i := i + 1;
+      end;	 
+      return res;
+   end;
+   
+   scan(a:ATP, r:ROUT{ETP,ETP}:ETP, start_value:ETP) is
+      -- Set each element in a to the result of applying `r' left to
+      -- right to the array up to the element. The first element is left
+      -- unchanged. 
+      cur_accum: ETP := start_value;
+      i ::= 0; sz ::= a.size;
+      loop until!(i>=sz);
+	 cur_val: ETP := a[i];
+	 cur_accum := r.call(cur_accum,cur_val);
+	 a[i] := cur_accum;
+	 i := i + 1;
+      end;
+   end; 
+   
+
+end; -- class ARR_ALG{ETP,ATP<$ARR{ETP}}
+-------------------------------------------------------------------
+

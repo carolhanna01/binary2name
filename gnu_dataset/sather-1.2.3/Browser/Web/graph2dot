@@ -1,0 +1,76 @@
+#!/usr/bin/tclsh
+#------------------------------>  Tcl - script  <-----------------------------#
+#- Copyright (C) 199x by International Computer Science Institute            -#
+#- This file is part of the GNU Sather package. It is free software; you may -#
+#- redistribute  and/or modify it under the terms of the  GNU General Public -#
+#- License (GPL)  as  published  by the  Free  Software  Foundation;  either -#
+#- version 3 of the license, or (at your option) any later version.          -#
+#- This  program  is distributed  in the  hope that it will  be  useful, but -#
+#- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY -#
+#- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        -#
+#- The license text is also available from:  Free Software Foundation, Inc., -#
+#- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     -#
+#------------->  Please email comments to <bug-sather@gnu.org>  <-------------#
+
+proc satherCleanName { nodeName } {
+    # Replace all the dangerous characters that sather uses
+    # in class names
+    regsub {\$} ${nodeName} {dol} newName
+    regsub {\{} ${newName} {LB} newName2
+    regsub {\}} ${newName2} {RB} newName3
+    regsub {\}} ${newName2} {RB} newName3
+    regsub {\\} ${newName3}  slash newName4
+    regsub {\.} ${newName4} dot newName5
+    return ${newName5}
+}
+
+proc dottyPutNode { fn name } {
+    set cn [satherCleanName ${name}]
+    puts $fn " \"${cn}\"  \[ \n label = \"${name}\" \n \];"
+}
+
+proc dottyPutEdge { fn src dest } {
+    set cs [satherCleanName ${src}]
+    set cd [satherCleanName ${dest}]
+    puts $fn " \"${cs}\" -> \"${cd}\" \[ \n \];"
+}
+
+proc getAllFile { fname } {
+    set ret ""
+    if { [file exists ${fname}] } {
+	set f [open ${fname} r]
+	set ret [read $f]
+	close $f
+    } else {
+	puts "No File found: $fname"
+	set ret "No File Found:${fname}"
+    }
+    return $ret
+}
+
+set gHome "$env(SATHER_HOME)"
+set header [open "${gHome}/Browser/Web/dotty-header" r]
+set headerStr [read $header]
+close ${header}
+set fileName $argv
+
+puts "$fileName"
+set infl [open ${fileName} "r"]
+set graphInfo [getAllFile ${fileName}]
+set outfl [open "${fileName}.dot" "w"]
+puts $outfl ${headerStr}
+set edges [lindex ${graphInfo} 2]
+foreach edge ${edges} {
+    set src [lindex ${edge} 0]
+    set dest [lindex ${edge} 1]
+    dottyPutNode ${outfl} ${src}
+    dottyPutNode ${outfl} ${dest}
+}
+foreach edge ${edges} {
+    set src [lindex ${edge} 0]
+    set dest [lindex ${edge} 1]
+    dottyPutEdge $outfl  ${src}  ${dest}
+}
+puts ${outfl} "\}"
+close ${outfl}
+

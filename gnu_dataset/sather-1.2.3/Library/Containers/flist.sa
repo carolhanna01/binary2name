@@ -1,0 +1,523 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- flist.sa: Array-based lists of elements of type T.
+
+-- Jan4/96 - incorporated Erik Schnetter's changes.
+-------------------------------------------------------------------
+class FLIST{T} < $ARR{T} is
+   -- Array-based lists of elements of type T.  These are extensible
+   -- stacks based on amortized doubling.  They may often be used as
+   -- replacements for linked lists.  Like linked lists (which are
+   -- widely used as containers in languages like Lisp), they serve as
+   -- general container objects for holding collections of other
+   -- objects. They are often a more efficient abstraction, however,
+   -- because less allocation and deallocation must occur, because
+   -- they keep successive elements in successive memory locations,
+   -- because they don't require storage for the links in a linked
+   -- list, and they support efficient access by array index.  Linked
+   -- lists also support insertion and deletion into the middle of the
+   -- list.  The set operations `union', `intersection', `difference',
+   -- and `sym_difference' and the searching operation `index_of' are
+   -- implemented by brute force search. If extensive use is made of
+   -- these operations, one should consider the use of other data
+   -- structures such as FSET{T}.
+   
+   include COMPARE{T};
+   
+   private include AREF{T} aget->private aref_aget, 
+	 aset->private aref_aset; -- Storage for the stack elements.
+
+   private attr loc:INT;	-- The index to insert the next element.
+
+      
+   -- It would be appropriate to verify the value of "loc" with an
+   -- invariant here, but for efficiency we want to be able to destroy
+   -- old objects after a size change occurs (requiring the
+   -- writeback).  Such calls destroy self, and so the invariant can't
+   -- be called.  
+   -- invariant:BOOL is
+   --    if void(self) then return true end;
+   --    else return loc.is_bet(0,asize) and asize>0 end;
+    
+   create:SAME is return void; end;
+
+   create(n:INT):SAME
+   -- A new empty FLIST capable of storing `n' elements without extra
+   -- space allocation.
+      pre n>=0 is 
+      if n=0 then return void
+      else return new(n)
+      end;
+   end;
+
+   create(a: ARRAY{T}): SAME is
+      -- Create a new FLIST from the elements in the array "a"
+      -- Useful for using the array shorthand for specifying the elements
+      sz ::= a.size;
+      res ::= new(sz);
+      res.loc := sz;
+      i ::= 0; loop until!(i = sz); res[i] := a[i]; i := i + 1; end;
+      return res;
+   end;
+   
+   create_from(a: $ELT{T}): SAME is
+      -- Create from any container
+      res ::= #SAME;
+      loop res := res.push(a.elt!) end;
+      return res;
+   end;
+	 
+   create_empty_sized(n: INT): SAME  
+   -- Create an flist with n elements that are set to elt_nil
+      pre n >= 0
+   is
+      res ::= create(n);
+      res.loc := n;
+      loop res.aset!(res.elt_nil) end;
+      return res;
+   end;
+
+   copy:SAME is
+      -- A copy of self.
+      if void(self) then return void end;
+      r::=new(asize); 
+      i ::= 0; sz ::= loc;
+      r.loc := loc;
+      loop until!(i = sz); r[i] := [i]; i := i + 1; end;
+      return r;
+      -- loop r:=r.push(elt!) end; return r 
+   end;
+
+   -- **** Insertion and deletion
+   push(e:T):SAME is
+      -- Add a new element to the end of the list and return the list.
+      -- If self is void, create a new list. Usage: `l:=l.push(e)'.
+      r:SAME;
+      if void(self) then r:=new(5)
+      elsif loc<asize then r:=self
+      else r:=new(2*asize); r.loc:=loc; 
+	 loop r.aset!(elt!) end;
+	 -- clear
+	 SYS::destroy(self);	-- The old one should never be used.
+      end;
+      r.loc:=r.loc+1; r[r.loc-1]:=e; 
+      return r 
+   end;
+
+   pop:T is
+      -- Return the top element and shrink the list.
+      -- Void if the list is empty or void.
+      if size=0 then return void end;
+      r::=[loc-1]; [loc-1]:=void; loc:=loc-1; return r 
+   end;
+
+   top:T is
+      -- The value of the top of the list.
+      -- Void if the list is empty or void.
+      if size=0 then return void end;      
+      return [loc-1] 
+   end;
+
+   fill(e: T) is
+      loop set!(e) end;
+   end;
+
+   clear is			
+      -- Clear the list. Self may be void.  Clear array elements
+      -- so they won't be referenced any more (and may become garbage).
+      if is_empty then return
+      else 
+	 nil: T; 
+	 loop [size.times!]:= nil end;
+	 loc:=0;
+      end;
+   end;
+    
+   reset is
+      -- Semantically identical to clear, but don't reset array
+      -- values (space may not be freed).  Useful for quickly
+      -- emptying the list when you know it won't matter.
+      if ~void(self) then loc := 0 end;
+   end;
+    
+   push_if_new(e:T):SAME is
+      -- Push `e' if it is not already present in the list.
+      -- Self may be void. 
+      -- Usage is: `l:=l.push_if_new(e)'. Consider using FSET{T}.
+      if has(e) then return self else return push(e) end 
+   end;
+
+   append(l:SAME):SAME 
+   -- Append `l' to the end of self and return the result.
+   -- Self may be void. `l' mustn't equal self unless void.
+   -- Modified(ben) - hopefully much more efficient - no iters
+      pre ~SYS::ob_eq(l,self) or void(self) is 
+      r::=copy; 
+      old_size ::= size;
+      r := r.expand_to_size(size+l.size);
+      i ::= old_size; sz ::= old_size+l.size;
+      li ::= 0; 
+      loop until!(i=sz); 
+	 r[i] := l[li];
+	 li := li+1;
+	 i  := i + 1;
+      end; 
+      return r 
+   end;
+
+   concat(l:SAME):SAME
+   -- Append 'l' destructively.  'l' mustn't equal self
+   -- unless void.
+   -- Modified (ben) - hopefully more efficient - no iters, single alloc
+      pre ~SYS::ob_eq(l,self) or void(self) is
+      res::=self;
+      if ~void(l) then 
+	 oldsize ::= size;
+	 res := res.expand_to_size(size+l.size);
+	 i ::= 0; sz ::= l.size;
+	 resi ::= oldsize;
+	 loop until!(i = sz);
+	    res[resi] := l[i];
+	    i := i + 1;
+	    resi := resi+1;
+	 end;
+	 -- Old version: res:=res.push(l.elt!) end 
+      end;
+      return (res);
+   end;
+
+   -- Users are advised to use this first set of routines
+   -- since these may later be rewritten to allow the FLIST
+   -- to shrink, which the versions without return values cannot do.
+   delete(ind: INT): SAME is delete(ind); return self end;
+   delete_elt(e: T): SAME is delete_elt(e); return self end;
+   delete_ordered(ind: INT): SAME is delete_ordered(ind); return self end;
+   delete_elt_ordered(e: T): SAME is delete_elt_ordered(e); return self end;
+   
+   delete(ind:INT) 
+   -- Delete the element with index `ind' and move the last element in
+   -- its place. Self may not be void.
+      pre ~void(self) and ind.is_bet(0,loc-1) 
+   is
+      [ind]:=[loc-1]; loc := loc - 1;  
+   end;
+
+   delete_elt(e: T) is  delete(index_of(e)) end;
+   -- Delete first occurance of element e from the list.  Consider
+   -- using FSET.
+   
+   delete_ordered(ind: INT) 
+   -- Delete the element with index `ind' and move up all other
+   -- elements (thus preseving order). More expensive than
+   -- 'delete'. Self may not be void.
+      pre ~void(self) and ind.is_bet(0,loc-1) is
+      i ::= ind+1; loop until!(i>=size);
+	 [i-1] := [i];
+	 i := i+1;
+      end;
+      loc := loc -1;
+   end;
+   
+   delete_elt_ordered(e: T) is delete_ordered(index_of(e)) end;
+   -- Similar to delete_ord, but for the element "e"
+   
+   insert_after(ind:INT, val:T): SAME pre valid_after_ind(ind) is
+      -- Insert the value "val" after the index "ind".
+      -- push all later elements upwards.
+      r: SAME := expand_to_size(size+1);	
+      -- Then move all elements downwards
+      r.push_downward(ind+1,1);
+      r[ind+1] := val;
+      return r;
+   end;
+   
+   insert_before(ind:INT, val:T): SAME pre valid_before_ind(ind) is
+      -- Insert val just before index "ind"
+      r: SAME := expand_to_size(size+1);	
+      -- Then move all elements downwards, including the elt at "ind"
+      r.push_downward(ind,1);	
+      r[ind] := val;
+      return r;
+   end;
+   
+   insert_all_after(ind:INT, val:$CONTAINER{T}):SAME 
+      pre valid_after_ind(ind) is
+      -- Insert all the values in "val" after the element at index
+      -- "ind" in the order in which they are yielded by "val.elt!"
+      r: SAME := expand_to_size(size+val.size);
+      r.push_downward(ind+1,val.size);
+      i ::= ind+1;  loop r[i] := val.elt!; i := i + 1; end;
+      return r
+   end;
+      
+   insert_all_before(ind:INT, val:$CONTAINER{T}) :SAME 
+      -- Insert all the values in "val" before the element in self at
+      -- index "ind" in the order in which they are yielded by "val.elt!"
+      pre valid_before_ind(ind) 
+   is
+      r: SAME := expand_to_size(size+val.size);
+      r.push_downward(ind,val.size);
+      i ::= ind;  loop r[i] := val.elt!; i := i + 1; end;
+      return r
+   end;
+
+   -- **** Predicates
+   contains(e: T): BOOL is return has(e) end;
+     
+   has(e:T):BOOL is
+      -- True if `e' is contained in self.
+      loop if elt_eq(e,elt!) then return true end end;
+      return false 
+   end;
+
+   is_empty:BOOL is	
+      -- True if the list is empty or void.
+      return size=0 
+   end;
+
+   equals(l: $CONTAINER{T}): BOOL is
+      -- Return true if the elemetns of "l" are the same as the elements
+      -- of self
+      typecase l
+      when SAME then
+	 if size /= l.size then return false end;
+	 loop 
+	    if ~elt_eq(elt!,l.elt!) then return false end;
+	 end;
+	 return true;
+      else return false; end;
+   end;
+   
+   has_ind(i: INT): BOOL is
+      -- Return true if "i" is a valid index in this FLIST
+      return 0 <= i and i < size 
+   end;
+
+   valid_after_ind(i: INT): BOOL is return -1 <= i and i < size end;
+   valid_before_ind(i:INT): BOOL is return 0 <=i and i <= size end;
+
+   -- **** Access functions
+   size:INT is
+      -- The current size. Self may be void.
+      if void(self) then return 0 else return loc end 
+   end;
+    
+   aget(ind:INT):T			
+   -- The element of self with index `ind'. Self may not be void.
+      pre ~void(self) and ind.is_bet(0,loc-1) 
+   is
+      return aref_aget(ind) 
+   end;
+
+   aset(ind:INT,val:T)
+   -- Set the element of self with index `ind' to `val'. Self may
+   -- not be void. 
+      pre ~void(self) and ind.is_bet(0,loc-1) 
+   is 
+      aref_aset(ind,val) 
+   end;
+
+   index_of(e:T):INT is
+      -- The list index of `e'. -1 if the list is void or the
+      -- element is not present (not fast). Consider using FSET{T}.
+      if ~void(self) then
+	 loop r::=ind!; if elt_eq(e,[r]) then return r end end 
+      end;
+      return -1 
+   end;   
+
+   -- **** Iterators
+   elt!:T is
+      -- Yield the elements of self in order. Self may be void.
+      -- Don't insert elements while calling this.
+      -- Modified (ben) - must ask Claudio
+      if ~void(self) then 
+	 i ::= 0; sz ::= loc;
+	 loop until!(i = sz); yield [i]; i := i + 1; end;
+      end;
+   end;
+
+   elt!(once beg:INT):T
+   -- Yield the elements of self starting at `beg'.
+   -- Don't insert elements while calling this.   
+   -- Modified (ben) - Looked at fast version - does 
+   -- not seem to be optimized out. Must ask Claudio about this
+      pre ~void(self) and beg.is_bet(0,loc-1) 
+   is
+      i ::= beg; sz ::= loc;
+      loop until!(i = sz); yield [i]; i := i + 1; end;
+   end;
+   --	loop yield aelt!(beg,loc-beg) end end;	 
+    
+   elt!(once beg,once  num:INT):T
+   -- Yield `num' successive elements starting at index `beg'.
+   -- Don't insert elements while calling this.      
+      pre ~void(self) and beg.is_bet(0,loc-1) and 
+	 num.is_bet(0,loc-beg) is
+      i ::= beg; sz ::= loc.min(beg+num);
+      loop until!(i = sz); yield [i]; i := i + 1; end;
+   end;
+
+   elt!(once beg,once  num,once  step:INT):T
+   -- Yield `num' elements starting at `beg' stepping by `step'.
+      pre ~void(self) and is_legal_iteration(beg,num,step,loc) is
+      loop yield aelt!(beg,num,step) end 
+   end;
+    
+   private is_legal_iteration(beg,num,step:INT,container_size:INT): BOOL is
+      -- True if the arguments are legal for an iteration from
+      -- index beg, with a step of "step" for "num" iterators
+      -- in a container of size "container_size"
+      if ~beg.is_bet(0,container_size-1) then return false end;
+      if step>0 then return num.is_bet(0,(container_size-1-beg+step)/step);
+      elsif step<0 then return num.is_bet(0,(beg-step)/-step);
+      else return false end 
+   end;
+   
+   set!(e: T) is
+      loop aset!(e); yield; end;
+   end;
+
+   ind!:INT is		
+      if ~void(self) then      
+	 loop yield 0.upto!(loc-1) end 
+      end 
+   end;
+
+   -- **** Conversion
+   array:ARRAY{T} is		
+      -- An array containing the elements of self. Void if self is void.
+      if void(self) then return void end;
+      r::=#ARRAY{T}(loc); 
+      loop r.set!(elt!) end; return r 
+   end;
+
+   inds: ARRAY{INT} is 
+      -- Return an array consisting of the indices of the FLIST
+      res ::= #ARRAY{INT}(size);
+      loop res.set!(size.times!) end;
+      return res;
+   end;
+   
+   str: STR is 
+      -- Prints out a string version of the flist of the components 
+      -- that are under $STR
+      if void(self) then return "{}" else return ELT_ALG{T}::str(self)  end;
+   end;
+
+   as_array:ARRAY{T} is 
+      res ::= #ARRAY{T}(size);
+      loop res.set!(elt!) end;
+      return res;
+   end;
+   
+   -- **** Non modifying operators
+   union(l:SAME):SAME is
+      -- A new list containing the elements in self unioned with
+      -- those in `l'. Doesn't modify self or `l'. Self may be void.
+      -- Consider using FSET{T} for better performance.
+      r::=copy; loop r:=r.push_if_new(l.elt!) end; return r 
+   end;
+    
+   intersect(l:SAME):SAME is
+      -- A new list containing the elements in both self and `l'.
+      -- Doesn't modify self or `l'. Consider FSET{T} for better 
+      -- performance. Self may be void.
+      r:SAME;
+      loop e::=elt!; if l.has(e) then r:=r.push(e) end end;
+      return r 
+   end;
+    
+   difference(l:SAME):SAME is
+      -- A new list containing the elements of self not in `l'.
+      -- Doesn't modify self or `l'. Consider FSET{T} for better
+      -- performance. Self may be void.
+      r:SAME;
+      loop e::=elt!; if ~l.has(e) then r:=r.push(e) end end;
+      return r 
+   end;
+
+   sym_difference(l:SAME):SAME is
+      -- A new list containing the elements in self or `l' but
+      -- not both. Doesn't modify self or `l'. Consider FSET{T} for
+      -- better performance. Self may be void.
+      r:SAME; 
+      loop e::=elt!; if ~l.has(e) then r:=r.push(e) end end;
+      loop e::=l.elt!; if ~has(e) then r:=r.push(e) end end;
+      return r 
+   end;
+
+   sublist(beg,num:INT):SAME 
+   -- A new list with `num' entries copied from self starting
+   -- at `beg'. Self may not be void.
+      pre ~void(self) and
+	 beg.is_bet(0,loc-1) and num.is_bet(0,loc-beg) is
+      r::=new(num+5); r.loc:=num; r.acopy(0,num,beg,self); return r 
+   end;
+
+   -- **** Modifying operators
+   to_reverse is
+      -- Reverse the order of the elements in self. Self may be void.
+      if void(self) then return end;
+      loop i::=(loc/2).times!; 
+	 u::=loc-i-1; t::=[i]; [i]:=[u]; [u]:=t 
+      end 
+   end; 
+   
+   -- ------------------- Implementation ------------------
+   private push_downward(from_ind: INT, by: INT) pre from_ind >= 0 is
+      -- Push all the elements from  index "from_ind" downward by
+      -- "ind" spots. The last elements are pushed off the end
+      to ::= size-1;
+      from ::= size-by-1;
+      -- if size = 0 then return; end;
+      loop until!(from < from_ind);
+	 [to] := [from];
+	 from := from - 1;	-- Increments should be faster than using 
+	 to := to - 1;		-- just one index and offseting it.
+      end;
+   end;
+   
+   private expand_to_size(new_size: INT): SAME is
+      -- Expand space so that the result has space for "new_size" elements.
+      -- Then set the location to new_size, indicating that it is filled
+      -- After this is done, the resulting array will be of size = new_size
+      -- and will have all the old elements of "self" copied over
+      -- and the remaining elements (if any) void
+      r: SAME;
+      if void(self) then r:=new(5.max(new_size))
+      elsif new_size<=asize then r:=self
+      else r:=new((2*asize).max(new_size)); 
+	 r.loc:=loc;		-- Necessary?
+	 i ::= 0; sz ::= size;	-- Copy over existing elements in self
+	 loop until!(i = sz);
+	    r[i] := [i] ;
+	    i := i + 1;
+	 end; 
+	 SYS::destroy(self); -- The old one should never be used.
+      end;
+      r.loc := new_size;
+      return r 
+   end;
+
+   count(e:T):INT is 
+      -- Return the number of occurences of 'e' in self
+      res:INT := 0;
+      loop i ::= elt!; if elt_eq(e,i) then res := res+1; end;  end;
+      return res;
+   end;
+
+end; -- class FLIST{T}
+
+-------------------------------------------------------------------

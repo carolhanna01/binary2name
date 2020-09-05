@@ -1,0 +1,341 @@
+@c rectang.texi
+
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+ 
+@node Rectangle Reference, Regular Closed Plane Curve Reference, Regular Polygon Reference, Top
+@chapter Rectangle Reference
+
+@tindex Rectangle
+Class @code{Rectangle} is defined in @file{rectangs.web}, and 
+is derived from @code{Polygon}, using public derivation.
+
+As noted above in @ref{Affine Transformations for Polygons,,
+Polygon Reference; Affine Transformations}, @code{class Rectangle},
+like @code{class Reg_Polygon}, 
+currently inherits its transformation functions and
+@code{operator*=(const Transform&)} from @code{Polygon}.  Consequently,
+the data members of a @code{Rectangle}, except for @code{center}, are
+not recalculated when it's transformed.  I plan to change this soon!  It
+will also be necessary to add the function
+@code{Rectangle::is_rectangular()}, in order to test whether a
+@code{Rectangle} is still rectangular. 
+ 
+@menu
+* Rectangle Data Members::      
+* Rectangle Constructors and Setting Functions::  
+* Rectangle Operators::         
+* Returning Points for Rectangles::  
+* Querying Rectangles::         
+* Ellipses for Rectangles::     
+@end menu
+
+@node Rectangle Data Members, Rectangle Constructors and Setting Functions, Rectangle Reference, Rectangle Reference
+@section Data Members
+
+@deftypevr {Private variables} real axis_h
+@deftypevrx {} real axis_v
+The lengths of the horizontal and vertical axes, respectively, of the
+@code{Rectangle}.  Actually, 
+they are merely the horizontal and vertical axes by convention, since
+there are no restrictions on the orientation of an @code{Rectangle}.
+
+Please note that @code{axis_h} and @code{axis_v} are currently not
+recalculated, when a @code{Rectangle} is transformed.  I plan to do
+something about this soon.
+@end deftypevr 
+
+@deftypevr {Private variable} bool on_free_store
+@code{true}, if the @code{Rectangle} was dynamically allocated on the
+free store, otherwise @code{false}.  Dynamic allocation of
+@code{Rectangles} should only be 
+performed by @code{create_new<Rectangle>()}, which sets
+@code{on_free_store} to @code{true}. 
+@end deftypevr
+
+@node Rectangle Constructors and Setting Functions, Rectangle Operators, Rectangle Data Members, Rectangle Reference
+@section Constructors and Setting Functions
+
+@deftypefn {Default constructor} void Rectangle (void)
+Creates an empty @code{Rectangle}.
+@end deftypefn 
+
+@deftypefn {Constructor} void Rectangle ({const Point&} @var{ccenter}, {const real} @var{aaxis_h}, {const real} @var{aaxis_v}, [{const real} @var{angle_x} = 0, [{const real} @var{angle_y} = 0, [{const real} @var{angle_z} = 0]]])
+Creates a @code{Rectangle} in the x-z plane, centered at the origin,
+with width @equiv{} @var{aaxis_h} 
+(in the @PLUSMINUS{x} direction), 
+and height @equiv{} @var{aaxis_v} 
+(in the
+@PLUSMINUS{z} direction).
+If one or more of the arguments
+@var{angle_x}, @var{angle_y}, or @var{angle_z} are used, it is rotated
+by those amounts around the appropriate axes.  
+Finally, the @code{Rectangle} is shifted such that    
+its center lies at @var{ccenter}.  
+
+@example
+Point C(-1, -1, 1);
+Rectangle r(C, 3, 4, 30, 30, 30);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(1, 3, -10, 1, 3, -9, 10);}
+\immediate\write\examples{Point C(-1, -1, 1);}
+\immediate\write\examples{Rectangle r(C, 3, 4, 30, 30, 30);}
+\immediate\write\examples{C.label("$r$", "");}
+\immediate\write\examples{r.draw();}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "rt");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF151.png"
+alt="[Figure 151. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 151.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 151 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+
+@deftypefn {Setting function} void set ({const Point&} @var{ccenter}, {const real} @var{aaxis_h}, {const real} @var{aaxis_v}, [{const real} @var{angle_x} = 0, [{const real} @var{angle_y} = 0, [{const real} @var{angle_z} = 0]]])
+Corresponds to the constructor described above.
+@end deftypefn 
+
+@deftypefn {Constructor} void Rectangle ({const Point&} @var{p0}, {const Point&} @var{p1}, {const Point&} @var{p2}, {const Point&} @var{p3})
+@c
+Creates @code{Rectangle} using four @code{Point}
+arguments.  The order of the arguments must correspond with a path
+around the @code{Rectangle}.
+
+This function does not currently check that the arguments yield a valid 
+@code{Rectangle}, therefore all code using it must ensure that they do.
+@c !! TO DO:  Change this function, so that it checks!
+@c
+@end deftypefn 
+
+@deftypefn {Setting function} void set ({const Point&} @var{pt0}, {const Point&} @var{pt1}, {const Point&} @var{pt2}, {const Point&} @var{pt3})
+Corresponds to the constructor above.
+@end deftypefn
+
+@deftypefn {Template specializations} Rectangle* create_new<Rectangle> ({const Rectangle*} @var{r})
+@c
+@deftypefnx {} Rectangle* create_new<Rectangle> ({const Rectangle&} @var{r})
+@c
+Pseudo-constructors for dynamic allocation of @code{Rectangles}.
+They create a @code{Rectangle} on the free store and allocate memory for it using 
+@code{new(Rectangle)}.  They return a pointer to the new @code{Rectangle}.  
+
+If @var{r} is a non-zero pointer or a reference,
+the new @code{Rectangle} will be a copy of
+@var{r}.  If the new object is not meant to be a
+copy of an existing one, @samp{0} must be passed to
+@code{create_new<Rectangle>()} as its argument.
+@xref{Dynamic Allocation of Shapes}, for more information. 
+@end deftypefn 
+
+@node Rectangle Operators, Returning Points for Rectangles, Rectangle Constructors and Setting Functions, Rectangle Reference
+@section Operators
+
+@deftypefn {Assignment Operator} {const Rectangle&} operator=  ({const Rectangle&} @var{r})
+Makes the @code{Rectangle} a copy of @var{r}.
+@end deftypefn 
+
+@node Returning Points for Rectangles, Querying Rectangles, Rectangle Operators, Rectangle Reference
+@section Returning Points
+
+@deftypefun Point corner ({unsigned short} @var{c})
+Returns the corner @code{Point} indicated by the argument @var{c}, which must be 
+between 0 and 3. 
+@c
+@c !! TO DO:  Add illustration.
+@c
+@end deftypefun 
+
+@deftypefn {@code{const} function} Point mid_point ({unsigned short} @var{m})
+Returns the mid-point of one of the sides.  The argument @var{c} must be 
+between 0 and 3. 
+@c
+@c !! TO DO:  Add illustration.
+@c
+@end deftypefn 
+
+@node Querying Rectangles, Ellipses for Rectangles, Returning Points for Rectangles, Rectangle Reference
+@section Querying
+
+@deftypefn {@code{const} functions} real get_axis_h (void)
+@deftypefnx {} real get_axis_v (void)
+@c
+These functions return @code{axis_h} and @code{axis_v}, respectively.  
+
+Please note, that @code{axis_h} and @code{axis_v} are currently not
+recalculated, when a @code{Rectangle} is transformed.  I plan to do
+something about this soon.
+@end deftypefn 
+
+@deftypefn {@code{const} function} bool is_rectangular (void) 
+Returns @code{true}, if the @code{Rectangle} is rectangular, otherwise
+@code{false}.  Transformations, such as shearing, can cause
+@code{Rectangles} to become non-rectangular.
+@c
+@c !! TO DO:  Add example and illustration.
+@end deftypefn
+    
+@node Ellipses for Rectangles,  , Querying Rectangles, Rectangle Reference
+@section Ellipses
+
+@deftypefn {@code{const} function} Ellipse out_ellipse (@code{void})
+Returns the smallest @code{Ellipse} that surrounds the @code{Rectangle}.
+
+@example
+Point P(-1, -1, 3);
+Rectangle r(P, 3, 4, 60, 30, 15);
+Ellipse e = r.out_ellipse();
+e.filldraw(black, gray);
+r.unfilldraw(black);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 2, 2, 10, 10, 180);}
+\immediate\write\examples{Point P(-1, -1, 3);}
+\immediate\write\examples{Rectangle r(P, 3, 4, 60, 30, 15);}
+\immediate\write\examples{Ellipse e = r.out_ellipse();}
+\immediate\write\examples{e.filldraw(black, gray);}
+\immediate\write\examples{r.unfilldraw(black);}
+\immediate\write\examples{draw_axes(gray, 3.5); }
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF152.png"
+alt="[Figure 152. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 152.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 152 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn 
+
+
+@deftypefn {@code{const} function} Ellipse in_ellipse (@code{void})
+Returns the @code{Ellipse} enclosed by the @code{Rectangle}.
+
+@example
+Point P(-1, -1, 3);
+Rectangle r(P, 3, 4, 60, 30, 15);
+Ellipse e = r.in_ellipse();
+r.filldraw(black, gray);
+e.unfilldraw(black);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 2, 2, 10, 10, 180);}
+\immediate\write\examples{Point P(-1, -1, 3);}
+\immediate\write\examples{Rectangle r(P, 3, 4, 60, 30, 15);}
+\immediate\write\examples{Ellipse e = r.in_ellipse();}
+\immediate\write\examples{r.filldraw(black, gray);}
+\immediate\write\examples{e.unfilldraw(black);}
+\immediate\write\examples{draw_axes(gray, 3.5); }
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX 
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF153.png"
+alt="[Figure 153. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 153.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 153 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn 
+
+@deftypefn {@code{const} function} Ellipse draw_out_ellipse ([{const Color&} ddraw_color = @code{*Colors::default_color}, [string ddashed = "", [string ppen = "", [Picture& picture = @code{current_picture}]]]])
+@c
+Draws the smallest @code{Ellipse} that surrounds the @code{Rectangle}.  
+The arguments are like those of @code{Path::draw()}   
+(@pxref{Drawing and Filling Paths,, Path Reference; Drawing and Filling}).
+The return value is the surrounding @code{Ellipse}.
+@end deftypefn
+
+@deftypefn {@code{const} function} Ellipse draw_in_ellipse ([{const Color&} ddraw_color = @code{*Colors::default_color}, [string ddashed = "", [string ppen = "", [Picture& picture = @code{current_picture}]]]])
+@c
+Draws the @code{Ellipse} enclosed by the @code{Rectangle}.  
+The arguments are like those of @code{Path::draw()}   
+(@pxref{Drawing and Filling Paths,, Path Reference; Drawing and Filling}).
+The return value is the enclosed @code{Ellipse}.
+@end deftypefn
+
+
+

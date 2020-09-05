@@ -1,0 +1,2942 @@
+@c point.texi
+        
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+ 
+@node Point Reference, Focus Reference, Picture Reference, Top
+@chapter Point Reference
+
+@tindex Point
+Class @code{Point} is defined in @file{points.web}.
+It is derived from @code{Shape} using @code{protected} derivation.
+The function 
+@code{Transform Transform::align_with_axis(Point, Point, char)}
+is a @code{friend} of @code{Point}.
+
+@menu
+* Point Data Members::          
+* Point Typedefs and Utility Structures::  
+* Point Global Constants and Variables::  
+* Point Constructors and Setting Functions::  
+* Point Destructor::            
+* Point Operators::             
+* Copying Points::              
+* Querying Points::             
+* Returning Coordinates::       
+* Returning Information for Points::  
+* Modifying Points::            
+* Affine Transformations for Points::  
+* Applying Transformations to Points::  
+* Projecting Points::           
+* Vector Operations::           
+* Points and Lines::            
+* Point Intersections::         
+* Point Drawing Functions::     
+* Labelling Points::            
+* Showing Points::              
+* Outputting Points::           
+@end menu
+
+@node Point Data Members, Point Typedefs and Utility Structures, Point Reference, Point Reference
+@section Data Members
+
+@deftypevr {Private variable} {valarray<real>} world_coordinates
+The set of four homogeneous coordinates x, y, z, and w that represent
+the position of the @code{Point} within 3DLDF's global coordinate
+system. 
+@end deftypevr 
+
+@deftypevr {Private variable} {valarray<real>} projective_coordinates
+The set of four homogeneous coordinates x, y, z, and w that represent
+the position of the @emph{projection} of the @code{Point} onto a
+two-dimensional plane for output.  The x and y values are used in the
+MetaPost code written to @code{out_stream}.  The z value is used
+in the hidden surface algorithm (which is currently rather primitive and
+doesn't work very well.  @pxref{Surface Hiding}).  The w value can be    
+@NEQ{1},
+depending on the projection used;  the perspective projection is
+non-affine, so w can take on other values.
+@end deftypevr 
+
+@deftypevr {Private variable} {valarray<real>} user_coordinates
+A set of four homogeneous coordinates x, y, z, and w.
+
+@code{user_coordinates} currently has no function.
+It is intended for use in user-defined coordinate systems.  For example,
+a coordinate system could be defined with respect to a plane surface
+that isn't parallel to one of the major planes.  Such a coordinate
+system would be convenient for drawing on the plane.  A @code{Transform}
+would make it possible to convert between @code{user_coordinates} and
+@code{world_coordinates}. 
+@end deftypevr 
+
+@deftypevr {Private variable} {valarray<real>} view_coordinates
+A set of four homogeneous coordinates x, y, z, and w.
+
+@code{view_coordinates} currently has no function.  It may be useful for
+displaying multiple views in an interactive graphical user interface, or
+for some other purpose.
+@end deftypevr 
+
+@deftypevr {Private variable} Transform transform
+Contains the product of the transformations applied to the @code{Point}. 
+When @code{apply_transform()} is called for the @code{Point}, directly
+or indirectly, the @code{world_coordinates} are updated and
+@code{transform} is reset to the identity @code{Transform}.
+@xref{Applying Transformations to Points,,Point Reference; Applying
+Transformations}.  
+@end deftypevr 
+
+@deftypevr {Private variable} bool on_free_store 
+Returns @code{on_free_store}.  This should only be @code{true} if 
+the @code{Point} was dynamically allocated on the
+free store.  @code{Points} should only ever be dynamically
+allocated by @code{create_new<Point>()}, which 
+uses @code{set_on_free_store()} to set @code{on_free_store}
+to @code{true}.
+@xref{Point Constructors and Setting Functions,,
+Point Reference; Constructors and Setting Functions}, and  
+@ref{Modifying Points,,Point Reference; Modifying}.
+@end deftypevr 
+
+@deftypevr {Private variable} {signed short} drawdot_value
+Used to tell @code{Point::output()} what MetaPost drawing command
+(@code{drawdot()} or @code{undrawdot()}) to write to @code{out_stream} 
+when outputting a @code{Point}.  
+
+When @code{drawdot()} or @code{undrawdot()} is called on a @code{Point},
+the @code{Point} is copied and put onto the @code{Picture}, which was
+passed to 
+@code{drawdot()} or @code{undrawdot()} as an argument
+(@code{current_picture} by 
+default).  @code{drawdot_value} is either set to @code{Shape::DRAWDOT}
+or @code{Shape::UNDRAWDOT} on the copy; @code{this->drawdot} is
+not set. 
+@end deftypevr 
+
+@deftypevr {Private variable} {const Color*} drawdot_color
+Used to tell @code{Point::output()} what string to write to @code{out_stream}
+for the color when outputting a @code{Point}.  
+@end deftypevr 
+
+@deftypevr {Private variable} string pen
+Used to tell @code{Point::output()} what string to write to @code{out_stream}
+for the pen when outputting a @code{Point}.  
+@end deftypevr 
+
+@deftypevr {Protected variable} {valarray<real>} projective_extremes
+A set of 6 @code{real} values indicating the maximum and minumum x, y,
+and 
+z-coordinates of the @code{Point}.  
+Used for determining whether a @code{Point} is projectable with the
+parameters of a particular invocation of @code{Picture::output()}.  
+@xref{Outputting Pictures,,Picture Reference; Outputting}. 
+
+Obviously, the maxima and minima
+will always be the same for a @code{Point}, namely the x, y, and
+z-coordinates.
+However, @code{set_extremes()} and @code{get_extremes()},
+the functions that access @code{projective_extremes}, are pure virtual
+functions in @code{class Shape},
+so the @code{Point} versions must be consistent with the versions for
+other types derived from @code{Shape}.
+@end deftypevr 
+
+@deftypevr {Protected variable} bool do_output
+@code{true} by default.  Set to @code{false} by @code{suppress_output()},
+which is called on a @code{Shape} by @code{Picture::output()}, if the
+@code{Shape} is not projectable.
+@xref{Outputting Pictures,,Picture Reference; Outputting}. 
+@end deftypevr 
+
+@deftypevr {Public static variable} string measurement_units
+The unit of measurement for all distances within a @code{Picture}, 
+@code{"cm"} (for centimeters) by default.  The x and y-coordinates of
+the  projected @code{Points} are always followed by @code{measurement_units}
+when they're written to @code{out_stream}.  Unlike Metafont, units of
+measurement cannot be indicated for individual coordinates.  Nor can
+@code{measurement_unit} be changed within a @code{Picture}.  
+
+When I write an input routine, I plan to make it behave the way Metafont 
+does, however, 3DLDF will probably also convert all of the input values
+to a standard unit, as Metafont does. 
+@end deftypevr 
+
+@deftypevr {Public static variable} real CURR_Y
+@deftypevrx {Public static variable} real CURR_Z
+Default values for the y and z-coordinate of @code{Points}, when the
+x-coordinate, or the x and y-coordinates only are specified.
+Both are 0 by default.  
+
+These values only used in the constructor and setting function taking
+one required @code{real} value (for the x-coordinate), and two optional
+@code{real} values (for the y and z-coordinates).  They are not used
+when a @code{Point} is declared using the 
+default constructor with no arguments.  In this case, the x, y, and
+z-coordinates will all be 0.
+@xref{Point Constructors and Setting Functions,,Point Reference; 
+Constructors and Setting Functions}. 
+
+@example
+Point A(1);
+A.show("A:");
+@print{} A: (1, 0, 0);
+CURR_Y = 5;
+A.set(2);
+A.show("A:");
+@print{} A: (2, 5, 0);
+CURR_Z = 12;
+Point B(3);
+B.show("B:");
+@print{} B: (3, 5, 12);
+Point C;
+C.show("C:");
+@print{} C: (0, 0, 0);
+@end example
+@end deftypevr
+
+@node Point Typedefs and Utility Structures, Point Global Constants and Variables, Point Data Members, Point Reference
+@section Typedefs and Utility Structures
+@deftp typedef point_pair first second
+Synonymous with @code{pair<Point, Point>}.
+@end deftp 
+
+@deftp struct bool_point b pt
+@code{b} is a @code{bool} and @code{pt} is a @code{Point}.  
+@code{bool_point} also contains two constructors and an assignment
+operator, described below.
+@end deftp 
+
+@deftypefn {Default constructor} void  bool_point (void)
+Creates a @code{bool_point} and sets @code{b} to @code{false} and
+@code{pt} to @code{INVALID_POINT}.
+@end deftypefn 
+
+@deftypefn {Default constructor} void bool_point (bool @var{bb}, {const Point&} @var{ppt})
+Creates a @code{bool_point} and sets @code{b} to @var{bb} and @code{pt}
+to @var{ppt}. 
+@end deftypefn 
+
+@deftypefn {Assignment operator} void bool_point::operator= ({const bool_point&} @var{bp})
+Sets @code{b} to
+@var{bp}.@code{b} and @code{pt} to @var{bp}.@code{pt}.
+@end deftypefn 
+
+@deftp typedef bool_point_pair first second
+Synonymous with @code{pair <bool_point, bool_point>}. 
+@end deftp
+
+@deftp struct bool_point_quadruple first second third fourth
+This structure contains four @code{bool_points}.  It also has two
+constructors and an assignment operator, described below.
+@end deftp
+
+@deftypefn {Default constructor} void  bool_point_quadruple (void)
+Creates a @code{bool_point_quadruple}, and sets
+@code{first}, @code{second}, @code{third}, and @code{fourth} all to
+@code{INVALID_BOOL_POINT}. 
+@end deftypefn 
+
+@deftypefn {Constructor} void  bool_point_quadruple (bool_point @var{a}, bool_point @var{b}, bool_point @var{c}, bool_point @var{d})
+Creates a @code{bool_point_quadruple} and sets
+@code{first} to @var{a}, @code{second} to @var{b}, @code{third} to
+@var{c}, and @code{fourth} to @var{d}.  
+@end deftypefn 
+
+@deftypefn {Assignment operator} void bool_point_quadruple::operator= ({const bool_point_quadruple&} @var{arg})
+Makes @code{*this} a copy of @var{arg}.  
+@end deftypefn 
+
+
+@deftp struct bool_real_point b r pt
+@code{b} is a @code{bool}, @code{r} is a @code{real}, and @code{pt} is a
+@code{Point}.  @code{bool_real_point} also contains three constructors
+and an assignment operator, described below.
+@end deftp 
+
+@deftypefn {Default constructor} void bool_real_point (void)
+Creates a @code{bool_real_point} and sets @code{b} to @code{false},
+@code{r} to @code{INVALID_REAL} and  @code{pt} to @code{INVALID_POINT}. 
+@end deftypefn 
+
+@deftypefn {Copy constructor} void bool_real_point ({const bool_real_point&} @var{brp})
+Creates a @code{bool_real_point} and sets @code{b} to @var{brp}.@code{b},
+@code{r} to @var{brp}.@code{r}, and  @code{pt} to @var{brp}.@code{pt}. 
+@end deftypefn 
+
+@deftypefn {Constructor} void bool_real_point ({const bool&} @var{bb}, {const real&} @var{rr}, {const Point&} @var{ppt})
+Creates a @code{bool_real_point} and sets @code{b} to @var{bb},
+@code{r} to @var{rr}, and  @code{pt} to @var{ppt}.
+@end deftypefn 
+
+@deftypefn {Assignment operator} void bool_real_point::operator= ({const bool_real_point&} @var{brp})
+Makes @code{*this} a copy of @var{brp}.
+@end deftypefn 
+
+
+@node Point Global Constants and Variables, Point Constructors and Setting Functions, Point Typedefs and Utility Structures, Point Reference
+@section Global Constants and Variables
+
+@deftypevr {Constant} Point INVALID_POINT
+The x, y, and z-values in @code{world_coordinates} are all @code{INVALID_REAL}.
+@end deftypevr 
+
+@deftypevr {Constant} Point origin
+The x, y, and z-values in @code{world_coordinates} are all 0.
+@end deftypevr 
+
+@deftypevr {Constant} bool_point INVALID_BOOL_POINT
+@code{b} is @code{false} and @code{pt} is @code{INVALID_POINT}.
+@end deftypevr 
+
+@deftypevr {Constant} bool_point_pair INVALID_BOOL_POINT_PAIR
+@code{first} and @code{second} are both @code{INVALID_BOOL_POINT}.
+@end deftypevr 
+
+@deftypevr {Constant} bool_real_point INVALID_BOOL_REAL_POINT
+@code{b} is @code{false}, @code{r} is @code{INVALID_REAL}, and @code{pt}
+is @code{INVALID_POINT}.
+@end deftypevr 
+
+@deftypevr {Constant} bool_point_quadruple INVALID_BOOL_POINT_QUADRUPLE
+@code{first}, @code{second}, @code{third}, and @code{fourth} are all 
+@code{INVALID_BOOL_POINT}.
+@end deftypevr 
+
+@node Point Constructors and Setting Functions, Point Destructor, Point Global Constants and Variables, Point Reference
+@section Constructors and Setting Functions 
+
+@deftypefn {Default constructor} void Point (void)
+Creates a @code{Point} and initializes its x, y, and z-coordinates 
+to 0.  
+@end deftypefn
+
+@deftypefn {Constructor} void Point ({const real} @var{x}, [{const real} @var{y} = @code{CURR_Y}, [{const real} @var{z} = @code{CURR_Z}]])
+Creates a @code{Point} and initializes its x, y, and z-coordinates 
+to the values of the arguments @var{x}, @var{y}, and @var{z}.  The
+arguments @var{y} and @var{z} are optional.  If they are not specified,
+the values of @code{CURR_Y} and @code{CURR_Z} are used.  They are 0 by
+default, but can be changed by the user.  This can be convenient, if all
+of the @code{Points} being drawn in a particular section of a program
+have the same z or y and z values.
+@end deftypefn
+
+@deftypefn {Setting function} void set ({const real} @var{x}, [{const real} @var{y} = @code{CURR_Y}, [{const real} @var{z} = @code{CURR_Z}]])
+Corresponds to the constructor above, but is used for resetting the coordinates of an existing 
+@code{Point}.
+@end deftypefn
+
+
+@deftypefn {Copy constructor} void Point ({const Point&} @var{p})
+Creates a @code{Point} and copies the values for its x, y, and z-coordinates 
+from @var{p}.
+@end deftypefn
+
+@deftypefn {Setting function} void set ({const Point&} @var{p})
+Corresponds to the copy constructor above, but is used for resetting the coordinates 
+of an existing @code{Point}.  This function exists purely as a convenience;  
+the operator @code{operator=()} 
+(@pxref{Point Operators, ,Point Reference; Operators}) 
+performs exactly the 
+same function.
+@end deftypefn
+
+@deftypefn {Template specializations} Point* create_new<Point> ({const Point*} @var{p})
+@c
+@deftypefnx {} Point* create_new<Point> ({const Point&} @var{p})
+@c
+Pseudo-constructors for dynamic allocation of @code{Points}.
+They create a @code{Point} on the free store and allocate memory for it using 
+@code{new(Point)}.  They return a pointer to the new @code{Point}.  
+
+If @var{p} is a non-zero pointer or a reference,
+the new @code{Point} will be a copy of
+@var{p}.  If the new object is not meant to be a
+copy of an existing one, @samp{0} must be passed to
+@code{create_new<Point>()} as its argument.
+@xref{Dynamic Allocation of Shapes}, for more information. 
+
+One use for @code{create_new<Point>} is in the constructors for
+@code{classes} of 
+objects that can contain a variable number of @code{Points}, such as
+@code{Path} and @code{Polygon}.  Another use is in the drawing and
+filling functions, where objects are copied and the copies put onto a
+@code{Picture}.
+
+Programmers who dynamically allocate @code{Points} must ensure that they
+are deallocated properly using @code{delete}!
+@end deftypefn 
+
+@node Point Destructor, Point Operators, Point Constructors and Setting Functions, Point Reference
+@section Destructor
+
+@deftypefn {@code{virtual} Destructor} void {~Point} (@code{void})
+This function currently has an empty definition, but its existence
+prevents GCC 3.3 from issuing the following warning:
+``@c
+@iftex 
+\thinspace
+@end iftex
+`class Point' has virtual functions but non-virtual destructor''.
+@end deftypefn 
+
+@node Point Operators, Copying Points, Point Destructor, Point Reference
+@section Operators
+
+@deftypefn {Assignment operator} void operator= ({const Point&} @var{p})
+Makes @code{*this} a copy of @var{p}.
+@end deftypefn
+
+@deftypefn {Operator} Transform operator*= ({const Transform&} @var{t})
+Multiplies @code{transform} by @var{t}.
+By multiplying a @code{Point} successively by  
+one or more @code{Transforms}, the effect of the transformations is
+``saved up'' in @code{transform}.  Only when an operation that needs
+updated values for the @code{world_coordinates} is called on a
+@code{Point}, or the @code{Point} is passed as an argument to such an
+operation, is the transformation stored in @code{transform} applied to 
+@code{world_coordinates} by @code{apply_transform()},
+which subsequently, resets @code{transform} to
+the identity @code{Transform}.
+@xref{Applying Transformations to Points,,Point Reference; 
+Applying Transformations}. 
+@end deftypefn
+
+@deftypefn {@code{const} operator} Point operator+ (Point @var{p})
+Returns a @code{Point} with @code{world_coordinates} that are the sums of
+the corresponding @code{world_coordinates} of @code{*this} and @var{p},
+after they've been updated.
+@code{*this} remains unchanged; as in many other functions with
+@code{Point} arguments, @var{p} is passed by value, because
+@code{apply_transform()} must be called on it, in order to update its
+@code{world_coordinates}.  If @var{p} were a @code{const Point&}, it
+would have to copied within the function anyway, because
+@code{apply_transform()} is a non-@code{const} operation.
+
+@example
+Point p0(-2, -6, -28);
+Point p1(3, 14, 92);
+Point p2(p0 + p1);
+p2.show("p2:");
+@print{} p2: (1, 8, 64)
+@end example
+
+@end deftypefn
+
+@deftypefn {Operator} void operator+= (Point @var{p})
+Adds the updated @code{world_coordinates} of @var{p} to those of
+@code{*this}.
+Equivalent in effect to @code{shift(@var{p})}
+In fact, this
+function merely calls @code{p.apply_transform()} and 
+@code{Point::shift(real, real, real)} with @var{p}'s x, y, and z
+coordinates (from @code{world_coordinates}) as its arguments. 
+@xref{Affine Transformations for Points,,
+Point Reference; Affine Transformations}.  
+@end deftypefn
+ 
+@deftypefn {@code{const} operator} Point operator- (Point @var{p})
+Returns a @code{Point} with @code{world_coordinates} representing the
+difference between the updated values of 
+@w{@code{this->world_coordinates}} and
+@var{p}@code{.world_coordinates}.
+@end deftypefn
+
+@deftypefn {Operator} void operator-= (Point @var{p})
+Subtracts the updated values of @var{p}@code{.world_coordinates} from 
+those of @code{this->world_coordinates}.
+@end deftypefn
+
+@deftypefn {Operator} real operator*= ({const real} @var{r})
+Multiplies the updated x, y, and z coordinates (@code{world_coordinates}) of
+the @code{Point} by @var{r} and returns @var{r}.  This makes it possible to
+chain invocations of this function.
+
+If @code{P} is a @code{Point} then 
+@code{P *= @var{r}} is
+equivalent in its effect to @code{P.scale(@var{r}, @var{r}, @var{r})},
+except that 
+@code{P.world_coordinates} is modified directly and immediately,
+without changing @code{P.transform}.  This is possible, because this
+function calls @code{apply_transform()} to update the
+@code{world_coordinates} before multiplying them @code{r}, so
+@code{transform} is the identity @code{Transform}.  
+
+@example
+Point P(1, 2, 3);
+P *= 7;
+P.show("P:");
+@print{} P: (7, 14, 21);
+Point Q(1.5, 2.7, 13.82);
+Q *= P *= -1.28;
+P.show("P:");
+@print{} P: (-8.96, -17.92, -26.88)
+Q.show("Q:");
+@print{} Q: (-1.92, -3.456, -17.6896)
+@end example
+@end deftypefn
+
+@deftypefn {@code{const} operator} Point operator* ({const real} @var{r})
+Returns a @code{Point} with x, y, and z coordinates
+(@code{world_coordinates}) equal to the updated x, y, and z coordinates
+of @code{*this} multiplied by @var{r}.  
+@end deftypefn
+
+@deftypefn {Non-member operator} Point operator* ({const real} @var{r}, {const Point&} @var{p})
+Equivalent to @code{Point::operator*(const real @var{r})} (see above),
+but with @var{r} placed first.
+@example
+Point p0(10, 11, 12);
+real r = 2.5;
+Point p1 = r * p0;
+p1.show();
+@print{}Point:
+@print{}(25, 27.5, 30)
+@end example
+
+@end deftypefn
+
+@deftypefn {@code{const} operator} Point operator- (void) 
+Unary minus (prefix).  Returns a @code{Point} with x, y, and z
+coordinates (@code{world_coordinates}) equal to the 
+the x, y, and z-coordinates (@code{world_coordinates}) of 
+@code{*this} multiplied by -1.
+@end deftypefn
+
+@deftypefn {Operator} void operator/= ({const real} @var{r})
+Divides the updated x, y, and z coordinates (@code{world_coordinates}) of
+the @code{Point} by @var{r}.  
+@end deftypefn
+
+@deftypefn {@code{const} operator} Point operator/ ({const real} @var{r})
+Returns a @code{Point} with x, y, and z coordinates
+(@code{world_coordinates}) equal to the updated x, y, and z coordinates
+of @code{*this} 
+divided by @var{r}.  
+@end deftypefn
+
+@deftypefn {Operator} bool operator== (Point @var{p})
+@deftypefnx  {@code{const} operator} bool operator== ({const Point&} @var{p})
+Equality comparison for @code{Points}.  These functions return
+@code{true} if the updated values of the @code{world_coordinates} of the two
+@code{Points} differ by less than the value returned by
+@code{Point::epsilon()}, otherwise @code{false}.
+@xref{Returning Information for Points,,Point Reference; 
+Returning Information}.  
+@end deftypefn
+
+@deftypefn {@code{const} operator} bool operator!= ({const Point&} @var{p})
+Inequality comparison for @code{Points}.  Returns @code{false} if
+@code{*this == @var{p}}, otherwise @code{true}.
+@end deftypefn
+
+
+@node Copying Points, Querying Points, Point Operators, Point Reference
+@section Copying 
+
+@deftypefn {@code{const} function} Shape* get_copy (void) 
+Creates a copy of the @code{Point}, and allocates memory for it on the
+free store using @code{create_new<Point>()}.  
+It returns a pointer to @code{Shape} that points to the new @code{Point}.  
+This function is used in the drawing commands for putting @code{Points} 
+onto @code{Pictures}.
+@xref{Point Drawing Functions,,Point Reference; Drawing}.
+@end deftypefn
+
+@node Querying Points, Returning Coordinates, Copying Points, Point Reference
+@section Querying 
+
+@deftypefn {@code{inline} function} bool is_identity (void)
+Returns @code{true} if @code{transform} is the identity @code{Transform}.
+@end deftypefn
+
+@deftypefn {@code{const} inline function}  Transform get_transform (void) 
+Returns @code{transform}.
+@end deftypefn
+
+@deftypefn {@code{const} function} bool is_on_free_store (void) 
+Returns @code{true} if memory for the @code{Point} has been dynamically
+allocated on the  
+free store, i.e., if the @code{Point} has been created using
+@code{create_new<Point>()}. 
+@xref{Point Constructors and Setting Functions,,
+Point Reference; Constructors and Setting Functions}.
+@end deftypefn
+
+
+@deftypefn {@code{const} function} bool is_on_plane ({const Plane&} @var{p})
+Returns @code{true}, if the @code{Point} lies on the
+@code{Plane} @var{p}, otherwise @code{false}.
+
+Planes are conceived of as having infinite extension, so while 
+the @code{Point} @math{C} in @NEXTFIG{} does not lie within 
+the @code{Rectangle} @math{r}, it does lie on @math{q}, so
+@code{C.is_on_plane(q)} returns 
+@code{true}.@c
+@c
+@footnote{It's unlikely that @code{Points} will lie on a @code{Plane},
+unless the user constructs the case specially.  
+In @NEXTFIG{}, the coordinates for @math{B} and @math{C} were found by using 
+@code{Plane::intersection_point()}.  
+@xref{Plane Intersections,,Planes; Intersections}.}
+
+
+
+@example
+Point P(1, 1, 1);
+Rectangle r(P, 4, 4, 20, 45, 35);
+Plane q = r.get_plane();
+Point A(2, 0, 2);
+Point B(2, 1.64143, 2);
+Point C(0.355028, 2.2185, 6.48628);
+cout << A.is_on_plane(q);
+@print{} 0
+cout << B.is_on_plane(q);
+@print{} 1
+cout << "C.is_on_plane(q)";
+@print{} 1
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 0, 3, 10, 10);}
+\immediate\write\examples{Point P(1, 1, 1);}
+\immediate\write\examples{P.dotlabel("$P$", "bot"); }
+\immediate\write\examples{Rectangle r(P, 4, 4, 20, 45, 35);}
+\immediate\write\examples{r.filldraw(black, light_gray);}
+\immediate\write\examples{Plane q = r.get_plane();}
+\immediate\write\examples{P.mediate(r.get_point(1), .25).label("$r$", "");}
+\immediate\write\examples{Point A(2, 0, 2);}
+\immediate\write\examples{Point B(2, 1.64143, 2);}
+\immediate\write\examples{A.dotlabel("$A$", "rt"); }
+\immediate\write\examples{B.dotlabel("$B$", "rt"); }
+\immediate\write\examples{Point C(0.355028, 2.2185, 6.48628);}
+\immediate\write\examples{C.dotlabel("$C$"); }
+\immediate\write\examples{draw_axes(0, "d", "d", "d", black, "evenly");}
+\immediate\write\examples{current_picture.output(default_focus, Projections::PERSP, 1, Sorting::NO_SORT);}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF80.png"
+alt="[Figure 80. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 80.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 80 not displayed.]
+@end ifinfo
+
+@end deftypefn 
+
+@deftypefn {@code{const} function} bool is_in_triangle ({const Point&} @var{p0}, {const Point&} @var{p1}, {const Point&} @var{p2}, [bool @var{verbose} = @code{false}, [bool @var{test_points} = @code{true}]]) 
+Returns @code{true}, if @code{*this} lies within the triangle determined by
+the three @code{Point} arguments, otherwise @code{false}.  
+
+If the code calling @code{is_in_triangle()} has ensured that 
+@math{p_0}, @math{p_1}, and @math{p_2} determine a plane, i.e., that they are not
+colinear, and that @code{*this} lies in that plane, then
+@code{false} can be passed to @code{is_in_triangle()} as its
+@var{test_points} argument.  
+
+If the @var{verbose} argument is @code{true}, information resulting from
+the execution of the function are printed to standard output or standard
+error. 
+
+This function is needed for determining whether a line intersects with a
+polygon. 
+@end deftypefn 
+
+@node Returning Coordinates, Returning Information for Points, Querying Points, Point Reference
+@section Returning Coordinates
+
+The functions in this section return either a single coordinate or a set of
+coordinates.  Each has  
+a @code{const} and a non-@code{const} version.
+
+The arguments are the same, with one exception:
+
+@table @var
+@item @code{char} @var{c}
+Only in @code{get_coord()}.  Indicates which coordinate should be
+returned.  Valid values are @code{'x'}, @code{'X'}, @code{'y'},
+@code{'Y'}, @code{'z'}, @code{'Z'}, @code{'w'}, and @code{'W'}. 
+
+@item @code{char @var{coords}}
+Indicates the set of coordinates which should be returned or from which
+the coordinate to be returned should be chosen from.  Valid values are
+@code{'w'} for @code{world_coordinates} (the default), @code{'p'} for
+@code{projective_coordinates}, @code{'u'} for @code{user_coordinates},
+and @code{'v'} for @code{view_coordinates}.  
+
+@item @code{const bool} @var{do_persp}
+Only relevant if @code{projective_coordinates}, or one of its elements
+is to be returned.  If @code{true}, the
+default, then @code{project()} is called, thereby generating values for 
+@code{projective_coordinates}.  If @var{do_persp} is @code{false}, then
+@code{projective_coordinates}, or one of its elements, is 
+returned unchanged, which may sometimes be useful.
+
+@item @code{const bool} @var{do_apply} 
+If @code{true} (the default), @code{apply_transform()} is called,
+thereby updating the @code{world_coordinates}.  Otherwise, it's not, so
+that the values stored in @code{world_coordinates} remain unchanged.
+Note that if @var{coords} is @code{'p'} and @var{do_persp} is @code{true},
+@code{apply_transform()} will be called in @code{project()}
+whether @code{do_apply} is @code{true} or @code{false}.  If for some
+reason, one wanted get @code{projective_coordinates}, or one of its
+values, based on the 
+projection of @code{world_coordinates} without first updating them, one
+would have to call @code{reset_transform()} before calling one of
+these functions.  It would probably be a good idea to save @code{transform}
+before doing so. 
+
+
+@item @code{Focus*} @var{f} 
+Indicates what @code{Focus} is to be used for projection.
+Only relevant if @code{coords} is @code{'p'}, i.e.,
+@code{projective_coordinates}, or one of its elements, is to be
+returned.  The default is 0, in which case @var{f} points to the global
+variable @code{default_focus}.
+
+
+@item @code{const unsigned short} @var{proj}
+Indicates what form of projection is to be used.
+Only relevant if @code{coords} is @code{'p'}, i.e.,
+@code{projective_coordinates}, or one of its elements, is to be
+returned.  The default is @code{Projections::PERSP}, which causes the
+perspective projection to be applied.
+
+
+@item @code{real} @var{factor} 
+Passed to @code{project()}.  The values of the x and y coordinates in
+@code{projective_coordinates} are multiplied by @var{factor}. 
+Only relevant if @code{coords} is @code{'p'}, i.e.,
+@code{projective_coordinates}, or one of its elements, is to be
+returned.  The default is 1.
+@end table
+
+@deftypefun {valarray <real>} get_all_coords ([char @var{coords} = 'w', [{const bool} @var{do_persp} = true, [{const bool} @var{do_apply} = true, [Focus* @var{f} = 0, [{const unsigned short} @var{proj} = Projections::PERSP, [real factor = 1]]]]]])
+Returns one of the sets of coordinates;  @code{world_coordinates} by
+default. 
+Returns a complete set of coordinates:  @code{'w'} for @code{world_coordinates}, 
+@code{'p'} for @code{projective_coordinates}, @code{'u'} for
+@code{user_coordinates}, or@code{'v'} for  @code{view_coordinates}. 
+@end deftypefun
+
+@deftypefun real get_coord (char @var{c}, [char @var{coords} = 'w', [{const bool} @var{do_persp} = true, [{const bool} @var{do_apply} = true, [Focus* @var{f} = 0, [{const unsigned short} @var{proj} = @code{Projections::PERSP}, [real @var{factor} = 1]]]]]])
+Returns one @code{coordinate}, x, y, z, or w, from the set of
+coordinates indicated (or @code{world_coordinates}, by default).
+@end deftypefun
+
+@deftypefun real get_x ([char @var{coords} = 'w', [{const bool} @var{do_persp} = true, [{const bool} @var{do_apply} = true, [Focus* @var{f} = 0, [{const unsigned short} @var{proj} = Projections::PERSP, [real @var{factor} = 1]]]]]])
+Returns the x-coordinate from the set of coordinates indicated (or
+@code{world_coordinates}, by default).
+@end deftypefun
+
+@deftypefun real get_y ([char @var{coords} = 'w', [{const bool} @var{do_persp} = true, [{const bool} @var{do_apply} = true, [Focus* @var{f} = 0, [{const unsigned short} @var{proj} = Projections::PERSP, [real @var{factor} = 1]]]]]])
+Returns the y-coordinate from the set of coordinates indicated (or
+@code{world_coordinates}, by default).
+@end deftypefun
+
+@deftypefun real get_z ([char @var{coords} = 'w', [{const bool} @var{do_persp} = true, [{const bool} @var{do_apply} = true, [Focus* @var{f} = 0, [{const unsigned short} @var{proj} = Projections::PERSP, [real @var{factor} = 1]]]]]])
+Returns the z-coordinate from the set of coordinates indicated (or
+@code{world_coordinates}, by default).
+@end deftypefun
+
+@deftypefun real get_w ([char @var{coords} = 'w', [{const bool} @var{do_persp} = true, [{const bool} @var{do_apply} = true, [Focus* @var{f} = 0, [{const unsigned short} @var{proj} = Projections::PERSP, [real @var{factor} = 1]]]]]])
+Returns the w-coordinate from the set of coordinates indicated (or
+@code{world_coordinates}, by default).
+@end deftypefun
+
+@node Returning Information for Points, Modifying Points, Returning Coordinates, Point Reference
+@section Returning Information
+
+@deftypefn {Static function} real epsilon (void)
+Returns the positive @code{real} value of smallest magnitude 
+@math{\epsilon} that should be used as a coordinate value in a
+@code{Point}.  
+A coordinate of a @code{Point} may also contain
+@math{-\epsilon}. 
+
+The value @math{\epsilon} is used for testing the equality of
+@code{Points} in @code{Point::operator==()}
+(@pxref{Point Operators, ,Point Reference; Operators}): 
+
+Let @math{\epsilon} be the value returned by @code{epsilon()}, 
+@math{P} and @math{Q} be
+@code{Points}, and @math{P_x}, @math{Q_x}, @math{P_y}, @math{Q_y}, 
+@math{P_z}, and @math{Q_z} the updated x, y, and z-coordinates of @math{P} and @math{Q}, 
+respectively.  
+If and only if 
+@math{||P_x| - |Q_x|| < \epsilon, ||P_y| - |Q_y|| < \epsilon}, 
+and 
+@math{||P_z| - |Q_z|| < \epsilon}, then
+@math{P = Q}. 
+
+@code{epsilon()} returns different values, depending on whether 
+@code{real} is @code{float} or @code{double}:
+If @code{real} is @code{float} (the default), @code{epsilon()} 
+returns 0.00001.
+If @code{real} is @code{double}, it returns 0.000000001.
+
+@b{Please note}:  I haven't tested whether 0.000000001 is a good
+value yet, so users should be aware of this if they set @code{real} to
+@code{double}!@c
+@c
+@footnote{For that matter, I haven't really tested whether 0.00001 is a
+good value when @code{real} is @code{float}.} 
+@c
+The way to test this is to start with two @code{Points} 
+@math{P} and @math{Q} at different locations.
+Then they should be transformed using different rotations in such a way
+that they should end up at the same location.
+Let @math{\epsilon} stand for the value returned by @code{epsilon()}, 
+and let @math{x}, @math{y}, and @math{y} stand for
+the @code{world_coordinates} of the @code{Points} after
+@code{apply_transform()} has been called on them.
+If @math{x_P = x_Q}, @math{y_P = y_Q}, and 
+@math{z_P = z_Q}, 
+@math{\epsilon} is a good value. 
+
+Rotation causes a significant loss of precision to due to the use of the
+@code{sin()} and @code{cos()} functions.  Therefore, neither
+@code{Point::epsilon()} nor @code{Transform::epsilon()} 
+(@pxref{Returning Information for Transforms,,
+Tranform Reference; Returning Information}) 
+can be as small as I'd like them to be.  If they are two
+small, operations that test for equality of @code{Transforms} and
+@code{Points} will return @code{false} for objects that should be
+equal.
+@end deftypefn
+ 
+@node Modifying Points, Affine Transformations for Points, Returning Information for Points, Point Reference
+@section Modifying 
+
+@deftypefn {Virtual function} bool set_on_free_store ([bool @var{b} = true])
+This function is used in the template function 
+@code{create_new()}.  It sets @code{on_free_store} to @code{true}.
+@xref{Point Data Members,,Point Reference; Data Members}, and
+@ref{Point Constructors and Setting Functions,,
+Point Reference; Constructors and Setting Functions}.
+@end deftypefn
+
+@deftypefun void clear (void)
+Sets all of the coordinates in all of the sets of coordinates (i.e., 
+@code{world_coordinates}, @code{user_coordinates}, @code{view_coordinates}, and 
+@code{projective_coordinates}) to 0 and resets @code{transform} 
+@end deftypefun
+
+@deftypefun void clean ([int @var{factor} = 1])
+Calls @code{apply_transform()} and sets the values of
+@code{world_coordinates} to 0, whose absolute values are less than
+@TMS{@code{epsilon()}, @var{factor}}. 
+@end deftypefun
+
+@deftypefun void reset_transform (void)
+Sets @code{Transform} to the identity @code{Transform}.  Performed in
+@code{apply_transform()}, after the latter updates @code{world_coordinates}.
+@ref{Applying Transformations to Points,,Point Reference; 
+Applying Transformations}.  
+@end deftypefun
+
+@node Affine Transformations for Points, Applying Transformations to Points, Modifying Points, Point Reference
+@section Affine Transformations
+
+@deftypefun Transform rotate ({const real} @var{x}, [{const real} @var{y} = 0, [{const real} @var{z} = 0]])
+@deftypefunx Transform rotate ({const Point&} @var{p0}, {const Point&} @var{p1}, [{const real} @var{angle} = 180])
+@deftypefunx Transform rotate ({const Path&} @var{p}, [{const real} @var{angle} = 180])
+Each of these functions calls the corresponding version of 
+@code{Transform::rotate()}, and returns its
+return value, namely, a @code{Transform} representing the rotation
+only. 
+
+In the first version, taking three @code{real} arguments, the
+@code{Point} is rotated @var{x} degrees around the x-axis, @var{y} 
+degrees around the y-axis, and @var{z} degrees around the z-axis in
+that order.
+
+@example
+Point p0(1, 0, 2);
+p0.rotate(90);
+p0.show("p0:")
+@print{} p0: (1, 2, 0) 
+Point p1(-1, 1, 1);
+p1.rotate(-90, 90, 90);
+p1.show("pt1:");
+@print{} p1: (1, -1, -1)
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 2, -10, 3, 2, 10, 10);}
+\immediate\write\examples{Point p0_b(1, 0, 2);}
+\immediate\write\examples{p0_b.dotlabel(Point::WORLD_VALUES, "bot");}
+\immediate\write\examples{Point p0_a(p0_b);}
+\immediate\write\examples{p0_a.rotate(90);}
+\immediate\write\examples{p0_a.label(Point::WORLD_VALUES); }
+\immediate\write\examples{p0_b.drawarrow(p0_a, black, "evenly");}
+\immediate\write\examples{p0_b.mediate(p0_a).label("$p0$", "rt");}
+\immediate\write\examples{Point p1_b(-1, 1, 1);}
+\immediate\write\examples{p1_b.dotlabel(Point::WORLD_VALUES); }
+\immediate\write\examples{Point p1_a(p1_b);}
+\immediate\write\examples{p1_a.rotate(-90, 90, 90);}
+\immediate\write\examples{p1_a.label(Point::WORLD_VALUES, "bot"); }
+\immediate\write\examples{p1_b.mediate(p1_a, .3).label("$p_1$", "llft"); }
+\immediate\write\examples{p1_b.drawarrow(p1_a, black, "evenly");}
+\immediate\write\examples{draw_axes(gray);}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF81.png"
+alt="[Figure 81. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 81.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 81 not displayed.]
+@end ifinfo
+
+Please note that rotations are not commutative operations.  Nor are they
+commutative with other transformations.
+So, if you want to rotate a @code{Point} about the x, y and z-axes in
+that order, 
+you can do so with a single invocation of @code{rotate()}, as in 
+the previous example.
+However, if you want to rotate a @code{Point} first about the
+y-axis and then about the x-axis, you must invoke @code{rotate()} twice.
+
+@example
+Point pt0(1, 1, 1);
+pt0.rotate(0, 45);
+pt0.rotate(45);
+pt0.show("pt0:");
+@print{} pt0: (0, 1.70711, 0.292893)
+@end example
+
+In the version taking two @code{Point} arguments @var{p0} and @var{p1},
+and a @code{real} argument @var{angle}, the @code{Point} is rotated
+@code{angle} degrees around the axis determined  
+by @var{p0} and @var{p1}, @DEG{180} by default.  
+
+@example
+Point P(2, 0, 0);
+Point A;
+Point B(2, 2, 2);
+P.rotate(A, B, 180);
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 4, 3, 10, 10);}
+\immediate\write\examples{Point P(2, 0, 0);}
+\immediate\write\examples{Point R(P);}
+\immediate\write\examples{P.dotlabel("$P_@OCB@DBKS{rm}@OCB{}initial@CCB@CCB$", "urt");}
+\immediate\write\examples{P.label(Point::WORLD_VALUES, "bot");}
+\immediate\write\examples{Path q;}
+\immediate\write\examples{q.set_connectors("..");}
+\immediate\write\examples{Point A;}
+\immediate\write\examples{A.dotlabel("$A$", "lrt"); }
+\immediate\write\examples{Point B(2, 2, 2);}
+\immediate\write\examples{B.dotlabel("$B$"); }
+\immediate\write\examples{A.draw(B);}
+\immediate\write\examples{P.rotate(A, B, 180);}
+\immediate\write\examples{P.dotlabel("$P_@OCB@DBKS{rm}@OCB{}rotated@CCB@CCB$", "ulft");}
+\immediate\write\examples{P.label(Point::WORLD_VALUES, "llft"); }
+\immediate\write\examples{q += R;}
+\immediate\write\examples{for (int i = 10; i <= 180; i+=10)}
+\immediate\write\examples{  @OCB}
+\immediate\write\examples{    R.rotate(A, B, 10);}
+\immediate\write\examples{    q += R;}
+\immediate\write\examples{  @CCB}
+\immediate\write\examples{q.draw(black, "evenly");}
+\immediate\write\examples{draw_axes(gray, 3.5, "rt");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF82.png"
+alt="[Figure 82. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 82.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 82 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefun
+
+@deftypefun Transform scale (real @var{x}, [real @var{y} = 1, [real @var{z} = 1]])
+Calls @code{transform.scale(@var{x}, @var{y}, @var{z})} and returns its
+return value, namely, a @code{Transform} representing the scaling operation
+only. 
+
+Scaling causes the x-coordinate of the @code{Point} to be multiplied by
+@var{x}, the y-coordinate of the @code{Point} to be multiplied by
+@var{y}, and the z-coordinate of the @code{Point} to be multiplied by
+@var{z}.
+
+@example
+Point p0(1, 0, 3);
+p0.scale(4);
+p0.show("p0:");
+@print{} p0: (4, 0, 3)
+Point p1(-2, -1, -2); 
+p1.scale(-2, -3, -4);
+p1.show("p1:");
+@print{} p1: (4, 3, 8)
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 2, -10, 3, 2, 10, 10);}
+\immediate\write\examples{Point p0_b(1, 0, 3);}
+\immediate\write\examples{p0_b.dotlabel(Point::WORLD_VALUES);}
+\immediate\write\examples{Point p0_a(p0_b);}
+\immediate\write\examples{p0_a.scale(4);}
+\immediate\write\examples{p0_a.label(Point::WORLD_VALUES);}
+\immediate\write\examples{p0_b.drawarrow(p0_a, black, "evenly");}
+\immediate\write\examples{p0_b.mediate(p0_a).label("$p_0$");}
+\immediate\write\examples{Point p1_b(-2, -1, -2); }
+\immediate\write\examples{p1_b.dotlabel(Point::WORLD_VALUES, "bot");}
+\immediate\write\examples{Point p1_a(p1_b);}
+\immediate\write\examples{p1_a.scale(-2, -3, -4);}
+\immediate\write\examples{p1_a.label(Point::WORLD_VALUES);}
+\immediate\write\examples{p1_b.drawarrow(p1_a, black, "evenly");}
+\immediate\write\examples{p1_b.mediate(p1_a, .25).label("$p_1$");}
+\immediate\write\examples{draw_axes(gray);}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF83.png"
+alt="[Figure 83. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 83.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 83 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefun
+
+@deftypefun Transform shear (real @var{xy}, [real @var{xz} = 0, [real @var{yx} = 0, [real @var{yz} = 0, [real @var{zx} = 0, [real @var{zy} = 0]]]]])
+Calls @code{transform.shear()} with the same arguments
+and returns its
+return value, namely, a @code{Transform} representing the shearing operation
+only. 
+
+Shearing modifies each coordinate of a @code{Point}
+proportionately to the values of the other two coordinates.
+Let @math{x_0}, @math{y_0}, and @math{z_0} stand for the coordinates of
+a @code{Point} @math{P} before @code{P.shear(}@c
+@math{\alpha}, @math{\beta},
+@math{\gamma}, @math{\delta}, @math{\epsilon}, @math{\zeta} 
+@code{)}, 
+and @math{x_1}, @math{y_1}, and @math{z_1}
+for its coordinates afterwards. 
+
+@display 
+@math{x_1 @equiv{} x_0 + \alpha y + \beta z}
+@math{y_1 @equiv{} y_0 + \gamma x + \delta z}
+@math{z_1 @equiv{} z_0 + \epsilon x + \zeta y}
+@end display
+
+@NEXTFIG{} demonstrates the effect of shearing the four
+@code{Points} of a 
+@TMS{3, 3}
+@code{Rectangle} (i.e., a square) @math{r} in the x-y plane using only an
+@var{xy} argument, making it non-rectangular.  
+
+@example
+Point P0;
+Point P1(3);
+Point P2(3, 3);
+Point P3(0, 3);
+Rectangle r(p0, p1, p2, p3);
+r.draw();
+r.shear(1.5);
+r.draw(black, "evenly");
+@end example
+
+@iftex 
+@tex 
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point P0;}
+\immediate\write\examples{Point P1(3);}
+\immediate\write\examples{Point P2(3, 3);}
+\immediate\write\examples{Point P3(0, 3);}
+\immediate\write\examples{Rectangle r(P0, P1, P2, P3);}
+\immediate\write\examples{r.draw();}
+\immediate\write\examples{r.get_point(0).dotlabel("$P_0$ = $Q_0$ = (0, 0)", "llft");}
+\immediate\write\examples{r.get_point(1).dotlabel("$P_1$ = $Q_1$ = (3, 0)", "lrt");}
+\immediate\write\examples{r.get_point(2).dotlabel("$P_2$ = (3, 3)", "ulft");}
+\immediate\write\examples{r.get_point(3).dotlabel("$P_3$ = (0, 3)", "ulft");}
+\immediate\write\examples{r.get_center().label("$r$", "");} 
+\immediate\write\examples{Point q_center(r.get_center());} 
+\immediate\write\examples{q_center *= r.shear(1.5);}
+\immediate\write\examples{q_center.label("$q$", "");} 
+\immediate\write\examples{r.get_point(2).dotlabel("$Q_2$ = (7.5, 3)");}
+\immediate\write\examples{r.get_point(3).dotlabel("$Q_3$ = (4.5, 3)");}
+\immediate\write\examples{r.draw(black, "evenly");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF84.png"
+alt="[Figure 84. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 84.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 84 not displayed.]
+@end ifinfo
+
+@end deftypefun
+
+@deftypefun Transform shift (real @var{x}, [real @var{y} = 0, [real @var{z} = 0]])
+@deftypefunx Transform shift ({const Point&} @var{p})
+Each of these functions calls the corresponding version of 
+@code{Transform::shift()} on @code{transform}, and returns its return
+value, namely, a @code{Transform} representing the shifting operation
+only. 
+
+The @code{Point} is shifted @var{x} units in the direction of the
+positive x-axis, @var{y} units in the direction of the
+positive y-axis, and @var{z} units in the direction of the
+positive z-axis.
+
+@example
+p0(1, 2, 3);
+p0.shift(2, 3, 5);
+p0.show("p0:");
+@print{} p0: (3, 5, 8)
+@end example
+
+@end deftypefun
+
+@deftypefun Transform shift_times (real @var{x}, [real @var{y} = 1, [real @var{z} = 1]])
+@deftypefunx Transform shift_times ({const Point&} @var{p})
+Each of these functions calls the corresponding version of 
+@code{Transform::shift_times()} on @code{transform} and 
+returns its return value, namely the new value of @code{transform}.
+
+@code{shift_times()} makes it possible to increase the magnitude of a
+shift applied to a @code{Point}, while maintaining its direction.
+Please note that @code{shift_times()} will only have an effect 
+if it's called after a call to
+@code{shift()} and before @code{transform} is reset.  
+This is performed by @code{reset_transform()}, which is called in
+@code{apply_transform()}, and can also be called directly.
+@xref{Resetting Transforms,,Transform Reference; Resetting}, and
+@ref{Applying Transformations to Points,,Point Reference; 
+Applying Transformations}.  
+
+@example
+Point P;
+P.drawdot();
+P.shift(1, 1, 1);
+P.drawdot();
+P.shift_times(2, 2, 2);
+P.drawdot();
+P.shift_times(2, 2, 2);
+P.drawdot();
+P.shift_times(2, 2, 2);
+P.drawdot();
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 4, 3, 10, 10);}
+\immediate\write\examples{Point P;}
+\immediate\write\examples{Path q;}
+\immediate\write\examples{q.set_connectors("..");}
+\immediate\write\examples{q += P;}
+\immediate\write\examples{P.dotlabel(Point::WORLD_VALUES, "lrt"); }
+\immediate\write\examples{P.shift(1, 1, 1);}
+\immediate\write\examples{q += P;}
+\immediate\write\examples{P.dotlabel(Point::WORLD_VALUES, "rt"); }
+\immediate\write\examples{P.shift_times(2, 2, 2);}
+\immediate\write\examples{q += P;}
+\immediate\write\examples{P.dotlabel(Point::WORLD_VALUES, "rt"); }
+\immediate\write\examples{P.shift_times(2, 2, 2);}
+\immediate\write\examples{q += P;}
+\immediate\write\examples{P.dotlabel(Point::WORLD_VALUES, "rt");}
+\immediate\write\examples{P.shift_times(2, 2, 2);}
+\immediate\write\examples{q += P;}
+\immediate\write\examples{P.label(Point::WORLD_VALUES);}
+\immediate\write\examples{q.drawarrow(black, "evenly");}
+\immediate\write\examples{draw_axes(gray);}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF85.png"
+alt="[Figure 85. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 85.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 85 not displayed.]
+@end ifinfo
+
+@end deftypefun
+  
+@node Applying Transformations to Points, Projecting Points, Affine Transformations for Points, Point Reference
+@section Applying Transformations
+
+@deftypefun void apply_transform (void)
+Updates @code{world_coordinates} by multiplying it by @code{transform},
+which is subsequently reset to the identity @code{Transform}.
+@end deftypefun
+
+@node Projecting Points, Vector Operations, Applying Transformations to Points, Point Reference
+@section Projecting
+
+@deftypefun bool project ({const Focus&} @var{f}, [{const unsigned short} @var{proj} = Projections::PERSP, [real @var{factor} = 1]]) 
+@deftypefunx bool project ([{const unsigned short&} @var{proj} = Projections::PERSP, [real @var{factor} = 1]])
+@c
+These functions calculate @code{projective_coordinates}.  
+@var{proj} indicates which projection is to be performed.
+If it is @code{Projections::PERSP}, then @var{f} indicates which
+@code{Focus} is to be used (in the first version), or the global variable
+@code{default_focus} is used (in the second).  If
+@code{Projections::PARALLEL_X_Y}, @code{Projections::PARALLEL_X_Z}, or 
+@code{Projections::PARALLEL_Z_Y} is used, @var{f} is ignored, since
+these projections don't use a @code{Focus}.  Currently, no other
+projections are defined.  The x and y coordinates in
+@code{projective_coordinates} are multiplied by @var{factor} with the default
+being 1.
+@end deftypefun
+
+@node Vector Operations, Points and Lines, Projecting Points, Point Reference
+@section Vector Operations
+
+Mathematically speaking, vectors and points are not the same.  However,
+they can both be represented as triples of real numbers (in a
+three-dimensional Cartesian space).  It is sometimes convenient to treat
+points as though they were vectors, and vice versa.  In particular, it
+is convenient to use the same data type, namely @code{class Point}, to
+represent both points and vectors in 3DLDF.
+
+@deftypefn {@code{const} function} real dot_product (Point @var{p})
+Returns the dot or scalar product of @code{*this} and @var{p}.
+
+If @math{P} and @math{Q} are @code{Points}, 
+@iftex
+@tex
+$$P\bullet Q = x_Px_Q + y_Py_Q + z_Pz_Q = |P||Q|\cos(\theta)$$
+@end tex
+@end iftex
+@c
+@ifnottex 
+@display 
+@math{P \dot Q = x_P * x_Q + y_P * y_Q + z_P * z_Q = |P||Q| * cos(\theta)} 
+@end display
+@end ifnottex 
+@c
+where  @math{|P|} 
+and @math{|Q|} are the magnitudes of 
+@math{P} and @math{Q}, respectively, and @math{\theta}
+is the angle between @math{P} and @math{Q}.
+
+Since 
+@iftex
+@tex
+$$\theta = \arccos\Biggl({P \bullet Q \over |P||Q|}\Biggr),$$
+@end tex
+@end iftex
+@c
+@ifnottex 
+@display
+@math{\theta = arccos(P \dot Q / |P||Q|)}, 
+@end display
+@end ifnottex 
+@c
+the dot product can be used for finding the angle between two vectors.
+
+@example
+Point P(1, -1, -1);
+Point Q(3, 2, 5);
+cout << P.angle(Q);
+@print{} 112.002
+cout << P.dot_product(Q);
+@print{} -4
+real P_Q_angle = (180.0 / PI)
+                 * acos(P.dot_product(Q) 
+                 / (P.magnitude() * Q.magnitude()));
+cout << P_Q_angle;
+@print{} 112.002
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 1, -10, 4, 1, 10, 10);}
+\immediate\write\examples{Point P(1, -1, -1);}
+\immediate\write\examples{origin.drawarrow(P);}
+\immediate\write\examples{P.label("$P$", "rt"); }
+\immediate\write\examples{P.label(Point::WORLD_VALUES, "bot"); }
+\immediate\write\examples{Point Q(3, 2, 5);}
+\immediate\write\examples{origin.drawarrow(Q);}
+\immediate\write\examples{Q.label("$Q$"); }
+\immediate\write\examples{Q.label(Point::WORLD_VALUES, "rt"); }
+\immediate\write\examples{real P_Q_angle = (180.0 / PI)}
+\immediate\write\examples{                 * acos(P.dot_product(Q) / (P.magnitude() * Q.magnitude()));}
+\immediate\write\examples{Path r;}
+\immediate\write\examples{r.set_connectors("--");}
+\immediate\write\examples{r += origin;}
+\immediate\write\examples{r += P;}
+\immediate\write\examples{r += Q;}
+\immediate\write\examples{Point N = r.get_normal();}
+\immediate\write\examples{Point T(P);}
+\immediate\write\examples{T *= .75;}
+\immediate\write\examples{Path u;}
+\immediate\write\examples{u.set_connectors("..");}
+\immediate\write\examples{u += T;}
+\immediate\write\examples{Point V(T);}
+\immediate\write\examples{V.rotate(origin, N, -P_Q_angle / 2);}
+\immediate\write\examples{V.label("$@DBKS{theta}$", "lft"); }
+\immediate\write\examples{V.shift(.75);}
+\immediate\write\examples{stringstream s;}
+\immediate\write\examples{s << "$@DBKS{theta} = " << P_Q_angle << "^@DBKS{circ}$";}
+\immediate\write\examples{V.label(s.str(), "urt"); }
+\immediate\write\examples{s.str("");}
+\immediate\write\examples{s << "$P@DBKS{bullet} Q = " << P.dot_product(Q) << "$";}
+\immediate\write\examples{V.label(s.str(), "lrt"); }
+\immediate\write\examples{for (int i = 0; i < 10; ++i)}
+\immediate\write\examples{  @OCB}
+\immediate\write\examples{    T.rotate(origin, N, -P_Q_angle/10);}
+\immediate\write\examples{    u += T;}
+\immediate\write\examples{  @CCB}
+\immediate\write\examples{u.draw(black, "evenly");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF86.png"
+alt="[Figure 86. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 86.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 86 not displayed.]
+@end ifinfo
+
+If the angle @math{\theta} between two vectors @math{P} and @math{Q} is
+@DEG{90}, then 
+@math{\cos(\theta)} is 0, so 
+@iftex
+@tex
+@math{P\bullet Q} 
+@end tex
+@end iftex
+@c
+@ifnottex 
+@math{P \dot Q} 
+@end ifnottex 
+@c
+will also be 0.  Therefore, 
+@code{dot_product()} can be used as a test for the orthogonality of vectors.
+
+@example
+Point P(2);
+Point Q(P);
+Point Q0(P0);
+Q0 *= Q.rotate(0, 0, 90);
+P *= Q.rotate(0, 45, 45);
+P *= Q.rotate(45);
+cout << P.angle(Q);
+@print{} 90
+cout << P.dot_product(Q);
+@print{} 0
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 1, -10, 4, 1, 10, 10);}
+\immediate\write\examples{Point P(2);}
+\immediate\write\examples{Point Q(P);}
+\immediate\write\examples{real dist = .75;}
+\immediate\write\examples{Point P0(dist);}
+\immediate\write\examples{Point R0(dist, dist);}
+\immediate\write\examples{Point Q0(P0);}
+\immediate\write\examples{Q0 *= Q.rotate(0, 0, 90);}
+\immediate\write\examples{R0 *= P0 *= Q0 *= P *= Q.rotate(0, 45, 45);}
+\immediate\write\examples{R0 *= P0 *= Q0 *= P *= Q.rotate(45);}
+\immediate\write\examples{origin.drawarrow(P);}
+\immediate\write\examples{P.label("$P$"); }
+\immediate\write\examples{P.label(Point::WORLD_VALUES, "rt"); }
+\immediate\write\examples{origin.drawarrow(Q);}
+\immediate\write\examples{Q.label("$Q$"); }
+\immediate\write\examples{Q.label(Point::WORLD_VALUES, "llft");}
+\immediate\write\examples{origin.mediate(R0).label("$90^@DBKS{circ}$", ""); }
+\immediate\write\examples{Path s("--", false, &P0, &R0, &Q0, 0);}
+\immediate\write\examples{s.draw(black, "evenly");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF87.png"
+alt="[Figure 87. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 87.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 87 not displayed.]
+@end ifinfo
+
+@end deftypefn
+
+@deftypefn {@code{const} function} Point cross_product (Point @var{p})
+Returns the cross or vector product of @code{*this} and @var{p}.
+
+If @math{P} and @math{Q} are @code{Points},
+@iftex 
+@tex  
+\setbox0=\hbox{$n$}
+\setbox1=\hbox to \wd0{\hfil$\hat{}$\hfil}
+\setbox2=\hbox{\copy1\hskip-\wd1$n$}
+$$P\times Q = ((y_Pz_Q - z_Py_Q), (z_Px_Q - x_Pz_Q), (x_Py_Q - y_Px_Q))
+= |P||Q|\sin(\theta)\copy2,$$
+where $|P|$ and $|Q|$ are the magnitudes of $P$ and $Q$, respectively,
+$\theta$ is the angle between $P$ and $Q$, and {\copy2} 
+@end tex
+@end iftex
+@c
+@ifnottex 
+
+@display 
+P * Q = ((y_P * z_Q - z_P * y_Q), (z_P * x_Q - x_P * z_Q), 
+(x_P * y_Q - y_P * x_Q)) = |P||Q| * sin(\theta) * n,
+@end display
+
+where @math{|P|} and @math{|Q|} are the magnitudes of 
+@math{P} and @math{Q}, respectively,
+@math{\theta} is the angle between @math{P} and @math{Q}, and @math{n} 
+@end ifnottex 
+@c
+is a unit vector
+perpendicular to both @math{P} and @math{Q} in the direction of a
+right-hand screw from @math{P} towards @math{Q}.  Therefore,
+@code{cross_product()} can be used to find the normals to planes.  
+
+@example
+Point P(2, 2, 2);
+Point Q(-2, 2, 2);
+Point n = P.cross_product(Q);
+n.show("n:");
+@print{} n: (0, -8, 8)
+real theta = (PI / 180.0) * P.angle(Q);
+cout << theta;
+@print{} 1.23096
+real n_mag = P.magnitude() * Q.magnitude() * sin(theta);
+cout << n_mag;
+@print{} 11.3137
+n /= n_mag;
+cout << n.magnitude();
+@print{} 1
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 1, -10, 4, 1, 10, 10);}
+\immediate\write\examples{Point P(2, 2, 2);}
+\immediate\write\examples{Point Q(-2, 2, 2);}
+\immediate\write\examples{Point n = P.cross_product(Q);}
+\immediate\write\examples{real angle_deg = P.angle(Q);}
+\immediate\write\examples{real theta = (PI / 180.0) * angle_deg;}
+\immediate\write\examples{real n_mag = P.magnitude() * Q.magnitude() * sin(theta);}
+\immediate\write\examples{P.label("$P$");}
+\immediate\write\examples{P.label(Point::WORLD_VALUES, "rt");}
+\immediate\write\examples{Q.label("$Q$");}
+\immediate\write\examples{Q.label(Point::WORLD_VALUES, "lft");}
+\immediate\write\examples{n.label("$@DBKS{vec}@OCB{}n@CCB{}$", "bot");}
+\immediate\write\examples{n.label(Point::WORLD_VALUES, "urt");}
+\immediate\write\examples{origin.drawarrow(n);}
+\immediate\write\examples{origin.drawarrow(P);}
+\immediate\write\examples{origin.drawarrow(Q);}
+\immediate\write\examples{Point R(origin.mediate(P));}
+\immediate\write\examples{Point T(R);}
+\immediate\write\examples{Path s;}
+\immediate\write\examples{s.set_connectors("..");}
+\immediate\write\examples{s += R;}
+\immediate\write\examples{real angle = P.angle(Q);}
+\immediate\write\examples{for (int i = 0; i < 10; ++i)}
+\immediate\write\examples{  @OCB}
+\immediate\write\examples{    R.rotate(origin, n, angle/10);}
+\immediate\write\examples{    s += R;}
+\immediate\write\examples{  @CCB}
+\immediate\write\examples{s.draw(black, "evenly");}
+\immediate\write\examples{T.rotate(origin, n, angle/2);}
+\immediate\write\examples{T = origin.mediate(T, .5);}
+\immediate\write\examples{T.label("$@DBKS{theta}$", "");}
+\immediate\write\examples{T.shift(1.5);}
+\immediate\write\examples{stringstream u;}
+\immediate\write\examples{u << "$@DBKS{theta} = " << angle_deg << "^@DBKS{circ}$";}
+\immediate\write\examples{T.label(u.str(), "rt");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF88.png"
+alt="[Figure 88. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 88.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 88 not displayed.]
+@end ifinfo
+
+If 
+@iftex 
+@tex 
+$\theta = 0^\circ$ or $180^\circ$, 
+@end tex
+@end iftex
+@c
+@ifnottex 
+@math{\theta = 0 degrees or 180 degrees},
+@end ifnottex 
+@c
+@math{\sin(\theta)} will be 0, and
+@TMS{P, Q} will be @math{(0, 0, 0)}.
+The cross product thus provides a test for parallel vectors.
+
+
+@example
+Point P(1, 2, 1);
+Point Q(P);
+Point R;
+R *= Q.shift(-3, -1, 1);
+Point s(Q - R);
+Point n = P.cross_product(s);
+n.show("n:");
+@print{} n: (0, 0, 0)
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 1, -10, 4, 1, 10, 10);}
+\immediate\write\examples{Point P(1, 2, 1);}
+\immediate\write\examples{Point Q(P);}
+\immediate\write\examples{Point R;}
+\immediate\write\examples{R *= Q.shift(-3, -1, 1);}
+\immediate\write\examples{origin.drawarrow(P);}
+\immediate\write\examples{R.drawarrow(Q);}
+\immediate\write\examples{Point s(Q - R);}
+\immediate\write\examples{R.mediate(Q).label("$@DBKS{vec}@OCB{}s@CCB$", "ulft");}
+\immediate\write\examples{Point n = P.cross_product(s);}
+\immediate\write\examples{origin.dotlabel("origin", "bot"); }
+\immediate\write\examples{P.label("$P$");}
+\immediate\write\examples{Q.label("$Q$");}
+\immediate\write\examples{R.dotlabel("$R$", "bot");}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF89.png"
+alt="[Figure 89. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 89.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 89 not displayed.]
+@end ifinfo
+
+@end deftypefn
+
+@deftypefn {@code{const} function} real magnitude (void) 
+Returns the magnitude of the @code{Point}.  This is its distance from
+@code{origin} and is equal to 
+@iftex 
+@tex
+$\sqrt{\strut x^2 + y^2 + z^2}$. 
+@end tex
+@end iftex
+@c
+@ifnottex 
+@math{sqrt(x^2 + y^2 + z^2)}. 
+@end ifnottex 
+
+@example
+Point P(13, 15.7, 22);
+cout << P.magnitude();
+@print{} 29.9915
+@end example
+@end deftypefn
+
+@deftypefn {@code{const} function} real angle (Point @var{p})
+Returns the angle in degrees between two @code{Points}.  
+
+@example
+Point P(3.75, -1.25, 6.25);
+Point Q(-5, 2.5, 6.25);
+real angle = P.angle(Q);
+cout << angle;
+@print{} 73.9084
+Point n = origin.get_normal(P, Q);
+n.show("n:");
+@print{} n: (0.393377, 0.91788, -0.0524503)
+@end example
+
+@iftex 
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(3, 3, -10, 2, 2, 10, 10, 180);}
+\immediate\write\examples{Point P(3.75, -1.25, 6.25);}
+\immediate\write\examples{P.label("$P$"); }
+\immediate\write\examples{origin.drawarrow(P, black);}
+\immediate\write\examples{Point Q(-5, 2.5, 6.25);}
+\immediate\write\examples{Q.label("$Q$"); }
+\immediate\write\examples{origin.drawarrow(Q, black);}
+\immediate\write\examples{real angle = P.angle(Q);}
+\immediate\write\examples{Point n = origin.get_normal(P, Q);}
+\immediate\write\examples{n.label("$@DBKS{vec}@OCB{}n@CCB$", "lft");  }
+\immediate\write\examples{origin.drawarrow(n);}
+\immediate\write\examples{Point a(P);}
+\immediate\write\examples{a *= .75;}
+\immediate\write\examples{Path b;}
+\immediate\write\examples{b += "..";}
+\immediate\write\examples{b += a;}
+\immediate\write\examples{for (int i = 0; i < 10; ++i)}
+\immediate\write\examples{  @OCB}
+\immediate\write\examples{    a.rotate(origin, n, -angle/10);}
+\immediate\write\examples{    b += a;}
+\immediate\write\examples{  @CCB}
+\immediate\write\examples{a.rotate(origin, n, angle/2);}
+\immediate\write\examples{a.label("$@DBKS{theta}$", "bot");}
+\immediate\write\examples{a.shift(1.5, 1);}
+\immediate\write\examples{stringstream c;}
+\immediate\write\examples{c << "$@DBKS{theta} = " << angle << "^@DBKS{circ}$";}
+\immediate\write\examples{a.label(c.str(), "");}
+\immediate\write\examples{b.draw(black, "evenly");}
+\immediate\write\examples{draw_axes(gray, 0, "d", "d", "rt"); }
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF90.png"
+alt="[Figure 90. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 90.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 90 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefn
+
+
+@deftypefn {Function} Point unit_vector ({const bool} @var{assign}, [{const bool} @var{silent = false}])
+@deftypefnx {@code{const} function} Point unit_vector (void) 
+These functions return a @code{Point} with the x, y, and z-coordinates
+of @code{world_coordinates} divided by the magnitude of the @code{Point}.
+The magnitude of the resulting @code{Point} is thus 1.  The first
+version assigns the result to @code{*this} and should only ever be
+called with @var{assign} = @code{true}.  Calling it with the
+argument @code{false} is equivalent to calling the @code{const} version,
+with no assignment.  If @code{unit_vector()} is called with @var{assign}
+and @var{silent} both @code{false}, it issues a warning message is
+issued and the @code{const} version is called.  If @var{silent} is
+@code{true}, the message is suppressed. 
+
+@example
+Point P(21, 45.677, 91);
+Point Q = P.unit_vector();
+Q.show("Q:");
+@print{} Q: (0.201994, 0.439357, 0.875308)
+P.rotate(30, 25, 10);
+P.show("P:");
+P: (-19.3213, 82.9627, 59.6009)
+cout << P.magnitude();
+@print{} 103.963 
+P.unit_vector(true);
+P.show("P:");
+@print{} P: (-0.185847, 0.797999, 0.573287)
+cout << P.magnitude();
+@print{} 1
+@end example
+
+@end deftypefn
+
+
+@node Points and Lines, Point Intersections, Vector Operations, Point Reference
+@section Points and Lines
+
+@deftypefn {@code{const} function} Line get_line ({const Point&} @var{p}) 
+Returns the @code{Line} @var{l} corresponding to the line from @code{*this} to
+@var{p}.  @var{l}.@code{position} will be @code{*this}, and
+@var{l}.@code{direction} will be @var{p} - @code{*this}.
+@xref{Line Reference}.
+@end deftypefn
+
+@deftypefn {@code{const} function} real slope (Point @var{p}, [char @var{m} = 'x', [char @var{n} = 'y']]) 
+Returns a @code{real} number representing the slope of the @emph{trace}
+of the line defined by  
+@code{*this} and @var{p} on the plane indicated by the arguments @var{m}
+and @var{n}. 
+
+@example
+Point p0(3, 4, 5);
+Point p1(2, 7, 12);
+real r = p0.slope(p1, 'x', 'y');
+@result{} r @equiv{} -3
+r = p0.slope(p1, 'x', 'z');
+@result{} r @equiv{} -7
+r = p0.slope(p1, 'z', 'y');
+@result{} r @equiv{} 0.428571
+@end example
+@end deftypefn
+
+@deftypefn {Function} bool_real is_on_segment (Point @var{p0}, Point @var{p1})
+@deftypefnx {@code{const} function} bool_real is_on_segment ({const Point&} @var{p0}, {const Point&} @var{p1}) 
+These functions return a @code{bool_real}, where the @code{bool} part is 
+@code{true}, if 
+the @code{Point} lies on the line segment between @var{p0} and @var{p1},
+otherwise @code{false}.  If the @code{Point} lies on the line segment, the
+@code{real} part is a value 
+@math{r} such that 
+@c
+@iftex 
+@tex
+$0\le r\le 1$
+@end tex
+@end iftex
+@c
+@ifnottex 
+0 <= r <= 1
+@end ifnottex 
+@c
+indicating how far the @code{Point} is along the way from
+@var{p0} to @var{p1}.  For example, if the @code{Point} is half of the way
+from @var{p0} to @var{p1}, @math{r} will be @math{.5}.  If the @code{Point}
+does not lie on the line 
+segment, but on the @emph{line} passing through @var{p0} and @var{p1}, 
+@math{r} will be @math{<0} or @math{>1}.
+
+If the @code{Point} doesn't lie on the line passing through @var{p0} and
+@var{p1}, 
+@math{r} will be @code{INVALID_REAL}.
+
+@example
+Point p0(-1, -2, 1);
+Point p1(3, 2, 5);
+Point p2(p0.mediate(p1, .75));
+Point p3(p0.mediate(p1, 1.5));
+Point p4(p2);
+p4.shift(-2, 1, -1);
+bool_real br = p2.is_on_segment(p0, p1);
+cout << br.first;
+@print{} 1
+cout << br.second;
+@print{} 0.75
+bool_real br = p3.is_on_segment(p0, p1);
+cout << br.first;
+@print{} 0
+cout << br.second;
+@print{} 1.5
+bool_real br = p4.is_on_segment(p0, p1);
+cout << br.first;
+@print{} 0
+cout << br.second;
+@print{} 3.40282e+38
+cout << (br.second == INVALID_REAL)
+@print{} 1
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(2, 2, -10, 2, 2, 10, 10);}
+\immediate\write\examples{Point p0(-1, -2, 1);}
+\immediate\write\examples{Point p1(3, 2, 5);}
+\immediate\write\examples{Point p2(p0.mediate(p1, .75));}
+\immediate\write\examples{Point p3(p0.mediate(p1, 1.5));}
+\immediate\write\examples{Point p4(p2);}
+\immediate\write\examples{p4.shift(-2, 1, -1);}
+\immediate\write\examples{p0.dotlabel("$p_0$", "bot"); }
+\immediate\write\examples{p1.dotlabel("$p_1$"); }
+\immediate\write\examples{p2.dotlabel("$p_2$", "lft"); }
+\immediate\write\examples{p3.dotlabel("$p_3$"); }
+\immediate\write\examples{p4.dotlabel("$p_4$"); }
+\immediate\write\examples{p0.draw(p1);}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF91.png"
+alt="[Figure 91. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 91.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 91 not displayed.]
+@end ifinfo
+
+@c
+
+
+@end deftypefn
+
+@deftypefn {@code{const} function} bool_real is_on_line ({const Point&} @var{p0}, {const Point&} @var{p1})
+Returns a @code{bool_real} where the @code{bool} part is @code{true}, if
+the @code{Point} lies on the line passing through @var{p0} and @var{p1},
+otherwise @code{false}.  If the @code{Point} lies on the line, the
+@code{real} part is a value @math{r} indicating how how far the @code{Point}
+is along the way from @var{p0} to @var{p1}, otherwise
+@code{INVALID_REAL}.  The following 
+values of @math{r} are possible for a call to @code{P.is_on_line(A, B)},
+where the @code{Point} @math{P} lies on the line
+@c
+@iftex
+@tex
+$\overrightarrow{AB}$:
+@end tex
+@end iftex
+@c
+@ifnottex 
+AB: 
+@end ifnottex 
+
+@iftex
+@tex
+@display 
+$P \equiv A \Longrightarrow r\equiv 0$.  
+
+$P \equiv B \Longrightarrow r\equiv 1$.
+
+$P$ lies on the opposite side of $A$ from $B \Longrightarrow r < 0$.  
+
+$P$ lies between $A$ and $B \Longrightarrow 0 <  r < 1$.
+
+$P$ lies on the opposite side of $A$ from $B \Longrightarrow r > 1$
+@end display
+@end tex
+@end iftex
+@c
+@ifnottex 
+@display 
+P @equiv{} A ---> r@equiv{} 0.  
+
+P @equiv{} B ---> r@equiv{} 1.
+
+P lies on the opposite side of A from B ---> r < 0.  
+
+P lies between A and B ---> 0 <  r < 1.
+
+P lies on the opposite side of A from B ---> r > 1
+@end display
+@end ifnottex 
+
+
+@example
+Point A(-1, -2);
+Point B(2, 3);
+Point C(B.mediate(A, 1.25));
+bool_real br = C.is_on_line(A, B);
+Point D(A.mediate(B));
+br = D.is_on_line(A, B);
+Point E(A.mediate(B, 1.25));
+br = E.is_on_line(A, B);
+Point F(D);
+F.shift(-1, 1);
+br = F.is_on_line(A, B);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point A(-1, -2);}
+\immediate\write\examples{A.dotlabel("$A$", "rt");}
+\immediate\write\examples{Point B(2, 3);}
+\immediate\write\examples{B.dotlabel("$B$", "lft");}
+\immediate\write\examples{A.draw(B);}
+\immediate\write\examples{Point C(B.mediate(A, 1.25));}
+\immediate\write\examples{C.dotlabel("$C$", "ulft"); }
+\immediate\write\examples{stringstream s;}
+\immediate\write\examples{bool_real br = C.is_on_line(A, B);}
+\immediate\write\examples{s << "$r @DBKS{equiv} " << br.second << "$";}
+\immediate\write\examples{C.label(s.str(), "bot");}
+\immediate\write\examples{C.draw(A, black, "evenly");} 
+\immediate\write\examples{s.str("");}
+\immediate\write\examples{Point D(A.mediate(B));}
+\immediate\write\examples{br = D.is_on_line(A, B);}
+\immediate\write\examples{D.dotlabel("$D$", "lft"); }
+\immediate\write\examples{s << "$r @DBKS{equiv} " << br.second << "$";}
+\immediate\write\examples{D.label(s.str(), "rt");}
+\immediate\write\examples{s.str("");}
+\immediate\write\examples{Point E(A.mediate(B, 1.25));}
+\immediate\write\examples{br = E.is_on_line(A, B);}
+\immediate\write\examples{E.dotlabel("$E$", "lft"); }
+\immediate\write\examples{s << "$r @DBKS{equiv} " << br.second << "$";}
+\immediate\write\examples{E.label(s.str(), "rt");}
+\immediate\write\examples{B.draw(E, black, "evenly");} 
+\immediate\write\examples{s.str("");}
+\immediate\write\examples{Point F(D);}
+\immediate\write\examples{F.shift(-1, 1);}
+\immediate\write\examples{F.dotlabel("$F$"); }
+\immediate\write\examples{F.label("$r@DBKS{equiv}$ @OCB@DBKS{tt} INVALID@UBAR REAL@CCB", "llft");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF92.png"
+alt="[Figure 92. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 92.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 92 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn
+
+@deftypefn {@code{const} function} Point mediate (Point @var{p}, [{const real} @var{r} = .5])
+Returns a @code{Point} @var{r} of the way from @code{*this} to @var{p}.
+
+@example
+Point p0(-1, 0, -1);
+Point p1(10, 0, 10);
+Point p2(5, 5, 5);
+Point p3 = p0.mediate(p1, 1.5);
+p3.show("p3:");
+@print{} p3: (15.5, 0, 15.5)
+Point p4 = p0.mediate(p2, 1/3.0);
+p4.show("p4:");
+@print{} p4: (1, 1.66667, 1)
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(2, 5, -10, 1, 3, 10, 10, 180);}
+\immediate\write\examples{Point p0(-1, 0, -1);}
+\immediate\write\examples{Point p1(10, 0, 10);}
+\immediate\write\examples{p0.draw(p1);}
+\immediate\write\examples{Point p2(5, 5, 5);}
+\immediate\write\examples{p0.draw(p2);}
+\immediate\write\examples{Point p3 = p0.mediate(p1, 1.5);}
+\immediate\write\examples{p1.draw(p3, black, "evenly");}
+\immediate\write\examples{Point p4 = p0.mediate(p2, 1/3.0);}
+\immediate\write\examples{p0.dotlabel("$p_0$", "bot"); }
+\immediate\write\examples{p1.dotlabel("$p_1$"); }
+\immediate\write\examples{p2.dotlabel("$p_2$"); }
+\immediate\write\examples{p3.dotlabel("$p_3$"); }
+\immediate\write\examples{p4.dotlabel("$p_4$", "rt"); }
+\immediate\write\examples{draw_axes(gray);}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF93.png"
+alt="[Figure 93. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 93.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 93 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn
+
+@node Point Intersections, Point Drawing Functions, Points and Lines, Point Reference
+@section Intersections
+
+@deftypefn {Static function} bool_point intersection_point (Point @var{p0}, Point @var{p1}, Point @var{q0}, Point @var{q1})
+@deftypefnx {Static function} bool_point intersection_point (Point @var{p0}, Point @var{p1}, Point @var{q0}, Point @var{q1}, {const bool} @var{trace})
+These functions find the intersection point, if any, of the lines determined by 
+@var{p0} and @var{p1} on the one hand, and @var{q0} and @var{q1} on the other.  
+
+Let @code{bp} be the @code{bool_point} returned by
+@code{intersection_point()}.  If an intersection point is found, the
+corresponding @code{Point} will be stored in @code{bp.pt}, otherwise, 
+@code{bp.pt} will be set to @code{INVALID_POINT}.  If the intersection
+point lies on both of the line segments, @code{bp.b} will be
+@code{true}, otherwise, @code{false}.  
+
+The two versions use different methods of finding the intersection
+point.  The first uses a vector calculation, the second looks for the
+intersections of the traces of the lines on the major planes.  If the
+@var{trace} argument is used, the second version will be called, whether
+@var{trace} is @code{true} or @code{false}.  Ordinarily, there should be
+no need to use the trace version.
+
+@example
+Point A(-1, -1);
+Point B(1, 1);
+Point C(-1, 1);
+Point D(1, -1);
+bool_point bp = Point::intersection_point(A, B, C, D);
+bp.pt.dotlabel("$i$");
+cout << "bp.b == " << bp.b << endl << flush;
+@print{} bp.b == 1
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point A(-1, -1);}
+\immediate\write\examples{Point B(1, 1);}
+\immediate\write\examples{Point C(-1, 1);}
+\immediate\write\examples{Point D(1, -1);}
+\immediate\write\examples{A.draw(B);}
+\immediate\write\examples{C.draw(D);}
+\immediate\write\examples{A.dotlabel("$A$", "bot");}
+\immediate\write\examples{B.dotlabel("$B$"); }
+\immediate\write\examples{C.dotlabel("$C$"); }
+\immediate\write\examples{D.dotlabel("$D$", "bot"); }
+\immediate\write\examples{bool_point bp = Point::intersection_point(A, B, C, D);}
+\immediate\write\examples{bp.pt.dotlabel("$i$");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF94.png"
+alt="[Figure 94. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 94.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 94 not displayed.]
+@end ifinfo
+
+@c
+
+@example
+Point A(.5, .5);
+Point B(1.5, 1.5);
+Point C(-1, 1);
+Point D(1, -1);
+bool_point bp = Point::intersection_point(A, B, C, D, true);
+bp.pt.dotlabel("$i$");
+cout << "bp.b == " << bp.b << endl << flush;
+@print{} bp.b == 0
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point A(.5, .5);}
+\immediate\write\examples{Point B(1.5, 1.5);}
+\immediate\write\examples{Point C(-1, 1);}
+\immediate\write\examples{Point D(1, -1);}
+\immediate\write\examples{A.draw(B);}
+\immediate\write\examples{C.draw(D);}
+\immediate\write\examples{A.dotlabel("$A$");}
+\immediate\write\examples{B.dotlabel("$B$"); }
+\immediate\write\examples{C.dotlabel("$C$"); }
+\immediate\write\examples{D.dotlabel("$D$"); }
+\immediate\write\examples{bool_point bp = Point::intersection_point(A, B, C, D);}
+\immediate\write\examples{bp.pt.dotlabel("$i$");}
+\immediate\write\examples{Point E(A.mediate(bp.pt, 2));}
+\immediate\write\examples{A.draw(E, black, "evenly");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF95.png"
+alt="[Figure 95. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 95.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 95 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn
+
+@node Point Drawing Functions, Labelling Points, Point Intersections, Point Reference
+@section Drawing 
+
+There are two versions for each of the drawing functions.  The second
+one has the @code{Picture} argument @var{picture} at the beginning of the
+argument list, rather than at the end.  This is convenient when passing
+a @code{picture} argument.  Where @var{picture} is optional, the default
+is always @code{current_picture}. 
+
+@cindex output file
+@cindex file, output
+@cindex pen expression
+@c 
+@deftypefn {@code{const} function} void drawdot ([{const Color&} @var{ddrawdot_color} = @code{*Colors::default_color}, [{const string} @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]])
+@deftypefnx {@code{const} function} void drawdot ([Picture& @var{picture} = @code{current_picture}, [{const Color&} @var{ddrawdot_color} = @code{*Colors::default_color}, [{const string} @var{ppen} = "", ]]])
+Draws a dot on @var{picture}.  If @var{ppen} is specified, a ``pen
+expression'' is included in the @code{drawdot} command written to
+@code{out_stream}.  Otherwise, MetaPost's @code{currentpen} is used.
+If @var{ddrawdot_color} is specified, the dot will be drawn using that
+@code{Color}.  Otherwise, the @code{Color} currently pointed to by the pointer
+@code{Colors::default_color} will be used.  This will normally be
+@code{Colors::black}.  See @ref{Color Reference}, for more information
+about @code{Colors} and the @code{namespace Colors}.  
+
+Please note that the ``dot'' will always be parallel to the plane of
+projection.  Even where it appears to be a surface, as in @NEXTFIG{}, it
+is never put into perspective, but will always have the same size and
+shape. 
+
+@example
+Point P(1, 1);
+P.drawdot(gray, "pensquare scaled 1cm");
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point P(1, 1);}
+\immediate\write\examples{P.drawdot(gray, "pensquare scaled 1cm");}
+\immediate\write\examples{P.label("$P$", "");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF96.png"
+alt="[Figure 96. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 96.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 96 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn
+
+@deftypefun void undrawdot ([string @var{pen} = "", [{Picture&} @var{picture} = @code{current_picture}]])
+@deftypefunx void undrawdot ([{Picture&} @var{picture} = @code{current_picture}, [string @var{pen} = ""]])
+Undraws a dot on @var{picture}.  If @var{ppen} is specified, a ``pen
+expression'' is included in the @code{undrawdot} command written to
+@code{out_stream}.  Otherwise, MetaPost's @code{currentpen} is used.
+
+@example
+Point P(1, 1);
+P.drawdot(gray, "pensquare scaled 1cm");
+P.undrawdot("pencircle scaled .5cm");
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point P(1, 1);}
+\immediate\write\examples{P.drawdot(gray, "pensquare scaled 1cm");}
+\immediate\write\examples{P.undrawdot("pencircle scaled .5cm");}
+\immediate\write\examples{P.label("$P$", "");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF97.png"
+alt="[Figure 97. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 97.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 97 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefun
+
+@deftypefun void draw ({const Point&} @var{p}, [{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [string @var{ddashed} = "", [string @var{ppen} = "", [{Picture&} @var{picture} = @code{current_picture}, [bool @var{aarrow} = @code{false}]]]]])
+@c
+@deftypefunx void draw ({Picture&} @var{picture} = @code{current_picture}, {const Point&} @var{p}, [{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [string @var{ddashed} = "", [string @var{ppen} = "", [bool @var{aarrow} = @code{false}]]]])
+Draws a line from @code{*this} to @var{p}.
+Returns the @code{Path *this -- p1}. 
+@xref{Drawing and Filling Paths,,Path Reference; Drawing and Filling},
+for more information.
+
+@example
+Point P(-1, -1, -1);
+Point Q(2, 3, 5);
+P.draw(Q, Colors::gray, "", "pensquare scaled .5cm");
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 0, 3, 10, 10);}
+\immediate\write\examples{Point P(-1, -1, -1);}
+\immediate\write\examples{P.dotlabel("$P$", "bot"); }
+\immediate\write\examples{Point Q(2, 3, 5);}
+\immediate\write\examples{Q.dotlabel("$Q$");}
+\immediate\write\examples{P.draw(Q, Colors::gray, "", "pensquare scaled .5cm");}
+\immediate\write\examples{draw_axes();}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF98.png"
+alt="[Figure 98. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 98.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 98 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefun
+
+@deftypefun void undraw ({const Point&} @var{p}, [string @var{ddashed} = "", [string @var{ppen} = "", [{Picture&} @var{picture} = @code{current_picture}]]])
+@c
+@deftypefunx void undraw ({Picture&} @var{picture}, {const Point&} @var{p}, [string @var{ddashed} = "", [string @var{ppen} = ""]])
+Undraws a line from @code{*this} to @var{p}.
+Returns the @code{Path *this -- p1}. 
+@xref{Drawing and Filling Paths,,Path Reference; Drawing and Filling},
+for more information.
+
+@example
+Point P(-1, -1, -1);
+Point Q(2, 3, 5);
+P.draw(Q, Colors::gray, "", "pensquare scaled .5cm");
+P.undraw(Q, "evenly scaled 6", "pencircle scaled .3cm");
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 0, 3, 10, 10);}
+\immediate\write\examples{Point P(-1, -1, -1);}
+\immediate\write\examples{P.dotlabel("$P$", "bot"); }
+\immediate\write\examples{Point Q(2, 3, 5);}
+\immediate\write\examples{Q.dotlabel("$Q$");}
+\immediate\write\examples{P.draw(Q, gray, "", "pensquare scaled .5cm");}
+\immediate\write\examples{P.undraw(Q, "evenly scaled 6", "pencircle scaled .3cm");}
+\immediate\write\examples{draw_axes();}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF99.png"
+alt="[Figure 99. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 99.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 99 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefun
+
+@cindex help lines 
+@deftypefun Path draw_help ({const Point&} @var{p}, [{const Color&} @var{ddraw_color} = *Colors::help_color, [string @var{ddashed} = "", [string @var{ppen} = "", [Picture& @var{picture} = current_picture]]]])
+@deftypefunx Path draw_help (Picture& @var{picture}, {const Point&} @var{p}, [{const Color&} @var{ddraw_color} = *Colors::help_color, [string @var{ddashed} = "", [string @var{ppen} = ""]]])
+Draws a ``help line'' from @code{*this to @var{p}}, but only if the
+@code{static Path} data member @code{do_help_lines} is @code{true}.  
+@xref{Path Data Members,,Path Reference; Data Members}.
+
+``Help lines'' are lines that are used when constructing a drawing, but
+that should not be printed in the final version.  
+@end deftypefun
+
+@deftypefun Path drawarrow ({const Point&} @var{p}, [{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [string @var{ddashed} = "", [string @var{ppen} = "", [Picture& @var{picture} = @code{current_picture}]]]])
+@deftypefunx Path drawarrow (Picture& @var{picture}, {const Point&} @var{p}, [{const Color&} @var{ddraw_color} = @code{*Colors::default_color}, [string @var{ddashed} = "", [string @var{ppen} = ""]]])
+Draws an arrow from @code{*this} to @var{p} and returns
+the @code{Path} @code{*this -- p}.
+The second version is convenient for passing a @code{Picture} argument
+without having to specify all of the other arguments. 
+
+@example
+Point P(-3, -2, 1);
+Point Q(3, 3, 5);
+P.drawarrow(Q);
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(4, 3, -10, 0, 3, 10, 10);}
+\immediate\write\examples{Point P(-3, -2, 1);}
+\immediate\write\examples{P.dotlabel("$P$", "bot"); }
+\immediate\write\examples{Point Q(3, 3, 5);}
+\immediate\write\examples{Q.label("$Q$");}
+\immediate\write\examples{P.drawarrow(Q);}
+\immediate\write\examples{Point R(P.mediate(Q));}
+\immediate\write\examples{R.label("$@DBKS{overrightarrow}@OCB{}PQ@CCB{}$", "ulft"); }
+\immediate\write\examples{draw_axes(gray);}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF100.png"
+alt="[Figure 100. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 100.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 100 not displayed.]
+@end ifinfo
+
+@c
+@end deftypefun
+
+@node Labelling Points, Showing Points, Point Drawing Functions, Point Reference
+@section Labelling 
+
+Labels make it possible to include @TeX{} text within a drawing.  
+Labels are implemented by means of @code{class Label}.  
+The functions @code{label()} and @code{dotlabel()}, described in this
+section, create objects of type @code{Label}, and add them to the
+@code{Picture}, which was passed to them as an argument
+(@code{current_picture}, by default).
+@xref{Label Reference}, for more information.
+
+@deftypefn {@code{const} function} void label ({const string} @var{text_str}, [{const string} @var{position_str} = "top", [{const bool} @var{dot} = @code{false}, [{Picture&} @var{picture} = @code{current_picture}]]])
+@c
+@deftypefnx {@code{const} function} void label ({const short} @var{text_short}, [{const string} @var{position_str} = "top", [{const bool} @var{dot} = @code{false}, [{Picture&} @var{picture} = @code{current_picture}]]])
+@c
+These functions cause a @code{Point} to be labelled in the drawing.
+The first argument is the text of the label. It can either be a
+@code{string}, in the first version, or a @code{short}, in the second.
+It will often be the name of the @code{Point} in the @cpp{} code, for
+example, @code{"p0"}.
+It is not possible to automate this kind of
+labelling, because it is not possible to access the names of variables
+through the variables themselves in @cpp{}.  
+
+@var{text_str} is always placed between
+``@code{btex''} and ``@code{etex}'' in the MetaPost @code{label} command
+written to @code{out_stream}.  This makes it possible to include math
+mode material in the text of labels, as in the following example.
+
+@example
+Point p0(2, 3);
+p0.label("$p_0$");
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point p0(2, 3);}
+\immediate\write\examples{p0.label("$p_0$");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF101.png"
+alt="[Figure 101. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 101.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 101 not displayed.]
+@end ifinfo
+
+@c
+
+If backslashes are needed in the text of the label, then 
+@var{text_str} must contain double backslashes, so that single
+backslashes will be written to @code{out_stream}.
+
+@example
+Point P;
+Point Q(2, 2);
+Point R(P.mediate(Q));
+R.label("$\\overrightarrow@OCB{}PQ@CCB{}$", "ulft");
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point P;}
+\immediate\write\examples{Point Q(2, 2);}
+\immediate\write\examples{P.drawarrow(Q);}
+\immediate\write\examples{P.dotlabel("$P$", "bot"); }
+\immediate\write\examples{Q.label("$Q$"); }
+\immediate\write\examples{Point R(P.mediate(Q));}
+\immediate\write\examples{R.label("$@DBKS{overrightarrow}@OCB PQ@CCB$", "ulft");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF102.png"
+alt="[Figure 102. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 102.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 102 not displayed.]
+@end ifinfo
+
+@c
+ 
+The @var{position} argument indicates where the text of the label should
+be located relative to the @code{Point}.  The valid values are the
+strings used in MetaPost for this purpose, i.e., @samp{top}, @samp{bot},
+@samp{lft}, @samp{rt}, @samp{llft} (lower left), @samp{lrt} (lower
+right), @samp{ulft} (upper left), and @samp{urt} (upper right).  The
+default is @samp{top}.  3DLDF does not catch the error if an invalid
+@code{position} argument is used; the @code{string} is written to the
+output file and an error will occur when MetaPost is run.
+
+The @var{dot} argument is used to determine whether the label should be
+dotted or not.  The default is @code{false}.  The function
+@code{dotlabel()} calls @code{label()}, passing @code{true} as the
+latter's @var{dot} argument. 
+@end deftypefn
+
+@deftypefn {@code{const} function} void dotlabel ([{const string} @var{text_str}, [{const string} @var{position_str} = "top", [Picture& @var{picture} = @code{current_picture}]]])
+@deftypefnx {@code{const} function} void dotlabel ({const short} @var{text_short}, [{const string} @var{position_str} = "top",  [Picture& @var{picture} = current_picture]])
+@c
+These functions are like @code{label()} except that they always produces a
+dot.
+
+@example
+Point p0(2, 3);
+p0.dotlabel("$p_0$");
+@end example
+
+@c
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point p0(2, 3);}
+\immediate\write\examples{p0.dotlabel("$p_0$");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX  
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF103.png"
+alt="[Figure 103. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 103.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 103 not displayed.]
+@end ifinfo
+
+@c
+
+@end deftypefn
+
+@node Showing Points, Outputting Points, Labelling Points, Point Reference
+@section Showing 
+
+@deftypefn {@code{const} function} void show ([string @var{text} = "", [char @var{coords} = 'w', [{const bool} @var{do_persp} = true, [{const bool} @var{do_apply} = true, [Focus* @var{f} = 0, [{const unsigned short} @var{proj} = Projections::persp, [{const real} @var{factor} = 1]]]]]]]) 
+Prints @var{text} followed by the values of a set of coordinates to
+standard output (@code{stdout}).  The other arguments are similar to
+those used in the functions described in @ref{Returning Coordinates}.  
+
+@example
+Point P(1, 3, 5);
+P.rotate(15, 67, 98);
+P.show("P:");
+@print{} P: (-3.68621, -3.89112, 2.50421)
+@end example
+@end deftypefn
+
+@deftypefun void show_transform ([string @var{text} = ""])
+Prints @var{text} to standard output (@code{stdout}), 
+or @code{"transform:"}, if @var{text} is the empty @code{string} (the
+default), and then 
+calls @code{transform.show()}.
+
+@example
+Point A(-1, 1, 1);
+Point B(13, 12, 6);
+Point Q(31, 17.31, 6);
+Q.rotate(A, B, 32);
+Q.show_transform("Q.transform:");
+@print{} Q.transform:
+   Transform:
+     0.935   0.212  -0.284       0 
+   -0.0749   0.902   0.426       0 
+     0.346  -0.377   0.859       0 
+    -0.336   0.687  -0.569       1 
+@end example
+@end deftypefun
+
+@node Outputting Points,  , Showing Points, Point Reference
+@section Outputting 
+
+@deftypefn {Non-member function} ostream& operator<< (ostream& @var{o}, Point& @var{p})
+Used in @code{Path::output()} for writing
+the x and y values of the @code{projective_coordinates} of @code{Points} to
+@code{out_stream}.  @xref{Outputting Paths,,Path Reference; Outputting}.  
+This is a low-level function that ordinary users should never have to
+invoke directly.
+@end deftypefn
+
+@deftypefun void output (void)
+Writes the MetaPost code for drawing or undrawing a @code{Point} to
+@code{out_stream}.  Called by @code{Picture::output()}, when a
+@code{Shape} on the @code{Picture} is a @code{Point}.
+@xref{Outputting Pictures,,Picture Reference; Outputting}.  
+@end deftypefun
+
+
+@deftypefn {Virtual function} void suppress_output (void)
+Sets @code{do_output} to @code{false}, which causes a @code{Point}
+not to be output.  This function is called in 
+@code{Picture::output()}, when a @code{Point} cannot be projected.  
+@xref{Outputting Pictures,,Picture Reference; Outputting}.  
+@end deftypefn
+
+@deftypefn {Virtual function} virtual void unsuppress_output (void)
+Resets @code{do_output} to @code{true}, so that a @code{Point} can
+potentially be output, if @code{Picture::output()} is called again for
+the @code{Picture} the @code{Point} is on. 
+This function is called in 
+@code{Picture::output()}.
+@xref{Outputting Pictures,,Picture Reference; Outputting}.  
+@end deftypefn
+
+@deftypefun {@code{vector<shape*>}} extract ({const Focus&} @var{f}, {const unsigned short} @var{proj}, real @var{factor})
+Attempts to project the @code{Point}
+using the arguments passed to @code{Picture::output()}, which calls this
+function.  If @code{extract()} succeeds,
+it returns a @code{vector<shape*>} containing only the @code{Point}.
+Otherwise, it returns an empty @code{vector<shape*>}.
+@end deftypefun
+
+@deftypefn {Virtual function} bool set_extremes (void)
+Sets ``extreme'' values
+for x, y, and z in @code{projective_coordinates}.  This
+is, of course, trivial for  
+@code{Points}, because they only have one x, y and z-coordinate. 
+So the maxima and minima for each coordinate are always the same.
+@end deftypefn
+
+@deftypefn {Virtual inline @code{const} function} @code{valarray <real>} get_extremes (void)
+Returns @code{projective_extremes}.
+@end deftypefn
+
+@deftypefn {Virtual @code{const} function} real get_minimum_z (void) 
+@deftypefnx {Virtual @code{const} function} real get_maximum_z (void) 
+@deftypefnx {Virtual @code{const} function} real get_mean_z (void) 
+These functions return the minimum, maximum, and mean z-value of the
+@code{Point}.  
+@code{get_minimum_z()} returns @code{projective_extremes[4]}, 
+@code{get_maximum_z()} returns @code{projective_extremes[5]}, and
+@code{get_mean_z()} returns 
+@code{(projective_extremes[4] + projective_extremes[5]) / 2}.
+However, since a @code{Point} has only one z-coordinate 
+(from @code{world_coordinates}), these values will all be the same.
+
+These functions are pure virtual functions in @code{Shape}, and are
+called on @code{Points} through pointers to @code{Shape}.  Therefore,
+they must be consistent with the versions for other types derived from
+@code{Shape}.  @xref{Outputting Shapes, Shape Reference; Outputting}.
+@end deftypefn
+

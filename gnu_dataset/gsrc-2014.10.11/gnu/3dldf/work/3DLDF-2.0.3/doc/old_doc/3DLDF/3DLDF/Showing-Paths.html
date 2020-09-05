@@ -1,0 +1,151 @@
+<html lang="en">
+<head>
+<title>Showing Paths - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Path-Reference.html#Path-Reference" title="Path Reference">
+<link rel="prev" href="Labelling-Paths.html#Labelling-Paths" title="Labelling Paths">
+<link rel="next" href="Querying-Paths.html#Querying-Paths" title="Querying Paths">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Showing-Paths"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Querying-Paths.html#Querying-Paths">Querying Paths</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Labelling-Paths.html#Labelling-Paths">Labelling Paths</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Path-Reference.html#Path-Reference">Path Reference</a>
+<hr>
+</div>
+
+<h3 class="section">26.14 Showing</h3>
+
+<div class="defun">
+&mdash; <code>const</code> function: void <b>show</b> ([<var>string text = "", </var>[<var>char coords = 'w', </var>[<var>const bool do_persp = </var><code>true</code><var>, </var>[<var>const bool do_apply = </var><code>true</code><var>, </var>[<var>Focus* f = 0, </var>[<var>const unsigned short proj = </var><code>Projections::PERSP</code><var>, </var>[<var>const real factor = 1</var>]]]]]]])<var><a name="index-show-606"></a></var><br>
+<blockquote><p>Prints information about the <code>Path</code> to standard output
+(<code>stdout</code>).  <var>text</var> is simply printed out, unless it's the
+empty string, in which case <code>"Path:"</code> is printed out. 
+<var>coords</var> indicates which set of coordinates should be shown.  Valid values are
+<code>'w'</code> for the <code>world_coordinates</code>, <code>'p'</code> for the
+<code>projective_coordinates</code>, <code>'u'</code> for the
+<code>user_coordinates</code>, and <code>'v'</code> for the <code>view_coordinates</code>,
+whereby the latter two are currently not in use
+(see <a href="Point-Data-Members.html#Point-Data-Members">Point Reference; Data Members</a>). 
+If <var>do_apply</var> is <code>true</code>, <code>apply_transform()</code> is called
+on each <code>Point</code>, updating its <code>world_coordinates</code> and
+resetting its <code>transform</code>.  Otherwise,
+it's not. 
+The arguments <var>do_persp</var>, <var>f</var>, <var>proj</var>, and <var>factor</var> are only
+relevant when showing <code>projective_coordinates</code>.  If <code>do_persp</code>
+is <code>true</code>, the <code>Points</code> are projected using the values of
+<var>f</var>, <var>proj</var>, and <var>factor</var>
+(see <a href="Outputting-Paths.html#Outputting-Paths">Path Reference; Outputting</a>). 
+Otherwise, the values currently
+stored in <code>projective_coordinates</code> are shown. 
+The <code>Points</code> and connectors are printed out alternately to standard
+output, followed by the word &ldquo;cycle&rdquo;, if <code>cycle_switch = true</code>.<a rel="footnote" href="#fn-1" name="fnd-1"><sup>1</sup></a>
+
+     <pre class="example">          default_focus.set(0, 3, -10, 0, 3, 10, 10);
+          Reg_Polygon r(origin, 5, 3, 45);
+          r.fill(gray);
+          Point p[10];
+          for (int i = 0; i &lt; 5; ++i)
+              p[i] = r.get_point(i);
+          p[5] = Point::intersection_point(p[4], p[0], p[2], p[1]).pt;
+          p[6] = Point::intersection_point(p[0], p[1], p[2], p[3]).pt;
+          p[7] = Point::intersection_point(p[1], p[2], p[4], p[3]).pt;
+          p[8] = Point::intersection_point(p[2], p[3], p[0], p[4]).pt;
+          p[9] = Point::intersection_point(p[3], p[4], p[0], p[1]).pt;
+          Path q("--", true, &amp;p[0], &amp;p[5], &amp;p[1], &amp;p[6], &amp;p[2], &amp;p[7],
+                 &amp;p[3], &amp;p[8], &amp;p[4], &amp;p[9], 0);
+          q.draw();
+          q.show("q:");
+          -| q:
+          fill_draw_value == 0
+          (0, 1.06066, 1.06066)
+          -- (-2.30826, 2.24651, 2.24651)
+          -- (-1.42658, 0.327762, 0.327762)
+          -- (-3.73485, -0.858092, -0.858092)
+          -- (-0.881678, -0.858092, -0.858092)
+          -- (4.92996e-07, -2.77684, -2.77684)
+          -- (0.881678, -0.858092, -0.858092)
+          -- (3.73485, -0.858092, -0.858092)
+          -- (1.42658, 0.327762, 0.327762)
+          -- (2.30826, 2.24651, 2.24651) -- cycle;
+          q.show("q:", 'p');
+          -| q:
+          fill_draw_value == 0
+          Projective coordinates.
+          (0, -1.75337, 0.0958948)
+          -- (-1.88483, -0.615265, 0.183441)
+          -- (-1.38131, -2.58743, 0.031736)
+          -- (-4.08541, -4.22023, -0.0938636)
+          -- (-0.964435, -4.22023, -0.0938636)
+          -- (0, -7.99767, -0.384436)
+          -- (0.964436, -4.22023, -0.0938636)
+          -- (4.08541, -4.22023, -0.0938636)
+          -- (1.38131, -2.58743, 0.031736)
+          -- (1.88483, -0.615266, 0.183441) -- cycle;
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF135.png"
+alt="[Figure 135. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 135. 
+<br>
+</p>
+
+     </blockquote></div>
+
+<div class="defun">
+&mdash; Function: void <b>show_colors</b> ([<var>bool  = </var><code>false</code>])<var><a name="index-show_005fcolors-607"></a></var><br>
+<blockquote><p>Shows the values of <code>draw_color</code> and <code>fill_color</code>.  These will
+normally be 0, unless the <code>Path</code> is on a <code>Picture</code>. 
+</p></blockquote></div>
+
+   <div class="footnote">
+<hr>
+<h4>Footnotes</h4><p class="footnote"><small>[<a name="fn-1" href="#fnd-1">1</a>]</small> The following example shows only one <code>Point</code> per
+line.  In actual use, two <code>Points</code> are shown, but this causes
+overfull boxes in Texinfo.</p>
+
+   <hr></div>
+
+   </body></html>
+

@@ -1,0 +1,927 @@
+@q patterns.web @>
+  
+@q * (1) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing.  @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation  @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version.  @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details.  @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA@>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html.@>
+
+@q ("@@" stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de@>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single "at" sign.)@>
+
+
+@q * (0) Patterns.@>
+@** Patterns\quad ({\tt patterns\PERIOD web}).\hfil
+\initials{LDF 2002.09.21.}  
+
+@^Compiling@>
+@:!! NOTE@> NOTE: 
+When you add a new \filename{.web} file and move code to it by copying
+it from another \filename{.web} file, remember to change the name of
+the header file that it writes.  Otherwise, this can cause problems
+and it's not obvious what's caused them.
+
+\LOG
+\initials{LDF 2002.09.21.}  
+Started using this file again.  Moved
+|hex_pattern_1()| here.  Made the appropriate changes to
+\filename{cmplprsp.web} and \filename{main.web}.  
+
+\initials{LDF 2003.11.12.}  
+Removed the version control identifiers from the CWEB
+files for the distribution of 3DLDF 1.1.  They're still used in my
+development versions.
+
+\initials{LDF 2003.12.10.}  
+Put the version control identifiers back
+into my release versions for 3DLDF 1.1.4.  I've already put some of
+them back in, now I'm doing the rest of them.  However, the release
+versions are now in their own RCS repository.
+\ENDLOG
+
+@q * Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.05.09.}  Now including \filename{creatnew.h}.
+
+\initials{LDF 2004.05.21.}  Now including \filename{pens.web}.
+\ENDLOG 
+
+@<Include files@>=
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++"  
+#include "pictures.h++"  
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++"
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+#include "helices.h++"
+#include "origami.h++"
+
+@q * Plane tesselations. @>
+@* Plane tesselations.
+
+@q ** Hexagonal tesselation 1.@>
+@ Hexagonal tesselation 1.
+
+\initials{LDF 2003.08.10.}  @:!! TO DO@> TO DO:  Change, so that it's possible to
+put the pattern into a rectangular area.
+
+\LOG
+\initials{LDF 2002.09.22.}  Added arguments.  |hex_pattern_1()| can now be used
+to make a pattern with up to three nested hexagons which can be drawn
+and filled.  Each hexagon has its own argument for the draw color, the
+fill color and the pen to be used.  |hex_pattern_1()| does not have
+arguments for dash patterns, but they could be added, if necessary.
+If the argument for the diameter of the middle or the inner
+hexagon is 0, then that hexagon is not drawn or filled.  In this case,
+the arguments for the draw and fill colors are ignored for that
+hexagon.  The default pen for the outer hexagon is thicker than the
+pens for the other two (.5mm and .3mm, respectively).
+
+\initials{LDF 2002.09.20.}  Rewrote this function.
+It now works with the new |project()| function.  
+|hex_pattern_1()| makes a ``honeycomb'' pattern on the x-z plane using
+a single hexagon (i.e., there aren't nested hexagons yet, as in the
+old version).  In the next version, I plan to add arguments for
+optionally putting two smaller hexagons inside the large one, and for
+filling and unfilling.  
+
+This version contains arguments for the drawing command, including a
+|Picture| argument, so that |hex_pattern_1()| need not be put onto
+|*current_picture|.
+
+\initials{LDF 2004.05.26.}  Made |Picture& picture| the first argument 
+and removed the default, which was formerly |current_picture|.
+
+\initials{LDF 2004.06.02.}  Removed the |string| arguments for |pen_outer|,
+|pen_middle|, and |pen_inner|.  They are now |Pens| and are declared within the
+function.  Changed the |Color| arguments to pointers to |Color|. 
+
+\initials{LDF 2004.06.07.}  Changed the code that uses |Dash_Patterns|.
+I have changed |string Path::dashed| to |Dash_Pattern* Path::dash_pattern|.
+\ENDLOG 
+
+@:!!@>
+@q *** Declaration.@>
+@<Declare Pattern functions@>=
+unsigned int
+hex_pattern_1(Picture& picture,
+              real diameter_outer = 5,
+              real diameter_middle = 0,
+              real diameter_inner = 0,
+              unsigned short first_row = 5,
+              unsigned short double_rows = 10,
+              unsigned short row_shift = 2,
+
+              @/@,
+              /* Arguments for the drawing and filling commands.  */
+
+              Color* draw_color_outer = 0, /* Outer */
+              Color* fill_color_outer = 0,
+
+              Color* draw_color_middle = 0,  /* Middle */
+              Color* fill_color_middle = 0,
+
+              Color* draw_color_inner = 0,  /* Inner */
+              Color* fill_color_inner = 0,
+
+              unsigned int max_hexagons = 1000);
+
+
+@
+@<Define Pattern functions@>=
+unsigned int
+hex_pattern_1(Picture& picture,
+              real diameter_outer,
+              real diameter_middle,
+              real diameter_inner,
+              unsigned short first_row,
+              unsigned short double_rows,
+              unsigned short row_shift,
+
+              @/@,
+              /* Arguments for the drawing and filling commands.  */
+
+              Color* draw_color_outer, /* Outer */    
+              Color* fill_color_outer,                
+
+              Color* draw_color_middle,  /* Middle */ 
+              Color* fill_color_middle,               
+
+                                                      
+              Color* draw_color_inner,  /* Inner */   
+              Color* fill_color_inner,
+
+
+              unsigned int max_hexagons)
+
+{
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */
+  if (DEBUG)
+    cerr << "Entering hex_pattern_1().\n" << flush;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  Pen pen_outer;
+  Pen pen_middle;
+  Pen pen_inner;
+
+  Transform q;
+
+  q.scale(.05, .05, .05);
+  pen_outer *= q;
+
+  q.reset();
+  q.scale(.03, .03, .03);
+  pen_middle *= q;
+
+  q.reset();
+  q.scale(.03, .03, .03);
+  pen_inner *= q;
+
+  if (first_row < 1)
+    {
+      cerr << "ERROR! In hex_pattern_1():\n"
+        << "first_row has invalid value: " << first_row
+          << "It must be strictly positive.\n"
+            << "Taking absolute value.\n" << flush;
+      first_row = abs(first_row);
+      cerr << "Now first_row == " << first_row << "." << endl
+           << flush;
+    }
+
+  if (first_row > 25) /* \initials{LDF 2002.09.22.}
+                         This can't be |else if| because the
+                         preceding condition might have produced
+                         a value $> 25$.  */
+    {
+      cerr << "ERROR! In hex_pattern_1():\n"
+           << "first_row has invalid value: " << first_row
+           << "It can be at most 25.\n"
+           << "Setting first_row to 25.\n" << flush;
+      first_row = 25;
+    }
+
+@ Having |do_middle| and |do_inner| is a convenience, so I don't have to check
+whether |diameter_middle| and |diameter_inner| are $\equiv 0$ below, which
+wouldn't be as clearly understandable.
+\initials{LDF 2002.09.22.}
+
+@<Define Pattern functions@>=
+ 
+ bool do_middle;  
+  bool do_inner;
+  
+  do_middle = (diameter_middle == ZERO_REAL) ? false : true; 
+  do_inner = (diameter_inner == ZERO_REAL) ? false : true; 
+
+@
+@<Define Pattern functions@>=
+
+  Point pt0; /* origin.  */
+
+  Reg_Polygon p_outer(pt0, 6, diameter_outer);
+  Reg_Polygon p_middle;
+  Reg_Polygon p_inner;
+
+
+@ The middle and inner hexagons are only set (and used) if 
+|do_middle| and/or |do_inner| are true. 
+\initials{LDF 2002.09.22.}
+
+@<Define Pattern functions@>=
+
+
+  if (do_middle)
+    p_middle.set(pt0, 6, diameter_middle);
+  if (do_inner)
+    p_inner.set(pt0, 6, diameter_inner);
+
+@ These |Reg_Polygons| are used for copying.
+\initials{LDF Undated.}
+
+@<Define Pattern functions@>=
+
+  Reg_Polygon p_outer_copy; 
+  Reg_Polygon p_middle_copy; 
+  Reg_Polygon p_inner_copy; 
+
+#if 0 
+  if (DEBUG)
+    p_outer.dotlabel(picture);
+#endif 
+
+@
+@<Define Pattern functions@>=
+
+  real right_shift = p_outer.get_point(4).get_x()
+                     + p_outer.get_point(3).get_x()
+                     - p_outer.get_point(1).get_x() 
+                     - p_outer.get_point(2).get_x();
+
+  real left_shift = -right_shift;
+
+@ Center the first row on the origin.
+\initials{LDF Undated.}
+
+@<Define Pattern functions@>=
+
+  Transform t;
+
+  t.shift((first_row / 2) * left_shift);
+
+  if (first_row % 2 == 0)
+    t.shift(.5 * right_shift);
+
+  p_outer *= t;  
+
+
+  if (do_middle)
+    p_middle *= t;
+  if (do_inner)
+    p_inner *= t;
+
+  Transform offset; /* \initials{LDF 2002.09.22.}
+                       |offset| is for moving the hexagons to
+                       the second row in the double row, which is
+                       offset with respect to the first (and will 
+                       contain one more set of nested hexagons).  */    
+  offset.shift(p_outer.get_point(4) - p_outer.get_point(2));
+
+  Transform move_back; /* \initials{LDF 2002.09.22.}
+                          |move_back| is for moving in the direction 
+                          of the positive z-axis before starting the
+                          next double row.  */
+                             
+  move_back.shift(p_outer.get_point(5) - p_outer.get_point(3));
+
+/* \initials{LDF 2002.09.22.}
+  The number of sets of hexagons in the rows differs, so we use
+  |i_min| and |i_max| for controlling the |for| loop that 
+  shifts and draws and fills the hexagons.  */
+
+  signed short i_min = 0;
+  unsigned short i_max = first_row;  /* \initials{LDF 2002.09.20.}
+                                        I could just use |first_row| 
+                                        instead of declaring a new 
+                                        variable, but the name |i_max|
+                                        makes more sense in the loop, 
+                                        so I think it's worth doing for
+                                        the sake of clarity.  */
+  short i, j, k;
+  unsigned int hexagon_ctr = 0;  /* Each time a hexagon is drawn,
+                                    |hexagon_ctr| is incremented.
+                                    |hexagon_ctr| is the return value
+                                    of this function 
+                                    (|hex_pattern_1()|).  */
+  for (k = 0; k < double_rows; ++k) /* |k| is the number of double
+                                        lines.  
+                                        \initials{LDF 2002.09.22.}
+                                        This loop takes care of
+                                        moving back in the direction 
+                                        of the positive z-axis.  */
+    {
+      /* \initials{LDF 2002.09.20.}
+         If 0 is passed as the |row_shift| argument, don't 
+         do any shifting.  Otherwise, every |row_shift| rows, 
+         increase the number of hexagons in the rows by 2.
+         The rows remain centered around the z-axis.
+         |row_shift| applies to the {\it double rows}.  The offset
+         row which is drawn when |j == 1| already has one hexagon
+         more than the first row drawn, so when
+         |row_shift == 1|, the effect is that each single row is one
+         hexagon longer than the last.  This makes the edges recede 
+         diagonally.
+           */
+      if (k != 0 && row_shift != 0 && k % row_shift == 0)
+        {
+          --i_min;
+          ++i_max;
+          t = p_outer.shift(left_shift);
+
+          if (do_middle)
+            p_middle *= t;
+          if (do_inner)
+            p_inner *= t;
+        }
+      
+      for (j = 0; j < 2; ++j) /* This loop makes 
+                                 the second line in each set of
+                                 double lines.  */
+        {
+          p_outer_copy = p_outer;
+
+          if (do_middle)
+            p_middle_copy = p_middle;
+          if (do_inner)
+            p_inner_copy = p_inner;
+
+
+          if (j == 1)
+            {
+              p_outer_copy *= offset;
+
+              if (do_middle)
+                p_middle_copy *= offset;
+              if (do_inner)
+                p_inner_copy *= offset;
+
+              --i_min;
+              t = p_outer_copy.shift(left_shift);
+
+              if (do_middle)
+                p_middle_copy *= t;
+              if (do_inner)
+                p_inner_copy *= t;
+            }
+
+
+@ This loop draws and/or fills the horizontal rows.  
+\initials{LDF 2002.09.22.}
+
+\LOG
+\initials{LDF 2004.06.07.}  Now checking for 
+|fill_color_outer == 0| instead of 
+|fill_color_outer == Colors::background_color|, because I've gotten rid of
+|Colors::background_color|.
+\ENDLOG 
+
+@<Define Pattern functions@>=
+
+          for (i = i_min; i < i_max; ++i) 
+            {
+              if (fill_color_outer == static_cast<Color*>(0))
+                p_outer_copy.draw(picture, draw_color_outer,
+                                  0, &pen_outer);
+              else if (draw_color_outer == fill_color_outer)
+                p_outer_copy.fill(picture, fill_color_outer);
+              else                
+                p_outer_copy.filldraw(picture, draw_color_outer,
+                                      fill_color_outer,
+                                      0, &pen_outer);
+            
+              if (do_middle)
+                {
+                  if (fill_color_middle == fill_color_outer)
+                    p_middle_copy.draw(picture, draw_color_middle,
+                                       0, &pen_middle);
+
+                  else if (draw_color_middle == fill_color_middle)
+                    p_middle_copy.fill(picture, fill_color_middle);
+                  
+                  else
+                    p_middle_copy.filldraw(picture, draw_color_middle,
+                                           fill_color_middle,
+                                           0, &pen_middle);
+                }
+              
+              if (do_inner)
+                {
+                  if (fill_color_inner == fill_color_middle)
+                    p_inner_copy.draw(picture, draw_color_inner,
+                                      0, &pen_inner);
+
+                  else if (draw_color_inner == fill_color_middle)
+                    p_inner_copy.fill(picture, fill_color_inner);
+                  else
+                  p_inner_copy.filldraw(picture, draw_color_inner,
+                                        fill_color_inner,
+                                        0, &pen_inner);
+                }
+              
+
+
+              
+              ++hexagon_ctr;
+              if (hexagon_ctr >= max_hexagons)
+                {
+                  cerr << "ERROR! In hex_pattern_1():\n"
+                       << "Too many sets of hexagons: "
+                       << hexagon_ctr << ".  Returning."
+                       << endl << flush;
+
+                  return hexagon_ctr;
+                }
+              t = p_outer_copy.shift(right_shift);
+
+              if (do_middle)
+                p_middle_copy *= t;
+              if (do_inner)
+                p_inner_copy *= t;
+            }
+        }
+      p_outer *= move_back;
+
+      if (do_middle)
+        p_middle *= move_back;
+      if (do_inner)
+        p_inner *= move_back;
+      ++i_min;
+    }
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr << "Exiting hex_pattern_1()." << endl;
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+  return hexagon_ctr;
+} 
+  
+
+@q * Epicycloid patterns. @>
+@* Epicycloid patterns.
+@:!! TO DO@> TO DO:  Start the patterns from a point on the inner
+circle.  If I then end on a point on the inner circle too, I won't
+have ``loose ends''.
+\initials{LDF 2004.01.31.}  
+
+
+@q ** Epicycloid pattern 1.@>
+@ Epicycloid pattern 1.
+\initials{LDF 2003.02.11.}  This functions works well for outer |Circles| with
+radii that are divisors (with no remainder) of the radius of the inner
+|Circle|.   
+Each outer |Circle| is rolled around the inner |Circle| once only.  If
+the radius of the outer |Circle| is a divisor of the inner |Circle|,
+the end of the epicycloid will meet up with the beginning.  If the
+radius of the outer |Circle| is not a divisor of the inner |Circle|,
+it won't.  See |epicycloid_pattern_3()| below, for a pattern that
+works well for outer |Circles|, whose radii are not divisors of the
+radius of the inner |Circle|.
+\LOG
+\initials{LDF 2003.02.09.}  Added this function.
+
+\initials{LDF 2003.08.27.}  Removed the declaration |const Color* curr_color|,
+since |curr_color| was never used.
+
+\initials{LDF 2004.01.18.}  Now starting from beginning of |Color*|
+vector, if I get to the end.
+
+\initials{LDF 2004.05.26.}  Made |Picture& picture| the first argument 
+and removed the default, which was formerly |current_picture|.
+
+\initials{LDF 2004.06.02.}  Changed calls to |draw()| to reflect the
+fact that it now takes a |Color*| argument rather than a |Color|.
+
+\initials{LDF 2004.06.07.}  Changed the code that uses |Dash_Patterns|.
+I have changed |string Path::dashed| to |Dash_Pattern* Path::dash_pattern|.
+
+\initials{LDF 2004.06.07.}  Removed default for |colors|, because 
+I've gotten rid of |Colors::default_color_vector|.
+
+\initials{LDF 2004.06.08.}  Changed |origin| to |origin_pt|, because I've
+removed the global variable |origin|.  I'm replacing it with a predefined
+variable defined in |Scanner_Type::create()|.
+\ENDLOG 
+
+@q *** Declaration. @>
+
+@<Declare Pattern functions@>=
+unsigned int
+epicycloid_pattern_1(Picture& picture,
+                     real diameter_inner,
+                     real diameter_outer_start,
+                     real diameter_outer_end,
+                     real step,
+                     unsigned int offsets,
+                     vector<const Color*> colors,
+                     int arc_divisions = 72);
+
+@q *** Definition. @>
+@
+@<Define Pattern functions@>=
+unsigned int
+epicycloid_pattern_1(Picture& picture,
+                     real diameter_inner,
+                     real diameter_outer_start,
+                     real diameter_outer_end,
+                     real step,
+                     unsigned int offsets,
+                     vector<const Color*> colors,
+                     int arc_divisions)
+{
+  bool DEBUG = false; /* true */
+
+  Point origin_pt(0, 0, 0);
+
+  if (diameter_inner < diameter_outer_start)
+    {
+      cerr << "WARNING! diameter_inner < diameter_outer!\n"
+           << "This is likely to lead to strange results.\n"
+           << "Continuing.\n\n" << flush;
+    }
+
+  using namespace Colors;
+ 
+
+  unsigned int spiral_counter = 0;
+  real radius_outer;
+  real phi;
+
+  Path spiral;
+  spiral += "..";
+
+
+  Dash_Pattern ddashed;
+
+  ddashed.set_type(Dash_Pattern::EVENLY);
+
+
+  real radius_inner = diameter_inner / 2;
+
+  Circle inner_circle(origin_pt, diameter_inner);
+  inner_circle.draw(picture);
+
+  if (DEBUG) 
+    inner_circle.get_center().dotlabel(picture, "inner_circle", "rt"); 
+
+  Circle outer_circle;
+  Point outer_circle_center;
+  Point normal;
+  Point p0;
+
+
+  real theta = 360.0 / arc_divisions;
+
+
+  Circle temp_circle;
+  Point p2;
+  Point temp_circle_center;
+  Point temp_circle_normal;
+
+
+
+  if (offsets < 1)
+    {
+      cerr << "WARNING! offsets has invalid value: " << offsets << endl
+        << "offsets must be >= 1.  Setting to 1.\n\n" << flush;
+      offsets = 1;
+    }
+
+  real diameter_outer;
+  vector<const Color*>::iterator iter = colors.begin();
+
+
+  for (diameter_outer = diameter_outer_start;
+       diameter_outer >= diameter_outer_end;
+       diameter_outer -= step)
+    {
+
+      if (iter != colors.end() - 1)
+        ++iter;
+      else
+        {
+          cerr << "Setting iter to colors.begin()." << endl;
+          iter = colors.begin();
+        }
+
+
+
+      radius_outer = diameter_outer / 2;
+      outer_circle_center.set(0, 0, radius_inner + radius_outer);
+      normal = outer_circle_center;
+      normal.shift(0, 1);
+      p0.set(0, 0, radius_inner + diameter_outer);
+      outer_circle.set(outer_circle_center, diameter_outer);
+
+
+      if(colors.size() == 0)
+        colors.push_back(&black);
+      
+
+      
+
+      for (unsigned int i = 0; i < offsets; ++i)
+        {
+
+          if (i != 0)
+            outer_circle_center *= normal *= p0 *= outer_circle.rotate(0, 360.0 / offsets);
+          else
+            {
+              if (DEBUG)
+                {
+                  p0.dotlabel(picture, "p0");
+                  outer_circle.draw(picture, &blue);
+                }
+            }
+          
+          if (DEBUG)
+            {
+              p0.dotlabel(picture, "p0", "bot");
+              outer_circle.draw(picture, &green, &ddashed);
+            }
+          spiral += p0;
+
+          phi = theta * radius_inner / radius_outer;
+
+          temp_circle = outer_circle;
+          temp_circle_center = outer_circle_center;
+          temp_circle_normal = normal;
+          p2 = p0;
+
+          for(int j = 1; j <= arc_divisions; ++j)
+            {
+              
+              p2 *= temp_circle_normal *= temp_circle_center *= temp_circle.rotate(0, theta);
+              p2.rotate(temp_circle_center, temp_circle_normal, phi);
+              spiral += p2;
+              if (DEBUG)
+                {
+                  p2.dotlabel(picture, "p2", "lft"); 
+                  temp_circle.draw(picture, &black, &ddashed);
+                }
+            }
+          
+          spiral.draw(picture, *iter);
+          ++spiral_counter;
+          spiral.clear();
+          spiral += "..";
+        }
+    }
+  return spiral_counter;
+}
+
+@q ** Epicycloid pattern 2.@>
+@ Epicycloid pattern 2.
+\initials{LDF 2003.02.11.}  This pattern should be like |epicycloid_pattern_1()|,
+except that the offsets are not made by rotating the outer |Circle|
+around the center of the inner |Circle|, but by rotating the |Point|
+used for tracing the epicycloid about the center of the 
+outer |Circle|.
+
+
+@q ** Epicycloid pattern 3.@>
+@ Epicycloid pattern 3.
+\initials{LDF 2003.02.11.}  This function works well for outer |Circles| with
+radii that are not even divisors of the radius of the inner |Circle|. 
+\LOG
+\initials{LDF 2003.02.11.}  Added this function.
+
+\initials{LDF 2003.08.27.}  Removed the declaration 
+|real radius_ratio = radius_outer / radius_inner|, 
+since\newline
+|radius_ratio| was never used.
+
+\initials{LDF 2004.05.26.}  Made |Picture& picture| the first argument 
+and removed the default, which was formerly |current_picture|.
+
+\initials{LDF 2004.06.07.}  Changed the code that uses |Dash_Patterns|.
+I have changed |string Path::dashed| to |Dash_Pattern* Path::dash_pattern|.
+
+\initials{LDF 2004.06.07.}  Removed default for |colors|, because 
+I've gotten rid of |Colors::default_color_vector|.
+
+\initials{LDF 2004.06.08.}  Changed |origin| to |origin_pt|, because I've
+removed the global variable |origin|.  I'm replacing it with a predefined
+variable defined in |Scanner_Type::create()|.
+\ENDLOG 
+
+
+@q *** Declaration.  @>
+
+@<Declare Pattern functions@>=
+
+unsigned int
+epicycloid_pattern_3(Picture& picture,
+                     real diameter_inner,
+                     real diameter_outer,
+                     vector<const Color*> colors,
+                     unsigned int limit = 100,
+                     int arc_divisions = 72);
+
+@
+@<Define Pattern functions@>=
+unsigned int
+epicycloid_pattern_3(Picture& picture,
+                     real diameter_inner,
+                     real diameter_outer,
+                     vector<const Color*> colors,
+                     unsigned int limit,
+                     int arc_divisions)
+{
+
+  using namespace Colors;
+
+  bool DEBUG = false; /* true */
+
+
+  Point origin_pt(0, 0, 0);
+
+  vector<const Color*>::iterator color_iter = colors.begin();
+
+
+  Dash_Pattern ddashed;
+
+  ddashed.set_type(Dash_Pattern::EVENLY);
+
+
+  real radius_outer = diameter_outer / 2;
+  real radius_inner = diameter_inner / 2;
+  real theta = 360.0 / arc_divisions;
+  real phi = theta * radius_inner / radius_outer;
+  real theta_total = 0;
+  
+  Circle inner_circle(origin_pt, diameter_inner);
+  inner_circle.draw(picture);
+
+  Point outer_circle_center(0, 0, radius_inner + radius_outer);
+  Circle outer_circle(outer_circle_center, diameter_outer);
+  outer_circle.draw(picture);
+  Point normal(outer_circle_center);
+  normal.shift(0, 1);
+  Point p0(0, 0, radius_inner + diameter_outer);
+  Path spiral;
+  spiral += "..";
+  spiral += p0;
+  Point start_pt(p0);
+  unsigned int spiral_counter = 1;
+
+  unsigned int iter_ctr = 0; 
+  while(true)
+    {
+      if (theta_total >= 360)
+        {
+          cerr << "theta_total == " << theta_total
+               << endl << "Reducing theta_total to "
+               << (theta_total - 360)
+               << endl << flush;
+          theta_total -= 360;
+          ++iter_ctr;
+          spiral.draw(picture, *color_iter++);
+          spiral.clear();
+          spiral += "..";
+          if (color_iter == colors.end())
+            color_iter = colors.begin();
+
+        }
+      if (iter_ctr > limit)
+        {
+          cerr << "Exceeded limit.  iter_ctr == " << iter_ctr
+               << endl << "Breaking.\n\n" << flush;
+          break;
+        }
+      else if (iter_ctr > 0 && (fmod((iter_ctr * radius_outer),
+                                     radius_inner) == 0))
+        {
+          cerr << "Came out even.\n"
+               << "iter_ctr == " << iter_ctr << endl
+               << "fmod((iter_ctr * radius_outer), radius_inner) == "
+               << fmod((iter_ctr * radius_outer), radius_inner) << endl
+               << "Breaking.\n\n" << flush;
+          break;
+        }
+      outer_circle_center *= normal *= p0
+        *= outer_circle.rotate(0, theta);
+      p0.rotate(outer_circle_center, normal, phi);
+      theta_total += theta;
+      if (DEBUG)
+        {
+          outer_circle.draw(picture, &black, &ddashed);
+          p0.dotlabel(picture, "p0");
+        }
+      spiral += p0;
+      ++spiral_counter;
+    }
+  return spiral_counter;
+}
+
+
+
+@q * Putting patterns together.@>
+@ Putting patterns together.
+
+@ This is what's compiled.
+@c
+@<Include files@>@;
+@<Declare Pattern functions@>@;
+@<Define Pattern functions@>@;
+
+@ This is what's written to \filename{patterns.h}. 
+@(patterns.h@>=
+@<Declare Pattern functions@>@;
+
+
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q run-mp-on-file:"persp.mp" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

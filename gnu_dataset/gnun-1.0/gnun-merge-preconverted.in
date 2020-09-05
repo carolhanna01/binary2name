@@ -1,0 +1,151 @@
+#! @BASH@
+# Merge preconverted files.
+
+# Copyright (C) 2012, 2014 Free Software Foundation, Inc.
+
+# This file is part of GNUnited Nations.
+
+# GNUnited Nations is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# GNUnited Nations is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with GNUnited Nations.  If not, see <http://www.gnu.org/licenses/>.
+
+function version () {
+cat <<EOF
+gnun-merge-preconverted (@PACKAGE_NAME@) @PACKAGE_VERSION@
+Copyright (C) 2014 Free Software Foundation, Inc.
+You may redistribute copies of @PACKAGE_NAME@
+under the terms of the GNU General Public License.
+For more information about these matters, see the file named COPYING.
+EOF
+}
+
+function usage () {
+cat <<EOF
+Usage: gnun-merge-preconverted OPTION... PO POT
+
+Merge gnun-preconverted translation with its new POT.
+
+Options:
+  -C, --compendium=COMP      Use compendium
+  -d, --disable-diffs        Don't add diffs to previous messages
+  -v, --version              Display version info and exit
+  -h, --help                 Display this help and exit
+
+Report bugs to @PACKAGE_BUGREPORT@
+@PACKAGE_NAME@ home page: <@PACKAGE_URL@>
+General help using GNU software: <http://www.gnu.org/gethelp/>
+EOF
+}
+
+function two_files_needed () {
+  echo 1>&2 "$0:" Two FILE arguments are required.
+}
+
+compendia=
+disable_diffs=
+po=
+pot=
+function parse_option () {
+  skip_option=
+  trimmed_option=
+  end_of_options=
+
+  case "$1" in
+      --help | -h* )
+	  usage
+	  exit 0
+	  ;;
+      --version | -v* )
+	  version
+	  exit 0
+	  ;;
+      -C | --compendium )
+          skip_option=yes
+	  compendia="${compendia} -C $2"
+	  ;;
+      --compendium=* )
+	  compendia="${compendia} -C ${1#--compendium=}"
+	  ;;
+      -C* )
+	  compendia="${compendia} -C ${1#-C}"
+	  ;;
+      -d | --disable-diffs )
+          disable_diffs=yes
+          ;;
+      -d* )
+          disable_diffs=yes
+          trimmed_option="${1#-d}"
+          ;;
+      -- )
+          end_of_options=yes
+	  ;;
+      * )
+         if test "x$po" = x; then
+            po="$1"
+          elif test "x$pot" = x; then
+            pot="$1"
+          else
+            two_files_needed
+          fi
+	  ;;
+  esac
+}
+
+while [ $# -ge 1 ]; do
+  current_option="$1"
+  while test -n "$current_option";do
+    parse_option "$current_option" "$2"
+    if test -n "$skip_option"; then
+      shift
+    fi
+    if test -n "$trimmed_option"; then
+      current_option=-"$trimmed_option"
+    else
+      current_option=
+    fi
+  done
+  shift
+  if test -n "$end_of_options"; then
+    break
+  fi
+done
+
+if test "x$po" = x; then
+  if test $# -gt 0; then
+    po="$1"
+    shift
+  else
+    two_files_needed
+  fi
+fi
+if test "x$pot" = x; then
+  if test $# -gt 0; then
+    pot="$1"
+    shift
+  else
+    two_files_needed
+  fi
+fi
+if test $# -gt 0; then
+  two_files_needed
+fi
+
+if test -z "@WDIFF@" && test "$disable_diffs" != yes; then
+  disable_diffs=yes
+  echo 1>&2 "$0: Note: no wdiff found, fuzzy differences are disabled." 
+fi
+
+@pkglibexecdir@/copy-msgid -i "$po"
+@MSGMERGE@ --previous -C "$po" ${compendia} -o "$po" /dev/null "$pot"
+if test -z "$disable_diffs"; then
+  @pkglibexecdir@/add-fuzzy-diff -i "$po"
+fi

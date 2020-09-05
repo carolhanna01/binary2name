@@ -1,0 +1,853 @@
+@q primes.web @>
+
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation  @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Prime Numbers.@>
+@** Prime Numbers\quad ({\tt primes\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2005.12.05.}
+Created this file.
+\ENDLOG 
+
+@q * (1) Include files.@>
+@ Include files.
+
+@<Include files@>=
+
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+
+@q * (1) Primes Table.@> 
+@* Primes Table.
+\initials{LDF 2005.12.05.}
+
+\LOG
+\initials{LDF 2005.12.05.}
+Added this section.
+
+\initials{LDF 2005.12.06.}
+Added |Mutex_Type primes_table_mutex|.
+\ENDLOG
+
+@<|namespace Prime_Numbers| declaration@>=
+namespace
+Prime_Numbers
+{
+    
+    bool do_write_primes_file = false;
+
+    vector<ulong_long>* primes_table = 0;
+
+    Mutex_Type primes_file_mutex;
+    Mutex_Type primes_table_mutex;
+
+    @<Declare prime number functions@>@;
+}
+
+@
+@<|extern| |namespace Prime_Numbers| declaration@>=
+namespace
+Prime_Numbers
+{
+
+    extern bool do_write_primes_file;
+
+    extern vector<ulong_long>* primes_table;
+    extern Mutex_Type primes_file_mutex;
+
+    @<Declare prime number functions@>@;
+}
+
+@q * (1) Prime Number Functions.@> 
+@* Prime Number Functions.
+\initials{LDF 2005.12.05.}
+
+\LOG
+\initials{LDF 2005.12.05.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Get Prime.@> 
+@*1 Get Prime.
+\initials{LDF 2005.12.05.}
+
+\LOG
+\initials{LDF 2005.12.05.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+@<Declare prime number functions@>=
+ulong_long
+get_prime(ulong_long u, Scanner_Node scanner_node = 0);
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define prime number functions@>=
+ulong_long
+Prime_Numbers::get_prime(ulong_long u, Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+   int status;
+
+
+@q **** (4)@> 
+
+   FILE* primes_file;
+   FILE* primes_zip_file;
+   FILE* primes_checksum_file;
+
+   string system_string;
+
+@q **** (4)@> 
+
+
+   if (primes_table != static_cast<vector<ulong_long>*>(0))
+      {
+          B:
+#if 0 
+
+          cerr << "`primes_table != 0'."
+               << endl;
+#endif 
+
+          primes_table_mutex.lock();
+ 
+#if 0 
+          cerr << "primes_table->size() == " << primes_table->size() << endl;
+#endif 
+
+          if (primes_table->size() <= u)
+             {
+#if 0 
+                 cerr << "`primes_table->size()'  <= `u'.  Filling `primes_table'." << endl;
+#endif 
+                 fill_primes_table(u, scanner_node);
+
+                 status = primes_file_mutex.lock();
+                 do_write_primes_file = true;
+                 status = primes_file_mutex.unlock();
+             }
+
+
+          primes_table_mutex.unlock();
+
+          return (*primes_table)[u];
+
+      }  /* |if (primes_table != 0)|  */
+
+@q **** (4)@> 
+
+    else  /* |primes_table == 0|  */
+      {
+#if 0 
+            cerr << "`primes_table == 0'" << endl;
+#endif 
+
+            status = primes_file_mutex.lock();
+
+            primes_file = fopen("primes.lbn", "rb");
+
+@q ***** (5)@> 
+
+            if (primes_file)
+               {
+#if 0 
+                  cerr << "Opened `primes_file' successfully." << endl;
+#endif 
+               }
+ 
+@q ***** (5)@> 
+
+            else   /* |!primes_file|  */
+               {
+#if 0 
+                   cerr << "Failed to open `primes_file'." << endl;
+#endif 
+
+@q ****** (6)@>                      
+
+                    primes_zip_file = fopen("primes.lbn.gz", "r");
+
+@q ******* (7)@> 
+
+                    if (primes_zip_file)
+                       {
+#if 0   
+                           cerr << "Opened `primes_zip_file' successfully." << endl;
+#endif 
+
+                           fclose(primes_zip_file);
+
+#if HAVE_GZIP
+                           status = system("gzip -d primes.lbn.gz");
+
+                           primes_file = fopen("primes.lbn", "rb");
+
+#else  /* |!HAVE_GZIP|  */
+                           cerr_strm << "ERROR!  In `Prime_Numbers::get_prime()':"
+                                     << endl 
+                                     << "`gzip' is unavailable.  "
+                                     << "Can't uncompress `primes.lbn.gz'.";
+
+                           log_message(cerr_strm);
+                           cerr_message(cerr_strm, error_stop_value);
+                           cerr_strm.str("");         
+
+#endif /* |!HAVE_GZIP|  */
+
+                           if (primes_file)
+                              {
+#if 0 
+                                  cerr << "Opened `primes_file' successfully after uncompressing." 
+                                       << endl;
+#endif 
+                               } 
+
+                           else /* |!primes_file|  */
+                              {
+#if 0 
+                                  cerr << "Failed to open `primes_file' after "
+                                       << "trying to uncompress it." 
+                                       << endl;
+#endif 
+                              }
+
+
+                       }  /* |if (primes_zip_file)|  */
+
+@q ******* (7)@> 
+
+                    else /* |!primes_zip_file|  */
+                       {
+#if 0 
+                           cerr << "Failed to open `primes_zip_file'." << endl;
+#endif 
+
+                       }  /* |else| (|!primes_zip_file|)  */
+
+               }  /* |else| (|!primes_file|)  */
+
+
+
+@q ***** (5)@> 
+
+           if (primes_file)  
+              {
+
+#if 0 
+                 cerr << "`primes_file' is now open." << endl;
+#endif 
+                 
+                 primes_checksum_file = fopen("primes.lsm", "r");
+
+                 if (!primes_checksum_file)
+                    {
+#if 0 
+                        cerr << "Failed to open `primes.lsm'.  Will regenerate "
+                             << "`primes.lbn'."  << endl;
+#endif 
+
+                        fclose(primes_file);
+        
+                        status = primes_file_mutex.unlock();                 
+        
+                        goto A;
+                    } 
+ 
+#if HAVE_SHA224SUM
+                 system_string = "cat primes.lsm | sha224sum --check --status";
+#elif HAVE_SHA1SUM
+                 system_string = "cat primes.lsm | sha1sum --check --status";
+#elif HAVE_MD5SUM
+                 system_string = "cat primes.lsm | md5sum --check --status";
+#elif HAVE_CKSUM 
+                 system_string = "cat primes.lsm | cksum --check --status";
+#else
+                 system_string = "";
+#endif
+
+                if (system_string.size() > 0)
+                   {
+#if 0 
+                        cerr << "Checking checksum file." << endl;
+#endif 
+                        
+                        status = system(system_string.c_str());
+
+#if 0 
+                        cerr << "status == " << status << endl;
+#endif 
+
+                        if (status)
+                           {
+#if 0 
+                               cerr << "Checking checksum failed. "
+                                    << "Will regenerate `primes.lbn'." << endl;
+#endif 
+
+                               fclose(primes_file);
+                               fclose(primes_checksum_file);
+                               status = primes_file_mutex.unlock();                 
+                                
+                               goto A;
+                           }
+
+                        else /* |!status|  */
+                           {
+#if 0 
+                               cerr << "Checking checksum succeeded." << endl;
+#endif 
+
+                               fclose(primes_checksum_file);
+
+                               primes_table = new vector<ulong_long>; 
+                               
+                               ulong_long* curr_ull = new ulong_long;
+
+                               size_t u_size = sizeof(ulong_long);
+
+                               while (fread(curr_ull, u_size, 1, primes_file) == 1)
+                                  {
+                                      primes_table->push_back(*curr_ull);
+                                  }
+                           
+                                int i = 0;
+
+#if 0 
+                                for (vector<ulong_long>::iterator iter = primes_table->begin();
+                                     iter != primes_table->end();
+                                     ++iter)
+                                    cerr << "Prime " << i++ << ": " << *iter << endl;
+
+                               cerr << "Type <RETURN> to continue: ";
+                               getchar();       
+#endif 
+                               delete curr_ull;
+                               curr_ull = 0;
+
+                               fclose(primes_file);
+                               status = primes_file_mutex.unlock();                 
+                          
+                               goto B;     
+
+                           }
+
+                   }  /* |if (system_string.size() > 0)|  */
+
+                else /* |system_string.size() <= 0|  */
+                   {
+#if 0 
+                        cerr << "Can't check  checksum file.  "
+                             << "Will regenerate `primes.lbn'." 
+                             << endl;
+#endif 
+
+                               fclose(primes_file);                                
+                               status = primes_file_mutex.unlock();                 
+
+                               goto A;
+
+                   }  /* |else| (|system_string.size() <= 0|)  */
+
+
+
+
+              }  /* |if (primes_file)|  */  
+
+@q ***** (5)@> 
+
+           else /* |!primes_file|  */
+              {
+#if 0 
+                 cerr << "Failed to open `primes_file'." << endl;
+#endif 
+
+                 A:
+
+#if 0 
+                 cerr << "Here I am, at `A'." << endl; 
+#endif 
+
+                 do_write_primes_file = true;
+
+                 status = primes_file_mutex.unlock();
+
+                 primes_table_mutex.lock();
+
+                 primes_table = new vector<ulong_long>;
+
+                 primes_table->push_back(0);
+                 primes_table->push_back(2);
+                 primes_table->push_back(3);
+
+#if 0 
+                 cerr << "Filling `primes_table' for first time." << endl;
+#endif 
+
+                 fill_primes_table(u, scanner_node);
+
+#if 0 
+                   j = 0;
+
+                   for (vector<ulong_long>::iterator iter = primes_table->begin();
+                        iter != primes_table->end();
+                        ++iter)
+                       cerr << "`(*primes_table)[" <<  j++ << "]' == " 
+                            << (*primes_table)[j] << endl;
+#endif 
+ 
+                   primes_table_mutex.unlock();
+
+
+                   return (*primes_table)[u];
+
+
+              }  /* else (|!primes_file|)  */
+
+
+@q ***** (5)@>            
+
+       }  /* |else| (|primes_table == 0|)  */
+
+   return 0;
+
+
+} /* End of |Prime_Numbers::get_prime()| definition.  */
+
+@q ** (2) Get Prime Vector.@> 
+@*1 Get Prime Vector.
+\initials{LDF 2005.12.06.}
+
+\LOG
+\initials{LDF 2005.12.06.}
+Added this function.
+
+\initials{LDF 2005.12.07.}
+Finished writing this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+@<Declare prime number functions@>=
+void*
+get_prime_vector(ulong_long u, ulong_long v, Scanner_Node scanner_node = 0);
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define prime number functions@>=
+void*
+Prime_Numbers::get_prime_vector(ulong_long u, ulong_long v, Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+   int status;
+
+@q **** (4)@> 
+
+    if (primes_table == static_cast<vector<ulong_long>*>(0) || primes_table->size() < v)
+       {
+           get_prime(v, scanner_node);
+       }
+
+    Pointer_Vector<ulong_long>* pv = new Pointer_Vector<ulong_long>;
+    ulong_long* curr_ptr = 0;
+
+
+    for (; u <= v; ++u)
+       {
+           curr_ptr = new ulong_long;
+           *curr_ptr = (*primes_table)[u];
+           *pv += curr_ptr;
+       }
+
+    
+    return static_cast<void*>(pv);
+
+
+@q **** (4)@> 
+
+
+
+}  /* End of |Prime_Numbers::get_prime_vector()| definition.  */
+
+
+
+@q ** (2) Fill primes table.@> 
+@*1 Fill primes table.
+\initials{LDF 2005.12.06.}
+
+\LOG
+\initials{LDF 2005.12.06.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+@<Declare prime number functions@>=
+int 
+fill_primes_table(ulong_long u, Scanner_Node scanner_node = 0);
+
+
+@q *** (3) Definition.@> 
+
+@
+@<Define prime number functions@>=
+int 
+Prime_Numbers::fill_primes_table(ulong_long u, Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+   int status;
+
+@q **** (4)@> 
+
+    ulong_long j = primes_table->size() - 1;
+   
+    if (u <= j)
+       return 0;
+
+    ulong_long k;
+    ulong_long q;
+    ulong_long r;
+
+    for (ulong_long n = (*primes_table)[j] + 2;  j < u; n += 2)
+        {
+
+#if 0 
+           cerr << "n == " << n << endl;
+#endif 
+
+           for (k = 1; k <= j; ++k)
+              {
+
+                  q = n / (*primes_table)[k];
+                  r = n % (*primes_table)[k];
+
+                  if (r == 0ULL)
+                     {
+                         break;
+                     }
+
+                  else if (k < j && q <= (*primes_table)[k])
+                     {
+                         primes_table->push_back(n);
+                         ++j;
+                         break;
+                     }
+                 
+              }  /* |for|  */
+
+          if (k >= j)
+             {
+                 primes_table->push_back(n);
+                 ++j;
+             } 
+
+        }  /* |for|  */
+
+   return 0;
+
+      
+}  /* End of |Prime_Numbers::fill_primes_table()| definition.  */
+
+@q ** (2) Write primes file.@> 
+@*1 Write primes file.
+\initials{LDF 2005.12.06.}
+
+\LOG
+\initials{LDF 2005.12.06.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+@<Declare prime number functions@>=
+int 
+write_primes_file(Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define prime number functions@>=
+int 
+Prime_Numbers::write_primes_file(Scanner_Node scanner_node)
+{
+
+   int status;
+
+@q **** (4)@> 
+
+    if (primes_table == static_cast<vector<ulong_long>*>(0))
+       {
+            cerr_mutex.lock(); 
+            cerr << "ERROR!  In `Prime_Numbers::write_primes_file()':"
+                 << endl
+                 << "`primes_table' is null.  Can't write primes file."
+                 << endl 
+                 << "Exiting function with return value 1."
+                 << endl;
+            cerr_mutex.unlock();  
+
+            return 1;
+
+       }  /* |if (primes_table == 0)|  */
+
+@q **** (4)@> 
+
+   primes_file_mutex.lock();
+   primes_table_mutex.lock();
+
+   FILE* primes_file;
+
+   primes_file = fopen("primes.lbn", "wb");
+
+@q **** (4)@> 
+
+   if (!primes_file)
+      {
+         cerr_mutex.lock(); 
+         cerr << "ERROR!  In `Prime_Numbers::write_primes_file()':"
+              << endl
+              << "Failed to open `primes.lbn'.  Exiting function with return value 1."
+              << endl;
+         cerr_mutex.unlock();  
+
+         return 1;
+
+      }   /* |if (!primes_file)|  */
+
+@q **** (4)@> 
+
+   size_t u_size = sizeof(ulong_long);
+
+   for(vector<ulong_long>::iterator iter = primes_table->begin();
+       iter != primes_table->end();
+       ++iter)
+      {
+           fwrite(&(*iter), u_size, 1, primes_file);
+      }
+  
+   fclose(primes_file);
+
+
+@q **** (4)@> 
+
+   string system_string;
+
+#if HAVE_SHA224SUM
+   system_string = "sha224sum primes.lbn > primes.lsm";
+#elif HAVE_SHA1SUM
+   system_string = "sha1sum primes.lbn > primes.lsm";
+#elif HAVE_MD5SUM
+   system_string = "md5sum primes.lbn  > primes.lsm";
+#elif HAVE_CKSUM 
+   system_string = "cksum primes.lbn  > primes.lsm";
+#else
+   system_string = "";
+#endif
+
+   if (system_string.size() > 0)
+      {
+#if 0 
+           cerr_mutex.lock(); 
+           cerr << "Creating checksum file." << endl;
+           cerr_mutex.unlock();  
+#endif 
+           
+           status = system(system_string.c_str());
+
+#if 0 
+           cerr_mutex.lock(); 
+           cerr << "status == " << status << endl;
+           cerr_mutex.unlock();  
+#endif 
+
+      }
+
+   else /* |system_string.size() <= 0|  */
+      {
+#if 0 
+           cerr_mutex.lock(); 
+           cerr << "Not creating checksum file." << endl;
+           cerr_mutex.unlock();  
+#endif 
+      }
+
+
+@q **** (4)@> 
+
+#if HAVE_GZIP
+   status = system("gzip primes.lbn");
+
+   if (status)
+      {
+         cerr_mutex.lock(); 
+         cerr << "ERROR!  In `Prime_Numbers::write_primes_file()':"
+              << endl
+              << "Failed to compress `primes.lbn'."
+              << endl 
+              << "`system(\"gzip primes.lbn\")' returned " << status   
+              << endl
+              << "Exiting function with return value 1."
+              << endl;
+         cerr_mutex.unlock();  
+
+         return 1;
+
+      }  /* |if (status)|  */
+#endif 
+
+
+
+@q **** (4)@> 
+
+   primes_table_mutex.unlock();
+   primes_file_mutex.unlock();
+
+   return 0;
+
+      
+}  /* End of |Prime_Numbers::write_primes_file()| definition.  */
+
+
+
+@q * (1) Putting Prime Numbers together. @>
+@* Putting Prime Numbers together.
+
+This is what's compiled.
+@c
+@<Include files@>@;
+@<|namespace Prime_Numbers| declaration@>@;
+@<Define prime number functions@>@;
+
+@ This is what's written to \filename{primes.h}.
+@(primes.h@>=
+@<|extern| |namespace Prime_Numbers| declaration@>@;
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 80))    @>
+
+
+
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

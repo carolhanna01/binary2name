@@ -1,0 +1,521 @@
+\input texinfo
+@c -*-texinfo-*-
+
+@c %**start of header
+@setfilename guile-debbugs.info
+@documentencoding UTF-8
+@settitle Guile Debbugs Reference Manual
+@c %**end of header
+
+@include version.texi
+
+@copying
+Copyright @copyright{} 2017 Ricardo Wurmus@*
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included in the section entitled ``GNU Free
+Documentation License''.
+@end copying
+
+@dircategory The Algorithmic Language Scheme
+@direntry
+* Guile-Debbugs: (guile-debbugs).      Guile bindings to Debbugs.
+@end direntry
+
+@titlepage
+@title Guile Debbugs Reference Manual
+@subtitle Accessing the Debbugs bug tracker with Guile
+@author Ricardo Wurmus
+
+@page
+@vskip 0pt plus 1filll
+Edition @value{EDITION} @*
+@value{UPDATED} @*
+
+@insertcopying
+@end titlepage
+
+@contents
+
+@c *********************************************************************
+@node Top
+@top Guile Debbugs
+
+This document describes Guile Debbugs version @value{VERSION}, the Guile
+bindings for the Debbugs bug tracker's SOAP service.
+
+@menu
+* Introduction::                What is this all about?
+* Installation::                Installing Guile-Debbugs.
+* Programming Interface::       Using Guile-Debbugs in Scheme.
+
+* Acknowledgments::             Thanks!
+* GNU Free Documentation License::  The license of this manual.
+* Concept Index::               Concepts.
+* Programming Index::           Data types, functions, and variables.
+@end menu
+
+@c *********************************************************************
+@node Introduction
+@chapter Introduction
+
+This package provides a Guile library to communicate with a Debbugs bug
+tracker's SOAP service.
+
+Here is a short Guile REPL session demonstrating some of the things you
+can do with this library:
+
+@cindex example, REPL session
+@lisp
+(set! %load-path (cons "/path/to/guile-debbugs/" %load-path))
+,use (debbugs soap)
+,use (debbugs operations)
+,use (debbugs bug)
+,use (debbugs email)
+(define %debian "http://bugs.debian.org/cgi-bin/soap.cgi")
+(define %gnu "https://debbugs.gnu.org/cgi/soap.cgi")
+(soap-invoke %debian newest-bugs 3)
+$1 = (880882 880881 880880)
+(soap-invoke %debian get-status $1)
+$2 = (#<bug 880882 ...> #<bug 880881 ...> #<bug 880880 ...>)
+(map bug-originator $2)
+$3 = ("ringo" "paul" "george")
+(soap-invoke %debian get-bug-log (car $1))
+$4 = (#<email 1 ...> #<email 2 ...> #<email 3 ...>)
+(email-body (car $4))
+$5 = "Hello world! ..."
+@end lisp
+
+For documentation of the supported operations @xref{Operations}.
+
+
+@c *********************************************************************
+@node Installation
+@chapter Installation
+
+Guile Debbugs uses the GNU build system.  To install Guile Debbugs from
+a release tarball just unpack it and run the usual commands:
+
+@example
+./configure
+make
+make install
+@end example
+
+If you want to build the sources from the source repository you need to
+bootstrap the build system first.  Run the @code{bootstrap.sh} script
+first and then perform the above steps.
+
+@c *********************************************************************
+@node Programming Interface
+@chapter Programming Interface
+
+Guile Debbugs provides rudimentary procedures to make requests to a SOAP
+service, and it defines operations that can be invoked on it.  It does
+not provide a full implementation of SOAP and it has only been tested
+with Debbugs.
+
+The following modules are included:
+
+@table @code
+@item (debbugs base64)
+Procedures for decoding and encoding base64 strings.
+
+@item (debbugs bug)
+Procedures to parse bugs as returned by Debbugs, and to access their
+properties.
+
+@item (debbugs email)
+Procedures to parse emails as returned by Debbugs.
+
+@item (debbugs operations)
+Implementations of SOAP operations supported by Debbugs.
+
+@item (debbugs rfc822)
+Parser for email headers.
+
+@item (debbugs soap)
+Procedures for talking with SOAP services.
+@end table
+
+The modules @code{(debbugs rfc822)} and @code{(debbugs base64)} won't be
+documented here as they are primarily for internal use.
+
+@menu
+* SOAP helpers::           Procedures for talking with SOAP services.
+* Operations::             Debbugs SOAP operations.
+* Bug helpers::            Procedures for parsing bugs and accessing their properties.
+* Email helpers::          Procedures for parsing emails and accessing their properties.
+@end menu
+
+@c *********************************************************************
+@node SOAP helpers
+@section SOAP helpers
+
+@cindex (debbugs soap), module
+The module @code{(debbugs soap)} provides procedures to invoke
+operations on a SOAP service, to retrieve responses, and to convert
+those responses to Scheme values.
+
+@cindex soap-request, constructor
+@deffn {Scheme Procedure} soap-request @var{body} [@var{callback}]
+Return a @code{<soap-request>}, which combines a SOAP request envelope
+enclosing the SXML expression @var{body} and the single-argument
+response handler procedure @var{callback}.  The response handler is to
+be called on the SOAP response SXML.  When no handler is provided the
+response expression is not processed.
+@end deffn
+
+@cindex soap-request?, predicate
+@deffn {Scheme Procedure} soap-request? @var{record}
+Return @code{#t} when @var{record} is a @code{<soap-request>} object.
+@end deffn
+
+@cindex soap-request-body, accessor
+@deffn {Scheme Procedure} soap-request-body @var{request}
+Return the SXML @code{body} of the SOAP request @var{request}, a
+@code{<soap-request>} object.
+@end deffn
+
+@cindex soap-request-callback, accessor
+@deffn {Scheme Procedure} soap-request-callback @var{request}
+Return the response handler procedure @code{callback} of the SOAP
+request @var{request}, a @code{<soap-request>} object.
+@end deffn
+
+@cindex make a SOAP request
+@cindex invoke SOAP operation
+@cindex send a request to a SOAP service
+@cindex soap-invoke, procedure
+@deffn {Scheme Procedure} soap-invoke @var{uri} @var{op} [@var{args} @dots{}]
+Invoke the SOAP operation @var{op}, a @code{<soap-request>} object, with
+all provided arguments @var{args} on the SOAP service at the provided
+URI @var{uri}.  Return the response body after processing it with the
+handler procedure that is part of @var{op}.
+@end deffn
+
+@cindex convert XML response to Scheme
+@cindex soap->scheme, procedure
+@deffn {Scheme Procedure} soap->scheme @var{sxml} [@var{plain}]
+Recursively convert a SOAP SXML expression @var{sxml} for a named value
+to a Scheme value.  If @var{plain} is @var{#t} return only the value,
+otherwise return a pair of a name and the value.
+@end deffn
+
+@c *********************************************************************
+@node Operations
+@section Operations
+
+@cindex (debbugs operations), module
+This module implements SOAP operations that can be used with a Debbugs
+SOAP service.  Each of the procedures in this module returns a
+@code{<soap-request>} value, i.e. a message in SXML format and an
+optional response handler procedure.
+
+@cindex newest-bugs, operation
+@deffn {Scheme Procedure} newest-bugs @var{amount}
+This operation returns the identifiers of the newest bugs as a list of
+numbers.  The integer @var{amount} must be specified to limit the number
+of bugs returned by Debbugs.
+@end deffn
+
+@cindex get-status, operation
+@deffn {Scheme Procedure} get-status @var{bug-ids}
+This operation returns @code{<bug>} records containing the details for
+the bugs identified by @var{bug-ids}, a list of bug numbers.  @xref{Bug
+helpers} for procedures that can be used on the return values.
+@end deffn
+
+@cindex get-bugs, operation
+@deffn {Scheme Procedure} get-bugs @var{args}
+This operation returns bug numbers for bugs that match the conditions
+given by @var{args}, an alist of key-value pairs.  Possible keys are
+@code{package}, @code{submitter}, @code{maint}, @code{src},
+@code{severity}, @code{status}, @code{tag}, @code{owner}, @code{bugs},
+@code{affects}, and @code{archive}.
+
+All keys and values must be provided as strings.  Valid values for
+@code{status} are the strings @code{done}, @code{forwarded}, and
+@code{open}.  For @code{archive} the valid values are either the string
+@code{both}, the string @code{1} (meaning ``archived''), or the string
+@code{0} (meaning ``not archived'').
+@end deffn
+
+@cindex get-bug-log, operation
+@deffn {Scheme Procedure} get-bug-log @var{bug-id}
+This operation requests all emails associated with the bug identified by
+@var{bug-id}.  All emails are returned as @code{<email>} values.
+@xref{Email helpers} for procedures that can be used on the return
+values.
+@end deffn
+
+@cindex get-usertag, operation
+@deffn {Scheme Procedure} get-usertag @var{email}
+This operation returns an association list of tag names (as strings) to
+lists of bug numbers for all bugs that have been tagged by @var{email},
+a string holding an email address.
+@end deffn
+
+@cindex search-est, operation
+@deffn {Scheme Procedure} search-est @var{phrase} [@var{skip}] [@var{max}]
+Return the result of a full text search according to the string
+@var{phrase}.  When @var{skip} is provided, the given number of hits
+will be skipped; this is useful for paged results.  At most @var{max}
+results are returned when @var{max} is provided.  The number of returned
+results is always limited by the absolute maximum returned by the
+Debbugs server.
+
+This operation may not be supported by all Debbugs instances.
+@end deffn
+
+
+@c *********************************************************************
+@node Bug helpers
+@section Bug helpers
+
+@cindex (debbugs bug), module
+Being a bug tracker, Debbugs tracks bugs.  Bugs are created and modified
+through email messages, and Debbugs reveals the internal state that is
+affected by these messages through the @code{get-status} operation.  The
+Guile bindings parse the returned state to a value of the record type
+@code{<bug>}.
+
+@cindex soap-bug->bug, procedure
+@deffn {Scheme Procedure} soap-bug->bug @var{bug-item}
+This procedure takes an SXML expression @var{bug-item}, which describes
+the state of a single bug, and returns a record of type @code{<bug>}.
+It is used to parse the SOAP response of the @code{get-status}
+operation.  This is the only way to obtain a value of type @code{<bug>}.
+@end deffn
+
+@cindex bug?, predicate
+@deffn {Scheme Procedure} bug? @var{record}
+Return @code{#t} when @var{record} is a @code{<bug>} object.
+@end deffn
+
+@cindex bug accessor procedures
+@cindex bug properties
+Debbugs records a large number of properties for each bug.  For each of
+these properties Guile Debbugs provides an accessor procedure, which
+returns the parsed value.  In the table below the properties are
+described.  Each property can be accessed with a procedure named
+@code{bug-PROPERTY}, where @code{PROPERTY} is the property name.
+
+@table @code
+@cindex bug-package, accessor
+@item package
+The package to which this bug report applies.
+
+@cindex bug-severity, accessor
+@item severity
+The severity of the bug report.
+
+@cindex bug-num, accessor
+@item num
+The bug number, a unique numeric identifier.
+
+@cindex bug-subject, accessor
+@item subject
+The current title of the bug report.
+
+@cindex bug-summary, accessor
+@item summary
+An arbitrary summary text.
+
+@cindex bug-msgid, accessor
+@item msgid
+The message ID of the email that caused the bug to be registered.
+
+@cindex bug-originator, accessor
+@item originator
+The email address of the submitter of the bug report.
+
+@cindex bug-owner, accessor
+@item owner
+The email address of the person assigned to fix this bug.
+
+@cindex bug-done, accessor
+@item done
+The email address of the person who closed the bug.
+
+@cindex bug-archived, accessor
+@item archived
+A boolean indicating whether the bug is archived.
+
+@cindex bug-unarchived, accessor
+@item unarchived
+A boolean indicating whether the bug has been unarchived and can be
+archived again.
+
+@cindex bug-pending, accessor
+@item pending
+Either the string ``pending'' or the string ``done''.
+
+@cindex bug-blocks, accessor
+@item blocks
+A list of bug numbers for bugs that are blocked by this bug.
+
+@cindex bug-blockedby, accessor
+@item blockedby
+A list of bug numbers of bugs blocking this bug.
+
+@cindex bug-mergedwith, accessor
+@item mergedwith
+A list of bug numbers for bugs that have been merged with this bug.
+
+@cindex bug-affects, accessor
+@item affects
+A list of package names that are affected by this bug.
+
+@cindex bug-date, accessor
+@item date
+The date and time when this bug was reported.
+
+@cindex bug-log-modified, accessor
+@item log-modified
+The date and time when this bug was last modified.
+
+@cindex bug-last-modified, accessor
+@item last-modified
+Honestly, I don't know what the difference is compared to @code{log-modified}.
+
+@cindex bug-forwarded, accessor
+@item forwarded
+A URL or an email address.
+
+@cindex bug-fixed-versions, accessor
+@item fixed-versions
+A list of version strings for versions of the affected package in which
+the bug has been fixed.
+
+@cindex bug-found-versions, accessor
+@item found-versions
+A list of version strings for versions of the package in which the bug
+has been found.
+
+@cindex bug-source, accessor
+@item source
+Source package of the bug report.
+
+@cindex bug-outlook, accessor
+@item outlook
+Unknown.
+
+@cindex bug-tags, accessor
+@item tags
+A list of tag strings.
+
+@cindex bug-found, accessor
+@item found
+Apparantly this field is not fully implemented in Debbugs yet.
+
+@cindex bug-location, accessor
+@item location
+In the Debian version of Debbugs this will always be ``db-h'' or ``archive''.
+@end table
+
+
+@c *********************************************************************
+@node Email helpers
+@section Email helpers
+
+@cindex Email helpers
+@cindex (debbugs email), module
+Debbugs is an email-driven bug tracker---bug reports are created by
+sending email and their state is updated by sending control messages.
+Every bug has an associated message log, an ordered list of user-sent
+emails and internal control messages.  The @code{(debbugs email)} module
+provides the record type @code{<email>} that represents those email
+messages.
+
+@cindex soap-email->email, procedure
+@deffn {Scheme Procedure} soap-email->email @var{email-item}
+This procedure takes an SXML expression @var{email-item}, which
+describes a single email with headers, body, message number, and
+attachments, and returns a record of type @code{<email>}.  It is used to
+parse the SOAP response of the @code{get-bug-log} operation.  This is
+the only way to obtain a value of type @code{<email>}.
+
+It parses the email headers to an association list of headers to values.
+It does not process other properties.
+@end deffn
+
+@cindex email?, predicate
+@deffn {Scheme Procedure} email? @var{record}
+Return @code{#t} when @var{record} is an object of type @code{<email>}.
+@end deffn
+
+@cindex bug accessor procedures
+@cindex bug properties
+An email consists of headers, a body, a message number, and an optional
+list of attachments.  This module provides accessor procedures to
+extract these values from a given object of type @code{<email>}.
+
+@cindex email-headers, accessor
+@deffn {Scheme Procedure} email-headers @var{email}
+Return the parsed RFC822 headers of the @var{email} as an association
+list.  The headers are parsed when the object is first created.
+@end deffn
+
+@cindex email-body, accessor
+@deffn {Scheme Procedure} email-body @var{email}
+Return the email's body as a string.
+@end deffn
+
+@cindex email-msg-num, accessor
+@deffn {Scheme Procedure} email-msg-num @var{email}
+Return the email's message number.  Emails in a bug log can be sorted
+using the message number.
+@end deffn
+
+@cindex email-attachments, accessor
+@deffn {Scheme Procedure} email-attachments @var{email}
+Return a list of attachments or the empty list if there are none.
+@end deffn
+
+
+@c *********************************************************************
+@node Acknowledgments
+@chapter Acknowledgments
+
+Thanks to the following people who contributed to Guile-Debbugs through
+bug reports or patches:
+
+@itemize @bullet
+@item Your Name Here @email{nobody@@yet}
+@end itemize
+
+Also thanks to the people who reviewed Guile Debbugs for hosting on
+Savannah and for joining the GNU project.
+
+@itemize @bullet
+@item Ineiev @email{ineiev@@gnu.org}
+@item Mike Gerwitz @email{mtg@@gnu.org}
+@end itemize
+
+Thank you.
+
+@c *********************************************************************
+@node GNU Free Documentation License
+@appendix GNU Free Documentation License
+
+@include fdl-1.3.texi
+
+@page
+
+@c *********************************************************************
+@node Concept Index
+@unnumbered Concept Index
+
+@printindex cp
+
+@node Programming Index
+@unnumbered Programming Index
+@syncodeindex tp fn
+@syncodeindex vr fn
+@printindex fn
+
+@bye

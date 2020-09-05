@@ -1,0 +1,4774 @@
+%%%% grrhm_06.ldf
+%%%% Created by Laurence D. Finston (LDF) Thu Jan 22 17:09:19 CET 2009
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2009, 2010, 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Last updated:  January 22, 2009
+
+%% Run like this:
+
+%% 3dldf grrhm_06.ldf 
+%% mpost grrhm_06.mp 
+%% tex grrhm_06.txt 
+%% dvips -o grrhm_06.ps grrhm_06.dvi
+%% ps2pdf grrhm_06.ps
+
+%% All on one line:
+if false:
+3dldf grrhm_06.ldf && mpost grrhm_06.mp && tex grrhm_06.txt && \
+dvips -o grrhm_06.ps grrhm_06.dvi \
+&& ps2pdf grrhm_06.ps
+fi;
+
+%% View the PostScript file using Ghostview like this:
+%% gv grrhm_06.ps &
+%% or with GNU Ghostview like this:
+%% ggv grrhm_06.ps &
+
+%% View the PDF file with Acrobat Reader like this:
+%% acroread grrhm_06.pdf &
+
+%% * (1) Beginning of 3DLDF code.
+
+%% ** (2) Plans for a cardboard model of the Great Rhombicosidodecahedron
+
+%% *** (3) Declarations.
+
+point c[];  %% centers
+
+point p[][];
+
+point q[];
+
+path w[];
+
+pen dot_pen;
+pen tiny_pen;
+
+dot_pen := pencircle scaled (.5mm, .5mm, .5mm);
+tiny_pen := pencircle scaled (.25mm, .25mm, .25mm);
+
+reg_polygon_vector rpv;
+
+transform t[];
+
+pickup pencircle scaled (.5mm, .5mm, .5mm);
+
+rpv := get_net great_rhombicosidodecahedron with_diameter 5;  %% 62 polyhedra
+
+for i := 0 upto size rpv - 1:
+   rotate rpv[i] (0, -90);
+   c[i] := get_center rpv[i];
+endfor;
+
+for i := 0 upto 61:
+   for j := 0 upto ((size rpv[i]) - 1):
+      p[i][j] := get_point (j) rpv[i];
+   endfor;
+endfor;
+
+%% *** (3) Comment figures 1 and 2 out (or in)
+
+if true:     
+%if false: 
+
+%% *** (3) Figure 1
+
+beginfig(1); 
+
+%% **** (4) The net without tabs
+
+for i := 0 upto size rpv - 1:
+   label(i, c[i]);
+endfor;
+
+
+%draw rpv with_color red;
+
+% dotlabel.rt(0, p[0][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[0][i]);
+% endfor;
+
+%% **** (4) First tab on rpv0
+
+q0 := ((p[0][1] - p[0][0]) / 5) shifted p[0][0];
+
+q1 := mediate(p[0][0], p[0][1]);
+
+%dotlabel.lft("$q_{0}$", q0);
+%dotlabel.lft("$q_{1}$", q1);
+
+q2 := q0 rotated_around (c0, q1) 180;
+
+%dotlabel.lft("$q_{2}$", q2);
+
+draw p[0][0] -- q0;
+draw q0 -- q2 dashed evenly;
+draw q2 -- p[0][1];
+
+
+q3 := q0 shifted (0, 1);
+
+q4 := p[0][0] rotated_around (q0, q3) 114;
+
+%dotlabel.rt("$q_{4}$", q4);
+
+q5 := (unit_vector(q4 - q0) / 2) shifted q0;
+
+%dotlabel.rt("$q_{5}$", q5);
+
+a := (q5 - q0) angle (q2 - q0);
+
+% message "a:"; 
+% show a;
+
+% message "magnitude (q4 - q0):"; 
+% show magnitude (q4 - q0);
+
+% message "magnitude (q5 - q0):"; 
+% show magnitude (q5 - q0);
+
+q6 := q5 rotated_around (c0, q1) 180;
+
+%dotlabel.rt("$q_{6}$", q6);
+
+q7 := mediate(q0, q5, 1/3);
+q8 := mediate(q2, q6, 1/3);
+
+% dotlabel.bot("$q_{7}$", q7);
+% dotlabel.ulft("$q_{8}$", q8);
+
+q9 := mediate(q0, q5, 2/3);
+q10 := mediate(q2, q6, 2/3);
+
+% dotlabel.lrt("$q_{9}$", q9);
+% dotlabel.urt("$q_{10}$", q10);
+
+draw q0 -- q5 -- q6 -- q2;
+
+draw q7 -- q8 with_pen tiny_pen;
+draw q9 -- q10 with_pen tiny_pen;
+
+%% Dots for stitches (q[11] -- q[20])
+
+for i = 1 upto 5:
+   q[10 + i] := mediate(q7, q8, i/6);
+   q[15 + i] := mediate(q9, q10, i/6);
+   q[20 + i] := (q[10 + i] -- q[15 + i]) intersection_point (q0 -- q2);
+   q[25 + i] := (q[10 + i] -- q[15 + i]) intersection_point (q5 -- q6);
+   q[30 + i] := q[20 + i];
+   q[35 + i] := q[25 + i];
+   drawdot q[10 + i] with_pen dot_pen;
+   drawdot q[15 + i] with_pen dot_pen;
+   draw q[20 + i] -- q[25 + i] with_pen tiny_pen;
+endfor;
+
+
+w0 := q0 -- q5 -- q6 -- q2;
+w1 := q7 -- q11 -- q12 -- q13 -- q14 -- q15 -- q8;
+w2 := q9 -- q16 -- q17 -- q18 -- q19 -- q20 -- q10;
+
+
+
+%% **** (4) Additional outer tabs on rpv[0]
+
+c70 := c0 shifted (0, 1);
+
+t0 := identity rotated_around (c0, c70) 36;
+
+for i := 1 upto 6:
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30
+      *= t0;
+
+   draw p[0][i] -- q0;
+   draw q0 -- q2 dashed evenly;
+
+   draw q2 -- p[0][i + 1];
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+  
+endfor;
+
+%% **** (4) Outer tabs on rpv7;
+
+% dotlabel.rt(0, p[7][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[7][i]);
+% endfor;
+
+c77 := c7 shifted (0, 1);
+
+t0 := identity shifted by (c7 - c0);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c7, c77) 36;
+
+for i := 7 upto 11:
+ 
+   k := i;
+   m := k + 1;
+
+   if k > 9:
+      k -= 10;
+   fi;
+
+   if m > 9:
+      m -= 10;
+   fi;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   % draw p[7][i] -- q0;
+   % draw q0 -- q2 dashed evenly;
+
+   %draw q2 -- p[0][i + 1];
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[7][k] -- q0;
+   draw p[7][m] -- q2;
+      
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+endfor;
+
+%% **** (4) Outer tabs on rpv12;
+
+%dotlabel.rt(0, p[12][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[12][i]);
+% endfor;
+
+c82 := c12 shifted (0, 1);
+
+t0 := identity shifted by (c12 - c7);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c12, c82) 36;
+
+for i := 2 upto 6:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[12][i] -- q0;
+    draw p[12][i + 1] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+endfor;
+
+
+%% **** (4) Outer tabs on rpv17;
+
+%dotlabel.rt(0, p[17][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[17][i]);
+% endfor;
+
+c87 := c17 shifted (0, 1);
+
+t0 := identity shifted by (c17 - c12);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+% draw q0 -- q5 -- q6 -- q2;
+
+% draw q7 -- q8 with_pen tiny_pen;
+% draw q9 -- q10 with_pen tiny_pen;
+
+% draw q0 -- q2 dashed evenly;
+
+% for j = 1 upto 5:
+%    drawdot q[10 + j] with_pen dot_pen;
+%    drawdot q[15 + j] with_pen dot_pen;
+%    draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+% endfor;
+
+t1 := identity rotated_around (c17, c87) 36;
+
+for i := 6 upto 13:
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[17][k] -- q0;
+    draw p[17][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+endfor;
+
+%% **** (4) Outer tabs on rpv19;
+
+%dotlabel.rt(0, p[19][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[19][i]);
+% endfor;
+
+c89 := c19 shifted (0, 1);
+
+t0 := identity shifted by (c19 - c17);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+% draw q0 -- q5 -- q6 -- q2;
+
+% draw q7 -- q8 with_pen tiny_pen;
+% draw q9 -- q10 with_pen tiny_pen;
+
+% draw q0 -- q2 dashed evenly;
+
+% for j = 1 upto 5:
+%    drawdot q[10 + j] with_pen dot_pen;
+%    drawdot q[15 + j] with_pen dot_pen;
+%    draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+% endfor;
+
+t1 := identity rotated_around (c19, c89) 36;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+if true: 
+%if false: 
+for i := 7 upto 11:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[19][k] -- q0;
+    draw p[19][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+
+endfor;
+fi;
+
+%% **** (4) Outer tabs on rpv24;
+
+%dotlabel.rt(0, p[24][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[24][i]);
+% endfor;
+
+c94 := c24 shifted (0, 1);
+
+t0 := identity shifted by (c24 - c19);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c24, c94) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+
+
+if true: 
+%if false: 
+for i := 2 upto 6:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[24][k] -- q0;
+    draw p[24][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+
+endfor;
+fi;
+
+%% **** (4)
+
+%% **** (4) Outer tabs on rpv31;
+
+%dotlabel.rt(0, p[31][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[31][i]);
+% endfor;
+
+c101 := c31 shifted (0, 1);
+
+t0 := identity shifted by (c31 - c24);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c31, c101) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+if true: 
+%if false: 
+for i := 7 upto 11:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[31][k] -- q0;
+    draw p[31][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+
+endfor;
+fi;
+
+%% ***** (5) End of outer tabs on rpv31
+
+
+%% **** (4) Outer tabs on rpv37;
+
+%dotlabel.rt(0, p[37][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[37][i]);
+% endfor;
+
+c107 := c37 shifted (0, 1);
+
+t0 := identity shifted by (c37 - c31);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c37, c107) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+if true: 
+%if false: 
+for i := 2 upto 6:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[37][k] -- q0;
+    draw p[37][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+
+endfor;
+fi;
+
+%% ***** (5) End of outer tabs on rpv37
+
+%% **** (4) Outer tabs on rpv43;
+
+%dotlabel.rt(0, p[43][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[43][i]);
+% endfor;
+
+c113 := c43 shifted (0, 1);
+
+t0 := identity shifted by (c43 - c37);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c43, c113) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+if true: 
+%if false: 
+for i := 7 upto 11:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[43][k] -- q0;
+    draw p[43][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+
+endfor;
+fi;
+
+%% ***** (5) End of outer tabs on rpv43
+
+%% **** (4) Outer tabs on rpv49;
+
+%dotlabel.rt(0, p[49][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[49][i]);
+% endfor;
+
+c119 := c49 shifted (0, 1);
+
+t0 := identity shifted by (c49 - c43);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c49, c119) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+
+%% ***** (5)
+
+if true: 
+%if false: 
+for i := 1 upto 8:
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[49][k] -- q0;
+    draw p[49][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+endfor;
+fi;
+
+%% ***** (5) End of outer tabs on rpv49
+
+
+%% **** (4) Outer tabs on rpv50;
+
+%dotlabel.rt(0, p[50][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[50][i]);
+% endfor;
+
+c120 := c50 shifted (0, 1);
+
+t0 := identity shifted by (c50 - c49);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c50, c120) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%% ***** (5)
+
+if true: 
+%if false: 
+for i := 2 upto 6:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[50][k] -- q0;
+    draw p[50][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+
+
+endfor;
+fi;
+
+%% ***** (5) End of outer tabs on rpv50
+
+%% **** (4) Outer tabs on rpv56;
+
+%dotlabel.rt(0, p[56][0]);
+
+% for i := 0 upto 9:
+%    dotlabel.top(i, p[56][i]);
+% endfor;
+
+c126 := c56 shifted (0, 1);
+
+t0 := identity shifted by (c56 - c50);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c56, c126) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+if true: 
+%if false: 
+for i := 6 upto 11:
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[56][k] -- q0;
+    draw p[56][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+
+endfor;
+fi;
+
+%% ***** (5) End of outer tabs on rpv56
+
+%% **** (4) Inner tabs on rpv0
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[0][i]);
+% endfor;
+
+t0 := identity shifted by (c0 - c56);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c0, c70) 36;
+
+t2 := t1;
+
+t2 *= t1;
+t2 *= t1;
+t2 *= t1;
+t2 *= t1;
+
+rotate_around t2 (p[0][7], p[0][8]) 180;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t2;
+
+if true:
+%if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+
+t1 := identity rotated_around (c0, c70) 36;
+
+if true: 
+%if false: 
+for i := 8 upto 8:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+
+    k := i;
+    m := i + 1;
+
+    if k > 9:
+       k -= 10;
+    fi;
+
+    if m > 9:
+       m -= 10;
+    fi;
+
+    draw q0 -- q5 -- q6 -- q2;
+
+    draw q7 -- q8 with_pen tiny_pen;
+    draw q9 -- q10 with_pen tiny_pen;
+
+    draw q0 -- q2 dashed evenly;
+
+    draw p[0][k] -- q0;
+    draw p[0][m] -- q2;
+     
+    for j = 1 upto 5:
+       drawdot q[10 + j] with_pen dot_pen;
+       drawdot q[15 + j] with_pen dot_pen;
+       draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+    endfor;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv7
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[7][i]);
+% endfor;
+
+t0 := identity shifted by (c7 - c0);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c7, c77) 36;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+t2 := t1;
+t2 *= t1;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t2;
+
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+if true: 
+%if false: 
+for i := 2 upto 6:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 4:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[7][k] -- q0;
+       draw p[7][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv12
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[12][i]);
+% endfor;
+
+t0 := identity shifted by (c12 - c7);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+
+t1 := identity rotated_around (c12, c82) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+
+%t1 := identity rotated_around (c12, c82) 36;
+
+if true: 
+%if false: 
+for i := 7 upto 11:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 9:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[12][k] -- q0;
+       draw p[12][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% **** (4)
+
+%% **** (4) Inner tabs on rpv17
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[17][i]);
+% endfor;
+
+t0 := identity shifted by (c17 - c12);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+
+t1 := identity rotated_around (c17, c87) 144;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+if true:
+%if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+%% **** (4) Inner tabs on rpv19
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[19][i]);
+% endfor;
+
+t0 := identity shifted by (c19 - c17);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+
+t1 := identity rotated_around (c19, c89) -144;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+
+t1 := identity rotated_around (c19, c89) 36;
+
+if true: 
+%if false: 
+for i := 2 upto 6:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 4:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[19][k] -- q0;
+       draw p[19][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv24
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[24][i]);
+% endfor;
+
+t0 := identity shifted by (c24 - c19);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+
+if false: 
+%t1 := identity rotated_around (c24, c94) 36;
+
+% q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+%    *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+%    *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+%       *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+
+t1 := identity rotated_around (c24, c94) 36;
+
+if true: 
+%if false: 
+for i := 7 upto 11:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 9:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[24][k] -- q0;
+       draw p[24][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv31
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[31][i]);
+% endfor;
+
+t0 := identity shifted by (c31 - c24);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+
+t1 := identity rotated_around (c31, c101) 36;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+if true: 
+%if false: 
+for i := 2 upto 6:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+       *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 4:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[31][k] -- q0;
+       draw p[31][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% ***** (5)
+
+%% **** (4) Inner tabs on rpv37
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[37][i]);
+% endfor;
+
+t0 := identity shifted by (c37 - c31);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c37, c107) 36;
+
+if false: 
+% q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+%    *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+%    *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+%       *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+  *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+if true: 
+%if false: 
+for i := 7 upto 11:
+
+    if i <> 9:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[37][k] -- q0;
+       draw p[37][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv43
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[43][i]);
+% endfor;
+
+t0 := identity shifted by (c43 - c37);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+
+t1 := identity rotated_around (c43, c113) 36;
+
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+if true: 
+%if false: 
+for i := 2 upto 6:
+
+    if i <> 4:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[43][k] -- q0;
+       draw p[43][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv49
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[49][i]);
+% endfor;
+
+t0 := identity shifted by (c49 - c43);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c49, c119) 36;
+
+t2 := t1;
+t2 *= t1;
+t2 *= t1;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t2;
+
+if true:
+%if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+%if true: 
+if false: 
+for i := 7 upto 11:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 9:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[49][k] -- q0;
+       draw p[49][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv50
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[50][i]);
+% endfor;
+
+t0 := identity shifted by (c50 - c49);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c50, c120) -108;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+
+
+%% ***** (5)
+
+t1 := identity rotated_around (c50, c120) 36;
+
+if true: 
+%if false: 
+for i := 7 upto 11:
+
+    if i <> 9:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[50][k] -- q0;
+       draw p[50][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+endfor;
+fi;
+
+%% **** (4) Inner tabs on rpv56
+
+% for i := 0 upto 9:
+%    dotlabel.lft(i, p[56][i]);
+% endfor;
+
+t0 := identity shifted by (c56 - c50);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c56, c126) 36;
+
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ***** (5)
+
+if true: 
+%if false: 
+for i := 2 upto 5:
+
+    if i <> 4:
+       k := i;
+       m := i + 1;
+
+       if k > 9:
+          k -= 10;
+       fi;
+
+       if m > 9:
+          m -= 10;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[56][k] -- q0;
+       draw p[56][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+endfor;
+fi;
+
+%% **** (4) The remaining edges on the dodecagons
+
+if false: 
+   forsuffixes i := 0, 7, 12, 17, 19, 24, 31, 37, 43, 49, 50, 56:
+      for j := 0 upto 9:
+         dotlabel.top(j, p[i][j]);
+      endfor;
+   endfor;
+fi;
+
+forsuffixes i = 7, 17, 19, 31, 43, 56:
+   draw p[i][4] -- p[i][5] dashed evenly;
+endfor;
+
+forsuffixes i = 0, 12, 24, 37, 49, 50:
+   draw p[i][0] -- p[i][9] dashed evenly;
+endfor;
+
+draw p[0][7] -- p[0][8];
+draw p[0][8] -- p[0][9];
+
+draw p[17][5] -- p[17][6];
+
+forsuffixes i = 12, 24, 37, 50:
+   draw p[i][0] -- p[i][1];
+   draw p[i][1] -- p[i][2];
+   draw p[i][7] -- p[i][8];
+   draw p[i][8] -- p[i][9];
+endfor;
+
+
+forsuffixes i = 7, 19, 31, 43:
+   draw p[i][2] -- p[i][3];
+   draw p[i][3] -- p[i][4];
+   draw p[i][5] -- p[i][6];
+   draw p[i][6] -- p[i][7];
+endfor;
+
+draw p[49][0] -- p[49][1];
+
+draw p[56][2] -- p[56][3];
+draw p[56][3] -- p[56][4];
+draw p[56][5] -- p[56][6];
+
+
+
+
+%% **** (4) Inner tabs on the hexagons
+%%
+%%          I believe there are no outer tabs on the hexagons or squares,
+%%          but I may have to correct this later.
+%%          LDF 2009.01.19.
+
+
+forsuffixes i :=  1,  3,  6,  9, 13, 15, 20, 22, 26, 28, 
+                 32, 34, 38, 40, 44, 46, 51, 53, 57, 59:
+   c[70 + i] := c[i] shifted (0, 1);
+if false: 
+   for j := 0 upto 5:
+      dotlabel.lft(j, p[i][j]);
+   endfor;
+fi; 
+endfor;
+
+%% ***** (5) Inner tabs on rpv1
+
+%w0 := q0 -- q5 -- q6 -- q2;
+%w1 := q7 -- q11 -- q12 -- q13 -- q14 -- q15 -- q8;
+%w2 := q9 -- q16 -- q17 -- q18 -- q19 -- q20 -- q10;
+
+q0 := get_point 0 w0;
+q5 := get_point 1 w0;
+q6 := get_point 2 w0;
+q2 := get_point 3 w0;
+
+q7  := get_point 0 w1;
+q11 := get_point 1 w1;
+q12 := get_point 2 w1;
+q13 := get_point 3 w1;
+q14 := get_point 4 w1;
+q15 := get_point 5 w1;
+q8  := get_point 6 w1;
+
+q9  :=  get_point 0 w2; 
+q16 :=  get_point 1 w2;
+q17 :=  get_point 2 w2;
+q18 :=  get_point 3 w2;
+q19 :=  get_point 4 w2;
+q20 :=  get_point 5 w2;
+q10 :=  get_point 6 w2;
+
+for i := 1 upto 5:
+   q[20 + i] := q[30 + i];
+   q[25 + i] := q[35 + i];
+endfor;
+
+t1 := identity rotated_around (c0, c70) -36;
+
+c71 := c1 shifted (0, 1);
+
+rotate_around t1 (c1, c71) -120;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+t1 := identity rotated_around (c1, c71) 60;
+
+%% ****** (6)
+
+if true: 
+%if false: 
+for i := 0 upto 4:
+
+    if (i <= 1) or (i == 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[1][k] -- q2;  
+       draw p[1][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv3
+
+
+
+t0 := identity shifted by (c[3] - c[1]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[3], c73) 60;
+
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if (i <> 2) and (i <> 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[3][k] -- q2;
+       draw p[3][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[6]
+
+
+
+t0 := identity shifted by (c[6] - c[3]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[6], c[76]) 60;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+if true: 
+%if false: 
+for i := 1 upto 5:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if (i == 1) or (i == 3):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[6][k] -- q0;
+       draw p[6][m] -- q2;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[9]
+
+
+
+t0 := identity shifted by (c[9] - c[6]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[9], c[79]) 60;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+if true: 
+%if false: 
+for i := 0 upto 4:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 1:
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[9][k] -- q2;
+       draw p[9][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[13]
+
+
+
+t0 := identity shifted by (c[13] - c[9]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[13], c[83]) 60;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+if true: 
+%if false: 
+for i := 0 upto 4:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if (i == 0) or (i == 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[13][k] -- q2;
+       draw p[13][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[15]
+
+
+
+t0 := identity shifted by (c[15] - c[13]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[15], c[85]) 60;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+
+if true: 
+%if false: 
+for i := 0 upto 3:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 2:
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[15][k] -- q2;
+       draw p[15][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[20]
+
+
+
+t0 := identity shifted by (c[20] - c[15]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[20], c[90]) 180;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[20], c[90]) 60;
+
+if true: 
+%if false: 
+for i := 1 upto 3:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if i <> 2:
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[20][k] -- q2;
+       draw p[20][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[22]
+
+
+
+t0 := identity shifted by (c[22] - c[20]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[22], c[92]) 180;
+
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[22], c[92]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+    if (i <> 1) and (i <> 5):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[22][k] -- q2;
+       draw p[22][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[26]
+
+
+
+t0 := identity shifted by (c[26] - c[22]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[26], c[96]) 60;
+
+%if true: 
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[26], c[96]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+    if (i == 0) or (i == 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[26][k] -- q2;
+       draw p[26][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[28]
+
+
+
+t0 := identity shifted by (c[28] - c[26]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[28], c[98]) 60;
+
+%if true: 
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[28], c[98]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+
+    if (i <> 2) and (i <> 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[28][k] -- q2;
+       draw p[28][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[32]
+
+
+
+t0 := identity shifted by (c[32] - c[28]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[32], c[102]) 60;
+
+%if true: 
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[32], c[102]) 60;
+
+if true: 
+%if false: 
+for i := 1 upto 3:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i <> 2):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[32][k] -- q2;
+       draw p[32][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+
+%% ***** (5) Inner tabs on rpv[34]
+
+
+
+t0 := identity shifted by (c[34] - c[32]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[34], c[104]) 120;
+
+if true: 
+%if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[34], c[104]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 4:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i <> 1):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[34][k] -- q2;
+       draw p[34][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[38]
+
+
+
+t0 := identity shifted by (c[38] - c[34]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[38], c[108]) 60;
+
+if true: 
+%if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[38], c[108]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i == 0) or (i == 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[38][k] -- q2;
+       draw p[38][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[40]
+
+
+
+t0 := identity shifted by (c[40] - c[38]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[40], c[110]) 60;
+
+%if true: 
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[40], c[110]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i <> 2) and (i <> 4):  % (i == 0) or (i == 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[40][k] -- q2;
+       draw p[40][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[44]
+
+
+
+t0 := identity shifted by (c[44] - c[40]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[44], c[114]) 60;
+
+%if true: 
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[44], c[114]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i == 1) or (i == 3):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[44][k] -- q2;
+       draw p[44][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[46]
+
+
+
+t0 := identity shifted by (c[46] - c[44]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[46], c[116]) 60;
+
+%if true: 
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[46], c[116]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 4:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i <> 1) and (i <> 2):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[46][k] -- q2;
+       draw p[46][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[51]
+
+
+
+t0 := identity shifted by (c[51] - c[46]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[51], c[121]) 60;
+
+if true: 
+%if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i == 0) or (i == 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[51][k] -- q2;
+       draw p[51][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[53]
+
+
+
+t0 := identity shifted by (c[53] - c[51]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[53], c[123]) 60;
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[53], c[123]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 5:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i <> 2) and (i <> 4):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[53][k] -- q2;
+       draw p[53][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[57]
+
+
+
+t0 := identity shifted by (c[57] - c[53]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[57], c[127]) 60;
+
+%if true: 
+if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[57], c[127]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 3:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i == 1) or (i == 3):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[57][k] -- q2;
+       draw p[57][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5) Inner tabs on rpv[59]
+
+t0 := identity shifted by (c[59] - c[57]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+t1 := identity rotated_around (c[59], c[129]) 120;
+
+if true: 
+%if false: 
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+%if true:
+if false: 
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+fi;
+
+%% ****** (6)
+
+t1 := identity rotated_around (c[59], c[129]) 60;
+
+if true: 
+%if false: 
+for i := 0 upto 4:
+
+if true: 
+%if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+    if (i <> 1):
+       k := i;
+       m := i + 1;
+
+       if k > 5:
+          k -= 6;
+       fi;
+
+       if m > 5:
+          m -= 6;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[59][k] -- q2;
+       draw p[59][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+%if true: 
+if false: 
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+fi; 
+
+
+endfor;
+fi;
+
+%% ***** (5)
+
+%% **** (4) The remaining edges on the hexagons
+
+%if true: 
+if false: 
+   forsuffixes i :=  1,  3,  6,  9, 13, 15, 20, 22, 26, 28, 
+                    32, 34, 38, 40, 44, 46, 51, 53, 57, 59:
+      for j := 0 upto 5:
+         dotlabel.top(j, p[i][j]);
+      endfor;
+   endfor;
+fi; 
+
+draw p[1][1] -- p[1][2];
+
+forsuffixes i := 1, 13, 26, 38, 51:
+   draw p[i][0] -- p[i][1];
+   draw p[i][4] -- p[i][5];
+endfor;
+
+draw p[15][0] -- p[15][1] -- p[15][2];
+draw p[15][3] -- p[15][4];
+
+forsuffixes i := 3, 28, 40, 53:
+   draw p[i][5] -- p[i][0] -- p[i][1] -- p[i][2];
+   draw p[i][3] -- p[i][4];
+endfor;
+
+forsuffixes i := 6, 20, 32, 44, 57:
+   draw p[i][1] -- p[i][2];
+   draw p[i][3] -- p[i][4];
+endfor;
+
+forsuffixes i := 9, 22, 34, 59:
+   draw p[i][0] -- p[i][1];
+   draw p[i][2] -- p[i][3] -- p[i][4] -- p[i][5];
+endfor;
+
+draw p[46][0] -- p[46][1];
+draw p[46][3] -- p[46][4] -- p[46][5];
+
+
+forsuffixes i :=  1, 13, 26, 38, 51:
+   if i > 1:
+      draw p[i][1] -- p[i][2] dashed evenly;
+   fi;
+   draw p[i][3] -- p[i][4] dashed evenly;
+   draw p[i][5] -- p[i][0] dashed evenly;
+endfor;
+
+forsuffixes i = 3, 15, 28, 40, 53:
+   draw p[i][2] -- p[i][3] dashed evenly;
+   draw p[i][4] -- p[i][5] dashed evenly;
+endfor;
+
+forsuffixes i = 6, 20, 32, 44, 57:
+   draw p[i][0] -- p[i][1] dashed evenly;
+   draw p[i][2] -- p[i][3] dashed evenly;
+   draw p[i][4] -- p[i][5] dashed evenly;
+endfor;
+
+forsuffixes i = 9, 22, 34, 46, 59:
+   draw p[i][1] -- p[i][2] dashed evenly;
+   draw p[i][5] -- p[i][0] dashed evenly;
+endfor;
+
+%% **** (4) Inner tabs on the squares
+
+forsuffixes i := 2, 4, 5, 8, 10, 11, 14, 16, 18, 21, 23, 25, 27, 29, 30, 33, 35,
+                 36, 39, 41, 42, 45, 47, 48, 52, 54, 55, 58, 60, 61: 
+              
+   c[70 + i] := c[i] shifted (0, 1);
+
+if false: 
+   for j := 0 upto 3:
+      dotlabel.lft(j, p[i][j]);
+   endfor;
+fi;
+endfor;
+
+%% ***** (5) Inner tabs on rpv[2]
+
+t1 := identity rotated_around (c59, c129) 60;
+shift t1 by (p[2][0] - p[59][0]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+%% ***** (5) Inner tabs on rpv[2]
+
+t1 := identity rotated_around (c[2], c[72]) 90;
+
+if true: 
+%if false: 
+for i := 0 upto 3:
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+    if (i == 0) or (i == 2):
+       k := i;
+       m := i + 1;
+
+       if k > 3:
+          k -= 4;
+       fi;
+
+       if m > 3:
+          m -= 4;
+       fi;
+
+       draw q0 -- q5 -- q6 -- q2;
+
+       draw q7 -- q8 with_pen tiny_pen;
+       draw q9 -- q10 with_pen tiny_pen;
+
+       draw q0 -- q2 dashed evenly;
+
+       draw p[2][k] -- q2;
+       draw p[2][m] -- q0;
+        
+       for j = 1 upto 5:
+          drawdot q[10 + j] with_pen dot_pen;
+          drawdot q[15 + j] with_pen dot_pen;
+          draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+       endfor;
+    fi;
+
+endfor;
+fi;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+  *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+
+%% ***** (5) Inner tabs on the horizontally- and vertically-orientated squares
+
+j := 2;
+
+forsuffixes i := 8, 14, 21, 27, 33, 39, 45, 52, 58:
+
+    t0 := identity shifted by (c[i] - c[j]);
+    
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+      draw q0 -- q5 -- q6 -- q2;
+
+      draw q7 -- q8 with_pen tiny_pen;
+      draw q9 -- q10 with_pen tiny_pen;
+
+      draw q0 -- q2 dashed evenly;
+
+      draw p[i][0] -- q2;
+      draw p[i][1] -- q0;
+       
+      for j = 1 upto 5:
+         drawdot q[10 + j] with_pen dot_pen;
+         drawdot q[15 + j] with_pen dot_pen;
+         draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+      endfor;
+
+
+    t1 := identity rotated_around (c[i], c[70 + i]) 180;
+
+    q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+       *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+       *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+      draw q0 -- q5 -- q6 -- q2;
+
+      draw q7 -- q8 with_pen tiny_pen;
+      draw q9 -- q10 with_pen tiny_pen;
+
+      draw q0 -- q2 dashed evenly;
+
+      draw p[i][2] -- q2;
+      draw p[i][3] -- q0;
+       
+      for j = 1 upto 5:
+         drawdot q[10 + j] with_pen dot_pen;
+         drawdot q[15 + j] with_pen dot_pen;
+         draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+      endfor;
+
+      q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+         *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+         *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+         *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+ 
+   j := i;
+
+endfor;
+
+%% ***** (5) Inner tabs on rpv[4] and the diagonally-orientated squares below it
+
+t0 := identity shifted by (p[4][0] - p[58][0]);
+
+p[4][10] := p[4][0] shifted (0, 1);
+
+rotate_around t0 (p[4][0], p[4][10]) -60;
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+ 
+
+
+forsuffixes i := 4, 16, 29, 41, 54:
+
+   if i > 4:
+      t0 := identity shifted by (c[i] - c[j]);
+      q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+         *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+         *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+         *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+   fi;
+
+   t1 := identity rotated_around (c[i], c[i + 70]) 90;
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][0] -- q2;
+   draw p[i][1] -- q0;
+ 
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][2] -- q2;
+   draw p[i][3] -- q0;
+ 
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][3] -- q2;
+   draw p[i][0] -- q0;
+ 
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   j := i;
+
+endfor;
+
+
+%% ***** (5) Inner tabs on rpv[5] and the similarly
+%% ***** (5) diagonally-orientated squares below it
+
+t0 := identity shifted by (p[5][0] - p[54][0]);
+
+p[5][10] := p[5][0] shifted (0, 1);
+
+rotate_around t0 (p[5][0], p[5][10]) 30;
+
+rotate_around t0 (c[5], c[75]) 90; 
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+ 
+
+forsuffixes i := 5, 18, 30, 42, 55:
+
+   if i > 5:
+      t0 := identity shifted by (c[i] - c[k]);
+      q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+         *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+         *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+         *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+   fi;
+
+   t1 := identity rotated_around (c[i], c[i + 70]) 180;
+     
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][1] -- q2;
+   draw p[i][2] -- q0;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][3] -- q2;
+   draw p[i][0] -- q0;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   k := i;
+
+endfor;
+
+%% ***** (5) Inner tabs on rpv[11] and the similarly
+%% ***** (5) diagonally-orientated squares below it
+
+t0 := identity rotated_around (c[57], c[127]) -120;
+
+shift t0 by (c[11] - c[61]);
+
+
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+ 
+forsuffixes i := 11, 25, 36, 48, 61:
+
+   if i > 11:
+      t0 := identity shifted by (c[i] - c[k]);
+
+      q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+         *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+         *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+         *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+   fi;
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][3] -- q2; % with_color blue;
+   draw p[i][0] -- q0; % with_color blue;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   t1 := identity rotated_around (c[i], c[i + 70]) 180;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][1] -- q2; % with_color blue;
+   draw p[i][2] -- q0; % with_color blue;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+   k := i;
+
+endfor;
+
+%% ***** (5) Inner tabs on rpv[10] and the diagonally-orientated squares below it
+
+t0 := identity rotated_around (p[55][3], p[58][3]) 180;
+
+shift t0 by (c[59] - c[57]);
+shift t0 by (c[10] - c[60]);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+ 
+forsuffixes i := 10, 23, 35, 47, 60:
+
+   if i > 10:
+      t0 := identity shifted by (c[i] - c[k]);
+
+      q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+         *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+         *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+         *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+   fi;
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][0] -- q2;
+   draw p[i][3] -- q0;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   t1 := identity rotated_around (c[i], c[i + 70]) 180;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+   draw q0 -- q5 -- q6 -- q2;
+
+   draw q7 -- q8 with_pen tiny_pen;
+   draw q9 -- q10 with_pen tiny_pen;
+
+   draw q0 -- q2 dashed evenly;
+
+   draw p[i][2] -- q2;
+   draw p[i][1] -- q0;
+
+   for j = 1 upto 5:
+      drawdot q[10 + j] with_pen dot_pen;
+      drawdot q[15 + j] with_pen dot_pen;
+      draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t1;
+
+
+   k := i;
+
+endfor;
+
+%% ***** (5)
+
+%% **** (4) The remaining edges on the squares
+
+if false: 
+   forsuffixes i :=  2,  4,  5,  8, 10, 11, 14, 16, 18, 21, 
+                    23, 25, 27, 29, 30, 33, 35, 36, 39, 41, 
+                    42, 45, 47, 48, 52, 54, 55, 58, 60, 61:
+      for j := 0 upto 3:
+         dotlabel.top(j, p[i][j]);
+      endfor;
+   endfor;
+fi; 
+
+forsuffixes i := 10, 23, 35, 47, 60:
+   draw p[i][3] -- p[i][0] -- p[i][1] -- p[i][2];
+endfor;
+
+forsuffixes i := 8, 21, 33, 45, 58:
+   draw p[i][0] -- p[i][1];
+   draw p[i][2] -- p[i][3];
+endfor;
+
+forsuffixes i := 5, 11, 18, 25, 30, 36, 42, 48, 55, 61:
+   draw p[i][0] -- p[i][3];
+   draw p[i][1] -- p[i][2];
+endfor;
+
+draw p[61][2] -- p[61][3];
+
+forsuffixes i := 2, 14, 27, 39, 52:
+   draw p[i][0] -- p[i][1];
+   draw p[i][2] -- p[i][3];
+endfor;
+
+forsuffixes i := 4, 16, 29, 41, 54:
+   draw p[i][0] -- p[i][1];
+   draw p[i][0] -- p[i][3];
+   draw p[i][2] -- p[i][3];
+endfor;
+
+%% **** (4) End of Figure 1
+
+%rotate current_picture (0, 180);
+
+endfig with_projection parallel_x_z no_sort; 
+
+%% *** (3) Figure 2 -- Double tabs
+
+beginfig(2); 
+
+%% **** (4) Set up first double tab
+
+if false: 
+   for i := 0 upto 3:
+      dotlabel.top(i, p[60][i]);
+   endfor;
+fi; 
+
+t0 := identity rotated_around (c[59], c[129]) -120;
+
+shift t0 (-10, 0, 35);
+
+q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+   *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+   *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+   *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 *= t0;
+
+if false: 
+   dotlabel.ulft("$q_{0}$", q0);
+   dotlabel.urt("$q_{2}$", q2);
+   dotlabel.top("$q_{5}$", q5);
+   dotlabel.top("$q_{6}$", q6);
+fi; 
+
+
+q140 := q0 shifted -.5;
+%dotlabel.lft("$q_{140}$",  q140);
+
+q141 := q2 shifted .5;
+%dotlabel.lft("$q_{141}$",  q141);
+
+for i := 0 upto 30:
+   q[i + 100] := q[i] rotated_around (q0, q2) 180;
+endfor;
+
+q140 := q0 shifted -.5;
+q141 := q2 shifted .5;
+
+%% **** (4) Draw double tabs
+
+t0 := identity shifted by (q141 - q0);
+
+t1 := identity shifted (0, 0, -1.25);
+shift t1 by 4*(q0 - q141);
+
+boolean b;
+
+for i := 0 upto 31:
+
+   for k := 0 upto 3:
+
+      q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+         *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+         *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+         *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 
+         *= q100 *= q102 *= q105 *= q106 *= q107 *= q108 *= q109 
+         *= q110 *= q111 
+         *= q112 *= q113 *= q114 *= q115 *= q116 *= q117
+         *= q118 *= q119 *= q120 *= q121 *= q122 *= q123
+         *= q124 *= q125 *= q126 *= q127 *= q128 *= q129 *= q130 
+         *= q140 *= q141 *= t0;
+
+      if (i >= 20) and (i < 26):
+         b := false;
+      else:
+         b := true;
+      fi;
+
+      if b:
+      	 draw q0 -- q140 dashed evenly;
+      	 draw q0 -- q5 -- q6 -- q2;
+      	 draw q100 -- q105 -- q106 -- q102;
+
+      	 draw q2 -- q141 dashed evenly;
+
+      	 draw q7 -- q8 with_pen tiny_pen;
+      	 draw q9 -- q10 with_pen tiny_pen;
+      	 draw q107 -- q108 with_pen tiny_pen;
+      	 draw q109 -- q110 with_pen tiny_pen;
+
+      	 draw q0 -- q2;
+
+      	 for j = 1 upto 5:
+      	    drawdot q[10 + j] with_pen dot_pen;
+      	    drawdot q[15 + j] with_pen dot_pen;
+      	    draw q[20 + j] -- q[25 + j] with_pen tiny_pen;
+
+      	    drawdot q[100 + 10 + j] with_pen dot_pen;
+      	    drawdot q[100 + 15 + j] with_pen dot_pen;
+      	    draw q[100 + 20 + j] -- q[100 + 25 + j] with_pen tiny_pen;
+      	 endfor;
+       fi;
+
+   endfor;
+
+   q0 *= q2 *= q5 *= q6 *= q7 *= q8 *= q9 *= q10 *= q11 
+      *= q12 *= q13 *= q14 *= q15 *= q16 *= q17
+      *= q18 *= q19 *= q20 *= q21 *= q22 *= q23
+      *= q24 *= q25 *= q26 *= q27 *= q28 *= q29 *= q30 
+      *= q100 *= q102 *= q105 *= q106 *= q107 *= q108 *= q109 
+      *= q110 *= q111 
+      *= q112 *= q113 *= q114 *= q115 *= q116 *= q117
+      *= q118 *= q119 *= q120 *= q121 *= q122 *= q123
+      *= q124 *= q125 *= q126 *= q127 *= q128 *= q129 *= q130 
+      *= q140 *= q141 *= t1;
+
+endfor;
+
+%% ***** (5)
+
+%% **** (4) End of Figure 2
+
+endfig with_projection parallel_x_z no_sort; 
+
+fi;  %% Figures 1 and 2 commented-out (or in)
+
+%% *** (3) Figure 3 --- Polygons for watercolor paper cut-outs --- Decagons and Hexagons
+
+beginfig(3); 
+
+%% **** (4) Decagons
+
+t0 := identity shifted 7;
+t1 := identity shifted (-28, 0, -7);
+
+n := 1;
+
+for k := 0 upto 2:
+
+   for i := 1 upto 4:
+
+      draw rpv0;
+
+      label(n, c0);
+   
+      if n > 12:
+         label("(Extra)", c0 shifted (0, 0, -.5));
+      fi;
+
+      n += 1;
+
+      if false: 
+      	 dotlabel.rt(0, p[0][0]);
+      	 dotlabel.top(1, p[0][1]);
+      	 dotlabel.top(2, p[0][2]);
+      	 dotlabel.top(3, p[0][3]);
+      	 dotlabel.lft(4, p[0][4]);
+      	 dotlabel.lft(5, p[0][5]);
+      	 dotlabel.lft(6, p[0][6]);
+      	 dotlabel.bot(7, p[0][7]);
+      	 dotlabel.rt(8, p[0][8]);
+      	 dotlabel.rt(9, p[0][9]);
+      fi; 
+      
+      for j := 0 upto 9:
+         m := j + 1;
+
+         if m > 9:
+            m -= 10;
+         fi;
+
+         draw mediate(p[0][j], p[0][m], 2) -- mediate(p[0][m], p[0][j], 2) dashed evenly;
+
+      endfor;
+
+      for j := 0 upto 9:
+         p[0][j] *= t0;        
+      endfor;
+
+      rpv0 *= c0 *= t0;
+        
+   endfor;
+
+   for j := 0 upto 9:
+      p[0][j] *= t1;        
+   endfor;
+
+   rpv0 *= c0 *= t1;
+
+endfor;
+
+%% **** (4) Hexagons (20)
+
+t0 := identity shifted (-5cm, 0, -19.5cm);
+
+rpv1 *= c1 *= t0;
+for j := 0 upto 5:
+   p[1][j] *= t0;
+endfor;
+
+
+t0 := identity shifted 4.5;
+
+t1 := identity shifted ((-4.5 * 6), 0, -4.5);
+
+n := 1;
+
+for k := 0 upto 3:
+
+   for i := 1 upto 6:
+
+      draw rpv1;
+      label(n, c1);
+
+      if n > 20:
+         label("(Extra)", c1 shifted (0, 0, -.5)); 
+      fi;
+
+      n += 1;
+
+      for j := 0 upto 5:
+         m := j + 1; 
+         if m > 5:
+            m -= 6;
+         fi;
+
+         draw mediate(p[1][j], p[1][m], 1.5) -- mediate(p[1][m], p[1][j], 1.5) dashed evenly;
+
+      endfor;
+
+      rpv1 *= c1 *= t0;
+      for j := 0 upto 5:
+         p[1][j] *= t0;
+      endfor;
+
+   endfor;
+
+   rpv1 *= c1 *= t1;
+   for j := 0 upto 5:
+      p[1][j] *= t1;
+   endfor;
+
+endfor;
+
+
+%% **** (4) End of Figure 3
+
+endfig with_projection parallel_x_z no_sort; 
+
+%% *** (3) Figure 4 --- Polygons for watercolor paper cut-outs --- Squares
+
+beginfig(4); 
+
+if false: 
+   dotlabel.top(0, p[2][0]);
+   dotlabel.top(1, p[2][1]);
+   dotlabel.bot(2, p[2][2]);
+   dotlabel.bot(3, p[2][3]);
+fi;
+
+q0 := p[2][1] shifted -.5;
+q1 := p[2][0] shifted .5;
+q2 := p[2][2] shifted -.5;
+q3 := p[2][3] shifted .5;
+  
+q4 := p[2][1] shifted (0, 0, .5);
+q5 := p[2][0] shifted (0, 0, .5);
+q6 := p[2][2] shifted (0, 0, -.5);
+q7 := p[2][3] shifted (0, 0, -.5);
+
+t0 := identity shifted by (q1 - p[2][1]);
+
+t1 := identity shifted by -13 * (q1 - p[2][1]);
+shift t1 (0, 0, -2);
+
+n := 1;
+
+for k := 0 upto 2:
+
+   for i := 1 upto 13:
+
+      draw rpv2;
+      label(n, c2);
+
+      if n > 30:
+         label("(Extra)", c2 shifted (0, 0, -.5));
+      fi;
+
+      n += 1;
+
+      if i == 0:   
+         draw q0 -- p[2][1] dashed evenly;
+         draw q2 -- p[2][2] dashed evenly;
+      fi; 
+
+      draw q1 -- p[2][0] dashed evenly;
+      draw q3 -- p[2][3] dashed evenly;
+
+      draw q4 -- p[2][1] dashed evenly;
+      draw q5 -- p[2][0] dashed evenly;
+      draw q6 -- p[2][2] dashed evenly;
+      draw q7 -- p[2][3] dashed evenly;
+
+      rpv2 *= c2 *= q0 *= q1 *= q2 *= q3 *= q4 *= q5 *= q6 *= q7 *= t0;
+
+      for j := 0 upto 3:
+         p[2][j] *= t0;
+      endfor;
+
+   endfor;   
+
+   rpv2 *= c2 *= q0 *= q1 *= q2 *= q3 *= q4 *= q5 *= q6 *= q7 *= t1;
+
+   for j := 0 upto 3:
+      p[2][j] *= t1;
+   endfor;
+
+endfor;
+
+%% **** (4) End of Figure 4
+
+endfig with_projection parallel_x_z no_sort; 
+
+%% *** (3)
+
+%% *** (3) End of 3DLDF code
+
+verbatim_metapost "end;";
+
+end;
+
+%% ** (2) 
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%       GNU Emacs editor.  The local variable list is not evaluated when an 
+%%       indirect buffer is visited, so it's necessary to evaluate the       
+%%       following s-expression in order to use the facilities normally      
+%%       accessed via the local variables list.                              
+%%       \initials{LDF 2004.02.12}.                                          
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% End:
+

@@ -1,0 +1,265 @@
+<html lang="en">
+<head>
+<title>Polygon Intersections - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Polygon-Reference.html#Polygon-Reference" title="Polygon Reference">
+<link rel="prev" href="Affine-Transformations-for-Polygons.html#Affine-Transformations-for-Polygons" title="Affine Transformations for Polygons">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Polygon-Intersections"></a>
+<p>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Affine-Transformations-for-Polygons.html#Affine-Transformations-for-Polygons">Affine Transformations for Polygons</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Polygon-Reference.html#Polygon-Reference">Polygon Reference</a>
+<hr>
+</div>
+
+<h3 class="section">27.5 Intersections</h3>
+
+<div class="defun">
+&mdash; <code>const</code> function: bool_point_pair <b>intersection_points</b> (<var>const Point&amp; p0, const Point&amp; p1</var>)<var><a name="index-intersection_005fpoints-650"></a></var><br>
+&mdash; <code>const</code> function: bool_point_pair <b>intersection_points</b> (<var>const Path&amp; p</var>)<var><a name="index-intersection_005fpoints-651"></a></var><br>
+<blockquote><p>These functions find the intersections of the
+<code>Polygon</code> and a line. 
+In the first version, the <code>Point</code> arguments are the end points of
+the line.  The argument to the second version must be a linear
+<code>Path</code>.
+
+        <p>A line and a regular polygon or rectangle<a rel="footnote" href="#fn-1" name="fnd-1"><sup>1</sup></a>
+can intersect at two points at most. 
+Let <code>b</code> be a <code>bool_point_pair</code> returned by
+<code>intersection_points()</code>. 
+If no
+intersection points are found, <code>b.first.pt</code> and <code>b.second.pt</code>
+will be <code>INVALID_POINT</code>, and <code>b.first.b</code> and <code>b.second.b</code>
+will be <code>false</code>.  If a single intersection point is found, the
+corresponding <code>Point</code> will be stored in <code>b.first.pt</code>.  If the
+<code>Point</code> is on the line segment
+p_0p_1
+,
+<code>b.first.b</code> will be <code>true</code>,
+otherwise <code>false</code>.  If a second intersection point is found, it
+will be stored in <code>b.second.pt</code>, and <code>b.second.b</code> is set
+analogously to <code>b.first.b</code>.
+
+        <p>When the <code>Point</code> arguments and the <code>Reg_Polygon</code> are coplanar,
+as in [next figure]
+, two intersection points are possible.  In this case,
+only intersection points of the line with an edge of the
+<code>Reg_Polygon</code> are returned in the <code>bool_point_pair</code>.
+
+     <pre class="example">          Point A(1, 1, 1);
+          Reg_Polygon r(origin, 5, 3);
+          Transform t;
+          t.rotate(15, 12, 11);
+          t.shift(A);
+          Point P(-2, 0, -1);
+          Point Q(2, 0, 1);
+          P *= Q *= r *= t;
+          bool_point_pair bpp = r.intersection_points(P, Q);
+          bpp.first.pt.dotlabel("$f$", "rt");
+          bpp.second.pt.dotlabel("$s$");
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF139.png"
+alt="[Figure 139. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 139. 
+<br>
+</p>
+
+        <p>In [next figure]
+, the lines BC
+ and
+PQ
+
+        <p>are not coplanar with the <code>Reg_Polygon</code> r.  In each case, only
+one intersection point is possible, and it can be either an intersection
+with an edge of the
+<code>Reg_Polygon</code>, or lie within its perimeter.
+
+     <pre class="example">          Point B(r.get_point(3).mediate(r.get_point(4)));
+          Point C(B);
+          B.shift(0, 2, .5);
+          C.shift(0, -2, -.5);
+          Point P(-1, -2, -1);
+          Point Q(0, 2, 1);
+          B *= C *= P *= Q *= r *= t;
+          bool_point_pair bpp = r.intersection_points(B, C);
+          bpp.first.pt.dotlabel("$i_0$", "rt");
+          bpp = r.intersection_points(P, Q);
+          bpp.first.pt.dotlabel("$i_1$", "rt");
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF140.png"
+alt="[Figure 140. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 140. 
+<br>
+</p>
+
+        <p>In [next figure]
+, the intersection point of r with the line
+PQ
+
+        <p>does not lie on the line <em>segment</em> PQ.
+
+     <pre class="example">          bpp = r.intersection_points(P, Q);
+          bpp.first.pt.dotlabel("$i$", "rt");
+          cout &lt;&lt; "bpp.first.b == " &lt;&lt; bpp.first.b &lt;&lt; endl &lt;&lt; flush;
+          -| bpp.first.b == 0
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF141.png"
+alt="[Figure 141. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 141. 
+<br>
+</p>
+
+     </blockquote></div>
+
+<div class="defun">
+&mdash; <code>const</code> function: vector&lt;Point&gt; <b>intersection_points</b> (<var>const Polygon&amp; r</var>)<var><a name="index-intersection_005fpoints-652"></a></var><br>
+<blockquote><p>Finds the intersection points of two <code>Polygons</code>. 
+Let v be the <code>vector&lt;Point&gt;</code> returned by
+<code>intersection_points()</code>.  If the <code>Polygons</code> are coplanar,
+v
+will contain the intersection points of the edges of the
+<code>Polygons</code>, as in [next figure]
+.
+
+     <pre class="example">          Rectangle r(origin, 4, 4);
+          Reg_Polygon rp(origin, 5, 5, 0, 36);
+          rp.shift(0, 0, .25);
+          vector &lt;Point&gt; v = r.intersection_points(rp);
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF142.png"
+alt="[Figure 142. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 142. 
+<br>
+</p>
+
+        <p>If the <code>Polygons</code> lie in parallel planes, there can be no
+intersection points.  If they lie in non-parallel, non-coplanar planes,
+<code>intersection_points()</code> first finds the intersection line of the
+two planes.  Then it finds the intersection points of this line with the
+two <code>Polygons</code>, if they exist.  There can no more than four
+intersection points, in this case. 
+v[0] and v[1] will be the
+intersection points of the line with <code>*this</code>, while v[2] and
+v[3] will be the intersection points of the line with <var>r</var>.  If one
+or more of the intersection points doesn't exist, the corresponding
+member of v will contain <code>INVALID_POINT</code> as a placeholder.
+
+     <pre class="example">          Point A(1, 1, 1);
+          Rectangle r(A, 4, 4);
+          Reg_Polygon p(A, 5, 5);
+          p.rotate(90, 30);
+          p.shift(2, 0, 3);
+          vector &lt;Point&gt; v = r.intersection_points(p);
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF143.png"
+alt="[Figure 143. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 143. 
+<br>
+</p>
+
+        <p>In [next figure]
+, the <code>Rectangle</code> r and the <code>Reg_Polygon</code> p
+don't overlap at all, nor does the intersection line of the two planes
+intersect with p.  However, it does intersect with p at the
+labelled <code>Points</code>.
+
+     <pre class="example">          Point A(1, 1, 1);
+          Rectangle r(A, 4, 4);
+          Reg_Polygon p(A, 5, 5);
+          p.rotate(90, 30);
+          p.shift(4, 3, 3);
+          vector &lt;Point&gt; v = r.intersection_points(p);
+          int i = 0;
+          for (vector&lt;Point&gt;::iterator iter = v.begin();
+           iter != v.end(); ++iter)
+           iter-&gt;dotlabel(i++, "bot");
+</pre>
+        <p><p align="center">
+<br>
+<img src="./graphics/png/3DLDF144.png"
+alt="[Figure 144. Not displayed.]" 
+/>
+<br>
+<br>
+Fig. 144. 
+<br>
+</p>
+
+        </blockquote></div>
+
+<!-- regpolyg.texi -->
+<!-- This file is part of the 3DLDF User and Reference Manual. -->
+<!-- Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation -->
+<!-- See the section "GNU Free Documentation License" in the file -->
+<!-- fdl.texi for copying conditions. -->
+   <div class="footnote">
+<hr>
+<h4>Footnotes</h4><p class="footnote"><small>[<a name="fn-1" href="#fnd-1">1</a>]</small> <code>Reg_Polygon</code> and <code>Rectangle</code> are currently the only
+classes derived from <code>Polygon</code>.</p>
+
+   <hr></div>
+
+   </body></html>
+

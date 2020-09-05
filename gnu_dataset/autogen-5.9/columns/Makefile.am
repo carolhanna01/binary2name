@@ -1,0 +1,53 @@
+##  -*- Mode: Makefile -*-
+## ---------------------------------------------------------------------
+## Makefile.am -- process this file with automake to produce Makefile.in
+##
+## Time-stamp:      "2007-01-27 06:55:37 bkorb"
+## Copyright (c):   1992-2007 by Bruce Korb
+##
+## Author:          Bruce Korb <bkorb@gnu.org>
+## Maintainer:      Bruce Korb <bkorb@gnu.org>
+##            by: bkorb
+## ---------------------------------------------------------------------
+## $Id: Makefile.am,v 4.11 2007/02/04 17:44:12 bkorb Exp $
+## ---------------------------------------------------------------------
+
+bin_PROGRAMS    = columns
+csrc            = opts.h columns.c opts.c
+nodist_columns_SOURCES = cols.c
+
+LO_LIB          = $(top_builddir)/autoopts/libopts.la
+columns_LDADD   = $(LO_LIB) $(LIBGUILE_LIBS)
+
+BUILT_SOURCES   = columns.menu columns.texi columns.1
+EXTRA_DIST      = opts.def $(csrc)
+
+RUNAG           = $(AGexe) -L$(top_srcdir)/autoopts -bcolumns
+man_MANS        = columns.1
+
+INCLUDES        = @INCLIST@
+
+CONFIG_CLEAN_FILES = columns.texi columns.menu columns.1 gen-stamp
+MAINTAINERCLEANFILES = Makefile.in $(CONFIG_CLEAN_FILES)
+DISTCLEANFILES  = cols.c
+
+gen : $(BUILT_SOURCES)
+
+all : gen
+
+## opts.h cannot be built until columns is built, so no rules for it.
+
+columns.1 columns.menu columns.texi : gen-stamp
+
+cols.c : Makefile
+	for f in config.h $(csrc) ; do echo "#include \"$$f\"" ; done > $@
+
+gen-stamp : opts.def columns$(EXEEXT)
+	top_builddir=$(top_builddir) \
+	$(RUNAG) -Taginfo -DLEVEL=section $(srcdir)/opts.def
+	$(RUNAG) -Tagman1 $(srcdir)/opts.def
+	@touch $@
+
+.NOTPARALLEL:
+
+# Makefile.am ends here

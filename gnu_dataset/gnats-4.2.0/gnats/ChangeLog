@@ -1,0 +1,4012 @@
+2015-01-16  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/Makefile.am: Add *.sh files to EXTRA_DIST
+	so they are picked up during make dist
+
+2015-01-15  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/Makefile.am: Remove reference to obsoleted file getdate.h
+
+2015-01-10  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/dbconfig.in: Change @PKGLIBEXECDIR@ to @pkglibexecdir@
+	* gnats/send-pr.conf.in: Change @SYSCONFDIR@ to @sysconfdir@
+
+2015-01-09  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/gnats.h: Add <limits.h> for LONG_MAX (moved from queue-pr.c).
+	* gnats/queue-pr.c: Move <limits.h> to better place for it (gnats.h).
+	* gnats/send-pr.sh:
+	- Add >&2 to recently added options' USAGE messages that missed it.
+	- Fix check for missing configuration to use unknown instead of default
+	since if we have a default other than unknown it's what we configured.
+	- Add count limits in the two while loops that ask for user input, to
+	prevent infinite loop that can happen if the script loses the terminal.
+	- Escape ampersands in the Synopsis being copied as the Subject because
+	they are special to "ed", to avoid things like AT&T changing to A: T.
+
+2015-01-06  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/queue-pr.c: Rearrange the order of #include directives
+	to address compilation issues on Solaris 8 and 10.
+	* gnats/query-pr.c: add g: to the short option list so that -g is
+	recognized.
+
+2015-01-05  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/send-pr.sh: 
+	- Fix missing x typo in "x$ORGANIZATION" comparison.
+	- Avoid forcing empty SUBMITTER to "unknown"; some sites build gnats
+	with ./configure --enable-submitter=" " to make Submitter-Id be input
+	by the user like any other field. By default it's "unknown" already.
+	- Replace ECHO_N / ECHO_C with the more portable printf, for predictable
+	behavior at runtime even when distributing pre-built clients elsewhere.
+
+2014-12-31  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/send-pr.sh: 
+	- Put in a hack for allowing PRs to be re-edited upon submission errors.
+	- Removed unneeded dependency to fgrep, grep is enough.
+	- Replace paste (PR#691) with tr again, this time adding an echo to
+	ensure trailing newline. Paste was too slow dealing with many values.
+	- send-pr will now check for GNATS_CREATE_TEMPLATE enviornment variable
+	and allow users to overload the default send-pr entry template by the
+	customized template file indicated by GNATS_CREATE_TEMPLATE.
+	- Avoid removing temp file to prevent race condition where someone
+	else may replace it with their own, causing the script to read
+	possibly malicious data. send-pr deletes temp files at the end anyway.
+	- Enhance send-pr to accept (host/port/user/passwd) like edit-pr does.
+
+2014-12-29  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/Makefile.am: Add getdate.c to CLEANFILES since it's generated,
+	and correct $(libexec_SCRIPTS) to $(pkglibexec_SCRIPTS).
+
+2014-12-28  Alex Manoussakis <amanou@savannah.gnu.org>
+	Updates that allow building with clang compiler tested on linux and OSX.
+
+	* gnats/internal.c (get_curr_date): Remove wrong cast and replace 0
+	with NULL to fix clang warning: "expression which evaluates to zero
+	treated as a null pointer constant of type 'time_t *'"
+
+2014-12-28  Alex Manoussakis <amanou@savannah.gnu.org>
+	Move datastore-specific programs and scripts to the ds-file directory
+	further paving the way for multiple datastore support.
+
+	* gnats/Makefile.am: Add . to SUBDIRS so libgnats.a is build first,
+	and add explicit target for query-pr.o so that the datastore-specific
+	objects are built before any programs, ensuring both libgnats and
+	datastore-specific libraries are available for linking.
+	Remove check-db, mkdb, mkcat, rmcat, gen-index, gen-closed-date
+	from this file, and move them to gnats/ds-file/Makefile.am
+	since they are datastore-specific.
+
+2014-12-27  Chad Walstrom <chewie@wookimus.net>
+	* gnats/Makefile.am: explicit build rules for shell scripts for
+	path substitution.
+	* gnats/*.sh: Removed *exec/*bin variables and updated the PATH
+	environment variable in each script.
+	* gnats/dbconfig.in: Update @LIBEXECDIR@ to @PKGLIBEXECDIR@
+
+2014-12-23  Alex Manoussakis <amanou@savannah.gnu.org>
+	* gnats/Makefile.am: Don't set DSLIB_DIR here, we are setting it
+	in configure.ac
+
+2014-12-22  Alex Manoussakis <amanou@savannah.gnu.org>
+	These changes allow building with gcc-4.8 without breaking older ones.
+
+	* gnats/Makefile.am: Use $@ $< variables instead of spelling files
+	  by name in the targets we build with -Wno-error. Also remove
+	  getdate.o target due to using newer getdate.y, but add gnugetopt.o
+	  to avoid its warnings with gcc-4.8 from being fatal.
+
+	* gnats/getdate.h: Removing file that's no longer needed.
+
+	* gnats/getdate.y: Replacing with copy from the libarchive-2.6.2
+	  library, since the old file had build issues on new systems / gcc-4.8.
+	  The replacement builds clean, and adds checks for invalid dates
+	  such as 2002-03-32.
+
+2014-12-22  Alex Manoussakis <amanou@savannah.gnu.org>
+
+	These changes allow building with -Werror turned back on all the way
+	up to gcc-4.7.
+
+	* gnats/Makefile.am:
+	  - Avoid warnings from being fatal for generated code or other
+	  libraries by using custom targets for fconfigl.o, getdate.o,
+	  gnugetopt1.o, regex.o building them as:
+	  $(COMPILE) -Wno-error -c -o file.o file.c
+
+	* gnats/edit.c (lock_pr): Refactor the code a bit so that the return
+	  value of fgets() is used, to avoid compilation warning.
+
+	* gnats/gnatsd.c
+	  (startConnection):
+	  - Get rid of unused variable access, and call exit when error is
+	  encountered.
+	  - Call syslog instead of log_msg, so that the %m sequence will work;
+	  it prints strerror(errno) according to syslog(3). This minor
+	  change also brings consistency with the other logging in this
+	  function which also calls syslog().
+
+	  (main): Get rid of unused variable dbinfo.
+
+	* gnats/query.c
+	  (process_format): Add missing format specifier "%s" to fprintf
+	  statement to avoid compilation warnings.
+
+	  (parseSimpleQueryExpression): Initialize len variable to avoid
+	  compilation warnings.
+
+	* gnats/queue-pr.c (main): Call usage() upon error, instead of
+	  trying to use fprintf with an array of strings in a broken way.
+
+	* gnats/acconfig.h: Removing deprecated file, not needed anymore
+	  since we are using AC_DEFINE with 3 arguments for stuff like
+	  HAVE_KERBEROS and HAVE_SOCKLEN_T which generates the templates for
+	  them.
+
+2014-12-21  Alex Manoussakis <amanou@savannah.gnu.org>
+
+	* gnats/gnats.h: Only define _POSIX_SOURCE if we are on linux, and
+	  especially NOT FreeBSD since that macro causes errors with system
+	  headers there unless sys/types.h is included earlier, but feature
+	  macros are supposed to be defined before any system headers are
+	  included.
+
+2012-01-07  Chad Walstrom  <chewie@wookimus.net>
+
+	* gnats/Makefile.am: Added in AM_CFLAGS to map in GCC_CFLAGS.
+	Added AM_LFLAGS to map in FLEX_LFLAGS.
+
+	* gnats/acconfig.h: Regenerated.
+
+	* gnats/fconfigl.l: Added missing function prototypes.
+	(Alexandros...)
+
+	* gnats/fconfigl.l: Added noinput and never-interactive
+	options to the lexer. flex does not produce very clean source.
+
+	* gnats/gnats.h: Added _POSIX_SOURCE = 1 before #include
+	<stdio.h> since fileno is not standard C. The feature test
+	macro is required.
+
+	* gnats/regex.c: Added missing prototypes.
+
+2012-01-07  Alexandros Manoussakis <alex@juniper.net>
+
+	* gnats/getdate.y: Updated #if macro to include STDC_HEADERS
+
+2009-12-26  skoot@qi.pl
+
+	* send-pr.sh: Copy TEMP file back in to request before sending
+	'--request-id'. Closes: #484
+
+2008-02-03  Chad Walstrom  <chewie@wookimus.net>
+
+	* edit-pr.sh: Exit with error if PR could not be locked.
+	Closes: #767
+
+2008-02-03  Stephane Chazelas  <Stephane@artesyncp.com>
+
+	* Makefile.am(install-data-hook): Fix call to install default
+	configuration files. Closes: #768
+
+	* query.c(stripWhiteSpace): Fixes failed queries because of
+	whitespace stripping.  Closes: #771
+
+	* edit-pr.sh: Use the email address in the responsible field
+	if found, otherwise use the environment settings.  Closed:
+	#773
+
+2007-12-28  Stephane Chazelas  <Stephane@artesyncp.com>
+
+	* gnatsd.c(startConnection): Test value rather than "defined"
+	for HAVE_DECL_AF_INET6.  It is always defined.  Closes: #615
+
+2007-09-22  Yves Martin  <yves.martin@support.elca.ch>
+
+	* cmds.c (set_confidential_access): removed spaces in the
+	query expression.  Affects versions 4.1.0 forward.
+
+2007-09-16  Chad Walstrom  <chewie@wookimus.net>
+
+	* autoconf.h.in: Dropped.  Generated by autoheader, thereby
+	doesn't belong in CVS.
+
+	* Makefile.am (install-data-hook): Conditionally copy in
+	configuration files rather than overwrite what might already
+	be there.  Fail gracefully when symlinks fail.
+
+2007-08-08  Chad Walstrom  <chewie@wookimus.net>
+
+	* Everything: Updated all of the copyright notices to indicate
+	GPL version 3 is now the appropriate license.
+
+	* mit-copyright.h: Noticed that mk_auth.c was without this
+	important document.
+
+2007-04-30  Martin Tournoij  <carpetsmoker@xs4all.nl>
+
+	* install-sid.sh (usage): The install-sid script wants to be
+	executed by /bin/sh, but is a bash script.  Remove "function"
+	keyword.  Closes: PR#746
+	
+2007-03-01  Chad Walstrom  <chewie@wookimus.net>
+
+	* Makefile.am: Used AM_CONDITIONAL that set in ../acinclude.m4
+	to build mk_auth.c intelligently.
+
+	* mk_auth.c: Removed #ifdef HAVE_KERBEROS...#endif
+
+	* autoconf.h.in: configure correctly included a new define for
+	HAVE_KERBEROS.
+
+	* client.c(clientConnect): Moved host and server variable
+	declaration up so that the Kerberos routines could call them.
+
+2006-09-29  Stephane Chazelas  <Stephane@artesyncp.com>
+
+	* gnatsd.c(startConnection): Fixed conditional, moved paren
+	outside macro.  Closes: PR#615
+
+2006-10-04  Chad Walstrom  <chewie@wookimus.net>
+
+	* autoconf.h.in: configure included a new define for
+	HAVE_DECL_AF_INET6.
+
+	* gnatsd.c(startConnection): Conditionally include AF_INET6 if
+	defined as a symbol or preprocessor variable.
+	Closes: PR#615
+
+2006-09-29  Chad Walstrom  <chewie@wookimus.net>
+
+	* at-pr.sh, check-db.sh, delete-pr.sh, diff-prs.sh,
+	edit-pr.sh, file-pr.sh, install-sid.sh, mail-agent.sh,
+	mail-query.sh, mkcat.sh, mkdb.sh, rmcat.sh, send-pr.sh: Added
+	the path environment variables determined by autoconf to each
+	script so that variable substitution works correctly.  Fixed
+	some typos. Closes: PR#669
+
+	* Makefile.am: Removed targets for shell scripts.  Handled by
+	../configure.ac now.
+
+
+2006-09-29  Stephane Chazelas  <Stephane@artesyncp.com>
+
+	* send-pr.sh: Portability problem with sed and tr.  Use paste
+	instead.  Closes: PR#691
+
+	* send-pr.sh: The comments inside <...> are not removed from
+	custom templates before submitting the PR as they are when a
+	template is not provided.  Some error messages where not sent
+	to stderr. Some tidy up in other places as well.  Added a
+	$SENDPR_CLEANUP variable that the user might want to define in
+	his ~/.send-pr.conf.  Closes: PR#697
+
+2006-08-06  Stephane Chazelas  <Stephane@artesyncp.com>
+
+	* mkcat.sh: doesn't take into account the "category-dir-perms"
+	parameter in dbconfig when creating category directories.
+	Closes: PR#655
+
+2006-06-30  Stephane Chazelas  <Stephane@artesyncp.com>
+
+	* edit-pr.sh: missing quote on line 172 (it's OK for the
+	Bourne shell and AT&T ksh based sh, but not other shells), and
+	the tr syntax, though POSIX is causing trouble with Solaris
+	tr.  Closes: PR#613
+
+2006-05-30  Michael van Elst  <mlelstv@serpens.de>
+
+	* diff-prs.sh: Speed up diffs-prs.sh. Do not append linebuffers
+	but store them in an array and don't bother to compare field
+	contents if the number of lines already differs.  Closes: PR#598.
+	(Committed by Chad Walstrom).
+
+2006-05-24  Alexandros Manoussakis  <amm2@andrew.cmu.edu>
+
+	* gnats/edit.c:  Removed function addAuditEntryP which checked
+	globally for an add-audit-trail line in dbconfig. Updated function
+	applyChangeActions so that add-audit-trail is checked in the loop
+	that goes through the on-change blocks. This makes the on-change
+	query-expression be honored, and also allows for on-change blocks
+	to have different audit-trail-formats. Also added audit-trail-format
+	processing in the global on-change block.
+	Closes: PR#551
+
+2006-05-11  Jonathan Guthrie  <jguthrie@brokersys.com>
+
+	* gnats/gnatsd.c(get_name): Added a parameter to accept
+	address type and make it safe for ipv6 addresses.
+
+	(startConnection): changed call to get_name and tested for
+	AF_INET6 family.  Closes: PR#601
+
+2006-04-20  Chad C. Walstrom <chewie@wookimus.net>
+
+	* gnats/gnats.h: Added the global variable global_db_list_file
+	so that it can be specified on the command-line.
+	
+	* database.c(initDatabaseList): Use the global variable
+	variable to specify the location of the ``databases'' file.
+	
+	* gnats/gen-closed-date.c, gen-index.c, getclose.c, gnatsd.c,
+	pr-age.c, pr-edit.c, pr-stat.c, query-pr.c, queue-pr.c(main):
+	Added long (--global-databases-file) and short option (-g)
+	processing for setting the global_db_list_file variable.
+	Closes: PR#544
+
+2005-12-31  Chad C. Walstrom <chewie@wookimus.net>
+
+	* gnats/Makefile.am: Cleanup. Some files weren't being
+	included in the distribution tarball; the shell scripts for
+	example.  Added the "dist_" prefix to the emacs lisp file.  No
+	need to set shells executable, automake will handle that.
+	Switched back to datadir instead of pkgdatadir.  Added
+	install-data-hook to create symlinks from default database
+	files in the datadir.
+
+	* gnats/ds-file/Makefile.am: Fixed typo.  EXTRA_DIST_FILES to
+	EXTRA_DIST.
+
+	* gnats/at-pr.sh, gnats/check-db.sh, gnats/delete-pr.sh,
+	gnats/edit-pr.sh, gnats/file-pr.sh, gnats/install-sid.sh,
+	gnats/mail-query.sh, gnats/mkdb.sh, gnats/send-pr.sh: Updated
+	pathname substitution to reflect reality, using @libexecdir@
+	instead of @prefix@/lib/, for example.
+	
+2005-12-22  Chad C. Walstrom  <chewie@wookimus.net>
+
+	* gnats/*.sh: Replaced xVARx with @VAR@ to simplify build
+	substitution.
+
+2005-11-21  Mel Hatzis <hatzis@juniper.net>
+
+	* gnats/gnats.el(gnats-process-filter): Bug fix.
+	(gnats-menu-build-paned-menu, gnats-request-enum): New feature.
+	Build multi-paned menus for some lists (useful if you have
+	many categories for example).
+
+2005-11-21  Mark D Baushke <mdb@gnu.org>
+
+	* gnats.el (gnats-do-query): Accept a list of PR numbers as an
+	alternative to just a gnats query expression. (Originally
+	submitted on 2003-10-10.)
+
+2005-11-07  Oli Möller
+
+	* gnats/gnats.el (gnats-get-addr-info, query-pr, send-pr,
+	edit-pr, view-pr): Patch #1 - Killed Buffers.  Sometimes
+	kill-buffer was invoked with nil argument, killing the current
+	buffer.
+
+	(gnats-server-response-ok): Patch #2: Response code 300..351
+	considered "ok".
+
+	(gnats-validate-field, gnats-server-resp-to-string,
+	gnats-submit-pr): Patch #3: Edit and submit.  Switch to view
+	mode after edit and correctly display server response after
+	submit.  It occurred that the user was unsure about the status
+	of a submission and unintentionally submitted it again and
+	again...
+
+	(gnats-get-mail-alias) Patch #4: Missing user name in audit
+	trail.  Audit trail entries of actions performed via the Emacs
+	interface were missing the user name.  Something is wrong with
+	the code in `gnats-get-mail-alias'.  This patch is only a
+	work-around and ALWAYS uses the username from the server.  The
+	real solution would be to find out why (gnats-send-command
+	"ADMV" "builtinfield:responsible") returns an empty string.
+
+	(gnats-view-mode-map) Patch #5: Additional keys for view-mode
+
+	(gnats-change-database) Patch #6: Fix for PR#508.
+
+2005-11-07  Alex Manoussakis <amm2@andrew.cmu.edu>
+
+	* The following changes closes PR#504: "gnatsd crashes when
+	trying to lock a nonexistent PR".
+
+	* gnats/ds-file/index.c, gnats/ds-file/index.h:
+	(getCategoryFromIndex, findPrCategoryBinary, findPrCategory)
+	Removed. Useless nowdays.
+
+	* gnats/pr.c (get_pr_path): does nothing when a PR is not found in the
+	index, instead of calling getCategoryFromIndex.  Also removed
+	the 4th argument from get_pr_path since it's now unneeded.
+	get_pr_path will return NULL and the error is handed correctly
+	later on. (the user gets the message: "No PR 2 listed in the
+	index")
+
+2005-10-30  Chad C. Walstrom  <chewie@wookimus.net>
+
+	* gnats/Makefile.in, gnats/aclocal.m4, gnats/configure,
+	gnats/configure.in, gnas/getdate.c, gnats/ds-file/Makefile.in
+
+	* gnats/autoconf.h.in: Updated via autoheader.
+
+	* gnats/getdate.y: Fixed three typos, missing semicolons.  Builds
+	cleanly with GNU Bison 1.35.
+
+	* gnats/getdate.y: Fixed three typos, missing semicolons.
+
+	* gnats/gnats-databases.in, gnats/dbconfig.in: Replaced 'xVARIABLEx'
+	delimiters with '@VARIABLE@'.
+
+	* gnats/mk_auth.c: Enclosed entire file in #ifdef HAVE_KERBEROS.
+	Should use a more sophisticated conditional expression to determine if
+	it will be compiled or not.
+
+	* gnats/gnats-pwconv.c: Renamed const VERSION to PROGRAM_VERSION
+
+	* gnats/autoconf.h.in: Apparently, this should be included.
+	autoheader generates the file as gnats/autoconf.h.in~ and expects you to
+	move it into place for use.
+
+	* gnats/Makefile.am, gnats/ds-file/Makefile.am:
+	New automake configuration files.
+
+2005-10-20  Chad Walstrom  <chewie@wookimus.net>
+
+	* getdate.y, getdate.c: Three typos fixed in getdate.y,
+	missing semicolons.  Regenerated getdate.c with GNU Bison
+	1.35.
+
+2005-08-19  Malcolm Purvis <malcolmp@aurema.com>
+
+	* misc.c: implement unsetenv().  Allows builds on Solaris 2.x
+	machines.  Closes: PR#495.
+
+2005-07-15  Chad Walstrom  <chewie@wookimus.net>
+
+	* Makefile.in (install-gnats-tools, install-gnats-bin): Removed chown
+	and chmod entries for setting binaries suid.  CAN-2005-2180 advisory.
+	gen-index as setuid root can overwrite any system file.
+
+2005-02-19  Mel Hatzis  <hatzis@wattes.org>
+
+	* configure.in: Added the beginnings for supporting multiple
+	backend datastores. A lot of the funtionality dealing directly
+	with the flat-file datastore has been moved into it's own
+	library (libds-file.a) which is pulled in unconditionally for now
+	- since there are no alternative backend datastores to configure.
+
+
+	* Makefile.in: Moved most of logic dealing with the flat-file
+	backend into a ds-file sub-directory for which we generate a
+	libds-file.a library. Modified all binary targets to link
+	against this library - the name of the datastore library to link
+	with is actually supplied by configure. Note that the index
+	file is now part of the flat-file datastore library; GNATS_LIBS
+	now includes a $(DS_LIB) macro defined by configure; a ds-libs
+	target has been added for building the datastore library; fconfig.y
+	is now generated (see the note about fconfig.y below).
+
+	* ds.mk: New file. Used to generate the Makefile in all datastore
+	implementations. Contains all the common elements of a datastore
+	Makefile.
+
+	* aclocal.m4: Regenerated.
+
+	* autoconf.h.in: Regenerated.
+
+	* configure: Regenerated.
+
+	* cmds.c (do_server_query, GNATS_lock, GNATS_unlk, GNATS_edit):
+	Function renames for the datastore API - iterate_prs, prExists and
+	readPRWithNum renamed to db_query, pr_exists and pr_load_by_id
+	respectively. The renames are to conform to a standard naming
+	convention used by the datastore API to assist with datastore
+	implementation.
+	(GNATS_rset): Removed references to the index, which is now only
+	relevant when GNATS if configured with the flat-file datastore.
+	This change involves a modification to the message accompanying
+	the return code when the index is reloaded - since the index is
+	no longer always relevant, it makes no sense for the GNATS server
+	to refer to it in the client/server protocol.
+
+	* database.c (struct databaseInfo, newDatabaseInfo): Replaced
+	indexDesc with a void ds_private pointer which is intended to cache
+	any datastore specific information (such as the indexDesc). The
+	indexDesc is now defined and exclusively used in the flat-file
+	datastore library and is pulled in via ds_private when needed.
+	(getIndexDesc, setIndexDesc, clearIndexDesc): Moved to index.c in
+	the flat-file datastore library since this is no longer generically
+	relevant.
+	(getDatastorePrivate, setDatastorePrivate): New functions. Used for
+	managing the datastore specific database elements such as the index
+	in the flat-file datastore implementation.
+	(loadDatabase): Replaced  all flat-file datastore specific
+	functionality with a new "db_init" function which is part of the new
+	GNATS datastore API.
+	(freeDatabaseInfo): Replaced all references to functions which free
+	the index with a call to a new "db_destroy" function which is part of
+	the new GNATS datastore API.
+
+	* database.h (setIndexDesc, setDatastorePrivate): Replaced
+	setIndexDesc with setDatastorePrivate - setIndexDesc now declared
+	in ds-file/index.h. Any datastore specific configuration elements
+	defined in the dbconfig (via ds-file/t-fconfig) are cached in the
+	DatabaseInfo struct via setDatastorePrivate.
+	(getIndexDesc, getDatastorePrivate): Replaced getIndexDesc with
+	getDatastorePrivate - getIndexDesc now declared in ds-file/index.h.
+
+	* edit.c (processPRChanges): No need to check if the PR has been
+	completely read into memory...all callers of this function do so.
+	Furthermore, the idea of reading a PR partially is not desirable
+	for a generalized backend datastore.
+	(rewrite_pr): Moved all the logic associated with reading/writing
+	to a PR file and dealing with the index into a new 'pr_update'
+	function in ds-file/pr.c.
+	(replace_pr): Renamed prExists to pr_exists, readPRWithNum to
+	pr_load_by_id and fillInPR with pr_load. These functions are
+	all part of the datastore API and have been renamed for clarity.
+
+	* ds-file/t-fconfig, fconfig.y, fconfig.y.in: fconfig.y renamed to
+	fconfig.y.in which no longer contains any datastore specific
+	grammar. The datastore specific items are now pulled in from
+	a t-fconfig file located in the ds-file directory. The fconfig.y
+	file is generated by concatenating fconfig.y.in with t-fconfig.
+	To accomodate this, fconfig.y.in now contains a dsDescription
+	section which all datastore's must define.
+
+	* file-pr.c (createNewPRFile): Renamed to createNewPR since we'll 
+	eventually be using alternatives to files for the backend. Also,
+	moved all the logic associated with reading/writing to a PR file
+	dealing with the index into a new 'pr_create' function in
+	ds-file/pr.c.
+	(run_atpr): Pass in an int for the PR number since we
+	no longer refer to a string representation of it in createNewPR.
+	(checkIfReply, append_report): Function renames for datastore API.
+	(getBugNumber): Moved to ds-file/pr.c - only relevant to flat-file
+	datastore.
+	(submit_pr): Function rename for multiple backend datastore support.
+
+	* gnats.h: No longer pull in index.h...this is only used for the
+	flat-file datastore.
+
+	* index.c, index.h, ds-file/index.c, ds-file/index.h: Moved the
+	index.[ch] files into the new ds-file sub-directory which implements
+	the flat-file backend datastore. The index is now only applicable
+	if GNATS is configured with the flat-file backend datastore. All
+	references to the index in the DatabaseInfo and PR data structures
+	have been replaced with an opaque 'ds_private' field, which is used
+	to cache all datastore specific data. The getIndexDesc/setIndexDesc
+	function definitions were moved out of database.c into index.c since
+	these functions are specific to the flat-file datastore.
+
+	* pr.c (allocPR): Replaced allocIndex with a call to the new pr_init
+	function in the datastore API. The flat-file datastore implementation
+	of pr_init is where allocIndex is now called. Also handle the case
+	where there are no fields in the dbconfig without corrupting memory.
+	(get_pr, get_pr_from_index, get_pr_path, pr_file_readable): These
+	functions have been relocated to ds-file/pr.c since they are
+	specific to the flat-file datastore.
+	(fillInPR): Renamed to pr_load and moved to ds-file/pr.c since the
+	implementation of this function is datastore specific.
+	(field_value): Replaced the call to indexValue which retrieves the
+	field value from the flat-file index with a datastore API function
+	call named field_cache_value. This allows for datastore
+	implementations to utilize a cache (such as the flat-file index),
+	for keeping some field values in memory.
+	(free_pr): Replaced calls related to freeing the index with a new
+	datastore API function named pr_destroy. The flat-file datastore
+	implementation of pr_destroy is where the index is now free'd.
+	(prExists): Renamed to pr_exists and moved to ds-file/pr.c since
+	the implementation of this function is datastore specific.
+	(readPRWithNum): Renamed to pr_load_by_id and moved to ds-file/pr.c
+	since the implementation of this function is datastore specific.
+	(pr_delete): Moved to ds-file/pr.c since the implementation of this
+	function is datastore specific.
+
+	* pr.h (PR_struct): Replaced the index pointer with an opaque
+	pointer to a struct containing datastore specific data. The index
+	is now defined within this opaque datastore data structure only when
+	GNATS is linked  with the flat-file datastore library.
+	(fillInPR): Renamed to pr_load and moved to ds.h.
+
+	* query.h (index.h): Removed index.h since the index is no longer a
+	generic part of the GNATS datastore; index.h is now only pulled in
+	when GNATS is configured with the flat-file backend.
+	(*QueryItem, SearchItem, *QueryTree, struct queryExpr): Imported
+	from query.c since these is required by the datastore library.
+	(*QueryFunc): Moved to ds.h since this is an integral part of the
+	datastore query functionality from which it is referenced.
+	(iterate_prs): Renamed to db_query and moved to ds.h since this is
+	now a part of the GNATS backend datastore API. The function was
+	renamed to conform to a standard naming convention used by the
+	datastore API to assist with datastore implementation.
+
+	* query.c (*QueryItem, SearchItem, *QueryTree, struct queryExpr):
+	Moved to query.h since these are now referenced from the datastore
+	library.
+	(fieldCompare, process_format): The index is now only relevant when
+	GNATS is configured with the flat-file backend. The check for
+	whether a PR is only partially in memory or whether we're only
+	referencing an indexed field is no longer relevant in all cases.
+	The datastore is now responsible for implementing a partial PR
+	cache (such as the index).
+	(pr_matches_tree): No longer a static - referenced by the datastore
+	backend.
+	(iterate_prs): Renamed to db_query and moved into the datastore
+	library - this is a member of the datastore API.
+
+	* ds.h: New File. Contains function declarations for all functions
+	implementing the GNATS datastore API. All datastore implementations
+	are required to define these functions.
+
+	* ds-file/Makefile.in, ds-file/ds-file.h, ds-file/db.c,
+	ds-file/pr.c, ds-file/fld.c: New files. Collectively implement the
+	GNATS flat-file datastore.
+
+	* gen-index.c: We will eventually only build this as part of the
+	flat-file datastore. For now, pull in the index include file from
+	the ds-file directory.
+
+	* getclose.c (do_prlist): Reworked so as not to use the flat-file
+	index. Use a query to get the relevant PRs for processing.
+
+	* pr-age.c (main): Function rename for multiple backend datastore.
+
+	* pr-edit.c (main): Function renames for multiple backend datastore.
+
+	* query-pr.c (main): Function renames for multiple backend datastore.
+
+2005-02-19  Mel Hatzis  <hatzis@wattes.org>
+
+	* adm.c (copy_adm_entry): Handle blank metadata fields by correctly
+	assigning the relevant field in the adm struct to NULL - and thereby
+	avoid an attempt to xstrdup a NULL value.
+
+	* file-pr.c (createNewPRFile): Avoid a NULL pointer dereference when
+	there's a blank response time field in the submitters file.
+
+	* gnatsd.c (findUserAccessLevel): Avoid a strlen of NULL when the
+	gnatsd.user_access file contains a blank 'database-alias' field.
+
+	* gnats.h (rewrite_pr): Made it a static function in edit.c - it
+	wasn't being used outside this scope anyway.
+
+	* mail.c (get_responsible_address): Avoid a NULL pointer dereference
+	if the responsible file doesn't have an email address for the
+	gnats-admin user.
+
+	* index.c, index.h (getPrevPR, setPrevPR, setNextPR): New functions.
+	The index chain is now doubly linked allowing edited PRs to be
+	replaced without incurring the overhead of a search through the
+	chain. As well as offering significantly better performance, this
+	supports a change to the PR edit functionality whereby we now start
+	with a copy of the old PR as well as the updated PR instead of
+	retrieving the old PR (from the index) in the guts of rewrite_pr.
+	The motivation behind this change is to isolate the index
+	functionality and move toward a generic backend datastore which
+	doesn't require the index.
+	(replaceCurrentPRInIndex): Modified signature. Pass in the PR to be
+	replaced (as well as the new PR) since we can now use the doubly
+	linked index chain to replace the PR without searching for it.
+
+	* pr.h (lookup_pr_path): Removed. Replaced by a call to the new
+	get_pr_from_index () function followed by a call to (a modified)
+	get_pr_path (). This change allows a single index search to be done
+	once (early on in a given call stack) to retrieve a PR and
+	thereafter access the PR file without requiring  more index
+	searches.
+	(pr_delete): New function. Contains the flat-file specific logic
+	related to PR deletions which will be moved out into a flat-file
+	backend when the datastore backend is generalized.
+
+	* pr.c (get_pr_from_index): New function. Retrieve a PR from the
+	index.
+	(pr_file_readable): New function. Check if a file can be opened for
+	reading.
+	(pr_delete): New function. Flat-file specific logic for delete.
+	(prExists): Now utilize get_pr_from_index () and get_pr_path ()
+	instead of the deprecated lookup_pr_path (). 
+	(readPRWithNum): Ditto. Also set the PR's next/prev index pointers.
+	(get_pr_path): New signature. Take in a PR * instead of searching
+	the index.
+	(lookup_pr_path): Deprecated.
+
+	* edit.c (applyChangeActions, processFieldChange, sendAuditMail):
+	Repositioned within the file so as not to require prototypes.
+	(processPRChanges): Handle NULL values appropriately when undoing
+	changes to modified read-only fields.
+	(rewrite_pr, replace_pr, edit_field): rewrite_pr now takes in a copy
+	of the old pr instead of retrieving it from the index. This is in
+	preparation for allowing it to be used with more than just the flat
+	file backend datastore. Also moved some error checking out of
+	rewrite_pr and simplified it...no need to validate the whole PR
+	when editing a single field.
+	(deletePR): Moved the file-related logic into a new pr_delete function
+	inside pr.c thereby preparing for a general backend datastore.
+
+2005-02-24  Chad Walstrom  <chewie@wookimus.net>
+
+	* man/*.man, man/Makefile.in: Removing historical remnants.  Manpages
+	  were moved to ../doc/man.
+
+2005-02-22  Mike M. Volokhov  <mishka@apk.od.ua>
+
+	* misc.c (xmalloc, xrealloc, xstrdup, basename, asprintf, vasprintf):
+	New fault-tolerant functions (x*), rewritten from scratch as
+	replacements for libiberty stuff. A basename() and [v]asprintf()
+	functions was stolen from libiberty tree to be more consistent
+	on various platforms.  The xstrndup() function was strengthen
+	when passed length is less than 1; this fixes potential problems
+	with other functions which relies on xstrndup(), i.e.:
+	strlen(xstrndup(string, 0)).
+
+	* gnugetopt.c, gnugetopt1.c, gnugetopt.h: Stolen from libiberty
+	sources to avoid possible portability problems and was bit
+	enreached with GNATS build directives. Contains GNU getopt(),
+	getopt_long(), and getopt_long_only() functions (however GNATS
+	use getopt_long only, which is now enforced in configure.in).
+	Files was renamed to gnu* for more clean selection of getopt sources.
+
+	* configure, configure.in: The following functions now handled
+	by AC_CHECK_FUNC macro - basename, asprintf, vasprintf, getopt,
+	getopt_long. See also autoconf.h.in file.
+
+	* autoconf.h.in: The libiberty stuff was replaced with GNATS own
+	HAVE_GETOPT* and HAVE_BASENAME triggers.
+
+	* ansidecl.h: Stolen from libiberty sources. This generic
+	definitions used accross GNATS sources.
+
+	* gnats.h: Add prototypes for new functions from misc.c. Include
+	"ansidecl.h", stored locally. Include getopt_long select logic.
+
+	* Makefile.in: Remove libiberty stuff, include gnugetopt* sources.
+
+2004-11-30  Chad Walstrom  <chewie@wookimus.net>
+
+	* gnatsd.c, gnats-pwconv.c (HAVE_CRYPT_H): Changed HAVE_CRYPT to
+	HAVE_CRYPT_H, which is the real define found in autoconf.h.in.
+
+	* gnats-pwconv.c: Removed extraneous header file #includes.
+
+	* misc.c (xstrndup): Added sanity check for len parameter, and
+	documented the function.
+
+	* Makefile.in (install-tools-bin): Removed $(srcdir) from install
+	command for diff-prs, since it is a generated file from diff-prs.sh.
+	This allows builds in directories != srcdir.
+
+2004-11-18  Pankaj Garg  <gargp@acm.org>
+
+	* mail.c (getOneAddress): Check addr pointer against addrStart before
+	trying to copy a zero-length string.
+
+2004-11-18  Chad Walstrom  <chewie@wookimus.net>
+
+	* configure.in: Added conditional define's for HAVE_DECL_GETOPT and
+	HAVE_DECL_BASENAME to get around include/getopt.h and
+	include/libiberty.h "three-state macro" function declarations of
+	getopt() and basename(). Updated Copyright.
+
+	* configure: regnerated
+
+	* autoconf.h.in: regenerated
+
+2004-11-13  Chad Walstrom  <chewie@wookimus.net>
+
+	* configure.in (--with-lispdir): Added new option to specify lispdir
+	rather than have it automatically determined.  Updated version to
+	4.1.0.
+
+	* configure: regenerated
+
+	* Makefile.in (install-gnats-arch-indep): Added $(DESTDIR) variable to
+	test for GNATSD_HOST_ACCESS_FILE
+
+2004-11-03  Chad Walstrom  <chewie@wookimus.net>
+
+	* Makefile.in (VERSION): replaced version string with
+	@PACKAGE_VERSION@ substitution variable from configure.in.
+
+	* configure.in (AC_INIT): Updated to use autoconf v2.50 to specify
+	PACKAGE_NAME, PACKAGE_VERSION, and PACKAGE_BUG.  Set version to 4.1.
+	(AC_CONFIG_FILES, AC_OUTPUT): Updated use of these macros to v2.50
+
+	* configure: regenerated
+
+2004-09-06  Hans-Albert Schneider  <Hans-Albert@HA-Schneider.de>
+
+	* misc.c (gnats_strftime): If we have to interpret %z ourselves,
+	avoid a buffer overflow with 10 or more %z in format string.
+	(log_msg): Fix format string bug (in calling syslog()) described in
+	http://lists.gnu.org/archive/html/bug-gnats/2004-06/msg00028.html
+	and in http://www.zone-h.org/advisories/read/id=4889
+
+	* gnats-pwconv.c: commented out definition of MAXLINE which is not
+	used.  gcc -Werror complains about this.
+
+2004-06-11  Jon Meredith  <jonm@alchemetrics.co.uk>
+
+	* misc.c (gnats_strftime): added check for +/- at the start of the
+	  string to support SCO OpenServer.  The undocumented %z does not have
+	  a '+' on for positive offsets, so the return from get_curr_date()
+	  cannot be parsed by get_date().  (Closes: patch #1461)
+
+2004-06-09  Chad Walstrom  <chewie@wookimus.net>
+
+	* Makefile.in, man/Makefile.in: Prepended the $(DESTDIR) variable to
+	  all destination targets. This will help with building distribution
+	  packages.  Moved mkinstalldir calls to install targets.
+
+2003-10-26  Mel Hatzis  <hatzis@juniper.net>
+
+	* file-pr.c (createNewPRFile): Get builtin originator field rather
+	than field named "Originator".
+
+	* client.c (read_server): Free memory for line to avoid leak.
+	
+2003-09-21  Yngve Svendsen <yngve.svendsen@sun.com>
+
+	* configure.in: Add standard check for awk program
+	* configure: Regenerated
+	* Makefile.in: Substitute AWK in diff-prs.sh.  Add rm of diff-prs
+	to domostlyclean target.
+	* diff-prs: Renamed to diff-prs.sh.  Add substitution marker for
+	awk program
+
+2003-08-30  Carl Lindberg  <lindberg@clindberg.org>
+
+	* mail.c (getOneAddress): Fix test for start address when ignoring
+	ending white space.
+
+2003-08-30  Mel Hatzis  <hatzis@juniper.net>, Andrew J. Gray  <andrewg@gnu.org>
+
+	* client.c (get_reply): Check for outfp being NULL.
+	(netSendPRCmd): Add flag to show information received.  All
+	callers changed.
+	* cmds.c (GNATS_subm): Send PR number for new submission.
+	* file-pr.c (submit_pr): Return PR number for new submission.
+	* pr-edit.c (long_options, handleNetworkEdit, main): Add
+	show_prnum option.
+
+2003-07-27  Andrew J. Gray  <andrewg@gnu.org>
+
+	* Makefile.in (VERSION): Increased to 4.0.
+
+2003-06-23  Yngve Svendsen - Sun Norway  <yngve.svendsen@sun.com>
+
+	* gnatsd.user_access: Fix a couple of typos.  Thanks to Ben
+	Elliston.
+
+2003-05-01  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* gnatsd.user_access, gnatsd.host_access: Add explanation of why
+	wildcard entries must be placed near the end of these files.
+
+2003-04-27  Andrew J. Gray  <andrewg@gnu.org>
+
+	* check-db.sh, Makefile.in (check-db): Use BINDIR to find
+	query_pr; fixes PR gnats/446.
+
+2003-03-08  Milan Zamazal  <pdm@zamazal.org>
+
+	* regex.h: #undef `__restrict_arr' before #defining it.
+
+2003-03-09  Andrew J. Gray  <andrewg@gnu.org>
+
+	* file-pr.c (checkIfReply): Change regex so that "PR" must be all
+	capitals and "PR#<number>" matches; patch by Lars Henriksen
+	<Lars.Henriksen@netman.dk>.
+
+2003-01-13  Milan Zamazal  <pdm@zamazal.org>
+
+	* fconfig.y: Missing semicolons added.
+	* fconfig.c: Regenerated.
+
+2002-11-25  Yngve Svendsen <yngve.svendsen@sun.com>
+
+	* client.c, database.c, edit.c, gen-closed-date.c, mail.c, misc.c,
+	  pr.c, query.c: Add cast of argument of isspace to unsigned char.
+	  Fixes PR 434.
+
+2002-11-24  Andrew J. Gray  <andrewg@gnu.org>
+
+	* Makefile.in (VERSION): Increased to 4.0-beta2.
+
+2002-11-09  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* delete-pr.sh: Fix usage message.
+
+2002-11-08  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* client.c (netEditField): Iterate over replies from server until
+	CODE_OK.  Otherwise, a required change reason would never get
+	submitted properly.  Fixes PR 331.  Fix due to Adrian Ashley.
+
+2002-11-01  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* file-pr.c (run_atpr): Decrease number of arguments to at-pr by
+	one.
+	
+	* edit-pr.c (main): Provide reason to edit_field().  Fixes PR
+	331.
+	
+	* at-pr.sh, file-pr.c: Remove unused "path to the PR file"
+	at-pr parameter.
+
+	* gnats.h, internal.c: Add database_name parameter to
+	gnatsdbHasNetconn.  This allows tools to determine properly
+	whether to use network mode or not to access a database.  Patch by
+	Mel Hatzis.
+
+	* (getclose.c, pr-age.c, pr-edit.c, query-pr.c, client.c): Use
+	database_name parameter when calling gnatsdbHasNetconn.
+
+2002-10-31  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* dbconfig.in: Warn people that they may need to set category dir
+	permissions to 755 if they have users running query-pr
+	etc. locally, i.e. not through gnatsd.
+
+2002-10-28  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+        * edit.c (applyChangeAction): Use value_is_empty to check not only
+        for empty fields but also for fields that contain only blanks.
+        * file-pr.c (missing_required_fields): Ditto
+
+        * lists.c, query.h: Add ListInitialRequiredFields, implementing an
+        argument InitialRequiredFields to LIST.
+
+2002-10-27  Hans-Albert Schneider  <Hans-Albert@HA-Schneider.de>
+
+	* gnatsd.access: Renamed to gnatsd.user_access.
+	Fixed reference to gnatsd.conf (now gnatsd.host_access).
+
+	* Makefile.in, gnatsd.host_access, mkdb.sh: Reflect this renaming.
+
+2002-10-27  Andrew J. Gray <Andrew.Gray@platypuspartners.com>
+
+	* adm.c (get_adm_record): Check for fields with no associated adm
+	file to avoid deferencing NULL in get_adm_dir.  Fixes PR
+	gnats/330.
+
+2002-10-24  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* dbconfig.in: Use Notify-List in the initial-pr-notification and
+	initial-pr-notification-pending mail formats.
+
+	* dbconfig.in: Add new field Notify-List.  Use it in the
+	audit-mail mail format definition.
+
+2002-10-24  Andrew J. Gray  <Andrew.Gray@platypuspartners.com>
+
+	* database.c (databaseInfo, newDatabaseInfo)
+	(freeDatabaseInfo): Add "require" parameter to
+	"initial-entry" fields; patch by Mel Hatzis <hatzis@juniper.net>.
+        (setRequiredInputFields, getRequiredInputFields): New funtions.
+	* file-pr.c (createNewPRFile): Likewise.
+	(missing_required_fields): New function.
+	* fconfig.y: Likewise.
+
+	* edit.c (applyChangeAction): Check for empty string in required
+	fields; patch by Mel Hatzis <hatsiz@juniper.net>.
+
+2002-10-24  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* dbconfig.in: Removed Cases, Quarter, Keywords and Date-Required
+	  field definitions.  They are documented in the "dbconfig
+	  recipes" appendix of the manual for those that need it.
+
+2002-10-15  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* misc.c (gnats_strftime): Fix a bug seriously affecting systems
+	without support for the format code %z.  The dates in PRs would be
+	incorrect when the timezone was different from GMT.  The
+	brokentime pointer passed to gnats_strftime() would point to
+	static data that might be overwritten by calls to (among others)
+	gmtime().  Fix due to Lars Henriksen, Lars.Henriksen@netman.dk.
+	Fixes PR 414.
+
+	* states: Clarify and correct some details.
+
+2002-10-14  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* dbconfig.in: Make the `states' field behave as described in the
+	states file, i.e. when changing from one closed state to another,
+	do not touch the Closed-Date field, and reset the Closed-Date
+	field only when changing from a closed state to an non-closed.
+	Patch submitted by Alwin Dieperink.
+
+2002-10-14  Pankaj K. Garg  <garpg@earthlink.net>
+
+	* gnatsd.access: Say a bit more about password encryption methods.
+	Mention empty passwords.  Say that default access level is
+	`listdb', not `edit'.  Change example entry to set blank password
+	for view access.
+	
+	* gnats.texi (gnatsd.user_access): Say a bit more about password
+	encryption methods.  Amend examples to illustrate the use of blank
+	passwords.  Demonstrate the new fall-through mechanism for
+	password matching.
+
+	* gnatsd.c (password_match): Clean up password matching.  Handle
+	blank passwords.
+	(findUserAccessLevel): If the password given during the login is
+	not blank and doesn't match the correct password, deny access.
+	
+	* cmds.c (GNATS_user): Handle case where a blank password has been
+	given by user.  Change usage message to allow for blank passwords.
+	(gnatsdChdb): Handle blank passwords.
+	(GNATS_chdb): Allow for one, two or three arguments to CHDB.
+	(GNATS_help): Amend help text for CHDB and USER.
+	
+2002-10-13  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* mail-agent.sh: Redirect mail-agent output to /dev/null.  Fixes
+	PR355.  Fix due to Andrew Gray.
+
+	* file-pr.c (run_atpr): Call at with &> /dev/null.
+
+2002-09-24  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* mkdb.sh: Change to use gnatsd.user_access as user access file
+	name.
+	- mkdb.sh (domkdir): Provide -p parameter to mkdir, so that
+	non-existing parent directories are automatically created.  Fixes
+	PR 316.  Both fixes by Pankaj K. Garg.
+	
+	* dbconfig.in: Fix capitalization of the descriptions of the
+	How-To-Repeat and Release fields.
+
+	* mail.c (getOneAddress): Cast the argument of isspace to int.
+	Fixes a problem where GNATS wouldn't compile on Solaris with GCC.
+
+2002-09-01  Milan Zamazal  <pdm@zamazal.org>
+
+	* mail.c (getOneAddress, get_responsible_addr): Handle spaces
+	around mail addresses; patch by Mel Hatzis <hatzis@juniper.net>.
+
+2002-08-12  Milan Zamazal  <pdm@zamazal.org>
+
+	* cmds.c (GNATS_lock): Invalid order of arguments in the help
+	message fixed; thanks to Mel Hatzis.
+
+2002-08-04  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-change-database): Offer default values when
+	prompting for the arguments.
+	(gnats-dbconfig-mode): Imenu support added.
+
+	* Makefile.in (mkdb): Substitute GLOBAL_DB_LIST_FILE.
+	* mkdb.sh (DATADIR): Get the value from GLOBAL_DB_LIST_FILE; patch
+	by Lars Henriksen <Lars.Henriksen@netman.dk>.
+
+	* gnatsd.c (get_name): Reference to `host' fixed in
+	`gethostbyaddr'; fixes PR gnats/363.
+
+	* at-pr.sh (QUERY_PR): A mistaken space removed; fixes
+	PR gnats/394.
+
+	* edit.c (validateFieldValue): Don't process an Integer string if
+	`text' is NULL; patch by Mel Hatzis <hatzis@juniper.net>.
+
+2002-07-28  Milan Zamazal  <pdm@zamazal.org>
+
+	* pr-stat.c (long_options): The `--help' option uncommented.
+
+	* queue-pr.c (main): `-m' added to the short options; thanks to
+	Dirk Schenkewitz.
+
+	* gnats-pwconv.c (USAGE): More customization of the messages
+	depending on HAVE_LIBCRYPT.
+	(main): Make OPTSTRING dependent on HAVE_LIBCRYPT.
+	Thanks to Dirk Schenkewitz.
+
+	* cmds.c (gnatsdChdb): Missing `const' qualifier added.
+
+	* gen-closed-date.c (main): The unused and undocumented option
+	`-c' removed.
+	(USAGE): Misaligned text aligned.
+	Thanks to Dirk Schenkewitz.
+
+	* gen-index.c (main): Don't use automatic option variable setting.
+
+2002-07-19  Milan Zamazal  <pdm@zamazal.org>
+
+	* cmds.c (gnatsdChdb): On verification error, be safe against
+	nameOfDb being NULL; based on a patch by Lars Henriksen,
+	fixes PR gnats/380.
+
+2002-07-14  Milan Zamazal  <pdm@zamazal.org>
+
+	* configure.in: pdm's copyright moved to FSF.
+	`gnatsd.access' changed to `gnatsd.user_access'; fixes
+	PR gnats/348.
+	* gnats.h: Likewise.
+
+	* at-pr.sh (RESP_ADDR): Use query-pr instead of pr-addr.
+
+	* gnats-pwconv.c: Copyright changed to FSF.
+	(encrypt_): Don't include the salt in the resulting string; fixes
+	PR gnats/395.
+
+	* client.c (scanEnv): If `database' is NULL and GNATSDB is a local
+	database name, use it instead of "default".  Based on a patch by
+	Mel Hatzis.
+
+2002-05-26  Milan Zamazal  <pdm@zamazal.org>
+
+	* mkdb.sh: Ignore remote databases; fixes PR gnats/384; patch by
+	Lars Henriksen <Lars.Henriksen@netman.dk>.
+
+	* edit-pr.sh: Don't do duplicate actions in traps; remove $new
+	only on success.
+
+2002-05-21  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in (dodistclean): Remove `#*'.
+
+2002-05-20  Milan Zamazal  <pdm@zamazal.org>
+
+	* edit-pr.sh: Don't delete new files on error signals.
+
+	* gen-index.c (main): Code formatting fix.
+
+	* gnats.el (gnats-get-addr-info): Call `query-pr
+	--print-server-addr' only if server is given.
+
+2002-05-17  Milan Zamazal  <pdm@zamazal.org>
+
+	* file-pr.c (checkIfReply): Regex fixed, use `re_search' instead
+	of `re_match'; patch by Andrew Gray
+	<Andrew.Gray@platypuspartners.com>.
+
+2002-05-15  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnatsd.host_access: Let the default access level is `listdb'.
+
+	* gen-index.c (add_pr): Use numeric_sorting's value implicitly,
+	don't compare it with TRUE.
+
+2002-04-23  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-dbconfig-font-lock-keywords):
+	`business-week-days' typo fixed.
+
+2002-03-31  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* query-pr.c (USAGE): field-flags, adm-field, adm-subfield and
+	  adm-key added.
+
+	* pr-age.c (main): PR number is argv[optind], not argv[1].  Fixes
+	  PR 362.
+
+2002-03-19  Yngve Svendsen  <yngve.svendsen@sun.com>
+
+	* gen-index.c (main): Add forgotten short options n, e, i to case
+	  structure.  Fixes PR 351.
+
+2002-03-02  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnatsd.c (password_match): DES password handling fixed; patch by
+	Mario Joussen <mario@joussen.org>.
+
+	* Makefile.in (install-tools-arch-indep): Don't depend on
+	`dbconfig'.
+	(all-tools): Depend on `dbconfig'.
+
+2002-02-19  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-replace-curr-text, gnats-advertised-undo):
+	Deuglified wrt variable value overriding.
+
+2002-02-10  Milan Zamazal  <pdm@zamazal.org>
+
+	* query.h: `regcmp' -> `gnats_regcmp'.
+	* getclose.c (do_prlist): `regcmp' -> `gnats_regcmp'.
+	* edit.c (validateFieldValue): `regcmp' -> `gnats_regcmp'.
+	* query.c (regcmp): Renamed to `gnats_regcmp'.
+	(iterate_prs): Consider the previous change.
+
+	* file-pr.c (createNewPRFile): Don't always set the default value
+	to the field; based on a patch by Forrest J. Cavalier III
+	<mibsoft@mibsoftware.com>; fixes PR gnats/333.
+
+2002-01-22  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (unlock-pr): Let `pr' is a string, not a number.
+
+2002-01-13  Milan Zamazal  <pdm@zamazal.org>
+
+	* query-pr.c (USAGE): --print-server-addr added.
+
+	* Makefile.in (LDFLAGS): Use @LDFLAGS@ instead of $(CFLAGS).
+
+	* gnats.el (gnats-show-connection): New command.
+	(unlock-database): New command.
+	(gnats-edit-mode): New argument `quietp'.
+	(gnats-apply-edits): Call gnats-edit-mode with `quietp' set to t.
+
+2002-01-10  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-query-mode): RET added to the overrided view
+	mode keys; fixes PR gnats/326.
+
+2002-01-07  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (query-pr): `edit-buffer' renamed to `query-buffer'.
+	(query-pr): Report the number of the matching PRs.
+	(gnats-query-mode-map): `G' (query-pr) added.
+
+2002-01-06  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.h: Include libgen.h if available; fixes PR gnats/319;
+	patch by Noritoshi Demizu <demizu@dd.iij4u.or.jp>.
+	* configure.in: libgen.h added to AC_CHECK_HEADERS; patch by
+	Noritoshi Demizu <demizu@dd.iij4u.or.jp>.
+	* configure: Regenerated.
+	* autoconf.h.in: Regenerated.
+
+	* misc.c (temporary_directory): `tmpdir' is `char *' now; fixes
+	PR gnats/317; patch by Forrest Cavalier <forrest@mibsoftware.com>.
+	(init_logging): With no syslog, put into log_method NOLOG and not
+	NONE; fixes PR gnats/318; patch by Forrest Cavalier
+	<forrest@mibsoftware.com>.
+
+	* Makefile.in (mandir): Removed.
+
+2001-12-27  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in (VERSION): Increased to 4.0-beta1.
+	(dodistclean): Remove TAGS.
+	(dorealclean): File list updated.
+	(doclean): Don't remove the files generated by lex and yacc.
+	(dorealclean): Remove the files generated by lex and yacc.
+
+2001-12-23  Milan Zamazal  <pdm@zamazal.org>
+
+	* file-pr.c (checkIfReply): Matching changed.
+	
+	* cmds.c (GNATS_help): The EDITADDR command added.
+
+	* gnatsd.c (password_match): Removed the remark about missing
+	manual description.
+
+	* configure.in: Declaration check for `unsetenv' added.
+	* configure: Regenerated.
+	* autoconf.h.in: Regenerated.
+	* gnats.h: `basename' declaration removed, it's already in
+	libiberty.h.
+	Protect `unsetenv' by HAVE_DECL_UNSETENV rather than only
+	HAVE_UNSETENV.
+
+2001-12-15  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-change-database): Reset `gnats-password'.
+
+2001-12-11  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (send-pr): When run with a universal argument, run
+	`gnats-change-database' in advance.
+	(gnats-get-field-info): Replace `\n' by newline; strip off a
+	starting newline from multiline fields.
+
+2001-12-10  Milan Zamazal  <pdm@zamazal.org>
+
+	* regex.c: Updated from current gnulib.
+	* regex.h: Updated from current gnulib.
+
+	* gnatsd.c (match): Cast `tolower' arguments to `int'.
+
+	* gnats-pwconv.c (encrypt_): Make all the parts concerning
+	encryption conditional.
+	(encrypt_): Check for `asprintf' error.
+
+2001-12-08  Milan Zamazal  <pdm@zamazal.org>
+
+	* mail-query.sh: Add the --database argument only if GNATSDB is
+	non-empty. 
+
+2001-12-08  Lars Henriksen  <Lars.Henriksen@netman.dk>
+
+	* Makefile.in (install-tools-bin): Typo in the warning message
+	fixed.
+
+2001-12-08  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in (install-tools-bin): Don't install `gnats-pwconv'.
+
+	* adm.c (initAdmField): Set field's `default_value' only if it's
+	not set already.
+	* cmds.c (GNATS_lock): Fix the order of arguments in the help
+	string.
+	* fconfig.y (fieldDec, optChangeExpr, multiEnumItem)
+	(multiEnumFileItem, enumFieldMember, auxFlagsList): Added closing
+	semicolon.
+	(startFieldDec): Set field's `default_value' to NULL.
+
+2001-12-07  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in (install-gnats-bin, uninstall, doclean): Add
+	`gnats-pwconv'.
+
+2001-12-07  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* Makefile.in (install-tools-bin): Install gnats-pwconv in
+	  $(libexecdir)/gnats.
+
+2001-12-06  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in (all-gnats): `gnats-pwconv' added to targets.
+	(gnats-pwconv): New target.
+	* gnats-pwconv.c: New utility.
+
+	* misc.c (usage): If `exit_code' is zero, print usage to stdout.
+
+2001-12-04  Milan Zamazal  <pdm@zamazal.org>
+
+	* lists.c (listTypeList, getGnatsFile): `listClasses' removed
+	again.
+	* query.h (queryOp): Likewise.
+	* query-pr.c (USAGE): The no longer pertinent `--list-classes'
+	option removed.
+
+2001-12-03  Milan Zamazal  <pdm@zamazal.org>
+
+	* dbconfig.in: Exclude "Originator" from the "audit-mail"
+	recipient list, use FROM fields instead.
+
+2001-12-02  Milan Zamazal  <pdm@zamazal.org>
+
+	* pr-edit.c (USAGE): New option `reason'.
+
+2001-12-02  Dan Martinez  <dfm@juniper.net>
+
+	* pr-edit.c (long_options): New option `reason'.
+	(handleNetworkEdit): New argument `reason'.
+	(main): Process the `reason' option.
+	* gnats.h (get_reply): Returns an int value.
+	(netEditField): New argument `reason'.
+	* client.c (get_reply): Return an int value.
+	(netEditField): Provide the change reason to the server if
+	required.
+
+2001-12-02  Milan Zamazal  <pdm@zamazal.org>
+
+	* mkdb.sh: The argument changed from DATADIR to DATABASE.
+	* mkdb.sh: Run gen-index.
+	* Makefile.in (mkdb): Replace xSYSCONFDIRx too.
+
+2001-12-01  Milan Zamazal  <pdm@zamazal.org>
+
+	* query.c (iterate_prs): Don't report an index error just because
+	there are no PRs, report it only when reading the index finished
+	with an error.
+
+	* gen-index.c (long_options): Moved to `main', cosmetic
+	improvements.
+	(main): Don't handle the flag options "manually", let them be
+	handled by `long_options' flags.
+	(sort_numerical): Renamed to `numeric_sorting'.
+	(add_pr, main): Consider the previous change.
+	(main): Don't open the output file until it's needed (especially
+	all options are processed).
+
+2001-11-14  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* responsible: Add note on how to change the address of the GNATS
+	  admin.
+
+	* categories: Add a couple of words explaining that the first
+	  entry is used as default for PRs that arrive without a set
+	  category.
+
+	* UPGRADING: Details on migrating `config' file settings to GNATS
+	  4 added.
+
+2001-11-12  Milan Zamazal  <pdm@zamazal.org>
+
+	* cmds.c (GNATS_appnOrRepl): Missing arguments to the
+	`daemon*lock*' calls added.
+	* internal.c (lock_gnats): Missing `res' declaration added.
+	(lock_gnats): MAXWAIT and GRANULARITY turned into constant
+	variables.
+	* edit.c (lock_pr): Missing `count' and `fdes' declarations added.
+
+2001-11-09  Lars Henriksen  <Lars.Henriksen@netman.dk>
+
+	* Makefile.in (install-gnats-arch-indep): Don't fail if the
+	installed files can't be chowned, only print a warning.
+	(install-gnats-bin): Use $(GNATS_USER) instead of `gnats' in the
+	printed message.
+
+2001-11-08  Milan Zamazal  <pdm@zamazal.org>
+
+	* pr-edit.c (main): Don't test a "boolean" int value by comparing
+	it with 1.
+
+2001-11-08  Dirk Bergstrom  <dirk@juniper.net>
+
+	* index.c (getFirstPR): Always checkPRChain; this decreases the
+	chances of writing out stale index data.
+	(writeIndex): Check to make sure that index hasn't changed since
+	last read, fail with CODE_INVALID_INDEX if it has.  Also generate
+	email to admin about the problem. Update indexDesc->mtime after
+	writing out new index.
+
+	* cmds.c (GNATS_appnOrRepl): Lock database before editing.
+
+	* pr-edit.c (main): Lock database before --append or --replace in
+	non-network mode.
+
+	* edit.c (lock_pr): Quash a race bug in PR locking.  Use basically
+	the same code as in lock_gnats.  Report lock time if PR is locked.
+
+	* internal.c (lock_gnats): Changed from using creat(path, 0) to
+	atomic open() to eliminate a race in database lock creation.
+
+	* internal.c (punt): Complain to stderr if database is null.
+	queue-pr sometimes calls punt() before defining database, and this
+	way cron will report the error.
+	
+	* edit-pr.sh (lock): Report pid when locking PR.
+	(submit): If there are errors during submission, prompt the user
+	to abort or retry.
+	
+	* queue-pr.c (main, run_gnats): Added new command-line option
+	"max-size"; in --run mode, messages larger than max-size will not
+	be processed, but instead will generate an email to the database
+	admin.
+	(fork_gnats): Fork off pr-edit, instead of file-pr (which is just
+	a shell script wrapper around pr-edit).
+	(USAGE): Add max-size option.
+	(run_gnats): If pr-edit exits with status 2, check to see if file
+	still exists; if not, another queue-pr is probably running.
+	Report file as missing.
+	
+2001-11-06  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* UPGRADING: Details GNATS 3 -> 4 upgrades.  Procedure is
+	  untested, but is believed to work.
+
+2001-11-05  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* UPGRADING: Rename to UPGRADING.old.  We still need it around for
+	  people upgrading from very old GNATS 3 versions to GNATS 4.
+
+	* INSTALL: Rewritten for GNATS 4.
+
+	* PROBLEMS, README: Updated/rewritten for GNATS 4.
+
+2001-11-01  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.h (DEFAULT_MULTIENUM_SEPARATOR): New constant.
+	* cmds.c (GNATS_ftypinfo): Use it.
+	* fconfig.y: Likewise.
+
+2001-11-01  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* gnatsd.c (cmds): New command FTYPINFO.
+	* cmds.c (GNATS_help): Document it.
+	* cmds.c (GNATS_ftypinfo): New command function.
+	* gnatsd.h: Declare it.
+	* pcodes.h (CODE_INVALID_FTYPE_PROPERTY): New error code.
+
+2001-10-29  Milan Zamazal  <pdm@zamazal.org>
+
+	* fconfigl.l: The `noyywrap' option added.
+
+2001-10-29  Carl E. Lindberg  <lindberg@clindberg.org>
+
+	* database.c (initDatabaseList): Null the databaseEnt pointers in
+	databaseInfoList; fixes PR gnats/181.
+
+2001-10-28  Milan Zamazal  <pdm@zamazal.org>
+
+	* pr.c (addLineToPR): Don't terminate enum fields on a space.
+
+2001-10-22  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* query-pr.c (USAGE): Split in a few more parts to get rid of GCC
+	2.96 and 3.0 ISO C89 string length warning.
+
+2001-10-17  Milan Zamazal  <pdm@zamazal.org>
+
+	* mail.c (composeMailMessage): If From: address is not given,
+	assign admin's address to `fromAddr'; patch by Yngve Svendsen.
+
+2001-10-16  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in (sysconfdir): Defined.
+
+	* gnatsd.host_access: access-level description updated; patch by
+	Yngve Svendsen.
+	* gnatsd.access: access-level and password description updated;
+	based on a patch by Yngve Svendsen.	
+
+	* query-pr.c (USAGE): Updated to match the manual; based on a
+	patch by Yngve Svendsen.
+
+	* gnats.el (gnats-query-mode-map): Binding of `send-pr' changed
+	from "a" to "s".
+
+2001-10-15  Milan Zamazal  <pdm@zamazal.org>
+
+	* misc.c (read_line): The type of `default_len' changed to
+	`size_t'; fixes PR gnats/270.
+
+2001-10-14  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnatsd.h (Access_Level): New type; `ACCESS_LISTDB' added.
+	(FLAG_MASK, FLAG_ONE_ARG): Removed.
+	* gnatsd.c (Access_String): New auxiliary structure.
+	(ACCESS_STRINGS): New constant.
+	(access_level, access_level_str): Rewritten.
+	(cmds): The structure of the array elements changed; DBLS's access
+	level lowered to ACCESS_LISTDB.
+	* gnatsd.c: All access level variable types changed from `int' to
+	`Access_Level'.
+	* gnats.h: Likewise.
+	* cmds.c: Likewise.
+
+2001-09-28  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnatsd.access: The description of the `admin' access level
+	fixed; patch by Yngve Svendsen.
+	* gnatsd.host_access: Likewise.
+
+2001-09-23  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el: Unnecessary progns removed.
+	(gnats-fetch-pr): Reset all fields, not only input fields.
+
+2001-09-20  Milan Zamazal  <pdm@zamazal.org>
+
+	* cmds.c (GNATS_help): Missing commands added to the help; patch
+	by Yngve Svendsen from PR gnats/264.
+
+2001-09-19  Milan Zamazal  <pdm@zamazal.org>
+
+	* cmds.c (gnatsdChdb): Reset `queryFormat' if the database is
+	changed; fixes PR gnats/257.
+
+2001-09-07  Milan Zamazal  <pdm@zamazal.org>
+
+	* dbconfig.in (audit-mail): "Category[notify]" and "Originator"
+	added; fixes PR gnats/188.
+
+	* gnats.el (gnats-dbconfig-mode): Made interactive.
+
+2001-09-06  Milan Zamazal  <pdm@zamazal.org>
+
+	* cmds.c (daemon_lock_gnats): New argument `verbose'; if it is
+	FALSE, don't print success message.
+	(daemon_unlock_gnats): Likewise.
+	(GNATS_subm, GNATS_lkdb, GNATS_undb, GNATS_edit): The new argument
+	to `daemon*' calls added.
+
+	* configure.in: AC_CONST removed, it's useless in a subdirectory.
+	New special check for Solaris' const handling added.
+	* configure: Regenerated.
+	
+	* misc.c (read_line): Formatting changes.
+
+2001-09-04  Milan Zamazal  <pdm@zamazal.org>
+
+	* file-pr.c (submit_pr): The Originator check moved to
+	`createNewPRFile' where it belongs to.
+
+	* configure.in: Standard autoconf check for `const' added.
+	* configure: Regenerated.
+
+2001-09-03  Milan Zamazal  <pdm@zamazal.org>
+
+	* edit.c (validateFieldValue): Missing argument to `setError' in
+	the Integer section added.
+
+2001-09-01  Milan Zamazal  <pdm@zamazal.org>
+
+	* configure.in: Help formatting improved.
+	* configure: Regenerated.
+
+2001-08-13  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-extend-properties): New function.
+	(gnats-edit-mode): Add it to after-change-functions.
+	(gnats-change-database): Set default values as well.
+	(gnats-change-database): `gnats-server', not `gnats-host'.
+	(gnats-run-modify-command): Turned into a macro and implemented in
+	the right way.
+	(gnats-mark-field-edited): Consider the previous change.
+	(gnats-delete-field, gnats-delete-char): Likewise.
+	(gnats-delete-backward-char, gnats-insert-char): Likewise.
+	(gnats-end-line, gnats-open-line, gnats-kill-line): Likewise.
+	(gnats-submit-pr): Connection buffer killing disabled for
+	debugging purposes, the buffer is killed anyway when the edit
+	buffer is killed.
+	(gnats-fetch-pr): Reset all input fields before parsing the PR.
+
+2001-08-12  Milan Zamazal  <pdm@zamazal.org>
+
+	* cmds.c (get_text_memory): Initialize `buf' to NULL and set it to
+	NULL after freeing it.
+	(get_text_memory): When reading the input, put '\0' at its end
+	only after the buffer is reallocated to a sufficient size.
+
+2001-08-11  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-clear-edit-buffer): The previous change undone.
+	(query-pr): Call `gnats-delete-process'.
+	(gnats-dbconfig-mode): New major mode.
+	(gnats-dbconfig-mode-map): New variable.
+	(gnats-dbconfig-mode-syntax-table): New variable.
+	(gnats-dbconfig-mode-hook): New variable.
+	(gnats-dbconfig-mode-abbrev-table): New variable.
+	(gnats-edit-mode): Set paragraph-start and paragraph-separate.
+	(gnats-request-enum): New argument NO-DEFAULT.
+	(gnats-end-line): Use it.
+	(gnats-cycle-enum-value): New function.
+	(gnats-insert-char): Use it and bind it to the space key.
+	(gnats-query-font-lock-keywords): Highlight any line containing
+	`high'.  This is of course wrong but it can't be handled well
+	until new query table formatting is written.
+	(gnats-insert-char): Character notation of \r and \n fixed.
+	(gnats-change-database): New command.
+	(gnats-query-mode-map): Bind it to a key.
+	(gnats-port): Clarify the type of the variable in the docstring.
+
+2001-08-10  Milan Zamazal  <pdm@zamazal.org>
+
+	* pr.c (read_header): Stop processing if you encounter the GNATS
+	field delimiter `>'.
+
+	* file-pr.c (submit_pr): Don't crash when there's no `Originator'
+	field in the database.
+
+	* gnats.el (gnats-get-mail-alias): Send the e-mail address to the
+	daemon; fixes PR gnats/131.
+	(gnats-debug-string): Don't complain if process-buffer is nil.
+	(gnats-delete-process): Kill server buffer.
+	(gnats-default-organization): Transformed into a customizable
+	option.
+	(gnats-default-submitter): Likewise.
+	(gnats-query-mode-map): Key binding `a' for `send-pr' added.
+	(gnats-clear-edit-buffer): Call `gnats-delete-process'.
+
+2001-08-09  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-apply-or-submit): Enclosed by save-excursion.
+	(gnats-default-organization): Set the default value to an empty
+	string.
+	(gnats-default-submitter): Likewise.
+	(gnats-submit-pr): The kill-buffer argument fixed.
+	(gnats-edit-server): Don't set default value of gnats-server-conn.
+	(gnats-server-conn): `permanent-local' set to t.
+	(gnats-delete-process): New function.
+	Add it to kill-buffer-hook.
+
+2001-08-04  Milan Zamazal  <pdm@zamazal.org>
+
+	* configure.in: `AM_PATH_LIBDIR' added.
+	* aclocal.m4: Regenerated.
+	* configure: Regenerated.
+	* Makefile.in (EMACS): Removed.
+	(lispdir): Assign it to `@lispdir@' instead of `@LISPDIR@'.
+
+	* misc.c (value_is_empty): Cast the argument of `isspace' to
+	`int'.
+
+2001-08-03  Milan Zamazal  <pdm@zamazal.org>
+
+	* configure.in: Don't continue with configuration if `sendmail' is
+	not available; fixes PR gnats/54.
+	* configure: Regenerated.
+
+2001-08-02  Milan Zamazal  <pdm@zamazal.org>
+
+	* adm.c (getAdmSubfieldValue): Return NULL if `i' is NULL, don't
+	crash.
+
+2001-07-30  Milan Zamazal  <pdm@zamazal.org>
+
+	* mkcat.sh: Protect category names by quotes; fixes PR gnats/41.
+	* rmcat.sh: Likewise.
+	* rmcat.sh: Use `rmcat', not $0, as the program name.
+	* mkcat.sh: Final messsage improved.
+	* rmcat.sh: Messages improved.
+
+	* gnats.el (gnats-get-addr-info): Read password from prompt if not
+	available.
+	(gnats-query-reread): New command.
+	(gnats-query-mode-map): Add a key for it.
+	(gnats-query-mode): Override the key in view-mode-map.
+
+2001-07-28  Milan Zamazal  <pdm@zamazal.org>
+
+	* file-pr.c (append_report): Performance problems fixed; based on
+	a patch by Dirk Bergstrom.
+
+	* check-db.sh: New `--all-databases' option implemented.
+	Indentation level changed to 2.
+
+	* gnats.el (gnats-query-current-pr): Match the string without text
+	properties.
+	(gnats-query-view-pr): Convert the PR number string to a number.
+	(gnats-query-edit-pr): Likewise.
+	(gnats-fetch-pr): Apply `prin1-to-string' on `pr'.
+	
+2001-07-23  Milan Zamazal  <pdm@zamazal.org>
+
+	* fconfig.y: `multiEnumFileContents' added for the new
+	`multi-enumerated-in-file' section.
+
+2001-07-23  Johannes Poehlmann  <jhp@caldera.de>
+
+	* fconfigl.l: `multi-enumerated-in-file' added.
+	* fconfig.y: New token `MULTI_ENUM_IN_FILE'.
+
+2001-07-15  Milan Zamazal  <pdm@zamazal.org>
+
+	* misc.c (value_is_empty): New function.
+	* gnats.h: Declare it.
+
+	* file-pr.c (submit_pr): If `Originator' is not set, try to set it
+	to the value of the `Reply-To:' or `From:' e-mail headers.
+
+	* pr.c (header_name): Use ANSI function argument declaration.
+	(lookup_header): Use `InvalidHeaderName' instead of the numeric
+	code.
+	(find_header_index): Use `lookup_header' instead of duplicating
+	the implementation.
+
+	* mkcat.sh (USAGE): Usage string slightly improved.
+	(prog): Set it uncoditionally.
+	* mkdb.sh (prog): Set it uncoditionally.
+
+2001-07-04  Milan Zamazal  <pdm@zamazal.org>
+
+	* database.c (getDatabaseFieldInfo): Remove the `const' qualifier;
+	fixes: PR gnats/208.
+	* database.h: Likewise.
+	* misc.c (init_gnats): Likewise.
+	* gnats.h: Likewise.
+
+2001-06-24  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in: Documentation support removed.
+
+2001-06-21  Milan Zamazal  <pdm@zamazal.org>
+
+	* Makefile.in: All man related targets and dependencies removed.
+	* configure.in: Don't generate man/Makefile.
+	* configure: Regenerated.
+	* All Texinfo and man files moved to ../doc/.
+
+2001-06-17  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-edit-server): Fix the buffer killing.
+
+2001-06-13  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* misc.c (gnats_strftime): Cast the argument of `isdigit' to
+	`int'.
+	
+	* gnats.texi: Document support for MD5 encrypted passwords in
+	gnatsd.access files. Change location of global gnatsd.access and
+	gnatsd.host_access.
+	p-inst.texi: Change location of global gnatsd.access and
+        gnatsd.host_access. Fix some typos.
+
+2001-06-12  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* p-admin.texi, p-inst.texi: Largely rewritten for GNATS 4.
+	gnats.texi: Revise appendixes for GNATS 4.
+
+2001-06-11  Milan Zamazal  <pdm@zamazal.org>
+
+	* configure.in: Default gnatsd access configuration files to
+	$sysconfdir instead of $datadir.
+	* configure: Regenerated.
+
+2001-06-11  Peter Novodvorsky  <nidd@altlinux.ru>
+
+	* check-db.sh: Multiple database support added;
+	fixes: PR gnats/198.
+
+2001-06-10  Milan Zamazal  <pdm@zamazal.org>
+
+	* configure.in: Check for crypt.h added.
+	* autoconf.h.in: Regenerated.
+	* aclocal.m4: Regenerated.
+	* configure: Regenerated.
+	* gnatsd.c: Include crypt.h only if present; fixes PR gnats/200.
+
+	* edit-pr.sh (DATE): Removed.
+
+	* configure.in: Remove the test for strftime (replaced by a
+	run-time check).
+	* misc.c (gnats_strftime): Add run-time check for `%z'.
+
+2001-06-10  Peter Novodvorsky  <nidd@altlinux.ru>
+
+	* lists.c (listTypeList): Classes added; fixes PR gnats/62.
+	(getGnatsFile): Handle ListClasses.
+	* query.h (e_lists): ListClasses added.
+
+2001-06-10  Carl E. Lindberg  <lindberg@clindberg.org>
+
+	* misc.c (gnats_strftime): Handle unsupported `%z' manually.
+	(minutes_gmt_offset): New function.
+	
+2001-05-27  Milan Zamazal  <pdm@zamazal.org>
+
+	* misc.c (gnats_strftime): Didn't work without `%z' support,
+	fixed.
+
+	* at-pr.sh (USAGE): Long options added.
+	(prog): Use the explicit name, not $0.
+
+	* gnats.el (query-pr-history): New variable.
+	(query-pr): Use it.
+	(view-pr): Convert the argument to a string.
+
+2001-05-26  Milan Zamazal  <pdm@zamazal.org>
+
+	* edit-pr.sh (QUERY_PR): Use full path of the `query-pr' command;
+	fixes PR gnats/113.
+	* at-pr.sh (QUERY-PR): New variable, sets full path to the
+	`query-pr' command; fixes PR gnats/115.
+
+	* cmds.c (GNATS_help): Document the USER command in the version
+	without arguments.
+
+	* configure.in: Check for `%z' in `strftime' added.
+	(AC_DIFF_OPT): Commented out (no longer supported by autoconf).
+	(AC_LISPDIR): Likewise.
+	(AC_FIND_PROGRAM): Replaced by AC_PATH_PROG.
+	* acconfig.h: Introduce HAVE_STRFTIME_WITH_Z.
+	Copyright header added.
+	* autoconf.h.in: Regenerated.
+	* aclocal.m4: Regenerated.
+	* configure: Regenerated.
+	* misc.c (gnats_strftime): New function.
+	* gnats.h: Declare it.
+	* query.c (format_pr_field): Use it.
+	* pr.c (write_pr_field): Likewise.
+	* internal.c (get_curr_date): Likewise.
+	* file-pr.c (createNewPRFile): Likewise.
+
+2000-05-26  Steffen Opel  <opel@geekgadgets.org>
+	
+	* cmds.c (GNATS_user): Reenable documented USER access level
+	return value if issued without arguments; fixes PR gnats/108.
+
+	* gnatsd.h (GNATS_nocl): Deleted left over prototype; fixes
+	PR gnats/112.
+	
+	* Makefile.in (edit-pr): Substitute BINDIR.
+	(at-pr): Likewise.
+	(mail-query): Substitute LIBEXECDIR; fixes
+	PR gnats/114.
+	
+	* file-pr.c (run_atpr): Supply --database option; fixes
+	PR gnats/116.
+
+	* cmds.c (gnatsChdb): Default editing users email address; fixes
+	PR gnats/118.
+	
+2001-05-20  Peter Novodvorsky  <nidd@debian.org>
+
+	* gen-index.c (main): Write the number of fields in binary index
+	before data writing starts; PR gnats/189.
+	
+	* cmds.c (set_confidential_access): Typo in the query expression
+	fixed; PR gnats/187.
+
+2001-05-06  Milan Zamazal  <pdm@zamazal.org>
+
+	* file-pr.c (createNewPRFile): Use %z instead of %Z in strftime.
+	* internal.c (get_curr_date): Likewise.
+	* pr.c (write_pr_field): Likewise.
+	* query.c (format_pr_field): Likewise.
+
+	* getdate.y: Updated (taken from tar-1.13.19 sources).
+	* getdate.c: Regenerated.
+
+2001-04-15  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.h: Reviewed and made less confused.
+	Merged in things from globals.h and config.h.
+	* globals.h: Removed.
+	* config.h: Move things not belonging here to gnats.h.
+
+	* misc.c (version): Use EXIT_OK instead of number.
+	(initGnats): Renamed to `init_gnats'.
+	(newStringListEnt): Renamed to `new_string_list_ent'.
+	(quoteString): Renamed to `quote_string'.
+	(readLine): Renamed to `read_line'.
+	(init_gnats): Description added.
+	(log_msg): Likewise.
+	Miscellaneous other coding style changes.
+
+	* Makefile.in (mkdb): Replace xSYSCONFDIRx instead of xDATADIRx.
+	(install-tools-arch-indep): Install defaults to sysconfdir.
+	* mkdb.sh: Use xSYSCONFDIRx in DATADIR.
+
+	* check-db.sh: Escape the single quote in here documents (Debian
+	bug fix).
+	Be verbose about missing index file (Debian customization).
+
+	* categories: Sample categories commented out.
+
+2001-04-14  Milan Zamazal  <pdm@zamazal.org>
+
+	* misc.c (usage): New function.
+	(version): New function.
+	* gnats.h: Declare the new functions.
+	* pr-edit.c (main): Use the new functions.
+	(usage): Removed.
+	(USAGE): New constant; help text rewritten.
+	(PROGRAM_NAME): New macro.
+	* queue-pr.c: Likewise.
+	* gen-index.c: Likewise.
+	* gen-closed-date.c: Likewise.
+	* pr-age.c: Likewise.
+	(long_options): hostname -> host.
+	* getclose.c: Likewise.
+	* gnatsd.c: Likewise.
+	(long_options): maximum-access-level takes an argument.
+	(main): Exit with the code 1 if an invalid option is given.
+	* query-pr.c: Likewise.
+	(main): Do not perform actions before all options are parsed.
+
+2001-04-08  Milan Zamazal  <pdm@zamazal.org>
+
+	* pr-edit.c (main): Return `2', not `!0' on other failures.
+
+	* queue-pr.c (drop_msg): Do the copying of the temporary file to
+	the queue directory correctly.
+
+	* Makefile.in (SOURCES): Missing files added.
+
+	* misc.c (temporary_directory): New function.
+	* gnats.h: Declare it.
+	* cmds.c (get_text): Use it.
+	* queue-pr.c (drop_msg): Use it.
+
+	* file-pr.sh: New option `--debug' (does nothing yet, it's for
+	queue-pr).
+
+	* queue-pr.c (USAGE): The help text improved.
+	(USAGE): Split into several smaller strings.
+	(main): Consider the new form of USAGE.
+	Various stylistic and coding standard related changes.
+
+2001-03-17  Milan Zamazal  <pdm@zamazal.org>
+
+	* query-pr.c (usage): Large string split into smaller pieces.
+
+	* configure.in: Copyright header added.
+	AC_FUNC_CHECK replaced by AC_CHECK_FUNC.
+	AC_HAVE_FUNCS replaced by AC_CHECK_FUNCS.
+	AC_HAVE_HEADERS replaced by AC_CHECK_HEADERS.
+
+	* configure.in: Test for `unsetenv' availability added.
+	* configure: Regenerated.
+	* autoconf.h.in: Regenerated.
+	* gnats.h: Declare `unsetenv' only if unavailable in libc.
+
+2001-02-25  Milan Zamazal  <pdm@zamazal.org>
+
+	* flowchart.fig: The administrator and maintainers can use user
+	tools too.
+
+	* Makefile.in (fconfigl.c): Don't depend on flex command line
+	options.
+
+2001-02-20  Milan Zamazal  <pdm@zamazal.org>
+
+	* getdate.y: Additional time zone names added; thanks to Yngve
+	Svendsen.
+
+2001-02-17  Milan Zamazal  <pdm@zamazal.org>
+
+	* flowchart.fig: New file.
+	
+	* gnats.el (gnats-query-reverse-listing): New user option.
+	(query-pr): Use it.
+	(gnats-view-edit-pr): Let the buffer be no longer read-only.
+
+2001-02-05  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-edit-mode-map): Override the keys in the right
+	order so that all the definitions take their effect.
+
+2001-02-04  Milan Zamazal  <pdm@zamazal.org>
+
+	* configure.in (--with-gnats-server): Removed, it's no longer
+	used.
+
+2001-01-31  Mark D. Baushke  <mdb@juniper.net>
+
+	* cmds.c (gnatsdChdb): Return the user access level for 
+	Gnatsweb use.
+
+2001-01-29  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnatsd.c (verifyHostAndUser): Ensure resulting access is not
+	lower than host access.
+
+	* configure.in: Check for crypt.
+
+	* gnatsd.c (password_match): New function, based on a patch by
+	Tommi Virtanen <tv@debian.org>.
+	(findUserAccessLevel): Use it.
+
+2001-01-27  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-edit-mode): Don't make the buffer read only.
+	(gnats-next-field): New command.
+	(gnats-previous-field): New command.
+	(gnats-find-field-adjust): New function.
+	(gnats-find-previous-field): New function.
+	(gnats-edit-mode-map): New keys for the new commands defined.
+	(gnats-edit-mode-menu): New menu.
+	(gnats-format-field): Support mouse editting on enumerated fields.
+	(gnats-replace-curr-text): Likewise.
+	(gnats-edit-button-map): New keymap.
+	(gnats-mouse-request-enum): New command.
+	(gnats-request-enum): If invoked by a mouse event, use X menu.
+	(gnats-request-enum): Choose as the default value the one starting
+	with the last command letter, if possible.
+	(gnats-find-next-field): Return a right position for multiline
+	fields.
+	(gnats-query-view-pr): Call mouse-set-point if needed.
+
+2001-01-24  Milan Zamazal  <pdm@zamazal.org>
+
+	* edit.c (deletePR): Don't let `composeMailMessage' crash by
+	giving it just NULL as the first argument.
+
+2001-01-21  Milan Zamazal  <pdm@zamazal.org>
+
+	* man/Makefile.in (mostlyclean): Remove *.5 files too.
+
+	* Makefile.in (doclean): Remove *.elc, *.html, and TAGS files.
+
+	* gnats.el: Copyright notice updated.
+	(gnats-format-field): INPUT documented.
+	(gnats-format-pr): New argument INPUT added.
+	(gnats-get-pr): NO-LOCK-P renamed to INPUT.
+	(gnats-fetch-pr): Likewise.
+	(gnats-view-mode): Enable view mode.
+	(gnats-query-mode): Likewise.
+	(gnats-view-edit-pr): Reformat the problem.
+	(view-pr): New function.
+	(gnats-query-view-pr): Use it.
+	(unlock-pr): New function.
+	(gnats-fetch-pr): Use it.
+	(gnats-view-mode-map): "q" removed.
+
+2001-01-15  Yngve Svendsen  <yngve.svendsen@clustra.com>
+
+	* gnats.texi: Spelling fixed.
+	* p-admin.texi: Likewise.
+	* p-inst.texi: Likewise.
+	* p-usage.texi: Likewise.
+
+2001-01-09  Milan Zamazal  <pdm@zamazal.org>
+
+	* check-db.sh: Handle binary indexes.
+
+2001-01-08  Milan Zamazal  <pdm@zamazal.org>
+
+	* gen-index.c (main): Don't use the non-existent option `-c'.
+	(usage): Likewise.
+	(do_prs): New function.
+	(main): New options `-i' and `-e'.
+	(long_options): Likewise.
+	(usage): Likewise.
+	(add_pr): New function.
+	(do_category): Use it.
+
+2001-01-02  Milan Zamazal  <pdm@zamazal.org>
+
+	* index.c (writeIndex): Set the mode of the temporary file.
+
+	* cmds.c (get_text): Set the mode of the temporary file.
+
+	* misc.c (fopen_temporary_file): New argument for setting the file
+	access rights mode.
+
+2001-01-01  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-query-font-lock-keywords): New variable.
+	(gnats-query-mode): Use it.
+	(gnats-edit-font-lock-keywords): New variable.
+	(gnats-edit-mode): Use it.
+	(gnats-query-view-pr): Use it.
+	(gnats-do-query): Don't set EXPR if QUERY is empty.
+	(gnats-update-font-lock-keywords): New function.
+	(gnats-edit-mode): Use it.
+	(gnats-query-view-pr): Use it.
+	(gnats-server,gnats-port,gnats-database,gnats-user,gnats-password): New
+	user options.
+	(gnats-get-addr-info): Use them.
+	(gnats-view-mode): New function.
+	(gnats-query-view-pr): Use it.
+	(gnats-view-edit-pr): New function.
+	(gnats-view-mode-hook,gnats-query-mode-hook,gnats-edit-mode-hook): New
+	hooks.
+	(gnats-get-addr-info): Don't escape when doing prin1-to-string.
+	(gnats-edit-mode): Print hint about submitting the edits.
+
+	* query.c (iterate_prs): Set some error message when no PR is
+	found.  (The first GNATS bug fix of the 3rd millenium.  Good.)
+
+2000-12-31  Milan Zamazal  <pdm@zamazal.org>
+
+	* gnats.el (gnats-query-current-pr): New function.
+	(gnats-query-view-pr): New function.
+	(edit-pr): Put stars around the buffer name.
+	(send-pr): Put stars around the buffer name.
+	(gnats-get-addr-info): Put stars around the buffer name.
+	(gnats-edit-server): Put stars about the buffer name.
+	(gnats-fetch-pr): Allow fetching problem reports without locking.
+	(gnats-get-pr): Allow fetching problem reports without locking.
+
+	* database.c (newDatabaseInfo): Missing initializations added.
+
+	* gnats.el (query-pr): New function.
+	(gnats-do-query): New function.
+	(gnats-query-mode): New function.
+	(gnats-query-edit-pr): New function.
+	(gnats-query-buffer-name): New variable.
+	(gnats-query-mode-map): New variable.
+
+	* Makefile.in (SOURCES): gnatsd source files added.
+
+2000-12-30  Milan Zamazal  <pdm@zamazal.org>
+	
+	* Makefile.in (LIBSRC): Updated.
+	
+	* gnats.el: Minor docstring fixes.
+	Fixes required by checkdoc.
+	(gnats-apply-edit): Invalid construct fixed.
+	(send-pr): Autoload.
+	(edit-pr): Autoload.
+	(edit-pr): Convert `pr' to string before using it as a string.
+	(gnats-get-addr-info): Convert `pr' to string before using it as a
+	string.
+	(gnats-apply-or-submit): The `count' argument removed.
+	(gnats-submit-pr): The `count' argument removed.
+	(gnats-apply-edits): The `count' argument removed.
+	(gnats-send-command): Make `cstr' a local variable.
+	(gnats-edit-server): Assign a value to `gnats-server-conn'.
+	(gnats-get-addr-info): Signal an error if the server info couldn't
+	be retrieved.
+	(gnats-get-addr-info): Be careful about the buffer locality of
+	`gnats-server-conn'.
+
+	* query-pr.c (main): Wrong `database' identifier reference fixed.
+
+	* internal.c (punt): Try to mail only if `database' is not NULL.
+
+	* configure.in: Two typos fixed.
+	GLOBAL_DB_LIST_FILE defaults to a location below sysconfdir, not
+	datadir.
+
+	* gnatsd.c (match): Use bool.
+	(main): Call init_logging.
+
+	* gnats.h (EXIT_OK): New constant.
+	(EXIT_PROGRAM_ERROR): New constant.
+
+	* misc.c (init_logging): New function.
+	(enable_debugging): New function.
+	(initGnats): Call init_logging.
+	(log_msg): Consider log_method.
+	(log_method): Change to NOLOG.
+	(program_error): New function.
+
+	* gnats.h (Logging_Methods): LOGFILE and NOLOG added.
+
+2000-12-29  Milan Zamazal  <pdm@zamazal.org>
+	
+	* configure.in: Test on mkstemp added.
+
+	* autoconf.h.in: HAVE_MKSTEMP added.
+
+	* queue-pr.c (drop_msg): Use open_temporary_file.
+
+	* index.c (writeIndex): Use fopen_temporary_file.
+
+	* cmds.c (get_text): Use fopen_temporary_file.
+
+	* misc.c (open_temporary_file): New function.
+	(fopen_temporary_file): New function.
+
+Wed Aug 23 12:49:59 2000  Bob Manson  <manson@feather.uglx.org.>
+
+	* pr.c (verifyMultiEnum): Accept NULL values if the field doesn't
+ 	have a default value.
+	(checkEnumTypes): If the field doesn't have a default value, don't
+ 	try to copy it in.
+
+Mon Aug 14 17:10:47 2000  Bob Manson  <manson@feather.uglx.org.>
+
+	* cmds.c (gnatsdChdb): Don't free the current database if it's
+	the same as the new one.
+
+Wed Aug  2 14:44:14 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* gnatsd.c (cmds): Allow multiple arguments to CHDB.
+
+	* Makefile.in (getdate.c): Move the -o option in front, so
+	it works with FreeBSD 4's slightly bizarre byacc.
+
+	* configure.in: Add -Wno-format to make FreeBSD 4's broken headers
+ 	happy; they erroneously claim that syslog() uses printf formatting.
+	* configure: Regenerated.
+
+Tue May 30 14:41:09 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* database.c (freeDatabaseInfo): Unlink the entry from the list of
+ 	databases before freeing it.
+
+Fri May 26 19:09:15 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (fillInPR): Renamed from simple_get_pr (); add an ErrorDesc
+	parameter.
+	(get_pr): Make it static.
+	(readPRWithNum): New function.
+
+	* index.c (clearPRChain): Make sure the desc is non-NULL before
+	referencing it.
+
+	* cmds.c, edit.c, file_pr.c, getclose.c, pr-age.c, pr-edit.c:
+ 	Finish cleanup of lock_pr() and unlock_pr(); they now take the PR
+ 	ID instead of the pathname of the PR.  Use readPRWithNum () and
+ 	prExists () instead of getting the PR path etc.
+	
+	* queue-pr.c(main): Initialize the database to NULL.
+
+Fri May 19 20:45:01 2000  Bob Manson  <manson@feather>
+
+	The current database is no longer a set of implicit global
+ 	variables, but instead is passed in to the various functions that
+ 	need it.  initGnats () returns the requested database as a
+ 	DatabaseInfo handle.
+
+	* cmds.c (gnatsdChdb): New function.
+
+	* gnatsd.c: Clean up authentication code a bit; all user
+ 	authentication is now verified when a CHDB is done.  Changing to
+ 	the initial database is now done via gnatsdChdb ().  The
+	authentication is probably now broken, however.
+
+Tue Mar 28 15:29:51 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* edit-pr.sh: Fixed calls to query-pr to be consistent.
+
+Thu Mar 23 15:19:26 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* query.c (format_pr_field): Add support for %{strftime-format}D,
+	to make formatting dates more flexible; you can even say
+	"%{strftime-format}-8D" etc.  Allow integer fields to be
+	printed with %d.
+	(process_printf_format): Detect the %{ and skip over to the
+	matching }.
+
+	* man/Makefile.in (SRCS8): Added pr-edit.man.
+
+	* edit-pr.sh: Need to process the pre-changed PR template with
+	$fixfil before comparing the two to see what fields changed.
+
+Thu Mar 23 14:26:50 2000  Bob Manson  <manson@purple.juniper.net>
+
+	* query-pr.c: Fixed typo in builtin queries.  Added "deprecated"
+ 	warning.
+
+Tue Mar 21 21:24:48 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* edit.c (processPRChanges): If the old PR really doesn't have a
+ 	value stored in its field (just an index entry), and the new PR
+	doesn't either, then that field didn't change.
+
+	* pr.c (prFieldHasValue): New function.
+
+Tue Mar 21 13:34:21 2000  Bob Manson  <manson@feather>
+
+	* gnats.el (gnats-request-enum): Only go to the next field if
+	the field didn't need a changed-why reason.
+
+	* lists.c: Remove the "Classes" option.
+
+	* query.h: Remove the ListClasses value.
+
+	* query-pr.c (long_options): Remove --list-classes.
+
+	* pr-init.c (getBuiltinField): Look up the field as a non-builtin
+ 	field, if it's not a builtin.
+
+	* dbconfig.in: Remove the builtin-name for fields that are no longer
+	builtins.
+
+	* builtin-fields.h: Remove several builtin fields that are no
+ 	longer needed as builtins.
+
+	* query-pr.c(query_opts): Use the builtin field names as strings
+ 	instead of using the builtin structs.
+
+Mon Mar 20 23:12:05 2000  Bob Manson  <manson@feather>
+
+	* gnats.el: Add submission ability.
+
+	* client.c (scanEnv): Check the validity of the port in all cases.
+
+Sun Mar 19 01:19:35 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* gnats.el: Use query-pr --gnats-server-addr to get the
+	hostname, port, etc. of the database to connect to.
+
+	* query-pr.c: Add --print-server-addr option.
+
+	* Change callers of client_init_gnats () to check its return
+	status, and to handle exiting etc.
+
+	* client.c (clientConnect): Add an ErrorDesc argument to return an
+ 	error status.  Don't exit on error anymore.
+	(scanEnv): Make public, and don't use const char ** arguments
+ 	since we're putting allocated strings into the pointers.  The
+ 	values returned contain defaults; this function now completely
+ 	determines the user/password/host/port/database to use.
+	(client_init_gnats): Make copies of the passed-in arguments to
+ 	facilitate cleanup.  Free up values obtained from scanEnv().  Add
+ 	an ErrorDesc argument, and return a non-zero value on error.
+
+Fri Mar 17 12:27:55 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* misc.c (open_mail_file): If the mail agent is NULL, just
+	leave without doing anything.
+
+	* mail.c (get_responsible_address): If the database hasn't been
+ 	properly configured, just return the mail address as-is.
+
+	* internal.c (unlock_gnats): Fail gracefully if gnats_adm_dir ()
+ 	returns NULL.
+	(punt): Try "mail user" if the mail agent can't be found or
+ 	opened.  Add the hostname where the error occurred to the
+	subject line.
+
+	* database.c: Add lots of checks for database validity, to prevent
+	coredumps.
+
+	* Makefile.in (install-tools-arch-indep): Fix path of gnats.el.
+
+Fri Mar 17 01:11:28 2000  Bob Manson  <manson@feather>
+
+	* Makefile.in: References to gnats-el.in removed, no more byte
+	compiling, no more references to send-pr.el etc.
+
+	* gnats-el.in: Deleted.
+	* gnats.el: Added.
+
+Thu Mar 16 20:32:12 2000  Michael Brader <mbrader@aurema.com>
+	
+	* gnatsd.c:  Add support for --maximum-access-level option; remove
+	--require-db option.
+	
+Thu Mar 16 20:24:00 2000  Bob Manson  <manson@feather>
+
+	* pr.c (setFieldChangeReason): New function.
+	(unsetField): Free the change reason text as well.
+
+	* pcodes.h (CODE_SEND_CHANGE_REASON): Added.
+
+	* edit.c (edit_field): Add changeReason parameter, and change the
+	field name string to a FieldIndex.
+
+	* cmds.c (GNATS_appnOrRepl): Add additional prompt for the change
+ 	reason text, if one is required.
+
+Thu Mar  9 20:48:34 2000  Bob Manson  <manson@feather>
+
+	* Renamed field-config to dbconfig.  A few minor changes to the
+ 	.texi docs.
+
+Wed Mar  8 15:08:22 2000  Bob Manson  <manson@red.juniper.net>
+
+	* cmds.c (print_server_errors): Print out the list of bad fields
+ 	if the error is CODE_INVALID_ENUM (the error message is not set in
+ 	one case, because there may be multiple fields in error).
+
+Fri Mar  3 00:27:04 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* database.c (initHostList): Check for a per-database host access
+ 	list.  (Temporary fix, along with the change to GNATS_user ().)
+	(databaseSpecServer): Init the list of databases as needed.
+
+	* cmds.c (GNATS_user): The check here for access levels is a bit
+ 	screwy; temporary hack to make it work in the obvious case.
+
+	* client.c (client_init_gnats): If no user was specified, then use
+ 	getlogin() or getpwuid () to determine a username to authenticate
+ 	with to the server.
+
+Wed Mar  1 13:34:21 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* adm.c (build_chain_for_field): Ignore records with an incorrect
+ 	number of fields.
+
+Mon Feb 28 19:04:48 2000  Bob Manson  <manson@feather>
+
+	* pr.c (simple_get_pr, get_pr): Moved here from query.c.
+
+Sun Feb 27 12:15:16 2000  Bob Manson  <manson@feather>
+
+	* query.c (freeQueryItem): Check for a NULL item being freed.
+
+	* index.c (finishIndexDesc): Always mark the builtin number and
+	category fields as indexed.
+
+	* pr.c (struct PR_private): Add a flag to indicate if data is
+ 	stored in the PR; speeds up freeing the PR.
+	(allocPR): Use memset instead of setting individual pointers to
+	NULL.
+	(find_field_num): Subtract 12 bytes instead of 13 from the
+	name when we find a -Changed-Why: field.
+
+	* index.c (extractBinaryField): Avoid a couple of unnecessary
+	pointer derefs.
+	(freeIndexDesc): Free the indexed field flags.
+
+	* database.c (initDatabaseList): Free the existing list before
+	storing a new one.
+
+	* flowchart.txt: A few minor tweaks (oh, well, it amuses me
+	anyway ;-)
+
+Sat Feb 26 12:42:00 2000  Bob Manson  <manson@feather>
+
+	* pr.c (addLineToPR): Take ownership of the passed-in buffer to
+ 	avoid making a new copy of the contents.
+	(read_pr): Let addLineToPR () take ownership of the line buffer.
+
+	* index.c: Move the indexed field flags into the index descriptor.
+
+	* client.c (readPRFromServer): Give ownership of the line buffer
+	to addLineToPR ().
+
+	* configure.in (GNATS_INSTALL): Remove --with-full-gnats.  (Leave
+ 	the partial targets in the Makefile, however).
+
+Fri Feb 25 10:19:19 2000  Bob Manson  <manson@feather>
+
+	* field.h (struct field_def): Add isIndexedField member, to avoid
+	linear searches in isIndexedField ().
+
+	* index.c (isIndexedFieldIndex): Use isIndexedField member of the
+ 	FieldDef for the field.
+
+	* Fix a few missing (void) parameters from function definitions.
+
+	* edit.c (validateFieldValue): Add missing parameter to regcmp ().
+
+	* globals.h(APPEND_STRING): Deleted, no longer used.
+
+	* query.c (newQueryItem): Keep the last-freed entry, and return it
+ 	instead of allocating a new one.  Make sure we free the regexp
+	buffer we allocated.
+
+	* pr.c (getFieldHeader): Don't bother making a copy of the header
+ 	name, just return a pointer into the line and the length of the
+ 	header.
+	(find_field_num): Add LEN parameter.
+
+	* field.c: Create a sorted list of field names.
+	(find_field_index_with_len): New function (basically renamed
+	from find_field_index).  Do a binary search for the field name on
+	the sorted field name list.
+
+	* query.c (freeQueryItem): Oops, one too many free()s.
+
+	* pr.c: Use fputs () instead of fprintf() in several places.
+	(find_field_num): Use find_field_index ().
+
+	* field.c (allocComplexFieldIndex): New function, to optimize
+	their allocation.
+
+	* pr.c (getFieldHeader): Use xstrndup.
+	(write_pr_field): Don't call xmalloc (); instead, be a bit
+	smarter about formatting output.
+
+	* field.c (isConstantFieldValue): New function.
+
+	* query.c: Add QueryItem object to hold individual query items;
+	this lets us keep around precompiled regexps for constant
+	query regexps, instead of recompiling every time.
+	(regcmp, regfind): Add pattern buffer argument; only compile
+	the regexp into the supplied buffer once.
+
+	* misc.c (readLine): Optimize (remove a unnecessary memcpy()).
+
+	* cmds.c (GNATS_help): Add some missing commands.
+
+	* query.c (parseQueryFormat): Add "or query format" to error
+ 	message.
+
+Thu Feb 24 19:23:16 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* edit.c (processPRChanges): For now, ignore changes to read-only
+ 	fields instead of generating an error.
+
+	* query.c (intFieldCompare): Make global.
+
+	* edit-pr.sh: Just set the user's email addr to $me.
+
+	* query-pr.c (main): Allow the --adm-field field to be a complex
+ 	field name.
+
+	* cmds.c (GNATS_admv): Allow complex field names here.
+
+	* query-pr.c (main): Allow the --field-flags and --field-types
+ 	arguments to be lists of fields; this is already handled in the
+ 	server, but we need to do something similar in the non-server
+ 	case.
+
+	* edit-pr.sh: Add blanks for fields that aren't already in
+	the PR; for now they're stuffed at the end of the PR.
+
+Wed Feb 23 15:54:49 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* mail.c (getOneAddress): New function, to cheezily rfc822-parse
+ 	one address out.
+	(get_one_responsible_addr): If the address already cheezily
+ 	appears to be a full email address, then just return a copy of it
+ 	as is (with no express or implied warranties as to fitness or
+ 	purpose).
+
+	* gnatsd.c: Misc cleanups.
+
+	* edit.c (deletePR): Move UID check...
+	* pr-edit.c (main): to here.
+
+	* client.c (netDeletePR): It's DELETE.
+
+	* cmds.c (GNATS_delete): New function.
+
+Tue Feb 22 15:02:09 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* cmds.c (GNATS_inputdefault): mmmm, typo.
+
+	* edit.c (edit_field): Don't coredump if the field didn't exist
+	before and we're appending.
+
+	* gnatsd.c (serverMainLoop): Make sure it exits on input error.
+
+	* edit.c (rewrite_pr): Check if the PR has changed categories and
+ 	if the new category directory exists; if it doesn't and we're in
+ 	autocreate mode, create it.
+
+	* cmds.c (GNATS_inputdefault): Escape newlines in the default
+ 	value.
+
+	* gnatsd.c (serverMainLoop): Don't segfault on blank lines
+	(patch suggested by Michael Brader <mbrader@aurema.com>)
+
+	* Add random casts and #defines for Solamis (including my favorite
+ 	redefinition of SIG_DFL).  Yeah, it's just random flotsam, and it
+ 	won't work in some other Solamis release.  Use an OS that supports
+ 	user-built software and doesn't have massively broken headers, or
+ 	fix it yourself.
+
+	* gnats.h: Add missing prototypes from libiberty, plus one piece
+ 	of Solamis trash.
+
+	* Makefile.in: Sordid rules to make Solamis' ancient make work.
+	(fconfig.c): Checks for various yacc-brand (tm) lossage.  It still
+ 	won't work with an ancient yacc tho--old yaxxen don't handle -p
+ 	correctly for yylval.
+
+Mon Feb 21 18:54:57 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* client.c (scanEnv): Fixes for checking the presence of a default
+ 	database with a host/port in the adm file.
+
+Mon Feb 21 15:00:12 2000  Bob Manson  <manson@feather>
+
+	* cmds.c (get_text): If we free buf, set it to NULL.  Don't try to
+	free buf if it's NULL.
+
+	* internal.c (gnatsdbHasNetconn): Check for a database adm entry
+	that has a server and port.
+
+	* database.c (readAdmFile): Add option to allow more fields than
+ 	required.
+	(databaseSpecIsNetConn, databaseSpecServer, databaseSpecPort):
+	New functions.
+
+	* client.c (scanEnv): Check for a database name that has optional
+	host and port associated, and use them.
+
+	* adm.h: Add optional DatabaseHost and DatabasePort fields to
+	the database adm entry.
+
+	* fconfig.y, mail.c, mail.h: Allow Reply-To: to be a list of
+ 	addresses, not just one.
+
+	* file-pr.sh: Use --database, not --directory.
+
+	* misc.c (init_gnats): Set the regexp syntax to Posix Extended
+	(which is a brand of wine most favored by champions).
+
+	* query.c (parseQueryExpression): Skip text in double quotes,
+	just like parseSimpleQueryExpression ().
+
+Fri Feb 18 17:40:32 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* field-config.in: Add entry for category-dir-perms.
+
+	* fconfig.y: Add support for category-dir-perms keyword.
+
+	* database.c (setCategoryDirPerms, categoryDirPerms): New functions.
+
+	* mail.c (insertAddress): Don't insert duplicate addresses.
+
+Thu Feb 17 17:11:41 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* edit.c (applyChangeActions): Need to keep the original action list
+	around.
+
+	* pr.c (unsetField): New function.
+
+Wed Feb 16 20:32:47 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* edit.c (processPRChanges): Ignore empty fields in the new PR
+ 	that weren't present in the old one.
+
+Tue Feb 15 17:57:24 2000  Bob Manson  <manson@feather>
+
+	* pr.c (checkEnumTypes): Don't generate an error if this PR is
+	an initial PR and the field is nonexistent.
+
+	* index.c (build_index_entry): Assume nonexistent fields are
+	empty.
+	(format_field): Ditto.
+
+Mon Feb 14 15:54:48 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (field_value): Always return NULL if the field doesn't
+ 	exist and it doesn't have a default value; don't arbitrarily put
+ 	an empty value in the PR field.  If the field is a date field and
+	its index entry contains a 0, return NULL instead.  (Date values
+	are still busted, but this is less busted now.)
+
+	* edit.c (validateFieldValue): Handle a non-existent field value
+	when verifying regexps.
+	(processFieldChange): Add the old and new field values to the
+	read-only error message.
+
+	* cmds.c (print_server_errors): Don't handle any errors specially,
+	since the error message is always filled in now.
+
+	* query.c (parseQueryFormat): Make sure the list of fields ends up
+ 	in the correct order.
+	(writeFullPR): Don't use variables before they're set.
+
+	* edit.c (addAuditEntryP): New function.
+	(processPRChanges): Ignore the case where a field isn't present in
+ 	the new PR but did in the old, and field is readonly; we set the
+ 	new PR's field to have the same value as the old one.
+	(edit_field): Use append_string () instead of the macro.
+	(applyChangeAction): Don't handle adding audit-trail entries
+ 	here...
+	(applyChangeActions): Do it here instead; we can also check for
+ 	a global "add audit trail entries" action.
+
+Fri Feb 11 16:55:09 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* mail.c (get_responsible_addr): Assume multiple addresses, and
+ 	split them by commas before mapping.
+	(get_one_responsible_addr): New function (renamed from
+ 	get_responsible_addr).
+
+Fri Feb 11 14:09:57 2000  Bob Manson  <manson@feather>
+
+	* file-pr.c (createNewPRFile): Fix bug preventing new directories
+ 	from being created.
+
+	* Add lots of checks for nonexistent fields.
+
+	* fconfig.y: Add support for edit-only flag, and virtual-format
+	field descriptor.
+
+	* field.c (get_field_value): Add support for virtual fields; add
+	mustBeFreed parameter.
+
+	* edit.c (rewrite_pr): Require a category value.
+	(addAuditTrailEnt): Check for a missing audit-trail field; set it
+ 	to "" if it's not there.
+
+Thu Feb  3 21:40:43 2000  Bob Manson  <manson@feather>
+
+	* field.h (FieldType): Add PRListType.
+	(struct field_def): Add maxPrsPerLine entry.
+
+	* fconfig.y: Add support for pr-list type.
+
+	* edit.c (validateFieldValue): Add checking for PRListType.
+
+Wed Feb  2 10:59:41 2000  Bob Manson  <manson@feather>
+
+	* gen-closed-date.c (get_closed): Fix some potential buffer
+ 	overrun bugs.
+
+	* client.c (scanEnv): Free items we allocated but didn't use.
+
+	* query.c (iterate_prs): Add err parameter.
+
+	* misc.c(init_space): Deleted, no longer used.
+
+	* gnatsd.h: Move system includes to the front of the file.
+
+	* gnats.h: Include <sys/param.h>.
+	(SKIP_WHITE_SPACE): Deleted, no longer used.
+
+	* index.c (get_pr_chain, open_index, getIndex, getCategoryFromIndex):
+	Add err parameter.
+
+	* queue-pr.c (fork_gnats): Use "--database databaseName ()" instead
+	of "-d databaseDir ()" for the option to file-pr.
+
+	* file-pr.c (createNewPRFile): Fix typo.
+
+Tue Feb  1 17:47:45 2000  Bob Manson  <manson@feather>
+
+	* pr.c (addLineToPR): Add spaces to the beginning of Unformatted:
+ 	field entries if they don't have one already.  Ignore text that
+ 	looks like a field name if it isn't a valid name.
+
+	* query.c (process_format): Don't try to reference NULL PRs.
+
+	* pr-edit.c (main): Check for a PR number before allowing edit
+ 	actions.  Don't close already-closed file descriptors.
+
+	* index.c (createIndexEntryBinary): Fix typo.
+
+	* file-pr.sh: Fix another typo.
+
+	* field.c (get_field_value): If the supplied PR is NULL, return
+	an empty string for field values.
+
+	* field-config.in: Reorganize to match the traditional PR full
+ 	format.
+
+	* cmds.c (GNATS_inputdefault): New command.
+
+	* adm.c (free_adm_entry): If the entry is NULL, don't try to free
+ 	it.
+
+	* queue-pr.c (main): Don't call punt() if the command usage
+	isn't right.
+
+Sat Jan 29 01:14:01 2000  Bob Manson  <manson@feather>
+
+	* internal.c (setError): CODE_READONLY_FIELD has a BadFields
+	list.
+
+	* index.c (writeCurrIndex): Fix writing out of binary indexes;
+	we need to write the number of fields in the index as the
+	first byte.
+	(createIndexEntry): Call createIndexEntryBinary () if the
+	index is binary.
+
+Fri Jan 28 10:11:48 2000  Bob Manson  <manson@feather>
+
+	* query-pr.c (queryPrExit): New function; do cleanup before
+	exiting.  Remove unused support for --network-mode.
+
+	* internal.c (newBadFieldEntry): Don't try to xstrdup () NULL
+	values.
+
+	* database.c (defaultSubmitter): Use the cached contents of the
+	adm file.
+	(defaultCategory, defaultState): Ditto.
+
+	* Add support for binary index files.
+
+	* fconfig.y: Add support for new binary-index keyword.
+	* fconfigl.l: Ditto.
+
+	* client.c (client_exit): Clear the current database.
+
+	* index.c(readBinaryRecord, extractBinaryField,
+ 	nextIndexEntryBinary, appendBinaryFieldContents,
+ 	createIndexEntryBinary, findPrCategoryBinary, indexIsBinary,
+ 	indexFieldCount): New functions.
+
+Thu Jan 27 11:08:17 2000  Bob Manson  <manson@feather>
+
+	* query-pr.c (main): Finish the network support for all
+	options.
+
+	* pr.c (write_multitext): Don't arbitrarily add an EOL if the
+ 	input string doesn't have one.
+	(printValidValues): Write out an EOL after each value.
+
+	* gnatsd.c (main): Don't twiddle with the regexp syntax
+ 	arbitrarily.
+
+	* client.c (get_reply): Handle a few more error types.
+	(clientConnect): Add support for invoking gnatsd locally via
+ 	socketpair ().
+	(sendRemoteQuery): Need to increment the current PR index.
+	(netValidValues, netFieldDescription, netFieldType):
+	New functions.
+
+	* query.c (do_print): Print %d formated values as an integer
+ 	value.
+
+Wed Jan 26 14:07:35 2000  Bob Manson  <manson@feather>
+
+	* query.c (findQueryFormat): Add err parameter.
+	(print_named_format_pr): Ditto.
+	(parseQueryFormat): Check the field name to see if it's
+	valid; fail if it isn't.  Add err parameter.  Set the name
+	field of the result to NULL.
+
+	* field.c (parseComplexFieldIndex): Return an error if
+	the field name is invalid.
+
+	* gnatsd.c (match): Minor cleanups.
+	(gnatsd_argify): Fix typo.
+
+	* Remove all line length limits.  Change the error handling to be
+	much cleaner; remove all calls to punt() from library code.  Use
+	asprintf() extensively.
+
+	* internal.c (fileExists): New function.
+
+	* gnatsd.c (serverMainLoop): New function; move most of
+	the code out of main().  Don't call exit() here.
+
+	* fconfig.y: Remove index-field-is-optional.
+
+	* gnatsd.c (gnatsd_argify): Restructure. Don't needlessly allocate
+ 	4x the length of the line.  (Read: rewrite really crappy code.)
+
+	* index.c (format_field): Don't fail if the date is invalid; put a
+	0 in the index instead.
+
+	* config.h: Delete STR_MAX et al.
+
+	* pathmax.h: Deleted, no longer used.
+
+Sat Jan 22 21:29:00 2000  Bob Manson  <manson@feather>
+
+	* files.[ch]: Deleted, no longer used.
+	
+	* Added global PR change options.  Changed "char *" to "const char
+ 	*" in many appropriate places, and -Wwritable-strings to
+ 	GCC_CFLAGS.  Fixed several potential bugs regarding const strings.
+  	Added read-only fields.
+
+Tue Jan 18 08:49:04 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* Fix error handling on parse errors, so that partially-allocated
+ 	data is freed.  Make sure error status on parse errors is
+ 	propagated to the right places.  Clients now exit when an
+	invalid configuration is read in, and gnatsd reports the
+	database as invalid.
+
+	* field-config.in: Add a few additional comments.
+
+	* fconfigl.l: Change quote strings so they're either explicitly
+ 	taken over by the parser, or freed when the parser exits.
+
+	* getclose.c (do_netprlist): Don't return confidential PRs.
+
+Mon Jan 17 21:59:10 2000  Bob Manson  <manson@feather>
+
+	* Add ChangeActions struct, to consolidate various per-field
+	change information.  Add conditional edits; this breaks existing
+	field-config files.  Fix several memory leaks.
+
+	* field-config.in: Fix syntax for State: and Responsible:
+	fields.  Add entry to State: field to update Closed-Date:
+	field.
+
+	* query.c (pr_matches_expr): Add PARAMS argument.
+
+	* field.c (get_field_value): Fix bug with not returning oldPR
+ 	values.
+
+	* edit.c (fix_closed_date): Deleted, no longer used.
+	(applyFieldEdit): Actually do something.  Free data that
+	we allocated.
+	(addAuditTrailEnt): Add FMT parameter.  Free up value
+	gotten from get_curr_date ().
+
+Sun Jan 16 20:23:57 2000  Bob Manson  <manson@feather>
+
+	* man/query-pr.man: Update a bit.
+
+	* file-pr.c (create_new_pr_file): Check for NULL field values,
+ 	instead of assuming non-existent fields return an empty string.
+
+Fri Jan 14 23:20:09 2000  Bob Manson  <manson@feather>
+
+	* Replace most uses of FieldList with a new type, ComplexFieldIndex.
+	  FieldList is now what it claims to be.  Enhance queries and
+	  formatting even more; now query arguments are completely
+	  symmetrical (way overkill, but it actually simplifies code).
+
+	* field.c: New file.
+
+	* cmds.c: Deleted fval command.
+
+	* builtin-fields.h (struct pr_builtin_field): Removed fieldDef
+	member, no longer used.
+
+Thu Jan 13 19:54:22 2000  Bob Manson  <manson@feather>
+
+	* pr.c (getFieldFlags): New function.
+	(read_header): Fix problem with overwriting array boundaries,
+	and make sure the header value has a terminating NUL.
+
+	* gnatsd.c (freeArgs): New function.  
+	(main): Restructure a bit; make sure we're freeing up the arguments
+	we parse.
+
+	* field.h (struct field_def): Add requireChangeReason flag.
+	(The flags should probably be collapsed into a single bitfield.)
+
+	* misc.c (init_gnats): Call clearCurrDatabase ().
+
+	* database.c: Encapsulate the database state into a struct
+	(tho there are still static variables scattered throughout
+	the code).
+	(clearCurrDatabase): New function.
+
+	* configure.in: Did some remaining cleanup; deleted several
+	unused options.
+
+	* cmds.c (GNATS_fieldflags): New function.
+
+	* client.c (netFieldFlags): New function.
+
+	* query-pr.c (long_options): Add --field-flags option.
+
+	* edit-pr.sh: Use diff-prs; ask about fields that require a
+	reason for change, if they've changed.
+
+	* diff-prs: New script to list the fields that have changed
+ 	between two PRs.
+
+Wed Jan 12 15:40:17 2000  Bob Manson  <manson@feather>
+
+	* delete-pr.sh: Don't send mail about deleted PRs--the server does
+	it now.
+
+	* Makefile.in, configure.in: Deleted GNATS_ADMIN; it's now wired
+ 	to gnats-admin. (To change gnats-admin's mail address, change it
+ 	in the responsible file.)
+
+	* config.h: Delete INDEX define, no longer used.
+
+	* index.c: Use the "path" entry in the index descriptor.
+	(build_index_entry): Fix index allocation code.
+	(free_pr_index): Free the individual field entries if we didn't
+ 	allocate them with a buffer.
+
+	* query.c: Change the funny '[' and '%' designators to real words
+ 	(builtinfield: and fieldtype: respectively).  Use FieldList
+ 	instead of FieldIndex for referring to which fields to search;
+ 	this makes it possible to do even more interesting queries.
+  	Remove the FieldType search ('#' operator), it's no longer needed.
+
+	* files.c: Delete a bunch of unused functions.
+
+	* query.c (append_string, append_char, do_print): New function.
+	(format_pr_field, process_printf_format, process_format): Add the
+	ability to produce output into a char* instead of a FILE pointer.
+	(allocateNamedParameter, getNamedParameterValue, 
+	 freeFormatParameterList):  New functions, for supporting parameters
+	to format statements.
+
+	* pr.c (get_field_value): Add PARAMS argument, for format
+ 	parameters.
+
+	* edit.c: Add parameters for the email address of the user performing
+	the various edit actions.
+	(addAuditTrailEnt, sendAuditMail): New functions.
+
+	* edit-pr.sh: Simplify--the server now takes care of Audit-Trail:
+	entries and sending email for edits.
+
+	* cmds.c: Add editEmailAddr static variable (this belongs
+ 	somewhere else...)
+	(GNATS_user): Use get_responsible_addr () to set a default edit
+	email address for the user.
+	(GNATS_editaddr): New function.
+
+	* client.c (netSetEditEmailAddr): New function.
+	(netEditField): Set the email address of the editing user before
+	doing the edit.
+	(netModifyPR): Ditto.
+
+	* database.c (setAuditTrailFormat, getAuditTrailFormat): New
+	functions.
+
+Tue Jan 11 17:06:40 2000  Bob Manson  <manson@feather>
+
+	* query.c (format_pr_field): Take a FieldList** instead of a
+ 	FieldIndex; take care of moving the pointer to the next field if
+ 	we actually consumed one.  Add appendedAudit parameter.  Use
+	get_any_date ().  Add 'P' and 'A' formats.
+
+	* pr.h: Delete bizarre comment.  Add predefines for various
+	structs and typedefs before including the headers needed by this
+	file.
+
+	* pr.c: One of my favorite fixes--headers no longer have that
+ 	&$#(*@$ newline at the end.  (Simplifies a lot of code.)
+	(verify_enum): Call verifyMultiEnum () if the field is a MultiEnum
+ 	field.
+	(verifyMultiEnum): New function.
+	(set_field): Use validateFieldValue () to verify that the field
+ 	value is OK.
+	(find_header_index): New function.
+	(get_field_value): Smarter, faster, more powerful.  (We have two
+ 	field indexes now...not good.  Tho they really do different
+ 	things.)
+
+	* pr-init.c (fconfig_parse): Call init_header () here (bleah!
+	badness! eeeugh!)
+
+	* gnatsd.c (cmds): Make most commands ACCESS_VIEW at least.  PR
+ 	submission is ACCESS_SUBMIT.  (Access levels should be bits,
+ 	probably defined by field-config.  Not yet.)
+	(main): Not sending a required CHDB gives an error message now.
+
+	* gnats.h: Move StringList here (???).
+
+	* file-pr.c (create_new_pr_file): Note that the received Category:
+ 	field is invalid.  Call composeMailMessage () to send out our
+ 	mail.
+	(notify_responsible, reply_to_submitter, append_notify): Deleted,
+ 	no longer used.
+	(append_report): Use edit_field () and composeMailMessage ().
+
+	* field-config.in: Add mail-format entries for submitted PRs
+	and PR notes received by mail.
+
+	* fconfig.y: Add support for parsing the new mail-format entry,
+ 	and support for multiple enum fields (enum fields with more than
+ 	one value).
+
+	* adm.c (getAdmSubfieldValue): New function.
+
+	* mail.c: New file.  Move several mail-related routines into
+	here.
+	(composeMailMessage): New function.
+
+Fri Jan  7 23:19:16 2000  Bob Manson  <manson@feather>
+
+	* edit.c (validateFieldValue): Add a check for Integer fields.
+	Allow Date fields to be an empty string.
+
+	* pr.c (set_field): Validate the new field value with
+	validateFieldValue ().  Add an err parameter to return
+	errors if the value is invalid.
+
+Wed Jan  5 21:59:43 2000  Bob Manson  <manson@feather>
+
+	* Makefile.in: Remove all traces of GNATS_ADDR.
+
+Wed Jan  5 12:53:02 2000  Bob Manson  <manson@tristam.juniper.net>
+
+	* gnats-databases.in: Added.
+
+Tue Jan  4 14:12:27 2000  Bob Manson  <manson@feather>
+
+	* query-pr.c (main): Don't try to parse empty expressions.
+
+	* mkdb.sh: Copy gnatsd.access instead of gnatsd.host_access.
+
+	* Makefile.in (install-tools-arch-dep): Add dependency on
+	field-config.
+	(doclean): Delete fconfig.c and friends.
+
+	* query-pr.c (main): Check for lists before trying to parse the
+	query expression.
+
+	* query.c (getSearchOperatorForType): Make global.
+	(parseSimpleQueryExpression): Add support for initial '[' marker
+ 	indicating that the field name referred to is the builtin name.
+	(appendSearchItem): Ditto.
+
+	* query-pr.c: Construct queries initially as strings; we then either
+	send them directly to the server as is in network mode, or parse it
+	for doing a direct query later.
+	(oldQueryField): New function.
+
+	* pr-init.c (getBuiltinField): New function, for looking up
+	builtin field information.
+
+	* pr-edit.c: We no longer parse PRs when in network mode.  Let the
+	server win.
+	(readPR): Deleted, no longer used.
+
+	* misc.c (quoteString): Move here; it's now a global.
+
+	* edit.c (replace_pr): Fill in err->msg.
+	(check_pr_file): Ditto.
+
+	* edit-pr.sh: pr-edit now requires the number of the edited PR.
+
+	* client.c (sendRemoteListQuery): Add outfile parameter.
+	(sendRemoteQuery): Add queryString parameter, for sending
+	unparsed expressions.
+	(netSendPRCmd, netEditField, netCheckPR, netSubmitNewPR, netModifyPR): 
+	Change PR* parameter to FILE*; we send the files directly now, so
+	the server does all the work.
+
+	* lists.c (getGnatsFile): Removed ListFieldConfig, no longer
+	used.  Removed infile.
+
+	* client.c: Removed unused variable reply.
+	(clientConnect): Renamed from client_init.
+	(get_reply): Handle CODE_TEXT_READY.
+	(client_get_field_config, client_get_field_config_line): Deleted,
+	no longer used.
+	(client_init_gnats): Don't call client_get_field_config ().
+
+	* Makefile.in: Removed GNATS_ADDR (oops).
+	* configure.in: Ditto.
+	* configure: Regenerated.
+
+Sun Jan  2 13:24:43 2000  Bob Manson  <manson@feather>
+
+	* pr.c (init_header): Make init_header () a global, we need
+	to call it from client_init_gnats () for now.
+
+	* client.c (client_get_field_config): It's CODE_TEXT_READY
+	now.
+	(client_init_gnats): Call init_header ().
+
+	* fconfig.y: Add a bit of useless error recovery.
+
+	* fconfigl.l: Fix quoted string lexing.  Match bad tokens
+	and return the arbitrary token BADTOK for them.
+
+Sat Jan  1 22:44:17 2000  Bob Manson  <manson@feather>
+
+	* man/gnatsd.man, man/pr-edit.man: New files, again woefully
+ 	incomplete.
+
+	* man/query-pr.man: Add a bit more verbiage.
+
+	* man/gnats.man: Mark obsolete commands.  Mention pr-edit.
+
+	* Use InvalidFieldIndex or the other Invalid* enum entries instead
+ 	of -1.  Don't compare returned values from Unix system calls
+ 	against -1; it's either 0 or non-zero.  Delete global
+ 	is_network_client variables, they haven't been used for some time.
+  	Change QueryExpr into an anonymous pointer-to-struct; it's now
+ 	encapsulated within query.c as it should be.
+
+	* query.c: Changed DateLessThan and DateGreaterThan to LessThan
+ 	and GreaterThan.  Added ability to search all fields of a
+ 	particular data type (replacement for hardcoded multitext and text
+ 	searches).  Simplified QueryExpr construction.
+ 	(SearchItem, QueryExpr): Moved here from query.h.  Added operator
+ 	string for DefaultSearchType.
+	(intFieldCompare): New function, for returning an integer value
+ 	describing the relation between two arbitrary field values.
+	(< and > now work on any field type.)
+
+	* query-pr.c (long_options): Removed bogus --print-field option.
+
+	* pr.c (PR_FIELD_TAG_END, PR_FIELD_TAG_START): Moved here;
+	this is the only place they should be used.
+	(stringToFieldType): New function; use an array instead
+	of hardcoding values into a function.
+
+	* lists.c (stringToListType): Case-insensitive comparisons
+	are better.
+
+	* gen-closed-date.c: Removed unused catfile option.
+
+	* file-pr.c (create_new_pr_file): Completely fill in the error
+ 	field values.
+
+	* cmds.c: Clean up the response codes so they make more sense and
+ 	are reasonably consistent.  (The gnatsd.man page describes the
+ 	classes of errors and responses.)  Removed a few more
+	unneeded commands.
+	(set_confidential_access): Moved here from gnatsd.c.
+	(GNATS_help): Add description for SUBM.
+
+	* client.c: Get rid of a few more globals.
+	(server_reply): Strip off the line terminator.
+	(get_reply): Handle continuation replies more gracefully.  Don't
+ 	try to parse error strings, they're not intended for us.  Make the
+ 	response codes we handle match those now sent by the server.
+
+Fri Dec 31 13:28:44 1999  Bob Manson  <manson@feather>
+
+	* query.c (pr_match_field): Fix multitext searches.
+
+Thu Dec 30 17:14:43 1999  Bob Manson  <manson@feather>
+
+	* man/query-pr.man: Mostly revised, still woefully incomplete.
+
+	* man/*: Very preliminary (and incomplete) updates.  Added a
+ 	couple of pages, deleted references to mkdist.
+
+	* edit-pr.sh: Fixed --database option.
+
+	* delete-pr.sh: Added --database option; fixed exit statuses for
+ 	invalid options.
+
+	* gen-index.c: Minor cleanups; also fixed output so newlines
+ 	appear when -n option is used.  Removed bogus --catfile option.
+
+	* delete-pr.sh: Use query-pr to get the address of gnats-admin.
+
+	* npr-edit.c: Deleted, no longer used; functionality merged into
+	pr-edit.c.
+	* gnats-*.sh: Deleted, no longer used; functionality merged into
+	their respective scripts (gnats-file-pr.sh->file-pr.sh, 
+	gnats-edit-pr.sh->edit-pr.sh).
+	* client.c (netSendPRCmd, netCheckPR, netEditField, netSubmitNewPR,
+	netModifyPR, netLockDB, netUnlockDB, netLockPR, netUnlockPR,
+	netDeletePR): New functions.
+
+Wed Dec 29 15:33:18 1999  Bob Manson  <manson@feather>
+
+	* query.c (insert_closed): New function.
+
+	* gnats-edit-pr.sh: Automatically set the mode to "network" if
+	a : appears in the GNATSDB variable.  Clean up option processing
+	of --host etc.  Don't set default values for HOST, PORT, etc. here,
+	let nedit-pr take care of it.
+
+	* getclose.c: Added network support.
+
+	* client.c (clientReadPR, readPRListFromServer, clientGetPRList):
+	New functions.
+
+	* pr-age.c: Added network support.
+
+	* query.c: Added support for parsing FieldType operator (assigned
+	to '#'); needed for checking for closed PRs.
+
+	* query-pr.c: Added new options --adm-field, --adm-subfield and
+	--adm-key.
+	(main): Default username and password are now NULL.
+
+	* pr-stat.c: Minor fixes; it's still pretty badly broken.  Not sure
+	if it's worth fixing.
+
+	* npr-edit.c (main): Default username and password are NULL now.
+
+	* lists.c (getGnatsFile): Fixed erroneous fallthrough to abort ().
+
+	* internal.c (gnatsdbHasNetconn): New function.
+
+	* edit.c (validateFieldValue): New function.
+	(check_pr): Massively simplified; uses validateFieldValue ().
+	(edit_field): Use validateFieldValue ().
+
+	* database.c (getHostList): Add a call to initHostList ().
+
+	* cmds.c(GNATS_mlct, GNATS_mlsu, GNATS_mlrs, GNATS_type,
+	GNATS_resp, GNATS_catg, GNATS_vdat, GNATS_nocl): Deleted.
+	(GNATS_admv, GNATS_vfld, GNATS_expr): New functions.
+
+	* client.c (client_get_field_config): Use sendRemoteListQuery ().
+	(sendRemoteQuery): Send a string expression with the EXPR command
+ 	instead of sending individual nodes.
+	(send_query_field, send_query_node): Deleted.
+	(clientGetAdmField): New function.
+
+	* adm.c (printAdmSubfield): New function.
+
+	* file-pr.c (create_new_pr_file): Replaced sole use of PENDING
+ 	with defaultCategory ().
+	
+Tue Dec 28 14:03:52 1999  Bob Manson  <manson@feather>
+
+	* sub-type.c, pr-addr.c, pr-mail.c, npr-addr.c: Deleted;
+ 	functionality added to query-pr.
+
+	* Replaced --directory options with --database, and edited usage
+	strings to match.
+	
+	* configure.in: Changed with-gnatsd-access-file to 
+	with-gnatsd-user-access-file.  Added with-gnatsd-host-access-file.
+	Moved the gnatsd.host_access file into ${datadir}/gnats; there
+	should probably be a per-database version as well, but I'm too lazy
+	to add it.
+
+Mon Dec 27 20:38:18 1999  Bob Manson  <manson@feather>
+
+	* file-pr.c (notify_responsible): Fix typo causing bad fields to
+ 	be misreported.
+
+	* man/Makefile.in: Removed mkdist.8 references.
+
+	* pr-init.c (getFconfigLine): Renamed from get_line ().
+
+	* pr-edit.c (main): Fixed submit_pr () call.
+
+	* internal.c (readLine): New function, unused as of yet.
+
+	* index.c (find_pr_category): Replace 512 with STR_MAXLONG.
+
+	* file-pr.c (submit_pr): Removed flag_autocreate argument; this
+	is obtained from the database spec now.
+
+	* fconfig.y: Added rule to parse create-category-dirs database
+	item.
+
+	* database.c (setCreateCategoryDirs, createCategoryDirs): New 
+	functions.
+
+	* configure.in: Changed various config options at pst's suggestion.
+	Put the shared gnats_databases file in gnats subdirectory.
+
+	* cmds.c (GNATS_subm): Fix submit_pr () call.
+
+	* Makefile.in: Added rules for mkdb and installation of default
+	(template) files; removed rules for creation of default database.
+	Added reminder to run mkdb, and removed mention of mkcat (category
+	directories are now created on the fly by default).  Removed
+	references to mkdist.
+
+Tue Dec 21 22:38:29 1999  Bob Manson  <manson@juniper.net>
+
+	* client.c (scanEnv): New function, to get various items out of
+	GNATSDB if they weren't supplied by the caller.
+	(client_init_gnats): Call scanEnv ().
+
+	* query-pr.c (main): Add a temporary hack to check for a : in
+	GNATSDB; if it's there, we're a network client. Remove cheezoid
+	manipulation of regexp matching for EOF, we better not
+	need it anymore.
+
+	* client.c (client_chdb): Send "default" if we're handed a NULL
+	database name (handle it like init_gnats does).
+
+	* configure.in: Add test for socklen_t.
+	
+	* Replaced calls to strdup with xstrdup.
+
+	* pr.c (allocPR): NULL != 0; I'm surprised gcc-2.7.1 didn't
+	catch these.
+	(verify_enum): If the enum value is NULL, don't try to
+	check it.
+
+	* pathmax.h: Another linux fix, this one's probably a decent
+	change--we should include sys/param.h before deciding
+	there's no PATH_MAX and we need to define our own.
+
+	* internal.c (get_curr_date): Changed %y to %Y, which
+	makes egcs shut up.  Admittedly it may fix a "why, tookay?"
+	bug, but I'm much more worried about the y3000 bugs.
+
+	* gnatsd.c (cmds): Fixed last entry.
+	(start_connection): Made len a socklen_t if socklen_t is present,
+ 	which makes linux happy.
+
+	* config.h: Add crappy bad fix for linux glibc madness.  "But
+	it's correct according to the standard!"  Bleah.
+
+	* Makefile.in: Added GNATSD_ACCESS_FILE, left it out from previous
+	changes.  Also added rules for fconfigl.o and getdate.o to work
+	around non-easily-fixable warnings.
+
+	* configure: Regenerated with autoconf-2.13.
+
+	* client.c (client_exit): Don't do anything if we're not a
+	network client.
+
+Mon Dec 20 15:47:25 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* Removed config file and associated trappings, and now most of the
+	  config that was previously there is now in field-config (which
+	  will probably be renamed shortly).
+  	
+	  GNATS_ROOT is no longer.  The GNATSDB environment variable is now
+ 	  used to determine which database to use (or the -d option to the
+ 	  clients).  
+
+	  Databases must now be specified by name.  The list of database
+ 	  names is now in ${datadir}/gnats_databases by default.  It is
+ 	  formatted similarly to the other adm files, and uses the same
+ 	  routines.  Since there is one other GNATS file in ${datadir},
+ 	  namely gnatsd.access, it may make sense to make a gnats/
+ 	  subdirectory there but I'm reluctant to do it for two files.
+
+	  Currently GNATSDB only contains a database name; eventually it
+	  will also be of the form
+	       host:port:name
+	  which is used for remote access.  Someday some sort of ssh
+	  tunneling functionality will be added, especially now that the
+	  emphasis is on remote access.
+
+	  The default database is now located in ${sharedstatedir}/gnatsdb.
+	  I may change things to allow the datafiles to be located
+ 	  indepndently from the database.  The only major change would be
+ 	  to the scripts, and the vast majority shouldn't need to be changed
+	  now.
+
+	  query-pr now supports specifying a format string on the
+	  command line with the --format option:
+	
+		  query-pr --format '"%s %s" Number State'
+	
+	  prints out the Number: and State: field values with
+	  a space between the two.  Also,
+	
+		  query-pr --format State
+
+          prints out the State field.
+
+	  A new server command, QFMT, has been added.  The query format is
+	  now specified with QFMT (and must be specified before QUER is
+	  invoked).  I have not tested remote access lately, it may 
+	  very well be broken (tho gnatsd seems to be working from the
+	  command line).
+
+	  A few new options have been added to query-pr, to print out the
+	  directory where a database is located, and to dump a sh-compatible
+	  set of variables describing things like the name of the database,
+	  its location, etc.
+
+	  The NOTIFY, ACKNOWLEDGE and DEFAULT_SUBMITTER configure options
+	  have been deleted.  DEFAULT_SUBMITTER is gotten from the submitters
+	  list instead--it's the first entry.  (It always was, it's just
+	  not being kept in two places now).  There's also no longer a
+	  default port number--if you need to set a default port, add it
+ 	  to /etc/services as a service instead.
+
+	  MAIL_AGENT is also gone; the mail-agent script is used instead
+	  (the script is installed in ${libexecdir}/gnats/mail-agent).
+
+	  lists.c has been reoverhauled; it's much better now.  It no longer
+	  dumps out files directly, except for the field-config file.
+
+	  db_conf* have been removed (functionality replaced in database.c).
+
+	  Many of the scripts are currently broken (they refer to GNATS_ROOT,
+	  and they need to call query-pr to get the directory name for the
+	  database instead).
+
+	  Many, many, many prototype fixes.  10 hours worth, in fact.
+  	  Enabled several anal pedantic warnings in gcc.  Eventually these
+ 	  will only be enabled when --enable-maintainer-mode is turned on
+	  (some systems have broken headers and things simply won't
+	  compile otherwise).
+
+	  Removed xmalloc.[ch]; xmalloc is used from libiberty, and free is
+	  called directly.  There will probably be problems because of this,
+	  because some libcs are unhappy about freeing NULL pointers; the
+	  code in GNATS should be fixed instead of using a wrapper.
+
+	  gnatsd.conf is now renamed to gnatsd.host_access; a slightly more
+	  descriptive name.  It also uses the adm.c routines for reading.
+
+	  Most of delete-pr is in pr-edit now; delete-pr still handles
+	  deleting all closed PRs.
+
+	  Most of the scripts have been fixed.  Some of them are almost
+	  certainly still busted.  Scripts that still directly refer to 
+	  files are (mostly) \hbadness 10000 and need to be fixed.  None
+	  of the scripts should be manipulating PRs or the index file
+	  directly.  I know that check-db is massively not working
+	  right now.
+
+	  edit-pr is kind of suckage right now, but it should still
+	  work.  It still knows about which fields need to have
+	  audit-trail entries added; I had planned on fixing this
+	  for 4.0, but it won't happen.  Most of the functionality is
+	  actually in the server, except for sending mail when changes
+	  occur.
+
+	  The "site" functionality has been removed.  It never was implemented
+	  very well or thoroughly.  Something similar may be reimplemented,
+	  but not in 4.0.
+
+	  This is likely the last major set of changes before 4.0 beta
+	  is released.  The only planned changes are to filenames, and
+	  of course the major associated documentation cleanups.  I
+	  also need to track down memory leaks, tho given the nature of
+	  the programs involved this actually isn't all that crucial.
+
+1999-12-16  Kenneth H. Cox  <kenstir@kilimanjaro.senteinc.com>
+
+	* Makefile.in (install-gnats-arch-indep): Location of gnats was
+	$(top_builddir) which was not defined.  Changed to $(srcdir).
+
+Fri Dec 10 17:04:38 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* query.c (parseQueryExpression): Make sure both sides of the
+	QueryExpr are NULL.
+
+	* pr.c (newFieldDef, freeFieldDef, freeStringList, freeFieldList,
+	freeFieldEdit, clearFieldList, freeInputTemplate): New functions.
+
+	* pr-edit.c (main): Removed -F option.
+
+	* index.c (indexEntry): Added nextPR member.  The index chain
+	is now kept as part of the PR's index.
+	(check_pr_chain, free_pr_chain, init_index, get_pr_chain,
+	free_curr_pr_chain, replaceCurrentPRInIndex, get_next_pr): New
+	functions, or moved from pr.c.
+
+	* field.h: Moved PR_FieldType and SearchType here.
+
+	* edit.c (replace_pr): Removed force argument.
+	(rewrite_pr): Ditto.
+	(processPRChanges): New function.
+
+	* client.c (sendRemoteListQuery): New function.
+	(sendRemoteQuery): Renamed from send_remote_query().  Moved
+	list functionality into sendRemoteListQuery().
+
+	* adm.c (freeAdmFieldDesc, freeAdmEntryChain): New functions.
+
+Thu Dec  9 20:57:02 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (field_value): Fundamental change--PR contents always
+ 	override index contents.
+
+	* getclose.c (do_prlist): Use gen_pr_path().
+
+	* gen-index.c (do_category): Check to see if the PR read in is
+	remotely sane.  (We should return an error status from read_pr()
+	since it no longer insanely exits).
+
+	* query.c(make_path): Removed, no longer used.
+
+	* internal.c: Removed gnats_locked (identical to is_gnats_locked).
+
+	* lists.c (stringToListType, listTypeToString): New functions.
+	(getGnatsFile): Renamed from get_gnats_file; simplified.
+
+	* cmds.c (GNATS_list): New function, calls getGnatsFile.  Remove
+ 	old GNATS_l* list functions.
+
+	* client.c (send_remote_query): Change list parameter. Use
+	listTypeToString ().
+
+	* query.h: Remove unused format #defines.  Remove LIST_*
+	bitmasks; add ListTypes enum.
+
+Wed Dec  8 16:30:09 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* query-pr.c (main): Use printValidValues instead of coding it
+	here.
+
+	* pr.c (printValidValues): New function.
+
+	* gnatsd.c (cmds): Add new commands.
+
+	* cmds.c (GNATS_fdsc, GNATS_flds, GNATS_linp, GNATS_ftyp, GNATS_fvld):
+	New functions.
+	(GNATS_help): Add descriptions for new server commands.
+
+	* edit.c (check_pr): Don't bother setting the bad value for
+ 	Category:, Submitter:, or Responsible: fields.  strdup invalid
+ 	fields when we *do* pass them in.
+
+	* client.c (client_print_errors): Print out the supplied error
+ 	message for an invalid category, submitter, responsible or date
+	field.
+
+	* pr.c (check_enum_types): Require values for all enum fields that
+ 	don't allow any value.  (Possibly should require a value even if
+ 	it allows any value.)
+
+	* query-pr.c: Add list-fields, list-input-fields, field-type,
+	field-description and valid-values options.
+
+	* pr.c (fieldTypeAsString, setInputTemplate, getInputTemplate):
+	New functions.
+
+	* npr-edit.c: Add check-initial option.
+	* pr-edit.c: Ditto.
+
+	* lists.c (get_gnats_file): Add LIST_FIELD_NAMES and
+	LIST_INPUT_FIELD_NAMES list options.
+
+	* field.h (InputTemplate): New structure.
+	(field_def): Add description member.
+
+	* field-config: Add a few more comments, description entries for
+	most of the fields, and an initial-entry section.
+
+	* fconfigl.l: Add description and initial-entry keywords.
+
+	* fconfig.y: Add "input" section for describing which fields
+	should be required for an initial PR, and a "description"
+	field to describe each field.
+
+	* edit.c (check_pr_file): Add option for verifying initial PRs.
+	(check_pr): Ditto.
+
+	* cmds.c (GNATS_chek): Add command option for verifying initial
+	PRs.
+
+Thu Dec  2 17:54:33 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* query.c (parseFieldName): Make public.
+
+	* pr.c (field_change_reason): New routine.
+	(struct PR_private): Added multiFieldIsReason member.
+	(setPRChain): Don't free the current PR chain, for now.
+	(replace_existing_pr): Use field_value () instead of
+	violating interfaces.
+	(replace_existing_pr): Step to the next field.
+	(get_field_value): New function.
+
+	* pcodes.h (CODE_INVALID_FIELD_NAME): New code.
+
+	* field.h (field_list): Add name and isReason fields.
+	(field_edit): New structure.
+
+	* fconfig.y: Add support for on-change, require, append-to-field
+	and set-field tokens.  Remove code for audit-related keywords.
+
+	* edit.c (rewrite_pr): Get the PR index chain before we do
+ 	anything else.  Don't redeclare old_pr.  Invoke applyChangeActions ()
+	on fields that have changed in the PR.
+	(editGetFieldValue, applyFieldEdit, applyChangeActions): New
+	functions.
+
+Wed Dec  1 13:29:02 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (find_field_num): Check for a "reason changed" field.
+	(verify_enum): Check for allow_any_value.
+
+	* pr-edit.c (main): Fix --unlockdb.
+
+	* field-config: Remove default value for Audit-Trail.
+
+	* fconfig.y: Add support for add-audit keyword.
+
+	* adm.c (initAdmField): Only set the default value if allow_any_value
+	isn't set for the field.
+
+Tue Nov 30 14:28:27 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (free_pr_header): New function.
+	(free_pr_contents): Don't free the header contents here, as otherwise
+	the header will never be available after a PR is read in.
+	(free_pr): Free the PR's header too.
+
+	* query.c (iterate_prs): Ditto.
+
+	* index.c (indexValue): If there's no index available for this
+	PR, return NULL instead of coredumping.
+
+	* pr.c (allocPR): Initialize the private struct.
+
+	* Move more PR-related code into pr.c; move index-related code
+	  into index.c.  Make Index weak and wimpy (with the thought of
+	  removing it entirely).
+
+	* index.c: Move the Index struct into here, as it is no longer
+ 	needed publicly.
+
+Mon Nov 29 18:52:47 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c: Change the value member into a struct.
+
+1999-11-14  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+	* BETA: This file renamed to "NEWS".  Seems more appropriate.
+
+1999-11-14  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+	* mkdist.sh:  Recognize --database command line option.
+	Get the categories file from the gnats database directory
+	instead of the dist directory.  Update copyright text to 
+	correct FSF address.
+	Fixes one part of PR gnats/15
+	TODO: man/mkdist.man is in need of an update.
+
+Tue Nov  9 17:45:36 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.h: Remove temptation.
+	* pr.c: Move tempted members into private struct.
+	(free_pr_contents): Free up the PR's buffer.
+
+	* file-pr.c (append_report): Don't check the contents of the
+	X-Gnats-Nonotify: field; if it's there, then don't send mail.
+	Remove gratuitous goto.
+
+	* edit.c (rewrite_pr): We only need to check the state types; if
+	they're different, the state has changed.
+
+	* npr-edit.c (net_send_pr_command): New function; read in
+	a PR and send it along with the appropriate command.
+	(net_check_pr): Use it.
+	(net_submit_pr): Ditto.
+
+	* file-pr.c: Clean up a few function prototypes.  Delete
+	bad_fields static variable; pass it in as needed.
+	(append_report): Simplify; use rewrite_pr ().
+
+	* edit.c (fix_closed_date): New function.
+	(rewrite_pr): Use it.
+	(edit_field): Free the PR after we're done with it.  Don't
+	free it if we actually passed it into rewrite_pr (), tho.
+
+	* cmds.c (GNATS_mlpr): Free the PR we allocated if we exit
+	early.
+
+1999-11-07  Jason Molenda  (jsm@makita.cygnus.com)
+
+	* BETA: Add notes about 3.113 release.
+
+1999-11-1  Bob Manson  <manson@tristam.juniper.net>
+
+	* Massive changes to implement PRs as first-class objects; there
+	  is no longer the concept of "current pr".  Initial cut at
+	  removing K&R compatibility cruft.
+	
+	* autoconf.h.in, configure.in, query-pr.c: Removed
+ 	GNATS_RELEASE_BASED--it was mostly gone anyway.
+
+	* npr-edit.c: Removed XXXnet_check_pr (); it was badness 10k.
+
+1999-10-27  Bob Manson  <manson@tristam.juniper.net>
+
+	* fconfig.y: Fix typo in regexpList rule.
+
+1999-10-27  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+        * at-pr.sh:  Send error/warning messages to stderr.
+        Fix handling of --directory option, thanks to patch from
+        <m.seaman@inpharmatica.co.uk>
+        Fixes PR gnats/6
+
+1999-10-27  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+	* getdate.y:  Add local modification to recognize EEST, CES, 
+	and CEST timezones.
+	* getdate.c: Regenerated.
+
+1999-10-27  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+	* ChangeLog.old: Moved to ChangeLog.v3.
+
+1999-10-26  Andreas Luik <Andreas.Luik@orthogon.de>
+
+        * Makefile.in (distclean): Also remove config.log.
+        (maintainer-clean): Accept this as the same as realclean.
+
+1999-10-26  Andreas Luik <Andreas.Luik@orthogon.de>
+
+	* mkcat.sh: Portability fix for zeroing out GNATS_SITE and 
+	categories files.
+
+Mon Oct 25 16:23:27 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c: Moved contents of headers.c here.  Header contents now
+	exist as part of the PR object; names are kept in a separate
+	array.
+	* headers.c, headers.h: Deleted, no longer used.
+
+1999-10-26  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+	* getdate.y, getdate.c, getdate.h: Import current FSF version
+	of getdate.y and its generated siblings.  Pulled in from tar-1.13.9,
+        master versions are apparently under RCS on the FSF machines.
+	* MANIFEST: List getdate.h.
+
+1999-10-26  Andreas Luik <Andreas.Luik@orthogon.de>
+
+        * mkdist.sh: Change set call for better portability.
+
+1999-10-26  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+	* BETA: Include beta notes for 3.111 and 3.112.
+
+1999-10-26  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+	* configure, config.h.in:  Regenerate with autoconf 2.13.
+
+1999-10-25  Andreas Luik <Andreas.Luik@orthogon.de>
+
+	* man/edit-pr.man, man/file-pr.man, man/gen-index.man, man/gnats.man,
+        man/mkcat.man, man/mkdist.man, man/nquery-pr.man, man/query-pr.man,
+        man/queue-pr.man, man/rmcat.man:
+	Correct references ("SEE ALSO") to "gnats(7)" instead of "gnats(l)".
+	One line description in .SH NAME; required for Solaris windex 
+	generation.
+
+1999-10-25  Jason Molenda  (jsm@bugshack.cygnus.com)
+
+        * gnats-el.in (start-background): Convert random number to a string
+        before concatenating.  Patch from Palle Girgensohn <girgen@partitur.se>
+        Fixes PR gnats/13
+
+Fri Oct 22 15:43:59 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* file-pr.sh, nfile-pr.sh, gnats-file-pr.sh: New files. file-pr
+	is now replaced with edit-pr --submit.
+
+	* main.c: Deleted, no longer used.
+
+	* cmds.c (print_server_errors): Handle CODE_INVALID_FIELD_CONTENTS
+ 	specially.
+	(GNATS_appnOrRepl, GNATS_appn, GNATS_repl, get_text_memory): New
+ 	functions.
+
+	* field.h (FieldDef): regex is now a Stringlist.
+
+	* fconfig.y: Make the regex qualifier a StringList.
+
+	* edit.c (check_curr_pr): If a date field is null, don't coredump.
+	The regex field is now a StringList; check all of the regexps.
+	(edit_field): Read in the PR we're editing.
+
+	* client.c (client_print_errors): Print out the field.value
+ 	contents when there is an invalid field.
+
+Thu Oct 21 19:10:26 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	Add commands to allow the server to add new PRs.
+
+	* pr-edit.c: Add submit, append and replace options.
+	* npr-edit.c: Ditto.
+
+	* main.c (main): Call submit_pr () instead of gnats ().
+
+	* file-pr.c (create_pr_file, submit_pr): New functions.
+	(gnats): Call create_pr_file.
+
+	* edit.c (check_curr_pr, rewrite_curr_pr, edit_field): New
+ 	functions.
+	(check_pr): Read in the PR and call check_curr_pr.
+
+	* cmds.c (GNATS_subm): New function.
+
+Wed Oct 20 20:09:51 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (struct PR_private): Used by the PR reading code to keep
+	track of state while reading.
+
+	* pr.h(struct PR_struct): New type to represent contents of PRs.
+
+Tue Oct 19 15:33:36 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (read_pr): Split up into three new functions, so that PRs
+ 	can be added line-by-line. 
+
+	* Makefile.in (install-gnats-arch-indep): Fix from Jeff
+	Bailey <jbailey@nisa.net> when srcdir != objdir.
+
+	* fconfig.y: Added allow-any-value entry for enums, to allow
+	any value to appear (this seems contradictory, but it's needed
+	for the Responsible: field).
+
+	* fconfigl.l: Added allow-any-value keyword.
+
+	* pr.c (check_enum_types): Check for allow_any_value flag
+	in the field.
+
+Thu Sep 30 12:36:59 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (check_enum_types): strdup() the field's default value, if
+ 	we have to assign one.
+	
+Wed Sep 29 13:34:31 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* query.c (pr_match_field): Read in the PR if the field we're
+	checking doesn't appear in the index.
+	(parseQueryExpression): New function. Parses a query expression
+ 	into a QueryExpr.
+	(queryExprToString): New function.  Converts a QueryExpr into
+	a string query expression.
+	
+	* query-pr.c (long_options): Added new option "expr", which
+	accepts a boolean query expression; uses parseQueryExpression()
+	to parse the expression.
+
+	* gnats.h: Moved gnats_* variables here; they will eventually be
+	deleted.
+
+	* field.h (struct field_def): Rearrangement of members to
+	make a bit more sense.
+
+Mon Sep 27 21:08:18 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.h (SearchType): Added DefaultSearchType value.
+
+	* query.c (add_query_builtin_field): New function.
+ 	 Changed previous callers of add_query_field to use it as
+	 appropriate.
+	(searchTypes): Added entry for DefaultSearchType.
+	(pr_match_field): Handle DefaultSearchType.
+
+Thu Sep 23 19:54:19 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	* pr.c (check_enum_types): Don't set the value to the default
+	unless the original value was bad.
+
+Tue Sep 21 16:53:52 1999  Bob Manson  <manson@tristam.juniper.net>
+
+	Changes to allow adding new fields, and to divorce the concept of
+ 	"field name" versus "builtin name".
+
+	* Use BUILTINNAME->index to get a builtin field's index number.
+	(FieldIndex): New type, partially replacing PR_Name.
+
+	* query.c (iterate_prs): Call clean_pr () after we're done
+	with the PR.
+
+	* client.c (client_print_errors): Fix printout of invalid enum
+	errors.
+
+	* builtin-fields.h: New file.  It currently contains all of the
+ 	pre-4.0 fields; this will eventually only contain those fields
+ 	strictly needed by GNATS.
+
+	* fconfig.y, fconfigl.l: Add new builtin-name keyword.
+
+	* field.h (struct field_def): Remove netquery field.
+
+Wed Aug 25 12:04:22 1999  Bob Manson  <bmanson@tristam.juniper.net>
+
+	* pr-init.c (fconfig_parse, argument func): New argument.
+	(get_line): New function.
+
+	* cmds.c (GNATS_lfds): New function; command for dumping the
+ 	field-config file to the client.
+
+	* client.c (client_get_field_config_line, client_get_field_config):
+	New functions.
+	(client_init_gnats): Call client_get_field_config ().
+
+	* adm.c (initAdmField): Don't explode if the contents of the chain
+ 	for the field are NULL.
+
+	* query.c (getSearchTypeForName, getSearchNameForType): New
+	functions.
+
+	* pr.h (FIRST_BUILTIN_FIELD, NUM_BUILTIN_FIELDS): New.
+
+	* pr-init.c (builtin): Change "Target" to be "Quarter".
+
+	* gnatsd.c (cmds): Add FVAL.
+
+	* files.c: Remove init_classes() and init_states().
+
+	* field-config: Remove the network-query-command definitions.
+
+	* fconfigl.l: Add "%option nounput" to make flex behave. Remove
+	network-query-command.
+
+	* fconfig.y: Add extern declarations for fconferror() and
+	fconflex ().  Remove the network-query-command parse.
+
+	* cmds.c (netcommands): New array to hold the old-style network
+	query commands; these are now hardcoded, and will probably be
+	removed.
+	(init_server_cmds): Initialize netcommands.
+	(GNATS_fval): New function, to add the FVAL command.
+
+	* client.c (send_query_field): Use the FVAL query command.
+
+	* Makefile.in: Use @CFLAGS@ instead of hardcoding -g.
+
+	* configure.in: Turn on -Wall -ansi -pedantic -Werror for
+	GCC.
+
+1999-08-24  Bob Manson  <bmanson@juniper.net>
+
+	* Initial checkin for 4.0.
+	
+
+Local Variables:
+left-margin: 8
+fill-column: 74
+version-control: never
+End:

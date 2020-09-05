@@ -1,0 +1,247 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class WTD_DIGRAPH_ALG{NTP<$STR,WT<$NUMBER{WT},GTP<$LBLD_DIGRAPH{NTP,WT,WT}} is
+   --   NTP,			-- Node type
+   --   WT<$NUMBER{WT},		-- Weight type
+   --   GTP<$LBLD_DIGRAPH{NTP,WT,WT} -- Labelled Graph type
+   --   Largely translated from the LEDA library
+   -- 
+   -- Usage:
+   --   It is simplest to use these algorithms by including
+   --   them using WTD_DIGRAPH_INCL. For instance, see WTD_DIGRAPH{STR,FLT}, 
+   --   You can also directly call thes routines  See TEST_WTD_DIGRAPH
+   --   If you have to use this class directly, keep the parameters straight!
+   
+   include  COMPARE{NTP};
+   
+   shared debug: BOOL := false;
+
+   maxval: WT is return WT::maxval end;
+   zero: WT is  return WT::zero end;
+
+   bellman_ford(g:GTP,s:NTP,out d:MAP{NTP,WT},out p:MAP{NTP,NTP}): BOOL
+   -- Computes the source shortest paths from "s" using a queue and
+   -- breadth first search.  On return, "d" holds a mapping from
+   -- nodes to their distances for "src" and "pred" holds a mapping
+   -- from each node to its parent node in the shortest paths
+   -- tree. Returns true if no negative cycle was found
+   -- 
+   -- 
+   -- Implementation: Note that bellman_ford works even in cyclic
+   -- graphs, provided there is no cycle with negative weight (in
+   -- which case the min weight to any of the nodes in the cycle
+   -- can be arbitrarily decreased) If such a negative weight cycle
+   -- is found, the routine quits and returns false - it can
+   -- therefore also be used as a reliable detector of negative
+   -- cycles.
+   -- 
+   is
+      if ~g.are_all_edges_labelled then
+	 raise #GRAPH_EXC(g,"bellman_ford","","").missing_edge_labels;
+      end;
+      src ::= s; 
+      dist:MAP{NTP,WT} := #;
+      pred:MAP{NTP,NTP} := #;
+      q: QUEUE{NTP} := #;
+      in_q: MAP{NTP,BOOL} := #;	-- Is a node in the queue?
+      count: MAP{NTP,INT} := #;	-- Number of times visited
+      loop n ::= g.node!; dist[n] := maxval; pred[n] := void;  end; 
+      dist[src] := zero;
+      q.enq(src);
+      -- deb2("Original q:"+q);
+      in_q[src] := true;
+      loop while!(~q.is_empty); -- deb2("Queue:"+q.str+"Distance:"+dist.str);
+	 u ::= q.remove;
+	 in_q[u] := false;
+	 count[u] := count[u]+1;
+	 if count[u] > g.n_nodes then return false; end; -- A Negative cycle
+	 cost_u: WT := dist[u];
+	 cost_u_v:WT;cost_v: WT;
+	 loop v ::= g.outgoing!(u, out cost_v,out cost_u_v);
+	    cost_v := cost_u+cost_u_v;
+	    if cost_v < dist[v] then 
+	       -- If we are now on the shortest path to "v", then revise
+	       -- the prev of "v" and its cost
+	       --deb2("Updating cost of:"+v.str+" to:"+cost_v);
+	       dist[v] := cost_v;    pred[v] := u;
+	       if ~in_q[v] then  q.enq(v); in_q[v] := true;    end;
+	    end; -- If new short path to v
+	 end; -- Go through neighbors of u
+      end; -- While the queue is not empty
+      -- Assign out arguments
+      d := dist; 
+      p := pred;
+      return true;
+   end;
+
+   dijkstra(g:GTP,s:NTP,out dist:MAP{NTP,WT},out pred:MAP{NTP,NTP}) 
+   -- Please see the comment at WTD_DIGRAPH_ALG{_,_,_,_}::dijkstra
+   -- Computes single source shortest paths from "src" for a
+   -- non-negative graph i.e. one without negative cycles.  Returns
+   -- the distance from "src" to all other nodes in "dist" and the
+   -- predecessor of each node of "g" in the shortest paths tree in
+   -- "pred"
+   -- 
+   -- Usage: 
+   --   See bellman_ford
+      pre g.are_all_edges_labelled
+   is
+      pq: A_PQ{PQMINWT{NTP,WT}} := #;
+      -- Note that pq_elts has a mapping into the actual "weight"
+      -- objects stored in "pq", thus allowing us to externally
+      -- change the weight associated with an item using the element
+      pq_elts: MAP{NTP,PQMINWT{NTP,WT}} := #;
+      dist := #;
+      pred := #;
+      loop n ::= g.node!; dist[n] := maxval; pred[n] := void end;
+      dist[s] := zero;
+      e ::= #PQMINWT{NTP,WT}(s,zero);    pq_elts[s]:= e;     pq.insert(e);
+      loop while!(~pq.is_empty);
+	 -- deb2("PQ:"+pq.str+"Distance:\n:"+dist);
+	 uel ::= pq.remove;
+	 u:NTP := uel.element; 
+	 du: WT := dist[u];
+	 -- deb2("du:"+du.str+"\n"); 	 -- deb2("u:"+u.str+"\n");
+	 cost_u_v:WT;cost_v: WT;
+	 loop v ::= g.outgoing!(u,out cost_v, out cost_u_v);
+	    -- Returns the set of outgoing edges
+	    cost_v := du+cost_u_v;
+	    if cost_v < dist[v] then
+	       -- If this is the shortest path to "v" then update cost to v
+	       -- deb2("Revising cost of:"+v.str+" to"+cost_v.str+"\n");
+	       if dist[v] = maxval then 
+		  -- Since v is not initialized, add it to pq
+		  et::=#PQMINWT{NTP,WT}(v,zero);
+		  pq_elts[v]:= et; 
+		  pq.insert(et);
+	       else 
+		  -- This changes the weight in the actual priority queue
+		  -- as well, since it uses the same elements
+		  pq_elts[v].weight := cost_v; 
+	       end;
+	       dist[v] := cost_v;
+	       pred[v] := u;
+	    end;
+	 end;
+      end;
+   end;
+
+   max_weight_path_node!(once g: GTP,once  src,once sink: NTP): NTP 
+   -- Computes the maximum node-weight path from "src" to "sink" in
+   -- the graph "g", returning a list of nodes in that maximum weight
+   -- path that starts with "src" and ends with "sink" Fully
+   -- considered only for DAGs: May have problems with other types of
+   -- graphs
+	 pre g.are_all_nodes_labelled
+   is
+      -- This algorithm deals with node weights, rather than edge
+      -- weights. Return nodes on the maximum weight (critical) path
+      -- from "src" to "sink"
+      -- Current maximum weight to a node
+      max_weight: FMAP{NTP,WT} := #;
+      -- Incoming node with the maximum weight to a node
+      max_in_node: FMAP{NTP,NTP} := #;
+      -- Number of incoming edges that have been seen already
+      n_edges_considered: FMAP{NTP,INT} := #;
+      loop 
+	 n ::= g.node!;
+	 max_weight := max_weight.insert(n,-WT::maxval);
+	 n_edges_considered := n_edges_considered.insert(n,0);
+      end;
+      consider ::= #FLIST{NTP};
+      n_considered ::= 1;
+      consider := consider.push(src);
+      src_weight ::= g.node_label(src);
+      -- Start with the source node
+      max_weight := max_weight.insert(src,src_weight);
+      new_consider: FLIST{NTP} := #;
+      loop until!(consider.size = 0);
+	 -- "consider" holds the list of nodes whose children's
+	 -- weights must be recomputed
+	 assert deb("L1:w:"+max_weight+"consider:"+consider.str);
+	 loop
+	    -- Go through all the nodes to consider
+	    parent ::= consider.elt!;
+	    parent_wt ::= max_weight.get(parent);
+	    assert deb("Parent:"+parent.str+" Max wt:"+str(parent_wt));
+	    loop child ::= g.outgoing!(parent);
+	       child_wt ::= g.node_label(child); -- Get the child weight
+	       assert deb("Child:"+child.str+" node weight:"+str(child_wt));    
+	       n_in ::= n_edges_considered.get(child);
+	       n_edges_considered := n_edges_considered.insert(child,n_in+1);
+	       if n_in+1 = g.n_incoming(child) then
+		  -- If all incoming edges to the child have been
+		  -- considered then the child's weight is recomputes
+		  new_consider := new_consider.push(child);
+	       end;
+	       max_wt::=max_weight.get(child); -- Get the maxwt to the child
+	       new_max_wt ::= parent_wt+child_wt; -- Compute the new max
+	       assert deb("Old max wt:"+str(max_wt)+" new"+str(new_max_wt));
+	       if new_max_wt > max_wt then -- Update the max wt
+		  assert deb("Changed wt:"+child.str+" new"+str(new_max_wt));
+		  max_weight := max_weight.insert(child,new_max_wt);
+		  max_in_node := max_in_node.insert(child,parent);
+	       end;
+	    end; -- Loop over all elements to consider
+	 end; -- Loop until "consider" is empty
+	 consider.clear;
+	 tmp ::= consider;
+	 consider := new_consider;
+	 new_consider := tmp;
+      end;
+      -- Now trace the max path backwards from the dest
+      n ::= sink;
+      path: LIST{NTP} := #;
+      loop until!(elt_eq(n,src)); 
+	 assert deb("next mwp node:"+node_str(n));
+	 yield n;
+	 if ~max_in_node.test(n) then
+	    #ERR+"*****Maximum weight source not found!!!****\n";
+	    #ERR+"Maximum weight table:\n"+max_weight.str+"\n";
+	    #ERR+"Maximum in node:\n"+max_in_node.str+"\n";
+	    #ERR+"N edges considered:\n"+n_edges_considered.str+"\n";
+	    raise "Maximum path sink was not reached from source!\n";
+	 end;
+	 n := max_in_node.get(n); 
+      end;
+      yield src;
+   end;
+
+   private deb(s: STR): BOOL is 
+      if debug  then #ERR+s+"\n"; end;
+      return true;
+   end;
+   
+   private deb2(s: STR) is     #ERR+s+"\n"; end;
+
+   private node_str(n: NTP): STR is
+      typecase n
+      when $STR then return n.str 
+      else return SYS::id(n).str;   end;
+   end;
+
+   private str(e: $OB): STR is
+      typecase e
+      when $STR then return e.str 
+      else 
+	 if ~void(e) then return SYS::id(e).str;
+	 else return "Void" end;
+      end;
+   end;
+
+end; -- class WTD_DIGRAPH_ALG
+-------------------------------------------------------------------
+

@@ -1,0 +1,106 @@
+Sqltutor schema is design to enable multiligual translations of
+tutorial questions with common @emph{problem} atributes and SQL
+solutions (anwers). For a given problem one or more questions can be
+defined with one or more possible solutions. A @emph{dataset} is a set
+of problems with given point evaluation and a common set of
+tables. Tutorials are defined as selections of datasets.
+
+@ifnotinfo
+@float Figure,schema
+@image{fig/schema,,3.5in}
+@caption{Sqltutor database schema}
+@end float
+@end ifnotinfo
+
+Tutorials, datasets and problems are defined in SQL language with a
+set of stored procedures. An example of how to define a dataset is
+given a file @code{compute_store.sql} with description of all steps
+in the comments.
+
+@section How to add new dataset
+
+To define a dataset we have to introduce its name (function
+@code{init_dataset} and optionaly describe its data source or sources
+(function @code{add_ds_source}). Dataset tables are described by calls
+to function @code{add_ds_table} where parameters are dataset name,
+priority in which tables are listed in tutorail questions, table name
+and the list of its column names (attributes).
+
+@noindent Example:
+
+@example
+SELECT init_dataset ('computer_store');
+SELECT add_ds_source('computer_store', 2010,
+       'http://en.wikibooks.org/wiki/SQL_Exercises/The_computer_store');
+SELECT add_ds_table ('computer_store', 1, 'manufacturers', 'code, name');
+SELECT add_ds_table ('computer_store', 2, 'products',
+                     'code, name, price, manufacturer');
+@end example
+
+For each @emph{problem} we can formulate one or more quesitions and
+one or more answers (sql queries). Within a dataset each problem is
+described by a unique identification number (secon parameter of the
+function @code{insert_problem}) followed by its point rating.
+
+@example
+-- dataset name, internal problem_id, points, category
+-- (currently unused)
+SELECT insert_problem ('computer_store', 10, 1, 'select');
+
+-- dataset name, internal problem id, order, language, question text
+SELECT insert_question('computer_store', 10, 1, 'en',
+       'Select the names and the prices of all the products 
+        in the store.');
+
+--  dataset name, internal dataset id, order, language, sql answer
+SELECT insert_answer  ('computer_store', 10, 1,
+                       'SELECT name FROM products;');
+@end example
+
+@noindent Tutoriual questions can be translated to other languages.
+
+@example
+-- Problem defines id, point rating and category
+SELECT insert_problem ('computer_store', 30, 2, 'select');
+SELECT insert_question('computer_store', 30, 1, 'en',
+       'Select the names of the products with a price less
+        than or equal to $200.');
+SELECT insert_answer  ('computer_store', 30, 1,
+       'SELECT name FROM products WHERE price <= 200;');
+
+-- Czech translation of problem id 30.  Answers (SQL code) are shared
+-- among all translations
+SELECT insert_question('computer_store', 30, 1, 'cs',
+                       'Vypište jména všech produktů, jejichž cena
+                        je menší nebo rovna 200 dolarů.');
+@end example
+
+@section How to add new tutorial
+
+A tutorial definition is simple, we introduce its language and name and
+add to it selected datasets.
+
+@example
+SELECT init_tutorial ('en', 'Demo');
+SELECT insert_dataset('Demo', 'en', 'computer_store');
+
+SELECT init_tutorial ('cs', 'Demo');
+SELECT insert_dataset('Demo', 'cs', 'computer_store');
+@end example
+
+@noindent Tutorials can be easily deleted. Datasets are independent on
+tutorials and they are not affected in any way when a tutorial
+referencing to them is deleted.
+
+@example
+SELECT delete_tutorial('cs', 'Demo');
+@end example
+
+
+@section Doxygen
+
+Doxygen generated source documentation is available only partly for
+classes implementing CGI interface for Sqltutor. Change to directory
+@file{doc} and run @file{make doxygen}. Generated output is stored in
+directories @file{html} and @file{latex}.
+

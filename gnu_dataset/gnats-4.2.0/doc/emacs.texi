@@ -1,0 +1,330 @@
+@ignore
+Copyright (C) 2001, 2002 Milan Zamazal
+
+Permission is granted to make and distribute verbatim copies of
+this manual provided the copyright notice and this permission notice
+are preserved on all copies.
+
+Permission is granted to process this file through TeX and print the
+results, provided the printed document carries a copying permission
+notice identical to this one except for the removal of this paragraph
+(this paragraph not being relevant to the printed manual).
+
+Permission is granted to copy and distribute modified versions of this
+manual under the conditions for verbatim copying, provided also that
+the entire resulting derived work is distributed under the terms of a
+permission notice identical to this one.
+
+Permission is granted to copy and distribute translations of this manual
+into another language, under the above conditions for modified versions.
+@end ignore
+
+@c ***************************************************************************
+
+@node Emacs
+@section The Emacs interface to @sc{gnats}
+@cindex Emacs
+
+Emacs interface to @sc{gnats} provides basic access to @sc{gnats}
+databases, i.e. sending, editing, and querying Problem Reports.  It
+also defines a simple major mode for editing @file{dbconfig} files.
+
+This section provides an overview of using @sc{gnats} with Emacs.  It
+does not describe the use of Emacs itself, for detailed instructions
+on using Emacs, see @ref{Top,,,emacs,GNU Emacs}.  For
+installation instructions of the @sc{gnats} Emacs mode, see
+@ref{Installing utils}.
+
+Please note the Emacs interface was completely rewritten between
+@w{@sc{gnats} 3} and @w{@sc{gnats} 4}.  It now uses @code{gnatsd},
+@ref{gnatsd}, exclusively for its operations and uses modern Emacs
+features like faces.  Its features are not complete though, you can
+send your suggestions and patches to the appropriate @sc{gnats}
+mailing list, @ref{Support}.
+
+@menu
+* Emacs viewing::               Viewing PRs by their number.
+* Emacs querying::              Querying the database.
+* Emacs submitting::            Submitting new PRs.
+* Emacs editing::               Editing PRs.
+* Emacs editing buffer::        The editing buffer.
+* Emacs and databases::         Changing the working database.
+* dbconfig mode::               Major mode for dbconfig files.
+* Other Emacs commands::        Miscellaneous commands.
+* Emacs customization::         Customizing the Emacs interface.
+@end menu
+
+@node Emacs viewing
+@subsection Viewing Problem Reports
+
+@cindex @code{view-pr}
+To view a particular Problem Report, use the command @kbd{M-x
+view-pr}.  It asks for a Problem Report number and displays that
+Problem Report.
+
+@cindex @code{gnats-view-edit-pr}
+The displayed buffer is put in the view mode, @ref{Misc File
+Ops,,,emacs,GNU Emacs}.  If you decide to edit the displayed Problem
+Report, use the command @kbd{e} (@code{gnats-view-edit-pr}).
+
+@table @code
+@cindex @code{gnats-view-mode-hook}
+@item gnats-view-mode-hook
+Hook run when @code{gnats-view-mode} is entered.
+@end table
+
+
+@node Emacs querying
+@subsection Querying Problem Reports
+
+@cindex @code{query-pr}
+Querying the database is performed by the @kbd{M-x query-pr} command.
+The command prompts for the query expression, @ref{Query expressions},
+and displays a buffer with the list of the matching Problem Reports.
+
+The list of the Problem Reports is displayed in the @samp{summary}
+query format, @ref{Formatting query-pr output}.  Currently, the
+display format cannot be changed and it must output each Problem
+Report's number in the first column.
+
+The Problem Report list buffer is put in the view mode, @ref{Misc File
+Ops,,,emacs,GNU Emacs}.  You can use most of the standard view mode
+commands in it.  Additionally, the following special commands are
+available:
+
+@table @kbd
+@cindex @code{gnats-query-view-pr}
+@item v
+@itemx RET
+@itemx mouse-2
+View the current Problem Report (@code{gnats-query-view-pr}),
+@ref{Emacs viewing}.
+
+@cindex @code{gnats-query-edit-pr}
+@item e
+Edit the current Problem Report (@code{gnats-query-edit-pr}),
+@ref{Emacs editing}.
+
+@cindex @code{gnats-query-reread}
+@item g
+Update the Problem Report list (@code{gnats-query-reread}).  The last
+performed query is executed again and the buffer is filled with the
+new results.
+
+@cindex @code{query-pr}
+@item G
+Perform new query (@code{query-pr}).
+
+@cindex @code{send-pr}
+@item s
+Send new Problem Report (@code{send-pr}), @ref{Emacs submitting}.
+
+@cindex @code{gnats-change-database}
+@item D
+Change the current database (@code{gnats-change-database}), @ref{Emacs
+and databases}.
+
+@cindex @code{bury-buffer}
+@item q
+Bury buffer, the buffer is put at the end of the list of all buffers.
+This is useful for quick escape of the buffer, without killing it.
+@end table
+
+@cindex @var{gnats-query-reverse-listing}
+If the value of the variable @var{gnats-query-reverse-listing} is
+non-@code{nil}, the listing appears in the reversed order, i.e. with
+the Problem Reports of the highest number first, in the buffer.
+
+Similarly to other @sc{gnats} Emacs modes, there is a hook available
+for the Problem Report list.
+
+@table @code
+@cindex @code{gnats-query-mode-hook}
+@item gnats-query-mode-hook
+Hook run when @code{gnats-query-mode} is entered.
+@end table
+
+
+@node Emacs submitting
+@subsection Submitting new Problem Reports
+
+@cindex @code{send-pr}
+You can submit new Problem Reports with the command @kbd{M-x send-pr}.
+The command puts you to the problem editing buffer, @ref{Emacs
+editing}.  The buffer is prefilled with the initial report fields and
+their default values, if defined.  You can use the usual Problem
+Report editing commands, @ref{Emacs editing}.  When you have filled in
+all the fields, you can send the Problem Report by presing @kbd{C-c
+C-c}.
+
+If you run @kbd{M-x send-pr} with a prefix argument, it runs the
+@code{gnats-change-database} command before putting you to the editing
+buffer, @ref{Emacs and databases}.
+
+You can set the following variables to get some fields pre-filled:
+
+@table @var
+@cindex @var{gnats-default-organization}
+@item gnats-default-organization
+Default value of the @samp{Organization} field used in new Problem Reports.
+
+@cindex @var{gnats-default-submitter}
+@item gnats-default-submitter
+Default value of the @samp{Submitter-Id} field used in new Problem Reports.
+@end table
+
+
+@node Emacs editing
+@subsection Editing Problem Reports
+
+@cindex @code{edit-pr}
+To edit a particular Problem Report, use the command @kbd{M-x
+edit-pr}.  It asks for a Problem Report number and puts the given
+Problem Report in the editing buffer.  @xref{Emacs editing buffer},
+for information how to edit the Problem Report in the buffer and how
+to submit your changes.
+
+Note you can also start editing of a selected Problem Report directly
+from within the viewing buffer, @ref{Emacs viewing}, or the query
+result buffer, @ref{Emacs querying}.
+
+
+@node Emacs editing buffer
+@subsection The Problem Report editing buffer
+
+When you invoke a Problem Report editing command, the Problem Report
+is put into a special editing buffer.  The Problem Report is formatted
+similarly to the @code{query-pr -F} output, @ref{Formatting query-pr
+output}.  Field identifiers are formatted as
+
+@example
+>Field:
+@end example
+
+with the text of the field following the identifier on the same line
+for single-line fields or starting on the next line for multi-line
+fields.
+
+The Problem Report editing mode tries to prevent you from violating
+the Problem Report format and the constraints put on the possible
+field values.  Generally, you can use usual editing commands, some of
+them have a slightly modified behavior though.  (If you encounter a
+very strange behavior somewhere, please report it as a bug,
+@ref{Support}.)
+
+@cindex @code{gnats-next-field}
+@cindex @code{gnats-previous-field}
+You can move between fields easily by pressing the @kbd{TAB}
+(@code{gnats-next-field}) or @kbd{M-TAB}
+(@code{gnats-previous-field}) keys.
+
+The field tags are read-only and you cannot edit them nor delete them.
+If you want to ``remove'' a field, just make its value empty.
+
+Editing a field value depends on the type of the edited field,
+@ref{Field datatypes}.  For text fields, you can edit the value
+directly, assuming you preserve the rule about single-line and
+multi-line values mentioned above.
+
+For enumerated fields, you cannot edit the value directly.  You can
+choose it from the list of the allowed values, either from the menu
+popped up by pressing the middle mouse button or from within
+minibuffer by pressing any key on the field's value.  If the pressed
+key matches any of the allowed field values, that value is put as the
+default value after the minibuffer prompt.  You can also cycle through
+the allowed field values directly in the editing buffer using the
+@code{SPACE} key.  Enumerated field values are marked by a special
+face to not confuse you; you must have enabled font lock mode to
+benefit from this feature, @ref{Font Lock,,,emacs,GNU Emacs}.
+
+Some field values can be read-only, you cannot edit them at all.
+
+@cindex @code{gnats-apply-or-submit}
+Once you have edited the Problem Report as needed, you can send it to
+the server with the @kbd{C-c C-c} command
+(@code{gnats-apply-or-submit}).  Successful submission is reported by
+a message and the buffer modification flag in mode line is cleared.
+Then you can either kill the buffer or continue with further
+modifications.
+
+@table @code
+@cindex @code{gnats-edit-mode-hook}
+@item gnats-edit-mode-hook
+Hook run when @code{gnats-edit-mode} is entered.
+@end table
+
+
+@node Emacs and databases
+@subsection Changing the database
+
+@cindex @code{gnats-change-database}
+By default, the Emacs interface connects to the default database,
+@ref{databases file}.  If you want to connect to another database, use
+the command @kbd{M-x gnats-change-database}.  It will ask you for the
+database name to use, server and port it can be accessed on, and your
+login name.
+
+@cindex gnatsd, Emacs
+If you want to use the @command{gnatsd} command, @ref{gnatsd},
+directly, without connecting to a remote server or the localhost
+connection port, provide your local file system full path to
+@command{gnatsd} as the server name.  Port number does not matter in
+this case.
+
+@cindex password, Emacs
+If the database requires a password to allow you the access to it, you
+are prompted for the password the first time you connect to the
+database.  If you provide an invalid password, you cannot connect to
+the database anymore and you have to run the @kbd{M-x
+gnats-change-database} command again.
+
+
+@node dbconfig mode
+@subsection dbconfig mode
+
+@cindex dbconfig mode
+@cindex @code{gnats-dbconfig-mode}
+The Emacs interface defines a simple major mode
+@code{gnats-dbconfig-mode} for editing @file{dbconfig} files,
+@ref{dbconfig file}.  It defines basic mode attributes like character
+syntax and font lock keywords, it does not define any special commands
+now.
+
+@table @code
+@cindex @code{gnats-dbconfig-mode-hook}
+@item gnats-dbconfig-mode-hook
+Hook run when @code{gnats-dbconfig-mode} is entered.
+@end table
+
+
+@node Other Emacs commands
+@subsection Other commands
+
+@table @kbd
+@cindex @code{unlock-pr}
+@item M-x unlock-pr
+Ask for a Problem Report number and unlock that Problem Report.  This
+function is useful if connection to a @sc{gnats} server was
+interrupted during an editing operation and further modifications of
+the Problem Report are blocked by a stealth lock.
+
+@cindex @code{unlock-database}
+@item M-x unlock-database
+Unlock the whole @sc{gnats} database.  This function is useful in
+situations similar to when @code{unlock-pr} is used.
+
+@cindex @code{gnats-show-connection}
+@item M-x gnats-show-connection
+Show the connection buffer associated with the current buffer.  You
+can view the Emacs communication with @sc{gnatsd} in it.  This is
+useful when something strange happens during the communication with
+the server, e.g. when sending a Problem Report with @kbd{C-c C-c} from
+a Problem Report editing buffer.
+@end table
+
+
+@node Emacs customization
+@subsection Customization
+
+All the user variables can be customized in the customization group
+@code{gnats}, @ref{Easy customization,,,emacs,GNU Emacs}.

@@ -1,0 +1,1 @@
+../swstructlib/src/swmetadata/swmemfile.h

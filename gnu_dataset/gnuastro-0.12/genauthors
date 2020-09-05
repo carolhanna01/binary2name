@@ -1,0 +1,104 @@
+#! /bin/sh
+#
+# Generate a list of authors from the git repository, it will only
+# actually do anything if a .git file exists. Run like this:
+#
+#    ./genauthors top/bin/dir
+#
+# Note that some authors might have changed their email addresses over
+# the course of their contributions to Gnuastro. Fortunately Git has a
+# great tool for that: the .mailmap file. It has already been included
+# in the source code and if any author changes their email address or
+# would want their name to be printed differently here, please use
+# that file. See the git-shortlog manpage for a complete explanation
+# of all the possible ways to do this.
+#
+# Original author:
+#     Mohammad Akhlaghi <mohammad@akhlaghi.org>
+# Contributing author(s):
+# Copyright (C) 2015-2020, Free Software Foundation, Inc.
+#
+# Gnuastro is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation, either version 3 of the License, or (at your
+# option) any later version.
+#
+# Gnuastro is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with Gnuastro. If not, see <http://www.gnu.org/licenses/>.
+
+
+
+
+
+# Initial settings:
+set -o nounset                  # Stop if a variable is not set.
+set -o errexit                  # Stop if a program returns false.
+
+
+
+
+
+# Only do the job if a .git directory exists (recall that this script
+# is also present in the tar-ball with no .git directory and might be
+# run from there)
+if [ ! -d "$1/.git" ]; then
+    echo "There is no Git repository in the source directory."
+    echo "AUTHORS cannot be generated."
+    exit 0
+fi
+
+
+
+
+
+# Print a status report, since this will be run along with the large
+# number of bootstrap operations, it is best to tell the users since
+# it might take a few seconds.
+echo "Generating AUTHORS from the version controlled source..."
+
+
+
+
+
+# Make sure the .mailmap file is present in this directory, so Git can fix
+# the different email addresses and names of one person. Note that while
+# this is in the top source directory, it is possible for the source and
+# build directories to be different, and we have to be prepared for that.
+if [ ! -f .mailmap ]; then
+    ln -s $1/.mailmap .mailmap
+fi
+
+
+
+
+
+# Set the version number. Note that this script is also run at the start of
+# the bootstrapping process. At that point we don't have the '.version'
+# file, so we will just rely on '.git describe'. Later during 'make', this
+# scripot will be run again to set it using 'git-version-gen'.
+if [ -f "$1/.version" ]; then
+    gnuastroversion="Gnuastro "$(cat "$1/.version")
+else
+    gnuastroversion=$(git --git-dir=$1/.git describe)
+fi
+
+
+
+
+
+# Print the top of the AUTHORS file.
+echo "GNU Astronomy Utilities (Gnuastro) authors
+==========================================
+
+Generated for $gnuastroversion.
+Ordered by number of commits in the Git project history.
+" > $1/AUTHORS
+
+# Generate the aggregate list
+git --git-dir=$1/.git shortlog --summary --email --no-merges \
+    --numbered >> $1/AUTHORS

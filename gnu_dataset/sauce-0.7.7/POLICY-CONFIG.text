@@ -1,0 +1,195 @@
+SAUCE POLICY and RECIPIENT CLASSES
+----------------------------------
+
+SAUCE can (and should) be configured to treat different recipient
+addresses differently.  When a RCPT command is received, SAUCE will
+determine what class the proposed recipient falls into.  Then,
+depending on the class, it will decide whether to accept, defer or
+reject this recipient; the classes accepted for a particular message
+can also affect SAUCE's behaviour after it has received the message
+body.
+
+The categorisation of recipient addresses into classes may change from
+time to time or from message to message depending on other available
+information.
+
+
+RECIPIENT CLASSES
+-----------------
+
+The recipient classes are:
+
+ normal
+        All normal SAUCE checking on the sending site's DNS and mail
+        system, and on the syntax and semantics of the message
+        headers, will be done.  Mail from new sites and new senders
+        will be delayed according to the configured policy.
+
+ nodelay
+        All the normal checks are done.  However, mail will not be
+        deferred solely because the sender or site is previously
+        unknown to SAUCE.
+
+ bait
+        The address has been published in a way that will hopefully
+        get it included in spammers' recipient lists, and never been
+        published in a way that a human might accidentally mail it.
+        SAUCE will blacklist the sending site and/or email addresses,
+        according to its configuration.  Mail for bait addresses is
+        (usually) accepted and discarded, so that the bait addresses
+        are not removed from spammers' lists.
+
+ unchecked
+        None of SAUCE's policy checks will be done.  The intent is
+        that SAUCE's behaviour for mail for unchecked recipients not
+        be significantly different from that of the underlying MTA.
+
+        HOWEVER: a single message delivery cannot go to both unchecked
+        and normal/nodelay recipients, because SAUCE would be faced
+        with a dilemma if the headers had policy problems - it would
+        neither be correct to bounce, nor to accept, the mail.  To
+        avoid this, if SAUCE has already accepted a normal/nodelay
+        address and is offered an unchecked one, or vice versa, SAUCE
+        will defer the later address with a `450'.  The calling site
+        must retry the deferred address, but in practice may do so
+        only some time later (and if it is broken, not at all).
+
+        This means that messages sent to a mixture of normal/nodelay
+        addresses and unchecked addresses will *usually* be
+        significantly delayed for at least some recipients.  For this
+        reason unchecked addresses should be used sparingly; they are
+        intended for mail administration role addresses such as
+        postmaster which *must* not reject mail spuriously.
+
+ lax
+        None of SAUCE's policy checks that can be applied at the RCPT
+        stage will be done, and unless the same message is also sent
+        to some normal/nodelay recipients, lax is just the same as
+        unchecked.
+
+        However, if single message is sent to a mixture of lax and
+        normal/nodelay addresses, problems with its headers may cause
+        the whole message transaction to be rejected, so that even the
+        lax recipient will not receive it.  This avoids the problem
+        with `unchecked' above: instead of deferring the later address
+        class with `450', SAUCE will accept all the recipients, but
+        risk rejecting the whole mail - even for the lax recipients -
+        if the headers reveal problems.
+
+ 450 <message re temporary general addressee unavailability>
+ 451 <message re temporary internal processing error>
+ 452 <message re temporary lack of storage space>
+ 550 <message re permanent addressee unavailability or access denial>
+ 552 <message re permanent lack of storage space>
+ 553 <message re (permanent) addressee syntax problem>
+        These recipient classes specify directly the response to be
+        sent to the RCPT command.  Usually 550 or 450 should be used.
+
+Ordinary mail recipient addresses should use one of normal, nodelay or
+lax, along with possibly 550 to block specific kinds of mail.
+
+
+    When to use lax and when to use unchecked ?
+    -------------------------------------------
+
+    lax and unchecked are identical for messages which are not also
+    sent to some normal/nodelay addresses, or for messages/sites with
+    problems which SAUCE detects before seeing the headers.  The only
+    difference between them comes when a single message is sent to
+    both normal/nodelay and lax/unchecked addresses (and there are no
+    problems which show up before the message headers are seen).
+
+    With unchecked, whenever such a message is sent, at least some of
+    the recipients will recieve their copy of the mail late - even if
+    there is nothing wrong with the mail, and they are regular
+    correspondents.  However, the unchecked recipients will receive
+    the mail even if the headers are broken.
+
+    With lax, if the message has no problems revealed by the headers,
+    it will be delivered without delay to all of the recipients.
+    However, if the headers have problems then the mail will be
+    rejected after the body has been received, and so none of the
+    recipients will receive it.
+
+    Therefore, `unchecked' is more appropriate for administrative and
+    problem-reporting addresses.  `lax' should be used for normal
+    correspondence, to avoid spurious delays to routine mail.
+
+
+POLICY FILE SYNTAX
+------------------
+
+SAUCE can be configured by the use of recipient policy files.  These
+are a series of lines which look like this
+ <sending-site-pat>  <sending-addr-pat>  <receiving-addr-pat>  <class>
+followed by a single line containing only `.'.
+Blank lines are permitted.  Lines starting with # are comments.
+
+<sending-site-pat> is one of
+  [<ip-address>]
+  [<ip-address-mask>/<prefix-len>]
+  <domain-name-glob>
+(where the [ and ] are literals and must actually appear surrounding
+the address or mask/length.)
+
+<some-addr-pat> is one of
+  <local-part-glob>@
+  <address-glob>  (not ending in @)
+(To match `<>' when specified as envelope sender, match `@' instead.)
+
+globs may contain no whitespace.  They support [...], ? and * and
+\-escapes for those metacharacters.  There is no way to specify
+patterns including whitespace.
+
+<class> is the address class, ie one of
+  450|451|452|550|552|553 <message-string>
+  normal|lax|nodelay|bait|unchecked
+as specified above.
+
+The first matching line in the policy is determining.
+
+
+INSTALLING AND USING POLICY
+---------------------------
+
+When a RCPT is issued the SAUCE configuration may direct that a policy
+file be used.  This is done with the addr_regexp configuration
+directive.
+
+Policy files have to be compiled and installed into SAUCE's internal
+policy directory (/var/lib/sauce/policies by default), using the
+sauce-setsyspolicy and sauce-setuserpolicy commands.
+
+There are two special kinds of `class' which can be used in
+addr_regexp, `policy' for system policies specified by the
+administrator, and `user' for policies specified by individual users
+using userv.  They work as follows:
+
+ Recipient class      Subpolicy argument
+ in addr_regexp       to sauce-set*policy   Default policy file
+			 
+ policy                                     /etc/sauce/policy	           
+ policy=<subpolicy>     :<subpolicy>        /etc/sauce/policy:<subpolicy> 
+ policy=<subpolicy>:    :<subpolicy>:$1     /etc/sauce/policy:<subpolicy>:$1
+		                       	 				   
+ user                                       ~$1/.sauce-policy                 
+ user=<user>                                ~<user>/.sauce-policy             
+ user=<user>:           :$1                 ~<user>/.sauce-policy:$1          
+ user=<user>:<suffix>   :<suffix>           ~<user>/.sauce-policy:<suffix>    
+ user=<user>:<suffix>:  :<suffix>:$1        ~<user>/.sauce-policy:<suffix>:$1 
+
+Here $1 is the first regexp match substring string from the
+addr_regexp, after the destination address has matched.  In the regexp
+match all characters except 7-bit alphanumerics and the puncutuation
+characters  - + _ . % $  will be replaced with ?, and if there are any
+more than 126 characters all extra ones will be replaced with *,
+before the relevant policy is looked up.
+
+Do not attempt to set or use policies whose names contain `/'.
+
+In any case, if the relevant policy has not been installed, or no line
+in the policy matches, then the addr_regexp processing continues as if
+the regexp had not matched.
+
+
+$Id: POLICY-CONFIG.text,v 1.2 2001/03/21 18:33:54 ian Exp $

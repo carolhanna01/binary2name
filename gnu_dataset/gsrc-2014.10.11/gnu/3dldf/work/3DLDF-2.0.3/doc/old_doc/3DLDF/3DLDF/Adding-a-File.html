@@ -1,0 +1,168 @@
+<html lang="en">
+<head>
+<title>Adding a File - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="prev" href="Utility-Functions.html#Utility-Functions" title="Utility Functions">
+<link rel="next" href="Future-Plans.html#Future-Plans" title="Future Plans">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Adding-a-File"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Future-Plans.html#Future-Plans">Future Plans</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Utility-Functions.html#Utility-Functions">Utility Functions</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="index.html#Top">Top</a>
+<hr>
+</div>
+
+<h2 class="chapter">39 Adding a File</h2>
+
+<p>Version 1.1.1 was the first version of 3DLDF since it became a GNU
+package (the current version is 1.1.5.1).  In previous versions,
+recompilation was controlled by an
+auxilliary program, which I wrote in C++
+ using CWEB.  However,
+in the course of making 3DLDF conformant to the
+GNU Coding Standards<a rel="footnote" href="#fn-1" name="fnd-1"><sup>1</sup></a>,
+this has
+been changed.  Recompilation is now controlled by <samp><span class="command">make</span></samp>, as is
+customary.  The chapter &ldquo;Compiling&rdquo; in previous editions of this
+manual, is therefore no longer needed.
+
+   <p>Nonetheless, using CWEB still has consequences for the way recompilation
+must be handled, and it was fairly tricky getting <samp><span class="command">make</span></samp> to work
+for 3DLDF.  Users who only put code in <samp><span class="file">main.web</span></samp> and/or change
+code in existing files won't have to worry about this;
+for others, this chapter explains how to add
+files to 3DLDF.
+
+   <p>Let's say you want to add a file <samp><span class="file">widgets.web</span></samp> that defines a
+<code>class Widget</code>, and that the latter needs access to
+<code>class Rectangle</code>, and is in turn required by <code>class Ellipse</code>. 
+Code must be added to <samp><span class="file">3DLDF-1.1.5.1/CWEB/Makefile</span></samp> for
+ctangling <samp><span class="file">widgets.web</span></samp>, compiling <samp><span class="file">widgets.cxx</span></samp>, and linking
+<samp><span class="file">widgets.o</span></samp> with the other object files to make the executable
+<samp><span class="file">3dldf</span></samp>.
+
+   <p>The best way to do this is to change
+<samp><span class="file">3DLDF-1.1.5.1/CWEB/Makefile.am</span></samp> and use Automake
+to generate a new <samp><span class="file">Makefile.in</span></samp>.  Then, <samp><span class="command">configure</span></samp> can be
+used to generate a new <samp><span class="file">Makefile</span></samp>.  It would be possible to modify
+<samp><span class="file">Makefile</span></samp> by hand, but I don't recommend it.  The following
+assumes that the user has access to Automake.  If he or she is using a
+GNU/Linux system, this is probably true.<a rel="footnote" href="#fn-2" name="fnd-2"><sup>2</sup></a>
+
+   <p>&lsquo;<samp><span class="samp">widgets.web</span></samp>&rsquo; must be added between &lsquo;<samp><span class="samp">rectangs.web</span></samp>&rsquo; and
+&lsquo;<samp><span class="samp">ellipses.web</span></samp>&rsquo; in the following variable declaration in
+<samp><span class="file">3DLDF-1.1.5.1/CWEB/Makefile.am</span></samp>:
+
+<pre class="example">     3dldf_SOME_CWEBS = pspglb.web io.web colors.web transfor.web \
+                        shapes.web pictures.web points.web \
+                        lines.web planes.web paths.web curves.web \
+                        polygons.web rectangs.web ellipses.web \
+                        circles.web patterns.web solids.web
+                        solfaced.web cuboid.web polyhed.web \
+                        utility.web parser.web examples.web
+</pre>
+   <p>Now, add &lsquo;<samp><span class="samp">widgets.o</span></samp>&rsquo; between &lsquo;<samp><span class="samp">ellipses.o</span></samp>&rsquo; and
+&lsquo;<samp><span class="samp">rectangs.o</span></samp>&rsquo; in the following variable declaration:
+
+<pre class="example">     3dldf_OBS_REVERSED = main.o examples.o parser.o utility.o \
+                          polyhed.o cuboid.o  solfaced.o solids.o \
+                          patterns.o circles.o ellipses.o rectangs.o \
+                          polygons.o curves.o paths.o \
+                          planes.o lines.o points.o pictures.o shapes.o
+                          transfor.o colors.o io.o pspglb.o
+</pre>
+   <p><code>3dldf_OBS_REVERSED</code> is needed, because 3DLDF fails with
+a &ldquo;Segmentation fault&rdquo;, if
+the executable is linked using <code>$(3dldf_OBJECTS)</code>.  This may cause
+problems, if <samp><span class="file">3dldf</span></samp> isn't built using the GNU C++
+ compiler
+(GCC).
+
+   <p>Now add a target for <samp><span class="file">widgets.o</span></samp> between the targets for
+<samp><span class="file">rectangs.o</span></samp> and <samp><span class="file">ellipses.o</span></samp>, and add <samp><span class="file">widgets.tim</span></samp>
+after <samp><span class="file">rectangs.tim</span></samp> in the list of prerequisites for
+<samp><span class="file">ellipses.o</span></samp>:
+
+<pre class="example">     rectangs.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+              shapes.tim pictures.tim points.tim lines.tim planes.tim \
+              paths.tim curves.tim polygons.tim rectangs.cxx
+     
+     ellipses.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+              shapes.tim pictures.tim points.tim lines.tim planes.tim \
+              paths.tim curves.tim polygons.tim rectangs.tim ellipses.cxx
+</pre>
+   <p>This is the result:
+<pre class="example">     rectangs.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+              shapes.tim pictures.tim points.tim lines.tim planes.tim \
+              paths.tim curves.tim polygons.tim rectangs.cxx
+     
+     widgets.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+              shapes.tim pictures.tim points.tim lines.tim planes.tim \
+              paths.tim curves.tim polygons.tim rectangs.tim \
+              widgets.cxx
+     
+     ellipses.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+              shapes.tim pictures.tim points.tim lines.tim planes.tim \
+              paths.tim curves.tim polygons.tim rectangs.tim widgets.tim \
+              ellipses.cxx
+</pre>
+   <p>In addition, <samp><span class="file">widgets.tim</span></samp>
+must be added to the list of prerequisites in all of the following
+targets up to and including <samp><span class="file">examples.o</span></samp>.
+
+<!-- This is ~/metafont/metapost/perspective/DOCUMENTATION/future.texi -->
+<!-- This file is part of the 3DLDF User and Reference Manual. -->
+<!-- Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation -->
+<!-- See the section "GNU Free Documentation License" in the file -->
+<!-- fdl.texi for copying conditions. -->
+   <div class="footnote">
+<hr>
+<h4>Footnotes</h4><p class="footnote"><small>[<a name="fn-1" href="#fnd-1">1</a>]</small> The GNU Coding Standards are available at
+<a href="http://www.gnu.org/prep/standards_toc.html">http://www.gnu.org/prep/standards_toc.html</a>.</p>
+
+   <p class="footnote"><small>[<a name="fn-2" href="#fnd-2">2</a>]</small> Automake is available for downloading from
+<a href="http://ftp.gnu.org/gnu/automake/">http://ftp.gnu.org/gnu/automake/</a>.  The Automake website is at
+<a href="http://www.gnu.org/software/automake/">http://www.gnu.org/software/automake/</a>.</p>
+
+   <hr></div>
+
+   </body></html>
+

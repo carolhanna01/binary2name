@@ -1,0 +1,92 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-------------------------------------------------------------------
+abstract class $OB is
+   -- Just a stub.  Everything subtypes from $OB, but this may not
+   -- be explicitly indicated in the compiler/browser type graph
+   
+end; -- type $OB
+-------------------------------------------------------------------
+class EXT_OB is
+   -- External objects.
+end; -- class EXT_OB
+-------------------------------------------------------------------
+class CAST{T} is
+   -- Narrow down from $OB to type T. A useful substitute for the
+   -- one line typecase statement.
+   --   Usage:
+   --    a: $OB := 3;
+   --    b: INT := CAST{INT}::from(a);
+   -- 
+   
+   create: SAME is return new end;
+   -- Used to get the class name (won't work with void?)
+   
+   from(o: $OB): T is 
+      -- Cast from o:$OB "o" to be of type T.
+      -- Raise the exception CAST_EXC if "o" is not of type T
+      -- 
+      -- Usage:
+      --    a: $OB := 3;
+      --    b: INT := CAST{INT}::from(a);
+      typecase o 
+      when T then return o 
+      else 
+	 res:CAST_EXC := #(o,#SAME);
+	 #ERR+res.str+"\n";
+	 raise res;
+      end;
+   end;
+   
+end;
+-------------------------------------------------------------------
+class CAST_EXC < $STR is
+   -- Exception that is raised when a CAST{T}::from call fails
+
+   readonly attr ob: $OB;
+   readonly attr caster: $OB;	-- Mainly so that we can find out the 
+   -- class name of the cast for error reporting.
+   
+   create(ob: $OB,caster: $OB): SAME is
+      res ::= new;
+      res.ob := ob;
+      res.caster := caster;
+      return res;
+   end;
+   
+   str: STR is 
+      caster_tp::= SYS::tp(caster);
+      caster_name::= SYS::str_for_tp(caster_tp);
+      res ::= "Typecasing using:"+caster_name+" ";
+      if void(ob) then res := res+" attempted to typecase a void object";
+      else 
+	 ob_tp ::= SYS::tp(ob);
+	 ob_classname ::= SYS::str_for_tp(ob_tp);
+	 res := res + " tried an invalid typecase from:"+ob_classname;
+      end;
+      return res;
+   end;
+   
+end;
+-------------------------------------------------------------------
+partial class ID is
+   -- ID is meant to be included by types that wish to provide object 
+   -- equality as their natural, immutable
+   -- identity relation
+      is_eq(arg:$OB):BOOL is return SYS::ob_eq(self,arg) end;
+      -- is_lt and hash fail for value types
+      is_lt(arg:$OB):BOOL is return SYS::id(self) < SYS::id(arg) end;
+      hash:INT is return SYS::id(self).hash end;
+   end;
+-------------------------------------------------------------------+

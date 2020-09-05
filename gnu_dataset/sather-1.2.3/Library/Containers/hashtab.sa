@@ -1,0 +1,441 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Holger Klawitter <holger@math.uni-muenster.de>
+--
+-- hashtab.sa:
+-- DYNAMIC_BUCKET_TABLE{K,BUCKET}
+-- DYNAMIC_DATABUCKET_TABLE{K,BUCKET}
+--   The dynamic hash table used as basis for container classes 
+--   SET, MAP, BAG and MULTIMAP.
+--   Unlike normal hash tables a dynamic hash table can do fast shrinking.
+--   See: Per-Ake Larson; Communications of the ACM Vol.31 (1988) P.446-457
+-- BUCKET{E}
+-- DATABUCKET{K,E}
+--   Implementation of the cell contents of the dynamic hashs table. BUCKETs
+--   are not used in the interface of the hash table.
+-- $BUCKET{E,ME}
+--   Type bound for buckets in a dynamic hash table.
+---------------------------------------------------------------------------
+class DYNAMIC_BUCKET_TABLE{E,BUCKET<$BUCKET{E,BUCKET}} is
+   -- Data structure used to implement a hash table.
+   -- Per-Ake Larson; Communications of the ACM Vol.31 (1988) P.446-457
+   -- The directory/segment structure is changed in favor of a dymnamically
+   -- changing array as storage area.
+   include COMPARE{E} elt_eq->elt_key_eq,elt_hash->elt_key_hash,
+	 elt_nil->elt_key_nil,elt_lt->,is_elt_nil->;
+   
+   private shared lower_fill_ratio: FLT := 0.800;
+   private shared upper_fill_ratio: FLT := 1.000;
+   -- For fast access one needs a low ratio between number of elements in the 
+   -- and number of cells. For efficient memory usage one needs a high ratio.
+   -- The ratio should always be between these two bounds (unless the table
+   -- is really small; where the ratio can get even lower.)
+
+   private attr store: AREF{BUCKET};
+   -- Here is the data being stored.
+
+   private attr doubles: INT;
+   -- Number of times the initial table size has been doubled.
+
+   private attr split_pos: INT;
+   -- Position of the next bucket to split.
+
+   private attr bound: INT;
+   -- Upper bound for split_pos. Is always initial_size * 2.pow(doubles)
+
+   private attr asize: INT;
+   -- The size of the fraction of the store which is currently in use.
+   -- Array access beyond this bound is illegal.
+
+   private attr minsize: INT;
+   -- Lower bound for the store size.
+
+   readonly attr n_inds: INT;
+   -- Returns the number of elements (resp. indices) in the table.
+
+   private hash(e:E): INT  pre ~void(self) is
+      -- Returns the bucket to store e. This number will be
+      -- generated from the hash-value and be normailzed through
+      -- the actual size of the set.
+      h,res: INT;
+	
+      h := elt_key_hash(e);
+      res := h % bound;
+      if res >= split_pos then return res end;
+      return h % ( bound.lshift(1) )
+   end;
+    
+   set_bucket(i:INT,l:BUCKET)
+      pre 0 <= i and i < asize and ~void(self)
+   is 
+      store[i]:=l
+   end;
+
+   bucket(i:INT): BUCKET
+      pre 0 <= i and i < asize and ~void(self)
+   is 
+      return store[i]
+   end;
+
+   create: SAME
+   is
+      if void(self) then return create_sized(16) end;
+      return create_sized(minsize.rshift(1))
+   end;
+
+   create_sized(initial_size:INT): SAME 
+   -- Creating a table with another minimal size. This might be useful to avoid
+   -- shrinking of large table which might get very empty.
+      pre initial_size.is_even and initial_size > 0
+   is
+      res ::= new;
+      res.store := #AREF{BUCKET}(initial_size.lshift(2));
+      res.bound := initial_size;
+      res.asize := initial_size.lshift(1);
+      res.minsize := initial_size.lshift(1);
+      return res
+   end;
+
+   map_copy: SAME	pre ~void(self) is
+      -- Returns a copy of self with all properties set like self.
+      res ::= new;
+      res.store := store.create(store.asize);
+      res.asize := asize;
+      res.n_inds := n_inds;
+      res.minsize := minsize;
+      res.bound := bound;
+      res.doubles := doubles;
+      res.split_pos := split_pos;
+      loop
+	 i ::= 0.upto!(asize-1);
+	 res.store[i] := store[i].copy_list;
+      end;
+      return res
+   end;
+
+   -- The functions changing the size of the bucket table:
+   -- They are split into three steps.
+   -- 1.) Splitting the next bucket into two (update_*)
+   -- 2.) Resizing the storage area. (shrink/grow)
+   -- 3.) Using the next storage cell for the new bucket. (update_*)
+
+   private grow pre ~void(self) is 
+      -- Increases the size of the array by one.
+      -- The functions changing the size of the bucket table:
+      -- They are split into two parts.
+      -- 1.) Splitting the next bucket into two. (update_*)
+      -- 2.) Resizing the storage area. (shrink/grow)
+      if store.asize = asize then
+	 news ::= store.create(asize.lshift(1));
+	 loop news.aset!(store.aelt!) end;
+	 store := news
+      end;
+      asize := asize + 1;
+   end;
+
+   private shrink  pre ~void(self) is
+      -- Decreases the size of the array by one.  Resizes the storage
+      -- area, if neccessary.  If the size in use = minsize, do
+      -- nothing.  If the size in use is half the array size then
+      -- shrink the array 
+      if asize = minsize then return end;
+      if store.asize = asize.lshift(1) then
+	 news ::= store.create(asize);
+	 loop news.aset!(store.aelt!) end;
+	 store := news
+      end;
+      asize := asize - 1;
+   end;
+
+   private update_insert is
+      -- Checks the actual fill ratio of the set.
+      -- Adds a bucket to the hash table if the ratio is high enough. 
+      -- The functions changing the size of the bucket table
+      -- are split into two parts.
+      -- 1.) Splitting the next bucket into two. (update_*)
+      -- 2.) Resizing the storage area. (shrink/grow)
+      if n_inds.flt / (bound+split_pos).flt < upper_fill_ratio then
+	 return
+      end;
+	
+      cur ::= bucket(split_pos);
+      prev ::= cur; prev := void;
+      -- This is an ugly hack to make prev to have the same type
+      -- like cur.
+      loop until!( void(cur) );
+	 if elt_key_hash(cur.item) % ( bound.lshift(1) ) = split_pos
+	 then			-- keep in the old bucket
+	    prev := cur;
+	    cur := cur.next;
+	 else			-- put into new bucket
+	    if void(prev) then	-- the first one for new bucket
+	       set_bucket(split_pos, cur.next);
+	       cur.next( bucket(bound + split_pos) );
+	       set_bucket( bound + split_pos, cur );
+	       cur := bucket( split_pos )
+	    else
+	       prev.next(cur.next);
+	       cur.next( bucket( bound + split_pos ));
+	       set_bucket( bound + split_pos, cur );
+	       cur := prev.next
+	    end
+	 end	
+      end;
+      grow;
+      split_pos := split_pos + 1;
+      if split_pos = bound then
+	 split_pos := 0;
+	 doubles := doubles + 1;
+	 bound := bound.lshift(1);
+      end
+   end; -- update_insert
+    
+   private update_delete is
+      -- Checks the actual fill ratio of the set.
+      -- Removes a bucket from the hash table if the ratio is low enough.
+      if n_inds.flt / (bound+split_pos).flt > lower_fill_ratio then
+	 return
+      end;
+	
+      --      to_merge ::= bucket(split_pos);
+      --      if void(to_merge) then -- just get the other bucket
+      --	 set_bucket( split_pos, bucket( bound + split_pos ))
+      --      else 
+      --	 to_merge.append( bucket( bound + split_pos ) )
+      --      end;
+      --      set_bucket( bound + split_pos, void );
+      --      shrink;
+      split_pos := split_pos - 1;
+      if split_pos < 0 then
+	 if doubles = 0 then
+	    split_pos := 0
+	 else
+	    doubles := doubles - 1;
+	    bound := bound.rshift(1);
+	    split_pos := bound - 1;
+	 end
+      end;
+      shrink;
+      to_merge ::= bucket(split_pos);
+      if void(to_merge) then	-- just get the other bucket
+	 set_bucket( split_pos, bucket( bound + split_pos ))
+      else 
+	 to_merge.append( bucket( bound + split_pos ) )
+      end;
+      set_bucket( bound + split_pos, void );
+   end; -- update_delete
+   
+   dbg: STR
+   -- Returns an interal string representation of the hashtable.
+   -- For debugging only.
+   is
+      res:STR;
+      res := "split_pos=" + split_pos + ", bound=" + bound +
+	    ", asize=" + asize + ", size=" + n_inds + ", minsize=" +
+	    minsize + "\n";
+      loop
+	 l ::= store.aelt!;
+	 bkt: STR := "";
+	 itemstr: STR;
+	 item ::= l.list!.item;
+	 typecase item
+	 when $STR then itemstr := item.str
+	 else itemstr := SYS::id(item).str; end;
+	 loop bkt := bkt + ",".separate!(itemstr) end;
+	 res := res + ", ".separate!(0.up!.str+"="+bkt);
+      end;
+      return res+"\n";
+   end; -- dbg
+    
+end; -- DYNAMIC_BUCKET_TABLE
+---------------------------------------------------------------------------
+class DYNAMIC_DATABUCKET_TABLE{K,E}
+-- This version of a DYNAMIC_BUCKET_TABLE does not simply store elements,
+-- it stores datas and keys seperately in each bucket, instead.
+-- Used in H_BAG, H_MAP and H_MULTIMAP.
+is
+   include DYNAMIC_BUCKET_TABLE{K,DATABUCKET{K,E}};   
+   
+   private data_nil: E is
+      e: E;
+      typecase e
+      when $NIL then 
+	 temp::= e.nil; typecase temp when E then return temp end;
+      else return void   end
+   end;
+    
+   map_aset(k:K,e:E) pre ~void(self) is
+      -- Over-ride data if 'k' exists.
+      -- Otherwise grow the bucket chain associated with hash(k)
+      h ::= hash(k);
+      loop
+	 b ::= bucket(h).list!;
+	 if elt_key_eq(b.item,k) then b.data := e; return end
+      end;
+      set_bucket( h, #DATABUCKET{K,E}(k,e,bucket(h)) );
+      n_inds := n_inds + 1;
+      update_insert
+   end;
+    
+   map_delete(k:K): E  pre ~void(self) is
+      -- Removes an element from the set.
+      -- Does nothing if there is no such element.
+      h ::= hash(k);
+      b ::= bucket(h);
+      prev ::= b; prev := void;	-- NASTY HACK to force type inference on prev.
+	
+      loop until!( void(b) or elt_key_eq(b.item,k) );
+	 prev := b;
+	 b := b.next
+      end;
+      if void(b) then
+	 return data_nil
+      end;
+      res ::= b.data;
+      if void(prev) then  set_bucket( h, b.next )
+      else prev.next(b.next)   end;
+      n_inds := n_inds - 1;
+      update_delete;
+      return res
+   end; -- map_delete
+    
+   map_has_ind(k:K): BOOL  pre ~void(self) is
+      loop
+	 if elt_key_eq(bucket(hash(k)).list!.item,k) then  return true end
+      end;
+      return false
+   end;
+    
+   map_aget(k:K): E  pre ~void(self) is
+      -- Returns the element equal to 'e' from the set.
+      -- Returns void or T::nil if there is no such element.
+      -- Self may not be void.
+      loop
+	 b ::= bucket(hash(k)).list!;
+	 if elt_key_eq(b.item,k) then return b.data end
+      end;
+      return data_nil
+   end;
+    
+   map_key!: K 
+      pre ~void(self) 
+   is
+      loop
+	 b ::= bucket( 0.upto!(bound+split_pos-1) );
+	 loop yield b.list!.item end
+      end
+   end;
+    
+   map_elt!: E  pre ~void(self) is
+      loop
+	 b ::= bucket( 0.upto!(bound+split_pos-1) );
+	 loop yield b.list!.data end
+      end
+   end;
+    
+   map_pair!: TUP{K,E} pre ~void(self) is
+      loop
+	 b ::= bucket( 0.upto!(bound+split_pos-1) );
+	 loop
+	    bk ::= b.list!;
+	    yield #TUP{K,E}(bk.item,bk.data)
+	 end
+      end
+   end;
+    
+end; -- DYNAMIC_DATABUCKET_TABLE
+---------------------------------------------------------------------------
+abstract class $BUCKET{E,ME<$BUCKET{E,ME}} < $NEXT{ME}
+is
+   item: E;
+   copy_list: SAME;
+   list!: SAME;
+end; -- $BUCKET{E,SELF}
+---------------------------------------------------------------------------
+class BUCKET{E} < $BUCKET{E,BUCKET{E}}  is
+   -- Mainly this class adds an item to NEXT and gives some handy constructors.
+   include NEXT{SAME};
+
+   attr item: E;
+   
+   create(e:E): SAME is
+      -- Create a link containing e.
+      res ::= new;
+      res.item := e;
+      return res
+   end;
+
+   create(e:E,n:SAME): SAME is
+      -- Create a link containig e and prepending the link n.
+      -- n may be void.
+      res ::= new;
+      res.item := e; res.next := n;
+      return res
+   end;
+
+   copy_list: SAME is
+      -- Returns a copy of self and all following links. The
+      -- objects will not be 'copy'ed.
+      -- Self may be void.
+      if void(self) then return void end;
+      return #SAME(item,next.copy_list)
+   end;
+
+   list!: SAME is
+      -- Yields all subsequent elements in the list.
+      b ::= self;
+      loop until!( void(b) ); yield b; b := b.next end
+   end;
+
+end;
+---------------------------------------------------------------------------
+class DATABUCKET{K,E} < $BUCKET{K,DATABUCKET{K,E}} is
+   -- An addition to BUCKET{K} this class also adds data.
+
+   include NEXT{SAME};
+   
+   attr item: K;
+   attr data: E;
+   
+   create(k:K): SAME is
+      res ::= new;
+      res.item := k;
+      return res
+   end;
+   
+   create(k:K,e:E): SAME is
+      res ::= new;
+      res.item := k; res.data := e;
+      return res
+   end;
+   
+   create(k:K,e:E,n:SAME): SAME is
+      res ::= new;
+      res.item := k; res.data := e; res.next := n;
+      return res
+   end;
+
+   copy_list: SAME  is
+      if void(self) then return void end;
+      return #SAME(item,data,next.copy_list)
+   end;
+
+   list!: SAME is
+      -- Yields all subsequent elements in the list.
+      b ::= self;
+      loop until!( void(b) ); yield b; b := b.next end
+   end;
+
+end; -- DATABUCKET{K,E}
+----------------------------------------------------------------------

@@ -1,0 +1,953 @@
+\input texinfo
+@c -*-texinfo-*-
+
+@c %**start of header
+@setfilename gwl.info
+@documentencoding UTF-8
+@settitle Guix Workflow Language Reference Manual
+@c %**end of header
+
+@include version.texi
+
+@copying
+Copyright @copyright{} 2018 Roel Janssen@*
+Copyright @copyright{} 2018, 2019, 2020 Ricardo Wurmus
+
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.3 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, no Front-Cover Texts, and no Back-Cover Texts.  A
+copy of the license is included in the section entitled ``GNU Free
+Documentation License''.
+@end copying
+
+@dircategory Scientific Computing
+@direntry
+* Guix Workflow Language: (gwl).  Reproducible Scientific Workflows based on Guix.
+@end direntry
+
+@titlepage
+@title Guix Workflow Language Reference Manual
+@subtitle Reproducible Scientific Workflows based on Guix
+@author The developers of the GNU Guix Workflow Language
+
+@page
+@vskip 0pt plus 1filll
+Edition @value{EDITION} @*
+@value{UPDATED} @*
+
+@insertcopying
+@end titlepage
+
+@contents
+
+@c *********************************************************************
+@node Top
+@top Guix Workflow Language
+
+This document describes the Guix Workflow Language version @value{VERSION}.
+
+@menu
+* Introduction::                What is this all about?
+* Installation::                Installing the GWL.
+* A Simple Workflow::           Show me what this looks like!
+* Defining a Process::          What's in a process?
+* Code Snippets::               Embedding scripts.
+* Defining a Workflow::         Combine processes to build a workflow.
+* Process Engines::             Generating executable pipeline scripts.
+* Invoking guix workflow::      Running workflows.
+
+* Acknowledgments::             Thanks!
+* GNU Free Documentation License::  The license of this manual.
+* Concept Index::               Concepts.
+* Programming Index::           Data types, functions, and variables.
+@end menu
+
+@c *********************************************************************
+@node Introduction
+@chapter Introduction
+
+This package provides the @dfn{Guix Workflow Language} (GWL), a
+scientific computing extension to the Guix package manager.  It
+combines the specification of work units and their relationship to one
+another with the reproducible software deployment facilities of the
+functional package manager GNU Guix.  A GWL workflow will always run
+in a reproducible environment that GNU Guix automatically prepares.
+The GWL extends your Guix installation with a single new sub-command:
+@code{guix workflow}.
+
+In the GWL there are two concepts we need to know about: processes and
+workflows.  We describe a computation (running a program, or
+evaluating a Scheme expression) using a process.  A workflow describes
+how individual processes relate to each other (e.g. ``process B must
+run after process A, and process C must run before process A'').
+
+GWL workflows are executable code.  The workflow language is embedded
+in the powerful general purpose language
+@url{https://gnu.org/software/guile/, Guile Scheme}, so you can
+compute arbitrarily complex process and workflow definitions.  The GWL
+supports a classic Lisp syntax as well as a Python-like syntax called
+@url{https://www.draketo.de/light/english/wisp-lisp-indentation-preprocessor,Wisp}.
+
+@c *********************************************************************
+@node Installation
+@chapter Installation
+
+There really is no point in using the GWL without Guix.  If you
+already have a Guix installation, you can install the GWL with
+@code{guix install gwl}.
+
+The Guix Workflow Language uses the GNU build system.  To install it
+from a release tarball just unpack it and run the usual commands:
+
+@cindex installing from source
+@cindex building from source
+@example
+./configure
+make
+make install
+@end example
+
+If you want to build the sources from the source repository you need to
+bootstrap the build system first.  Run @code{autoreconf -vif} first and
+then perform the above steps.
+
+Note that in order for Guix to learn about the ``workflow''
+sub-command provided by the GWL, the Guile module @code{(guix scripts
+workflow)} must be found in a directory on the @code{GUILE_LOAD_PATH}.
+
+@c *********************************************************************
+@node A Simple Workflow
+@chapter A Simple Workflow
+
+To get a little taste of what the workflow language looks like, let's
+start by writing a simple workflow.
+
+Here is a simple workflow example:
+
+@example
+@verbatiminclude examples/simple-wisp.w
+@end example
+
+This white-space sensitive syntax is called Wisp and if your familiar
+with Python or YAML you should feel right at home.  To use this syntax
+simply save your workflow to a file ending on @file{.w}, @file{.wisp},
+or @file{.gwl}.
+
+The workflow language really is a @dfn{domain specific language} (DSL)
+embedded in Guile Scheme, so if you're a Lisper you may prefer to write
+your workflows directly in Scheme while basking in its parenthetical
+glow:
+
+@example
+@verbatiminclude examples/simple.scm
+@end example
+
+Everything you can express in Scheme can also be expressed with the Wisp
+syntax, so the choice is down to personal preference.
+
+@c *********************************************************************
+@node Defining a Process
+@chapter Defining a Process
+
+@cindex defining processes
+In the GWL a ``process'' is a combination of some kind of command or
+script to be executed, the software packages that need to be available
+when executing the commands, and declarations of inputs and generated
+outputs.  A process has a name, and optionally a synopsis and a
+description, for display purposes.
+
+@cindex make-process, constructor
+We create a process with the @code{make-process} constructor like
+this:
+
+@example
+make-process
+  name "hello"
+  procedure
+     ' display "hello"
+@end example
+
+This creates a process with the name ``hello'', which will print the
+string @code{"hello"} once the process is executed.  The
+@code{procedure} field holds the Scheme code that does all the work of
+saying ``hello''.  We will talk about the @code{procedure} field a
+little later and show how to write code snippets in languages other
+than Scheme.
+
+Often we will want to refer to previously created processes later, for
+example to combine them in a workflow definition.  To do that we need
+to bind the created processes to variable names.  Here we bind the
+above process to a variable named @code{hello}:
+
+@example
+define hello
+  make-process
+    name "hello"
+    procedure
+       ' display "hello"
+@end example
+
+@cindex process, constructor
+@cindex process, definition macro
+This is a very common thing to do, so the GWL offers a shorter syntax
+for not only creating a process but also binding it to a variable.
+The following example is equivalent to the above definition:
+
+@example
+process hello
+  procedure
+     ' display "hello"
+@end example
+
+
+@node @code{process} Fields
+@section @code{process} Fields
+@cindex process, valid fields
+Both @code{make-process} and @code{process} accept the same fields,
+which we describe below.
+
+@table @code
+@cindex name, process field
+@item name
+The readable name of the process as a string.  This is used for
+display purposes and to select processes by name.  When the
+@code{process} constructor is used, the @code{name} field need not be
+provided explicitly.
+
+@cindex version, process field
+@item version
+This field holds an arbitrary version string.  This can be used to
+disambiguate between different implementations of a process when
+searching by name.
+
+@cindex synopsis, process field
+@item synopsis
+A short summary of what this process intends to accomplish.
+
+@cindex description, process field
+@item description
+A longer description about the purpose of this process.
+
+@cindex packages, process field
+@item packages
+This field is used to specify what software packages need to be
+available when executing the process.  Packages can either be Guix
+package specifications --- such as the string @code{"guile@@3.0"} for
+Guile version 3.0 --- or package variable names.  When using package
+variable names, you need to make sure to import the appropriate Guix
+module at the top of your workflow file, e.g. @code{(import (gnu
+packages guile))} for the variable @code{guile}.
+
+@cindex implicit list, process.packages
+The @code{packages} field accepts a list of packages as well as
+multiple values (an ``implicit list'').  All of the following
+specifications are valid.  A single package:
+
+@example
+process
+  packages "guile"
+  @dots{}
+@end example
+
+More than one package:
+
+@example
+process
+  packages "guile" "python"
+  @dots{}
+@end example
+
+A single list of packages:
+
+@example
+process
+  packages
+    list "guile" "python"
+  @dots{}
+@end example
+
+@cindex inputs, process field
+@item inputs
+This field holds inputs to the process.  Commonly, this will be a list
+of file names that the process requires to be present.  The GWL can
+automatically connect processes by matching up their declared inputs
+and outputs, so that processes generating certain outputs are executed
+before those that declare the same item as an input.
+
+As with the @code{packages} field, the @code{inputs} field accepts an
+``implicit list'' of multiple values as well as an explicit list.
+@cindex tagged lists
+@cindex named items, lists
+@cindex tagged items, lists
+Additionally, individual inputs can be ``tagged'' or named by
+prefixing it with a keyword (@pxref{Keywords,,,guile,GNU Guile
+Reference Manual}).  Here's an example of an implicit list of inputs
+spread across multiple lines where two inputs have been tagged:
+
+@example
+process
+  inputs
+    . genome: "hg19.fa"
+    . "cookie-recipes.txt"
+    . samples: "foo.fq"
+  @dots{}
+@end example
+
+The leading period is Wisp syntax to continue the previous line.  You
+can, of course, do without the periods, but this may look a little
+more cluttered:
+
+@example
+process
+  inputs genome: "hg19.fa" "cookie-recipes.txt" samples: "foo.fq"
+  @dots{}
+@end example
+
+@cindex pick, items from a tagged list
+@cindex select, tagged items in a list
+Why tag inputs at all?  Because you can reference them in other parts
+of your process definition without having to awkwardly traverse the
+whole list of inputs.  Here is one way to select the first input that
+was tagged with the @code{samples:} keyword:
+
+@example
+pick genome: inputs
+@end example
+
+To select the second item after the tag @code{genome:} do this:
+
+@example
+pick second genome: inputs
+@end example
+
+or using a numerical zero-based index:
+
+@example
+pick 1 genome: inputs
+@end example
+
+@ref{Code Snippets} for a convenient way to access named items in code
+snippets without having to define your picks beforehand.
+
+@cindex outputs, process field
+@item outputs
+This field holds a list of outputs that are expected to appear after
+executing the process.  Usually this will be a list of file names.
+Just like the @code{inputs} field, this field accepts a plain list, an
+implicit list of one or more values, and lists with named items.
+
+The GWL can automatically connect processes by matching up their
+declared inputs and outputs, so that processes generating certain
+outputs are executed before those that declare the same item as an
+input.
+
+@cindex output-path, process field
+@item output-path
+This is a directory prefix for all outputs.
+
+@cindex run-time, process field
+@item run-time
+This field is used to specify run-time resource estimates, such as the
+memory requirement of the process or the maximum time it should run.
+This is especially useful when submitting jobs to an HPC cluster
+scheduler such as Grid Engine, as these schedulers may give higher
+priority to jobs that declare a short run time.
+
+@cindex time, complexity
+@cindex space, complexity
+@cindex threads, complexity
+@cindex seconds, run-time specification
+@cindex minutes, run-time specification
+@cindex hours, run-time specification
+@cindex kibibytes, memory specification
+@cindex kilobytes, memory specification
+@cindex mebibytes, memory specification
+@cindex megabytes, memory specification
+@cindex gibibytes, memory specification
+@cindex gigabytes, memory specification
+Resources are specified as a complexity value with the fields
+@code{space} (for memory requirements), @code{time} (for the expected
+duration of the computation), and @code{threads} (to control the
+number of CPU threads).  For convenience, memory requirements can be
+specified with the units @code{kibibytes} (or @code{KiB}),
+@code{mebibytes} (or @code{MiB}), or @code{gibibytes} (or @code{GiB}).
+Supported time units are @code{seconds}, @code{minutes}, and
+@code{hours}.
+
+Here is an example of a single-threaded process that is granted 20 MiB
+of run-time memory for a duration of 10 seconds:
+
+@example
+process stamp-inputs
+  inputs "first" "second" "third"
+  outputs "inputs.txt"
+  run-time
+    complexity
+      space 20 mebibytes
+      time  10 seconds
+      threads 1
+  # @{ echo @{@{inputs@}@} > @{@{outputs@}@} @}
+@end example
+
+When this process is executed by a scheduler that honors resource
+limits, the process will be granted at most 20 MiB of memory and will
+be killed if it has not concluded after 10 seconds.
+
+@cindex procedure, process field
+@item procedure
+This field holds an expression of code that should be run when the
+process is executed.  This is the ``work'' that a process should
+perform.  By default that's a quoted Scheme expression, but code
+snippets in other languages are also supported (@pxref{Code
+Snippets}).
+
+Here's an example of a process with a procedure that writes a haiku to
+a file:
+
+@example
+process haiku
+  outputs "haiku.txt"
+  synopsis "Write a haiku to a file"
+  description
+    . "This process writes a haiku by Gary Hotham \
+to the file \"haiku.txt\"."
+  procedure
+    ` with-output-to-file ,outputs
+        lambda ()
+          display "\
+the library book
+overdue?
+slow falling snow"
+@end example
+
+The Scheme expression here is quasiquoted (with a leading @code{`}) to
+allow for unquoting (with @code{,}) of variables, such as
+@code{outputs}.
+
+Not always will Scheme be the best choice for a process procedure.
+Sometimes all you want to do is fire off a few shell commands.  While
+this is, of course, possible to express in Scheme, it is admittedly
+somewhat verbose.  For convenience we offer a simple and surprisingly
+short syntax for this common use case.  As a bonus you can even leave
+off the field name ``procedure'' and write your code snippet right
+there.  How?  @ref{Code Snippets}.
+@end table
+
+@c TODO: document the accessor procedures
+
+@node Process templates
+@section Process templates
+@cindex process templates
+@cindex generating processes
+
+When defining many similar processes, it can be useful to parameterize
+a single process template.  This can be accomplished by defining a
+procedure that takes any number of arguments and returns a
+parameterized process.  Here's how to do this somewhat verbosely in
+plain Scheme:
+
+@lisp
+(define (build-me-a-process thing)
+  "Return a process that displays THING."
+  (make-process
+    (name (string-append "show-" thing))
+    (procedure `(display ,thing))))
+
+;; Now use this procedure to build concrete processes.
+(define show-fruit
+  (build-me-a-process "fruit"))
+(define show-kitchen
+  (build-me-a-process "kitchen"))
+(define show-table
+  (build-me-a-process "table"))
+@end lisp
+
+As this is a somewhat common thing to do in real workflows, the GWL
+provides simplified syntax to express the same concepts with a little
+less effort:
+
+@example
+process build-me-a-process (with thing)
+  name
+    string-append "show-" thing
+  procedure
+    ` display ,thing
+
+define show-fruit
+  build-me-a-process "fruit"
+define show-kitchen
+  build-me-a-process "kitchen"
+define show-table
+  build-me-a-process "table"
+@end example
+
+The result is the same: you get a procedure @code{build-me-a-process}
+that you can use to define a number of similar processes.  In the end
+you have the three processes @code{show-fruit}, @code{show-kitchen},
+and @code{show-table}.
+
+@node Useful procedures
+@section Useful procedures
+@cindex (gwl utils)
+@cindex Helper procedures
+@cindex Utilities
+
+The @code{(gwl utils)} module provides a number of useful helpers that
+are intended to simplify common tasks when defining processes.  The
+helpers defined by this module are all available by default.
+
+@cindex on, helper procedure
+@cindex reorder higher order function application
+@deffn {Scheme Procedure} on @var{collection} @var{higher} @var{proc}
+The @code{on} procedure is an alternative way to express the
+application of a higher order function to some collection.  The only
+purpose of this procedure is to improve legibility when using Wisp
+syntax, as it allows one to avoid leading dots.  The following two
+expressions are equivalent:
+
+@example
+;; With "on"
+on numbers map
+   lambda (number)
+     + number 10
+
+;; Without "on"
+map
+  lambda (number)
+    + number 10
+  . samples
+@end example
+@end deffn
+
+@cindex expand, helper procedure
+@cindex expand file name templates
+@cindex file name expansion
+@deffn {Scheme Procedure} expand @var{file-name-part}@dots{}
+This procedure returns a list of file names by combining any number of
+file name parts given as arguments.  A file name part can either be a
+string or a list of strings.  This is very useful when you need to
+generate a list of input or output file names.
+
+@example
+(expand "/home/"
+        '("me" "you" "them")
+        "/data/"
+        '("old" "new"))
+
+=> '("/home/me/data/old"
+     "/home/me/data/new"
+     "/home/you/data/old"
+     "/home/you/data/new"
+     "/home/them/data/old"
+     "/home/them/data/new")
+@end example
+@end deffn
+
+@cindex pick, helper procedure
+@cindex pick elements from a list
+@cindex select tagged items
+@deffn {Scheme Procedure} pick [@var{n}] @var{key} @var{collection}
+This procedure allows you to pick a named item from a @var{collection}
+by looking for the specified keyword @var{key}.  Optionally, you can
+provide a selector procedure or index @var{n} as the first argument.
+Without a selector the first item matching the given @var{key} will be
+returned.  When the selector is @code{*} all items following the
+@var{key} (up to the next tag) will be returned.  If the selector is a
+number it is used as a zero-based index into the list of items
+following the @var{key}.  If the selector is a procedure it is applied
+to the list of items following the @var{key}.
+
+@example
+define collection
+  list
+    . "one"
+    . "two"
+    . "three"
+    . mine: "four"
+    . "five"
+    . yours: "six"
+
+pick mine: collection
+
+; => "four"
+
+pick * mine: collection
+
+; => '("four" "five")
+
+pick second mine: collection
+
+; => "five"
+
+pick 0 yours: collection
+
+; => "six"
+@end example
+@end deffn
+
+@cindex load-workflow
+@cindex load a workflow
+@deffn {Scheme Syntax} load-workflow @var{file}
+This macro lets you load a workflow from the given @var{file}.  The
+file must evaluate to a workflow value.  This macro is useful for when
+you want to extend previously defined workflows.  The argument
+@var{file} is expected to be a file name relative to the file invoking
+@code{load-workflow}.
+@end deffn
+
+@c *********************************************************************
+@node Code Snippets
+@chapter Code Snippets
+
+@cindex scripts, embedding
+@cindex code snippets
+@cindex special syntax, code snippets
+@cindex language support, code snippets
+@cindex Python, code snippets
+@cindex R, code snippets
+@cindex shell snippets
+The Guix Workflow Language is embedded in Guile Scheme, so it makes
+sense to use Scheme to define the work that a process should perform.
+Sometimes it may be more convenient, though, to express the procedure in
+a different language, such as GNU R, Python, or maybe even in Bash.
+
+The GWL provides special syntax for embedding code snippets.  The
+special syntax is provided in the @code{(gwl sugar)} module, and is
+loaded by default.  Here is an example of a process that runs an
+embedded Bash shell script:
+
+@example
+process run-bash
+  packages "bash"
+  # bash @{ echo "hello from bash!" @}
+@end example
+
+Notice how the ``procedure'' field name was not used here, because the
+code snippet came last.  This cuts down on boilerplate.
+
+Code snippets are introduced with @code{# interpreter @{}, where
+@code{interpreter} is the command line for running an interpreter, such
+as @code{/bin/bash -c}.  Code snippets must end with a closing brace,
+@code{@rbracechar{}}.
+
+Make sure that the package inputs include a package providing the
+interpreter.  For convenience we provide the special interpreters
+@code{bash}, @code{R}, and @code{python}, so that you don't have to
+specify a more complicated command line.  When no interpreter is
+provided the generic shell interpreter @code{/bin/sh} will be used:
+
+@example
+process run-sh
+  # @{ echo "hello from a shell!" @}
+@end example
+
+@cindex string interpolation, code snippets
+@cindex accessing variables, code snippets
+Within code snippets a special syntax is supported for accessing
+variables.  Any uninterrupted value enclosed in double braces is
+considered a reference to a variable, which may also be the name of
+other process fields.  In the following example, the shell snippet
+refers to the @code{name} and @code{inputs} fields of the current
+process:
+
+@example
+process run-bash
+  packages "bash"
+  inputs
+    . "a"
+    . "b"
+    . "c"
+  # bash @{
+    echo "The name of this process: @{@{name@}@}."
+    echo "The data inputs are: @{@{inputs@}@}."
+  @}
+@end example
+
+@cindex accessing named values in variables, code snippets
+You can even access named or tagged values in lists.  In the following
+example, the shell snippet refers to only selected values of the
+@code{inputs} field of the current process:
+
+@example
+process run-bash
+  packages "bash"
+  inputs
+    . "a"
+    . mine: "b"
+    . "c"
+    . yours: "d"
+  # bash @{
+    echo "This is mine: @{@{inputs:mine@}@}, and this is yours: @{@{inputs:yours@}@}."
+  @}
+@end example
+
+As expected, this will output the following text when run:
+
+@example
+This is mine: b, and this is yours: d.
+@end example
+
+@cindex accessing multiple named values, code snippets
+You can also access tagged sub-lists with the @code{::} accessor:
+
+@example
+process frobnicate
+  packages "frobnicator"
+  inputs
+    . genome: "hg19.fa"
+    . samples: "a" "b" "c"
+  outputs
+    . "result"
+  # @{
+    frobnicate -g @{@{inputs:genome@}@} --files @{@{inputs::samples@}@} > @{@{outputs@}@}
+  @}
+@end example
+
+This process will cause the following command to be executed:
+
+@example
+frobnicate -g hg19.fa --files a b c > result
+@end example
+
+If these two ways to access elements of a list are not enough, we
+recommend defining a variable using @code{pick} (@ref{Useful
+procedures}).  In the following example we define a variable
+@var{second-sample} inside of the @code{procedure} field to hold the
+second of the inputs after the keyword @code{samples:}, i.e. the
+string @code{the}.  We can then refer to that variable by name in the
+code snippet.
+
+@example
+process foo
+  inputs
+    . "something"
+    . samples: "in" "the" "way"
+  procedure
+    define second-sample
+      pick second samples: inputs
+    # @{ echo @{@{second-sample@}@} @}
+@end example
+
+@cindex environment variables, code snippets
+@cindex process meta data, code snippets
+You can also access process meta data through environment variables.
+The following variables may be set:
+
+@itemize
+@item @code{_GWL_PROCESS_NAME}
+@item @code{_GWL_PROCESS_SYNOPSIS}
+@item @code{_GWL_PROCESS_DESCRIPTION}
+@item @code{_GWL_PROCESS_INPUTS}
+@item @code{_GWL_PROCESS_OUTPUT_PATH}
+@item @code{_GWL_PROCESS_OUTPUTS}
+@item @code{_GWL_PROCESS_COMPLEXITY_TIME}
+@item @code{_GWL_PROCESS_COMPLEXITY_SPACE}
+@item @code{_GWL_PROCESS_COMPLEXITY_THREADS}
+@end itemize
+
+@c *********************************************************************
+@node Defining a Workflow
+@chapter Defining a Workflow
+
+@cindex defining a workflow
+@cindex combining processes in a workflow
+
+A workflow is a combination of processes that run in a certain order
+or simultaneously.  You can specify the dependencies of processes
+manually or let the GWL figure it out by matching up the declared
+inputs and outputs of all processes.
+
+A workflow definition will look something like this:
+
+@example
+workflow do-stuff
+  processes
+    . this
+    . that
+    . something-else
+@end example
+
+This defines a workflow with the name ``do-stuff'', binds it to a variable
+@code{do-stuff}, and declares that it consists of the three processes
+@code{this}, @code{that}, and @code{something-else}.  All of these
+processes will be run at the same time.  This may not be what you want
+when the processes depend on each other.
+
+@cindex auto-connect, workflow order
+If the processes all declare inputs and outputs, the GWL can connect
+the processes and ensure that only independent processes are run
+simultaneously.  Use the @code{auto-connect} procedure on your
+processes:
+
+@example
+workflow do-stuff
+  processes
+    auto-connect
+      . this
+      . that
+      . something-else
+@end example
+
+@cindex graph, workflow order
+You can also explicitly construct a graph of processes with the aptly
+named @code{graph} macro.  The following workflow definition lets the
+process @code{combine} run after @code{generate-A} and
+@code{generate-B}, which will both run in parallel.  The process
+@code{compress} will run after @code{combine}, and thus at the very
+end.
+
+@example
+workflow frobnicate
+  processes
+    graph
+      combine -> generate-A generate-B
+      compress -> combine
+@end example
+
+
+@c *********************************************************************
+@node Process Engines
+@chapter Process Engines
+
+@cindex executing processes
+@cindex simple-engine, Process Engine
+Once you have defined a workflow, there are different ways to run the
+processes it consists of.  The simplest way is to turn the workflow into
+a Guile script that sets up the desired environment and then executes
+the workflow processes on the current machine.  This is what the
+@code{simple-engine} does.
+
+@cindex grid-engine, Process Engine
+The @code{grid-engine} is similar to the @code{simple-engine} in that
+it generates a shell script, with the difference that it also includes
+resource variable definitions for submission to a Grid Engine
+scheduling system.  The resource variables are derived from the
+process @code{run-time} field.
+
+@c *********************************************************************
+@node Invoking guix workflow
+@chapter Invoking @command{guix workflow}
+
+The Guix Workflow Language extends your Guix installation with a new
+sub-command: @command{guix workflow}.  Here are some of the options
+the command accepts:
+
+@table @code
+@item --input=@var{name}[=@var{file}]
+@itemx -i @var{name}[=@var{file}]
+A workflow may have so-called free inputs, inputs that are not
+provided by any of the workflow's processes.  By default, the GWL will
+pick files from the current working directory that match the names of
+free inputs.  This option can be used to map a @var{file} with an
+arbitrary name to a free input in the workflow with the given
+@var{name}.  This option can be provided more than once.
+
+In the following example, the free input called @code{genome} is
+mapped to the file @file{/data/hg19.fa} before running the workflow
+defined in @file{analysis.w}:
+
+@example
+guix workflow --input=genome=/data/hg19.fa --run=analysis.w
+@end example
+
+@item --output=@var{location}
+@itemx -o @var{location}
+This option currently has no effect.
+
+@item --engine=@var{engine}
+@itemx -e @var{engine}
+Select the process engine @var{engine} as the target of the generated
+process scripts. See @ref{Process Engines}.
+
+@c TODO: how does this differ from ``--dry-run''?
+@item --prepare=@var{file}
+@itemx -p @var{file}
+Generate the process scripts and build or download all dependencies,
+but do not run the workflow process scripts corresponding to the
+workflow defined in @var{file}.
+
+@item --run=@var{file}
+@itemx -r @var{file}
+Generate the process scripts, build or download all dependencies, and
+then run the workflow process scripts corresponding to the workflow
+defined in @var{file}.
+
+@item --dry-run
+@itemx -n
+Prepare the scripts and the environments but don't actually run the
+processes.  Only show what commands would be run.
+
+@item --force
+@itemx -f
+Execute all processes, even if their outputs may have been cached from
+previous runs.
+
+@cindex container
+@cindex user namespaces
+@cindex isolate processes
+@item --container
+@itemx -c
+Run each process inside of an isolated environment with file system
+virtualization and user namespaces.  Only declared input files will be
+available at execution time, and only declared output files will be
+stored.  This is a great option to use when you want to make sure that
+your processes only depend on state that you have declared.  A
+downside is that generated output files cannot be written to the
+target directories directly but are copied from the container to the
+file system.
+
+@item --graph=@var{file}
+@itemx -g @var{file}
+Load the workflow @var{file} and generate a graph in Dot-format.
+
+@item --web-interface
+@itemx -w
+The GWL includes a web interface.  This option starts it.
+@end table
+
+
+@c *********************************************************************
+@node Acknowledgments
+@chapter Acknowledgments
+
+Thanks to the following people who contributed to the Guix Workflow
+Language through bug reports, patches, or through insightful
+discussions:
+
+@itemize @bullet
+@item Ludovic Courtès @email{ludo@@gnu.org}
+@item Simon Tournier
+@item Kyle Meyer @email{kyle@@kyleam.com}
+@end itemize
+
+Also thanks to the people who reviewed this project for joining the GNU
+project.
+
+@itemize @bullet
+@item Mike Gerwitz @email{mtg@@gnu.org}
+@end itemize
+
+Thank you.
+
+@c *********************************************************************
+@node GNU Free Documentation License
+@appendix GNU Free Documentation License
+
+@include fdl-1.3.texi
+
+@page
+
+@c *********************************************************************
+@node Concept Index
+@unnumbered Concept Index
+
+@printindex cp
+
+@node Programming Index
+@unnumbered Programming Index
+@syncodeindex tp fn
+@syncodeindex vr fn
+@printindex fn
+
+@bye

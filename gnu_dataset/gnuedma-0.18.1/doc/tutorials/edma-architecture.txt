@@ -1,0 +1,90 @@
+GNU/EDMA Basic Programming
+by David Martínez Oliveira < dmartin at tsc.uvigo.es >
+
+Introduction
+------------
+This tutorial will introduce the general GNU/EDMA architecture as well as the basic programming concepts behind GNU/EDMA development system.
+
+After reading this tutorial you will be able to write basic GNU/EDMA applications and develop basic GNU/EDMA components. You will also know the basic architecture and possibilities of the system.
+
+Readers should have basic knowledge of C programming to fully understand this text.
+
+What is GNU/EDMA?
+-----------------
+GNU/EDMA is shared library plus a set of tools and interfaces that allows to develop Object-Oriented (OO hereinafter) applications in a way independent of the underlying programming languages.
+
+Upto now, the implementation of an OO design required, in general, an OO capable programming language, even when the design was completely independent of the final implementation. However, the choosen implementation language imposes restriction at the design level and so, introduces implementation dependencies which is something undesirable.
+
+For example, if the choosen implementation language is Java, the design cannot include multiple inheritance if a direct mapping from design to code is required. There are several ways to face this fact but dependencies appears in a way or another.
+
+GNU/EDMA provides all the functionalities required for OO programming (OOP hereinafter) independently of the choosen implementation language, so programming languages become simply machine code generation. To achieve this goal, GNU/EDMA provides a loosely uncoupled architecture based on message passing and then, GNU/EDMA is the middleware providing these services.
+
+GNU/EDMA Architecture Sketch
+----------------------------
+The GNU/EDMA system is composed of the following items:
+
+* The GNU/EDMA core (CORIE). This is the unique required element to use the system since it provides all the facilities of the system. This element is composed of a shared library that provides all the system features plus a very reduced set of components required by the system.
+* GNU/EDMA component repository: Additionally, the GNU/EDMA can include a component repository available to the system it is installed on. This repository can be global, available system-wide or each GNU/EDMA application can use its own private repository. Additionally, simple GNU/EDMA application can completely avoid components repositories.
+
+GNU/EDMA works on components which, in general, can be considered equivalent to the classes in common OO systems. Each component is composed of two main parts:
+
+* An Interface which holds the properties and methods provided by the component. Interfaces are managed internally by the system, that is, they only exists at run-time and can be defined dynamically from a running applications or they can be defined externally by a text file which is managed by the GNU/EDMA system.
+
+* An implementation which contains the real code of the component methods. By default, implementation files takes the form of a shared library for native code. For other systems (interpreted or bytecoded) implementation may get different form, but that topic is beyond the scope of this tutorial.
+
+The implementation file contains the real code of the methods defined by the component interface.
+
+GNU/EDMA System Extensions
+--------------------------
+GNU/EDMA provides three subsystems oriented to extend the system. The first two allows to extend the functionality of interfaces and implementations. The third extension system allows to deal with exceptions at the system level. A brief description of each one follows:
+
+* IngrIDF: This extension system allows to write interface parsers so each programming can choose his/her preferrer interface format. GNU/EDMA provides a very basic format by default but more complex one can be easely integrated in the system.
+
+Note that the IngrIDF subsystem also allows to get interfaces files from different places or formats, for instance, you can write parsers to get interfaces from compressed files, from network, from metadata embedded in bytecode files, etc...
+
+* SIU: The SIU extension system allows to write implementation proxy extensions. Basically a SIU proxy is a component able to intercept system calls at the interface level, that is, you can take control of execution just before executing the real code. Note that the real code can exists or not :).
+
+SIU proxies allows for instance to interface to external system like interpreters or virtual machines, allowing transparent access to them from the GNU/EDMA environment. SIU proxies can also be used for Aspect Oriented Programming (AOP) but this topic is treated in other tutorial.
+
+* EMI: The EMI extension system allows to write GNU/EDMA components to manage system exceptions. Exceptions like CLASS_NOT_FOUND can be catch by a registered emi handler which could try to get the class from someother place (a network server, a system cache, etc...)
+
+GNU/EDMA Component Instalation
+------------------------------
+Component instalation requires a procedure which is slightly different depending on the repository choosen. For system repository the procedure is as follows:
+
+1. Copy the interface file (.idf) in the appropriated directory:
+   /base_system/share/edma/idf/namespace_dir/
+2. Copy the implementation file (.so) in the appropriated directory:
+   /base_system/lib/edma/namespace_dir
+3. Add a new entry to the GNU/EDMA registry at
+   /base_system/etc/edma.cfg
+
+These three steps are carried out automatically by the ines_register tool which receives as parameter a .ines file which is a deployment handler for the component. Deployment handlers can be generated automatically from the interface files using other GNU/EDMA tools which are described later in this section.
+
+For local registries the procedure is analogous with the unique diference that the "base_system" directory must be changed by the local repository directory.
+
+Each time a new component is installed the system checks if the component version is higher that the one available in the system. GNU/EDMA doesn't remove old version so old applications can still use it to avoid problems due to changes in interface or implementation conditions.
+
+Version management in the GNU/EDMA environment is treated in another tutorial
+
+GNU/EDMA Application Zero-Install
+---------------------------------
+GNU/EDMA supports application zero-install, that is, installing the whole GNU/EDMA application in any directory within the filesystem. This procedure makes the instalation process as easy as copying a directory.
+
+To deploy a zero-install GNU/EDMA application, such application must provide its own local repository as well as versions of the all the components required by the application (implementation and interface).
+
+Note that hybrid solutions can be also used.
+
+GNU/EDMA Tools
+--------------
+The GNU/EDMA system includes the following tools:
+
+* ines_class_register/ines_class_unregister. This two small tools allows to install and uninstall GNU/EDMA components from .ines deploy descriptors, updating system registry as required
+* edma-fg-helper. This tools allows to generate different files skeletons based on IDFWizard plug-ins from the command-line.
+* cleanup-after-crash: GNU/EDMA uses shared memory to publish system-wide information to every process in the system. Shared memory is not freed when a program crashes as happens with process local storage, so this tool can be used to remove shared memory in this situation. 
+
+
+Final Words
+-----------
+This brief tutorial presented the general architecture of the GNU/EDMA development environment. We hope this text helps you to understand the main aims of this system
+

@@ -1,0 +1,155 @@
+LibreDWG - free implementation of the DWG file format
+
+LibreDWG is a free C library to read and write DWG files.  This program is
+part of the GNU project, released under the aegis of GNU.  It is licensed
+under the terms of the GNU General Public License version 3 (or at you option
+any later version).
+
+DWG is a file format created in the 70's for the emerging CAD applications.
+Currently it is the native file format of AutoCAD, a proprietary CAD program 
+developed by AutoDesk.
+
+LibreDWG is a fork from LibDWG due to its usage of Esperanto, which we
+think is not the best strategy for a free software project which aims
+to get lots of contributors.  LibreDWG is written in English.  At the
+moment our decoder (i.e. reader) is done, just some very advanced
+R2010+ and pre-R13 entities fail to read and are skipped over. The
+writer is good enough for R2000.  Among the example applications we
+wrote using LibreDWG is a reader, a writer, a rewriter (i.e. saveas),
+an initial SVG and Postscript conversion, dxf converters, dwggrep to
+search for text, and dwglayer to print the list of layers.
+More are in the pipeline.
+Please contact us if you want to help.
+
+The strings API is utf-8 (wtf8 really, Windows UCS-2 has no surrogate
+pairs), and encodes to the internal 8-bit or UCS-2 strings, depending
+on the DWG version.
+
+Sometimes we hang on our IRC channel which is #libredwg at irc.freenode.net
+If you don't find us there, please email the package maintainers:
+
+Reini Urban <rurban AT cpan.org>
+
+The now inactive founders and previous maintainers were:
+
+Felipe Corrêa da Silva Sanches <juca AT members.fsf.org>
+Rodrigo Rodrigues da Silva <pitanga AT members.fsf.org>
+Hardeep Singh Rai <hardeep.rai AT gmail DOT com>
+
+If you are looking for general information about the project, check our website:
+http://www.gnu.org/software/libredwg
+
+== Building and installing the library ==
+
+You need the following dependencies:
+- Basic development tools (a C99 compiler like gcc/clang, make, autoconf, automake
+  and libtool)
+
+Optionally:
+
+- dejagnu
+- TeXinfo for building the docs
+- pslib for dwg2ps: http://pslib.sourceforge.net/doc/pslib.html
+- pcre2 with 8bit and 16bit libraries for dwggrep regexp support
+- SWIG 1.7+
+- Python 2.7 or 3.x development headers (debian: python-dev; yum: python-devel)
+  and the libxml2 python bindings.
+- Perl 5 for the perl bindings
+
+See INSTALL for generic instructions.  Basically, you do:
+
+$ sh ./autogen.sh (if you checked out the source code from git)
+$ ./configure [--enable-trace] [--disable--write] [--disable-shared]
+$ make
+$ make check    # optional but strongly encouraged while LibreDWG is alpha
+$ sudo make install
+
+This builds and installs various files in the "installation dirs":
+  $libdir     ($exec_prefix/lib)   -- library files (libredwg.*)
+  $includedir ($prefix/include)    -- dwg.h dwg_api.h
+  $libdir/pkgconfig                -- libredwg.pc
+  $infodir    ($datarootdir/info)  -- LibreDWG.info
+
+Use "./configure --help" to see a full list of options you can use to
+customize the installation dirs.  Other options recognized by configure are:
+
+  --enable-trace
+
+    Enable runtime tracing (default: no).  When enabled, the environment
+    variable LIBREDWG_TRACE is consulted on the first decode/encode attempt.
+    Its value is an integer: 0 (no output) through 9 (full verbosity).
+    Most tools do support an --verbosity|-v flag instead.
+
+  --disable-write
+  
+    Disable DWG write support (default: no). When enabled, you activate the write
+    support for the DWG format.
+    This is an experimental feature. Rewriting most DWG's to the r2000 format
+    usually works fine, DWG versions since r2004 are not yet supported, and the
+    API usage is very rough so far.
+
+== Windows ==
+
+See the following scripts how we build on Windows:
+
+* build-aux/smoke.sh: cross-compilation recipes
+* build-aux/msys2.bat: msys2 deps
+* .appveyor.yml: windows smoker
+
+We only support C99 compilers and POSIX environments, i.e. cygwin or msys or cross.
+stdint.h and inttypes.h must be available.
+Pre-compiled Windows binaries are here: https://github.com/LibreDWG/libredwg/releases
+
+== Example usage of the library ==
+
+The programs and examples directories contains some application code that uses our lib:
+
+* dwgread -- A DWG reader supporting various output formats, such as
+  JSON, DXF, DXFB, GeoJSON. Later also YAML, XML/OGR, GPX, SVG, PS.
+
+* dwgwrite -- A DWG writer supporting various input formats.
+  The input formats DXF, DXFB and later JSON, GeoJSON, YAML, XML/OGR, GPX
+  are under construction.
+
+* dwgrewrite -- Reads a DWG, writes it back under a different name and optionally
+  under a different version (default r2000), and re-reads it back for confirmation.
+
+* dwg2dxf -- Converts a DWG to a DXF (ascii or binary, minimal or full), optionally
+  under a different version. About 80% coverage.
+
+* dxf2dwg -- Converts a ascii or binary DXF to a DWG, optionally
+  under a different version. Under construction.
+
+* dwglayers -- Prints the list of layers in a DWG
+
+* dwggrep -- Searches DWG files for a text string, via regular expressions.
+
+* dwg2ps -- Opens a DWG file and outputs an PostScript file.  This code
+  depends on the PSlib library.  On Debian-based systems this is usually
+  available as a package named pslib-dev. This is very limited so far.
+
+* dwg2SVG -- Opens a DWG file and outputs an SVG (Scalable Vector Graphics)
+  file.  SVG is a W3C standard for 2d vector graphics.  You can open these
+  files on several free software tools.  We recommend Inkscape, a free software
+  vector graphics editor.  The dwg2SVG program will not handle 3d content
+  from DWG since SVG only supports 2-dimensional images.
+
+* dwgbmp -- Extracts the bmp thumbnail of a dwg file when it is available.
+
+* load_dwg -- This is a skeleton code, reading the DWG and adding an entity.
+  Look there if you want to have a quickly glance on how to use the library.
+
+* dwg2svg2 -- Another example how to use the DWG API, bypassing direct access to
+  the DWG struct.
+
+* xmlsuite -- an extensive example library to use XML to compare against prepared
+  features is in the test/xmlsuite directory. It also features code to output entities
+  in XML, but does not use the python bindings.
+
+Copyright (C) 2009, 2010, 2015, 2018, 2019 Free Software Foundation, Inc.
+
+This library is free software, licensed under the terms of the GNU
+General Public License as published by the Free Software Foundation,
+either version 3 of the License, or (at your option) any later version.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.

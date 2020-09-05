@@ -1,0 +1,86 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class I_INTERVAL_TEST is
+   -- Test class for integer intervals
+   include TEST;
+   
+   main is
+      class_name("I_INTERVAL");
+      i1: I_INTERVAL := #(0,5);
+      i2: I_INTERVAL := #(-2,3);
+      test("i1",i1,"[0,5]");
+      test("i2",i2,"[-2,3]");
+      test("i1.first",i1.first,0);
+      test("i1.size",i1.size,6);
+      test("i1.last",i1.last,5);
+      test("i2.first",i2.first,-2);
+      test("i2.size",i2.size,6);
+      test("i2.first",i2.first,-2);
+      test("i2.last",i2.last,3);
+      test("i2.is_empty",i2.is_empty,false);
+      test("i2.is_nil",i2.is_nil,false);
+      i3: I_INTERVAL := I_INTERVAL::nil;
+      test("i3.is_nil",i3.is_nil,true);
+      i4: I_INTERVAL := #(-2,3);
+      i5: I_INTERVAL := #(-2,-3);
+      test("i5.is_empty",i5.is_empty,true);
+      test("i4=i2",i4=i2,true);
+      test("i4=i2",i4=i3,false);
+      res:FLIST{INT};
+      proper: FLIST{INT};
+      proper := proper.push(-2).push(-1).push(0).push(1).push(2)
+	    .push(3);
+      loop res := res.push(i2.elt!) end;
+      test("i2's elts",res.str,proper.str);
+      proper.to_reverse;
+      res := #;
+      loop res := res.push(i2.reverse_elt!) end;
+      test("i2's reverse elts",res.str,proper.str);
+      test("i2.intersection(i1)",i2.intersection(i1),#I_INTERVAL(0,3));
+      i9: I_INTERVAL := #I_INTERVAL(-5,-1);
+      test("is_intersecting",i9.is_intersecting(i1),false);
+      res := #;
+      p1: I_INTERVAL := #I_INTERVAL(0,102);
+      parts: FLIST{I_INTERVAL} := #;
+      loop
+	 next_int: I_INTERVAL := p1.partition_equally!(9);
+	 #OUT+"Next even partition:"+next_int+":"+next_int.size+"\n";
+	 parts := parts.push(next_int);
+      end;
+      rese ::= #FLIST{I_INTERVAL};
+      rese := rese.push(i(0,11)).push(i(12,23)).push(i(24,35)).push(i(36,47))
+	    .push(i(48,58)).push(i(59,69)).push(i(70,80))
+	    .push(i(81,91)).push(i(92,102));
+      -- Should yield a set of 6 blocks of 11 and the first 3 of 12
+      test("Even Parts",parts.str,rese.str);
+      parts := #;
+      loop
+	 next_int: I_INTERVAL := p1.partition_lump_at_end!(9);
+	 #OUT+"Next lumpy partition:"+next_int+":"+next_int.size+"\n";
+	 parts := parts.push(next_int);
+      end;
+      resp ::= #FLIST{I_INTERVAL};
+      resp := resp.push(i(0,10)).push(i(11,21)).push(i(22,32)).push(i(33,43))
+	    .push(i(44,54)).push(i(55,65)).push(i(66,76)).push(i(77,87))
+	    .push(i(88,102));
+      -- Should yield a set of 8 blocks of 11 and the last of 14
+      test("Lumpy Parts",parts.str,resp.str);
+      finish;
+   end;
+
+   i(s,f: INT): I_INTERVAL is return #I_INTERVAL(s,f) end;
+end;
+-------------------------------------------------------------------

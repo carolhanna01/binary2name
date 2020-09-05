@@ -1,0 +1,1 @@
+#define WORDSPLIT_VERSION "v1.0-6-gd36275f"

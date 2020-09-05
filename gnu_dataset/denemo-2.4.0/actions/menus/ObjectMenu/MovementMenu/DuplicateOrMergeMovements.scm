@@ -1,0 +1,36 @@
+;;;DuplicateOrMergeMovements
+(if (d-GetSaved)
+    (let ((timesig (d-InitialTimeSig "query=timesigname"))
+            (keysig (d-InitialKey "query=keysigname")) 
+            (choice (RadioBoxMenu (cons (_ "Duplicate Movement") 'dup) (cons (_ "Merge with Previous Movement") 'merge))))
+        
+        (d-SelectAll)
+        (d-Copy)
+        (d-UnsetMark)    
+        (if choice
+            (case choice
+                ((merge)
+                    (if (d-PreviousMovement)
+                        (begin
+                            (d-MoveToEnd)
+                            (while (d-MoveToStaffUp))
+                            (d-AppendMeasureAllStaffs)
+                            (d-MoveCursorRight)
+                            (d-InsertTimeSig timesig)
+                            (d-InsertKey keysig)
+                            (d-Paste)
+                            (d-PushPosition)
+                            (d-NextMovement)
+                            (d-DeleteMovement)
+                            (d-PopPosition))
+                        (begin
+                            (d-WarningDialog (_ "No Movement Before")))))
+                ((dup)
+                    (d-InsertMovementAfter)
+                     (d-IncreaseGuard)
+                    (d-InitialTimeSig timesig)
+                    (d-InitialKey keysig)
+                    (d-Paste)
+                   (d-DecreaseGuard)))
+            (d-InfoDialog (_ "Cancelled"))))
+    (d-WarningDialog (_ "Score is not saved")))

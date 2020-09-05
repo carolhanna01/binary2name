@@ -1,0 +1,73 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Temperature.sa: TkKit example: a temperature converter
+-- edit one entry and hit return to get the corresponding temperature
+-- Author: Matthias Ernst <mernst@desy.de>
+
+class TEMPERATURE is
+   attr celsius, fahrenheit: TK_ENTRY;
+
+   c2f is
+      c ::= #FLT(celsius.get);
+      fahrenheit.set((c*1.8 + 32.0).str);
+   end;
+
+   f2c is
+      f ::= #FLT(fahrenheit.get);
+      celsius.set(((f-32.0)/1.8).str);
+   end;
+
+   main is
+      sather_home ::= UNIX::get_env("SATHER_HOME");
+      if void(sather_home) then
+	 raise "Please define the environment variable SATHER_HOME";
+      end;
+      app ::= #TK_APP("temperature", "Temperature", sather_home+"Library/System/TkKit/");
+
+      caption ::= #TK_LABEL("caption", app.root).relief_raised;
+      caption.text := "Temperature converter";
+
+      f ::= #TK_FRAME("f", app.root).relief_raised;
+
+      f1 ::= #TK_FRAME("f1", f).configure("bd", 2).relief_ridge;
+
+      cl ::= #TK_BUTTON("cl", f1);
+      cl.text := "Celsius degree: ";
+      cl.pack_info := "-side left";
+
+      celsius := #TK_ENTRY("ce", f1).relief_sunken;
+      celsius.pack_info := "-side left";
+
+      f2 ::= #TK_FRAME("f2", f).configure("bd", 2).relief_ridge;
+
+      fl ::= #TK_BUTTON("fl", f2);
+      fl.text := "Fahrenheit degree: ";
+      fl.pack_info := "-side left";
+
+      fahrenheit := #TK_ENTRY("fe", f2).relief_sunken;
+      fahrenheit.pack_info := "-side left";
+
+      f2c_cb ::= #TKKIT_CB("f2c",bind(f2c) );
+      c2f_cb ::= #TKKIT_CB("c2f", bind(c2f));
+
+      cl.callback := c2f_cb;
+      celsius.bind_command("<Return>", c2f_cb, void); -- no args
+
+      fl.callback := f2c_cb;
+      fahrenheit.bind_command("<Return>", f2c_cb, void);
+
+      app.root.show_all;
+      app.tcl_tk.main_loop;
+   end;
+end;

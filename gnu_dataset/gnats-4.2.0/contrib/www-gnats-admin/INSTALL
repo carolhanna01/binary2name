@@ -1,0 +1,54 @@
+               wwwgnats_admin - web administration tool for gnats
+
+                              Installation guide
+
+	1. Install gnats and gnatsd, the gnats network server. Run gnatsd under its own
+	   user/group to limit the damage possible if the service is compromised.
+	   If you want to manage gnats via the web, you will probably also install gnatsweb
+	   on the same server to allow users to create, view, and edit PRs.
+
+	2. Some Linux distributions with precompiled packages provide the suexec wrapper
+	   in a separate package from the main apache web server. Otherwise configure or
+	   recompile Apache to run with suexec enabled. 
+
+	3. Install Apache on the same server as your gnats database.
+	   wwwgnats_admin maintains the list of gnats databases in
+	   /usr/local/etc/gnats/databases and follows the paths in that file to the
+	   directories containing the actual databases (by default in /var/local/gnats). 
+	   Although you could reproduce that arrangement on the web server using NFS mounts,
+	   it is much simpler to just run a web server for gnats use and administration
+	   on the machine with the gnats database.
+
+	4. Change line 1 of wwwgnats_admin.pl to point to the location of your
+	   'perl' executable.  Perl must be version 5.
+
+	5. Install the wwwgnats_admin.pl script to run using the same account as the
+	   gnats daemon. You should be able to either 
+
+		a. Create a virtual host which runs suexec under that account and place
+		   the script in the cgi-bin directory for that virtual host,
+
+		b. Create a public_html/ subdirectory in the home directory of the
+		   gnatsd account, as indicated by the UserDir directive in the apache
+		   configuration file. Copy the script into that directory so that it is
+		   then available via http://hostname/~account/wwwgnats_admin.cgi 
+
+	   Only approach b) has been tested. More information on Apache suexec configuration is
+	   available at http://httpd.apache.org/docs/suexec.html
+
+	6. In the script directory use the htpasswd command from the Apache distribution to
+	   create, in the file .htpasswd, the list of users authorized to manage gnats.
+
+	7. Create a .htaccess file to force user checking against the .htpasswd file. i.e.
+
+		AuthUserFile /home/gnats/public_html/admin/.htpasswd
+		AuthName Gnats_Admin
+		AuthType Basic
+		<Limit GET>
+		require valid-user
+		</Limit>
+		<Limit POST>
+		require valid-user
+		</Limit>
+
+

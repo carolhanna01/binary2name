@@ -1,0 +1,224 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- fmultimap.sa: Map from K -> FLIST{T}
+-- Author: Benedict A. Gomes <gomes@tiramisu.ICSI.Berkeley.EDU>
+
+class FMULTIMAP{KTP,ETP} < $STR is
+   -- A mapping from elements of type K to lists of elements of type T
+   -- Unlike FMAP, this class is NOT meant to be used when void
+   -- and must be created initially.
+   -- 
+   -- Implementation: Most of the primitive FMAP routines have been
+   -- made private and renamed with a multi_ prefix.  We do permit one
+   -- operation that violates the interface, danger_multi_get which
+   -- returns the actual flist associated with a particular key (not a
+   -- copy of the flist).  This list must *not* be modified and may
+   -- well become invalid when other operations are performed upon the
+   -- multi-map
+   
+   private include FMAP{KTP,FLIST{ETP}} 
+	 target!-> private multi_target!, -- Called in filter
+	 pair!-> private multi_pair!, -- Called in double, halve, str
+	 pairs!->private pairs!,
+	 targets!->private targets!, 
+	 keys!->private keys!, -- Obsolete
+	 insert->private multi_insert, -- Called by insert_pair
+	 insert_pair->private multi_insert_pair,
+	 create->private old_create,
+	 delete->private multi_delete,
+	 filter_not!->, filter!->,
+   -- Unchanged private: key_eq, elt_nil,key_nil, is_key_nil, test
+   -- get_pair, delete
+   -- Publicly included
+	 copy->copy,
+	 get-> danger_multi_get,	-- Public, but DANGEROUS.
+	 is_empty->is_empty,
+	 has_ind->has_ind,
+	 clear->clear,
+	 ind!->ind!,
+	 n_inds->n_inds,
+	 str->;
+	 
+   
+   private const initially_provide_for: INT := 1;
+   
+   private attr total_n_targets: INT;
+
+   --              ------ Initialization/Duplication ------
+   create: SAME is
+      -- Create must be called before use
+      res ::= old_create(2);
+      res.total_n_targets := 0;
+      return res;
+   end;
+   
+   copy: SAME is
+      res ::= old_create(size);
+      res.total_n_targets := 0;
+      loop res := res.insert_pair(pair!) end;
+      res.hsize := hsize;
+      return res;
+   end;
+   
+--              ------ Insertion/Removal --------------- 
+   insert(k: KTP, t: ETP): SAME is
+      -- Insert a new element "t" associated with "k"
+      l: FLIST{ETP}; 
+      if has_ind(k) then l := danger_multi_get(k);  else l := #; end;
+      l := l.push(t);
+      total_n_targets := total_n_targets+1;
+      return multi_insert(k,l);	 
+   end;
+   
+   insert_pair(p: TUP{KTP,ETP}): SAME is   return insert(p.t1,p.t2);  end;
+   
+   delete(k: KTP, t: ETP): SAME is
+      -- Delete an element "t" from the  elements associated with k
+      -- Do nothing if the target does not exist for "k"
+      l: FLIST{ETP};  
+      if has_ind(k) then l := danger_multi_get(k);  else l := #; end;
+      if ~l.has(t) then
+	 -- Do nothing if the target does not exist
+	 return self
+      end;
+      l.delete_elt(t);
+      total_n_targets := total_n_targets-1;
+      if l.size = 0 then
+	 return multi_delete(k);
+      else
+	 return multi_insert(k,l);
+      end;
+   end;
+
+   delete_all(k: KTP): SAME is
+      -- Delete all elements associated with element "k"
+      if has_ind(k) then return multi_delete(k); end;
+   end;
+      
+   --              ------ Access/Measurement --------------
+   get_all(k: KTP): FLIST{ETP} is
+      -- Return a copy of internal list associated with element "k"
+      if has_ind(k) then return danger_multi_get(k).copy;  
+      else return #FLIST{ETP} end;
+   end;
+
+   n_targets: INT is return total_n_targets end;
+   -- Return the total number of targets
+   
+   n_targets(k: KTP): INT is
+      -- Return the number of targets for the key "k"
+      if has_ind(k) then return danger_multi_get(k).size   else return 0 end;
+   end;
+
+   size: INT is return n_targets end;
+   -- Alias for n_targets to satisfy "CONTAINER{KTP}"
+   
+    --              ------ Queries/Comparison --------------
+   equals(b: $RO_MULTIMAP{KTP,ETP}): BOOL is
+      -- Returns true if all of "e"'s elements are equal to self's elts
+      -- Ordering is an issue. Should be redefined to be more
+      -- precise for particular descendants
+      if n_inds /= b.n_ind then return false end;
+      if size /= b.size then return false end;
+      loop e ::= ind!; 
+	 if n_targets(e) /= b.n_targets(e) then return false end; 
+      end;
+      return true ;
+   end;
+
+   has_pair(k:KTP,t:ETP): BOOL  is
+      if has_ind(k) then return danger_multi_get(k).has(t) 
+      else return false end;
+   end;
+
+--              ------ Cursor --------------------------
+   pair!: TUP{KTP, ETP} is
+      -- Yields pairs of keys and elements - keys may repeat
+      loop p: TUP{KTP,FLIST{ETP}} := multi_pair!;
+	 loop 
+	    yield #TUP{KTP,ETP}(p.t1,p.t2.elt!);
+	 end;
+      end;
+   end;
+
+   elt!: ETP is loop yield target!; end; end;
+   
+   target!: ETP is
+      -- Return all the targets in the current multi-map
+      loop t: FLIST{ETP} := multi_target!;
+	 loop yield t.elt! end;
+      end;
+   end;
+   
+   target!(once k: KTP): ETP is
+      -- Return the elements associated with k
+      l: FLIST{ETP};  if has_ind(k) then l := danger_multi_get(k);  
+      else l := #; end;
+      loop yield l.elt! end;
+   end;
+
+--              ------ Conversion ----------------------
+    str: STR is
+      -- Prints out a string version of the array of the components 
+      -- that are under $STR, and their associated indices
+      res ::= #FSTR("{");
+      loop  
+	 p ::= pair!;
+	 key ::= p.t1; elt ::= p.t2;
+	 res := res+",".separate!("["+ind_str(key)+"]="+elt_str(elt));  
+      end;
+      res := res +"}";
+      return(res.str);
+   end;
+
+--              ------  Private Implementation ---------------
+   private ind_str(i: KTP): STR is
+      typecase i
+      when $STR then return i.str  else return "Unprintable Index" end;
+   end;
+
+   private elt_str(e: ETP): STR is
+      typecase e 
+      when $STR then return e.str  else return "Unprintable Element" end;
+   end;
+   
+   private multi_insert_pair(p:TUP{KTP,FLIST{ETP}}):SAME is
+      return multi_insert(p.t1,p.t2) 
+   end;
+   
+   private halve_size:SAME 
+   -- A new table of half the size of self with self's entries
+   -- copied over. 
+      pre ~void(self) and hsize<(asize-1)/4 is
+      ns::=(asize-1)/2+1; r::=allocate(ns); 
+      loop r:=r.multi_insert_pair(multi_pair!) end; 
+      r.total_n_targets := total_n_targets;
+      SYS::destroy(self);   -- The old one should never be used now.
+      return r
+   end;
+
+   private double_size:SAME 
+   -- A new table of twice the size of self with self's entries
+   -- copied over. 
+      pre ~void(self) is
+      ns::=(asize-1)*2+1; r::=allocate(ns); 
+      loop r:=r.multi_insert_pair(multi_pair!) end; 
+      r.total_n_targets := total_n_targets;
+      SYS::destroy(self);   -- The old one should never be used now.
+      return r
+   end;
+
+      
+end; -- class FMULTIMAP{KTP,ETP}
+-------------------------------------------------------------------

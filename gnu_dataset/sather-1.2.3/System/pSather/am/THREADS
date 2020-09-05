@@ -1,0 +1,104 @@
+This document describes how to attach a new thread package to 
+this library
+
+A thread package must have the following features to be useful for this
+library:
+- locks
+- semaphores
+- possibility to send a signal to a thread. Waits on semaphores must
+  be interruptible by such signals.
+
+If the thread package is preemptive, it must supply thread safe versions
+of malloc/calloc/free, stdio.h, strings.h and probably some
+other packages as well.
+
+It will also help if you have a good debugger with thread support.
+
+There are two files you need to change, and one you have to write.
+
+1. Make sure that the active message stuff works on your machine. 
+   To do this compile the library without -DAM_THREADS (the standard
+   Makefile has definitions for sun, Solaris and Linux for this).
+   If the library compiles and the test program runs successful, go on
+   to step 2.
+
+2. Define a macro to be used whenever you insert some special code for 
+   your thread package (the library already uses two such macros, namely
+   SOLARIS_THREADS and LWP).
+
+3. Edit am.h. This file defines all the macros used in the public
+   interface to the am-library. If you have a preemptive thread package,
+   you should take a look at the Solaris implementation, otherwise check
+   out the LWP part of this file.
+
+4. Edit am_int.h. This file defines some macros used in the internal
+   implementation of the am library. Again, if you have preemptive
+   threads look at the Solaris part, otherwise at the LWP part of this
+   file. You must define the following macros:
+
+   T_INIT_MACHINE:
+   	Executed before the different processes are forked off. Use this
+	macro to initialize global data structure that must be on the same
+	memory address on all clusters. If you need to call procedures to
+	start your thread package, call them here.
+
+   T_INIT_CLUSTER:
+   	This macro is called after each process started. Start special
+	threads here. Solaris and lwp start their polling threads at this
+	point.
+
+   AM_INIT_THREAD:
+   	This is called just after T_INIT_CLUSTER and whenever a new
+	thread starts (this is actually only true when
+	USE_AM_TO_START_THREAD is defined (see below)).
+
+   If your thread creation mechanism is similar to lwp and Solaris
+   threads, where you basically call a function that takes the function f
+   to start the thread and a pointer p as argument and creates a thread
+   by calling f and passing p. If this is the case, define
+   USE_AM_TO_START_THREAD and the following two macros:
+
+   AM_START_THREAD_DCL(dcl)
+   	This macro is used to define the function that is called whenever
+	a thread starts. dcl defines one argument to be passed to the
+	functions. See the examples in am_int.h on how exactly this macro
+	is used.
+
+   AM_START_THREAD(msg)
+   	This macro is used to start a new thread. The new thread should
+	execute the function defined with AM_START_THREAD_DCL and pass
+	msg as an argument. See the examples in am_int.h on how exactly
+	this macro is used.  
+
+   If, for some reason, you cannot use the above mechanism to start a
+   thread, you will have to change the code in am_process() in am.c
+   between the lines 
+   	#ifdef USE_AM_TO_START_THREAD
+	#endif
+   
+   If your thread package is able to restart a thread on an other
+   process, you can use the following two macros to increase efficiency.
+   To see an example on how they can be used check the Solaris
+   implementation.
+
+   THREAD_PRIVATE_STUFF
+   	defines some variables in the shared memory segment. Each process
+	will have its own copy of them and knows how to access the
+	variables of other processes. Solaris defines a semaphore here.
+
+   SIGNAL_PROC(proc)
+   	This macro is used whenever a process sent a messages to process
+	proc. Solaris uses it to increment the semaphore of this process.
+   	
+   	
+5. If you need some functions to support your thread package, create a
+   new .c file to implement them.
+
+6. Compile the library and the test file mesg.c. If it does execute 
+   without problems, mail your changes to fleiner@icsi.berkeley.edu, so
+   that it can be included in the official distribution.
+
+For questions, remarks, suggestions send email to
+fleiner@icsi.berkeley.edu. Please say exactly which version of the
+library you are using and the flags used to compile the library.
+You find this information in the SPEC file.

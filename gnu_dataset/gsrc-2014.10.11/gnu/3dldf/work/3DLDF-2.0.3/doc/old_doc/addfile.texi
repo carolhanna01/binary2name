@@ -1,0 +1,123 @@
+@c addfile.texi
+   
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+@node Adding a File, Future Plans, Utility Functions, Top
+@chapter Adding a File
+
+Version 1.1.1 was the first version of 3DLDF since it became a GNU
+package (the current version is @value{VERSION}).  In previous versions,
+recompilation was controlled by an 
+auxilliary program, which I wrote in @cpp{} using CWEB.  However,
+in the course of making 3DLDF conformant to the 
+GNU Coding Standards@c
+@c
+@footnote{The GNU Coding Standards are available at
+@uref{http://www.gnu.org/prep/standards_toc.html}.}@c  
+@c
+,
+this has 
+been changed.  Recompilation is now controlled by @command{make}, as is
+customary.  The chapter ``Compiling'' in previous editions of this
+manual, is therefore no longer needed.
+
+Nonetheless, using CWEB still has consequences for the way recompilation
+must be handled, and it was fairly tricky getting @command{make} to work
+for 3DLDF.  Users who only put code in @file{main.web} and/or change
+code in existing files won't have to worry about this;  
+for others, this chapter explains how to add 
+files to 3DLDF.  
+
+Let's say you want to add a file @file{widgets.web} that defines a
+@code{class Widget}, and that the latter needs access to 
+@code{class Rectangle}, and is in turn required by @code{class Ellipse}.  
+Code must be added to @file{3DLDF-@value{VERSION}/CWEB/Makefile} for
+ctangling @file{widgets.web}, compiling @file{widgets.cxx}, and linking 
+@file{widgets.o} with the other object files to make the executable
+@file{3dldf}.
+
+The best way to do this is to change
+@file{3DLDF-@value{VERSION}/CWEB/Makefile.am} and use Automake 
+to generate a new @file{Makefile.in}.  Then, @command{configure} can be
+used to generate a new @file{Makefile}.  It would be possible to modify
+@file{Makefile} by hand, but I don't recommend it.  The following
+assumes that the user has access to Automake.  If he or she is using a
+GNU/Linux system, this is probably true.@c
+@c
+@footnote{Automake is available for downloading from
+@uref{http://ftp.gnu.org/gnu/automake/}.  The Automake website is at 
+@uref{http://www.gnu.org/software/automake/}.}
+
+@samp{widgets.web} must be added between @samp{rectangs.web} and
+@samp{ellipses.web} in the following variable declaration in 
+@file{3DLDF-@value{VERSION}/CWEB/Makefile.am}:
+
+@example
+3dldf_SOME_CWEBS = pspglb.web io.web colors.web transfor.web \
+                   shapes.web pictures.web points.web \
+                   lines.web planes.web paths.web curves.web \
+                   polygons.web rectangs.web ellipses.web \
+                   circles.web patterns.web solids.web 
+                   solfaced.web cuboid.web polyhed.web \
+                   utility.web parser.web examples.web 
+@end example
+ 
+Now, add @samp{widgets.o} between @samp{ellipses.o} and
+@samp{rectangs.o} in the following variable declaration:
+
+@example
+3dldf_OBS_REVERSED = main.o examples.o parser.o utility.o \
+                     polyhed.o cuboid.o  solfaced.o solids.o \
+                     patterns.o circles.o ellipses.o rectangs.o \
+                     polygons.o curves.o paths.o \
+                     planes.o lines.o points.o pictures.o shapes.o 
+                     transfor.o colors.o io.o pspglb.o  
+@end example
+
+@code{3dldf_OBS_REVERSED} is needed, because 3DLDF fails with
+a ``Segmentation fault'', if 
+the executable is linked using @code{$(3dldf_OBJECTS)}.  This may cause
+problems, if @file{3dldf} isn't built using the GNU @cpp{} compiler
+(GCC).  
+
+Now add a target for @file{widgets.o} between the targets for
+@file{rectangs.o} and @file{ellipses.o}, and add @file{widgets.tim}
+after @file{rectangs.tim} in the list of prerequisites for
+@file{ellipses.o}: 
+
+@example
+rectangs.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+         shapes.tim pictures.tim points.tim lines.tim planes.tim \
+         paths.tim curves.tim polygons.tim rectangs.cxx
+
+ellipses.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+         shapes.tim pictures.tim points.tim lines.tim planes.tim \
+         paths.tim curves.tim polygons.tim rectangs.tim ellipses.cxx
+@end example
+
+This is the result:
+@example
+rectangs.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+         shapes.tim pictures.tim points.tim lines.tim planes.tim \
+         paths.tim curves.tim polygons.tim rectangs.cxx
+
+widgets.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+         shapes.tim pictures.tim points.tim lines.tim planes.tim \
+         paths.tim curves.tim polygons.tim rectangs.tim \
+         widgets.cxx
+
+ellipses.o: loader.tim pspglb.tim io.tim colors.tim transfor.tim \
+         shapes.tim pictures.tim points.tim lines.tim planes.tim \
+         paths.tim curves.tim polygons.tim rectangs.tim widgets.tim \
+         ellipses.cxx
+@end example
+
+In addition, @file{widgets.tim}
+must be added to the list of prerequisites in all of the following
+targets up to and including @file{examples.o}.
+
+
+

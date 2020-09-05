@@ -1,0 +1,150 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- glob.sa: Unix style "globbing" of strings.
+-------------------------------------------------------------------
+class GLOB is
+   -- Unix "glob"-style string patterns are what the various shells 
+   -- in Unix use to specify sets of file names. They are used in the
+   -- Sather interpreter to specify class names, etc. This class takes
+   -- a pattern string and a test string and determines whether
+   -- the test string matches the pattern.
+   -- 
+   -- Here are the components of a glob pattern:
+   -- 
+   -- 1) char 
+   -- Any pattern character except for the special characters 
+   -- "[{?*\" must be matched exactly in the text string.
+   -- 
+   -- 2) '\' char
+   -- The backslash character is used as an escape to enable matching 
+   -- of the special characters. The backslash may be followed by any
+   -- character and the pattern matches that character.
+   -- 
+   -- 3) '[' ... ']'
+   -- If the left bracket character '[' appears unescaped, then it
+   -- must be followed by a sequence of characters and a right bracket.
+   -- This pattern matches any single character in the list. If a 
+   -- right bracket appears immediately after the left bracket, it is 
+   -- treated as an ordinary character rather than as the closing 
+   -- bracket. All characters between the two brackets except '-' are 
+   -- taken to be themselves (i.e. they aren't special or escaped). 
+   -- Sequences of the form "char1 '-' char2" are treated as a 
+   -- shorthand for a list of all the characters alphabetically 
+   -- between "char1" and "char2". '-' may be included in the set by 
+   -- making it the first or last character.
+   -- 
+   -- 3) '{' str, str, ... '}'
+   -- If the left brace character '{' appears unescaped, then it
+   -- must be followed by a comma-separated list of strings. Nothing
+   -- is escaped 
+   -- 
+   -- 4) '?'
+   -- A question mark matches an arbitrary single character. 
+   -- 
+   -- 5) '*'
+   -- An asterisk matches zero or more arbitrary characters.
+
+   is_legal_pattern(s:STR):STR is
+      -- Void if `s' is a legal pattern string, an error message if
+      -- not.
+      in_bracket:BOOL;		-- True if between brackets.
+      after_slash:BOOL;		-- True if immediately after a backslash.
+      loop i::=s.ind!; c::=s[i];
+	 if in_bracket then
+	    if c='[' then
+	    return "Error in glob pattern at character " + i +
+	       ", unescaped bracket within brackets." 
+	    elsif c=']' then in_bracket:=false end;
+	 elsif c='[' then in_bracket:=true end;
+	 if after_slash then
+	    if "[]?*\\".contains(c) then after_slash:=false
+	    else return "Error in glob pattern at character " + i + 
+	       ", illegal character after backslash." end;
+	 elsif c='\\' then after_slash:=true end end;
+      if in_bracket then
+	 return "Error in glob pattern, no closing bracket." end;
+      if after_slash then
+	 return "Error in glob pattern, final backslash." end;
+      return void end;
+   
+   pattern_matches(pat,s:STR):BOOL is
+      -- True if the glob pattern `pat' matches the string `s'.
+      return pattern_matches(pat,s,0,0) end;
+   
+   pattern_matches(pat,s:STR,pst,sst:INT):BOOL is
+      -- True if the pattern `pat' starting at character `pst' 
+      -- matches the string `s' starting at character `sst'.
+      if pst=pat.size then return sst=s.size end;
+      c::=pat[pst];		-- The pattern character.
+      case c
+      when '\\' then
+	 if pat.size=pst+1 then return false end; -- Error in pattern.
+	 c2::=pat[pst+1];	-- The next character
+	 case c2
+	 when '[', ']', '?', '*', '\\' then
+	    if s.size=sst then return false end; -- String used up.
+	    if s[sst]=c2 then 
+	       return pattern_matches(pat,s,pst+2,sst+1) 
+	    else return false end;
+	 else return false end; -- Error in pattern.
+      when '[' then
+	 if s.size=sst then return false end; -- No chars left to match.
+	 rb::=pat.search(']',pst+1); -- Closing right bracket index.
+	 if rb=-1 then return false end; -- Error in pattern.
+	 i::=pst+1;
+	 loop until!(i=rb); -- Indices between brackets.
+	    c:=pat[i];
+	    case c
+	    when '\\' then c2::=pat[i+1];
+	       case c2
+	       when  '[', ']', '?', '*', '\\' then
+		  if s[sst]=c2 then
+		     return pattern_matches(pat,s,rb+1,sst+1) end;
+	       else return false end; -- Error in pattern.
+	       i:=i+1;		-- Extra increment to position.
+	    when '-' then
+	       if i=pst+1 then
+		  if s[sst]='-' then -- First character in brackets.
+		     return pattern_matches(pat,s,rb+1,sst+1) end;
+	       else		-- Check range.
+		  if pat[i-1]<s[sst] and s[sst]<pat[i+1] then
+		     return pattern_matches(pat,s,rb+1,sst+1) end;
+	       end;
+	    when  '[', ']', '?', '*' then
+	       return false;	-- Error in pattern.
+	    else
+	       if s[sst]=c then 
+		  return pattern_matches(pat,s,rb+1,sst+1) end end;
+	    i:=i+1 end;
+	 return false;		-- Nothing matched.
+      when ']' then return false -- Error in pattern.
+      when '?' then
+	 if s.size=sst then return false end; -- String used up.	 
+	 return pattern_matches(pat,s,pst+1,sst+1) -- ? matches 1 char.
+      when '*' then
+	 if pst=pat.size-1 then return true end; -- * matches anything.
+	 nsst::=sst;		-- Next starting position.
+	 loop until!(nsst>=s.size); -- Done when string is used up.
+	    if pattern_matches(pat,s,pst+1,nsst) then return true end;
+	    nsst:=nsst+1 end;
+	 return false;		-- No matches.
+      else			-- Ordinary character, must match.
+	 if s.size=sst then return false -- String used up.	 
+	 elsif s[sst]=c then 
+	    return pattern_matches(pat,s,pst+1,sst+1)
+	 else return false end end end;
+
+end; -- class GLOB
+
+-------------------------------------------------------------------

@@ -1,0 +1,1282 @@
+2011-03-07  Jim Meyering  <meyering@redhat.com>
+
+	vc-chlog: handle two-word function names like "operator delete"
+	With exuberant ctags, a file in gcc would provoke diagnostics like this:
+	  vc-chlog: line 425: test: delete: integer expression expected
+	* vc-chlog.in (func_taglist): Don't let a function name like "operator
+	delete" provoke shell syntax errors.
+
+2011-01-05  Jim Meyering  <meyering@redhat.com>
+
+	doc: don't emit @@ME@@ strings into generated man page
+	Do hard-code the program name, vc-dwim, in the --help POD sources,
+	rather than using @@ME@@ and substituting at output time.  The man
+	page generation process, $(POD2MAN), didn't know to perform that
+	substitution.
+	* vc-dwim.pl: s/@@ME@@/vc-dwim/, as above.
+	(package PodTemplate): Now that we no longer substitute anything
+	in --help output, remove the embedded package and its functions.
+	Reported by Paul Eggert.
+
+2010-11-07  Jim Meyering  <meyering@redhat.com>
+
+	tests: don't fail symlinked-changelog when email not define in ~/.bazaar
+	* tests/symlinked-changelog: Set/export HOME, and then run bzr whoami,
+	to keep this test from failing due to "bzr: ERROR: Unable to determine
+	your name.".
+
+2010-11-06  Jim Meyering  <meyering@redhat.com>
+
+	build: configure for gnu-web-doc-update
+	* cfg.mk (manual_title): Define.  Required by the web-manual-
+	generating code in build-aux/gnu-web-doc-update
+
+	build: remove now-unnecessary release-related settings
+	* cfg.mk (gnu_ftp_host-alpha, gnu_ftp_host-beta gnu_ftp_host-stable):
+	(gnu_rel_host, url_dir_list): Remove definitions.  The defaults,
+	now provided by maint.mk, are the same.
+
+	build: use gnulib's gnu-web-doc-update module
+	* bootstrap.conf (gnulib_modules): Add gnu-web-doc-update.
+
+	build: use gnulib's do-release-commit-and-tag module
+	* bootstrap.conf (gnulib_modules): Add do-release-commit-and-tag.
+
+	build: use latest bootstrap from gnulib
+	* bootstrap: Update to latest from gnulib.
+
+2010-11-05  Jim Meyering  <meyering@redhat.com>
+
+	avoid a warning from perl-5.12
+	e.g., "main::SAVE_ERR" used only once: ..."
+	This unexpected output to stderr was making several tests fail.
+	* vc-dwim.pl (run_command): Use 3-argument form of open,
+	rather than embedding glob name in a string.
+
+2010-04-17  Jim Meyering  <meyering@redhat.com>
+
+	doc: mention the 2009-10-30 bug fix
+	* NEWS: Describe sole bug fix since version 1.2.
+
+	build: update bootstrap script from gnulib
+	* bootstrap: Update from gnulib.
+
+	doc: refer to v1.3 of the FDL, not v1.2; remove uses of @acronym{...}
+	* doc/vc-dwim.texi: Use version 1.3 of FDL.
+	Use "GNU", rather than @acronym{GNU} to placate syntax-check.
+
+	* README: Likewise.
+
+2010-01-04  Jim Meyering  <meyering@redhat.com>
+
+	pull in a work-around for a Perl taint bug from File::Coda
+	* Coda.pm: Sync from File::Coda, but omit the File:: prefix for now.
+
+	update cfg.mk to reflect newer maint.mk from gnulib
+	* cfg.mk (update-copyright-env): Also record non-default max line length.
+	(gpg_key_ID): Remove, now that maint.mk no longer requires this.
+
+2009-10-30  Jim Meyering  <meyering@redhat.com>
+
+	vc-dwim: commit symlink'd ChangeLog *after* primary commit, not before
+	* vc-dwim.pl (do_commit): Set DIE_UPON_FAILURE.
+	(main): With a symlink'd ChangeLog file, attempt the primary commit
+	before the ChangeLog commit, since the primary one is far more likely
+	to fail, e.g., due to a commit hook.  In that case, the ChangeLog
+	delta is left uncommitted, as you probably require, so that you
+	can run vc-dwim after correcting the problem with the primary commit.
+
+2009-09-09  Jim Meyering  <meyering@redhat.com>
+
+	maint: use correct directory name in generated announcement
+	* cfg.mk (url_dir_list): Use .../gnu/$(PACKAGE), not .../gnu/coreutils.
+	Reported by Bob Friesenhahn.
+
+2009-09-08  Jim Meyering  <meyering@redhat.com>
+
+	build: use gnulib's gnupload script
+	* bootstrap.conf (gnulib_modules): Add gnupload.
+
+	build: don't try to run autoheader, if we don't use it
+	* bootstrap: Define AUTOHEADER=true when AC_CONFIG_HEADERS is
+	not used in configure.ac.
+
+	build: use gnulib's announce-gen module
+	* bootstrap.conf (gnulib_modules): Add announce-gen.
+
+	build: update bootstrap from gnulib
+	* bootstrap: Update from gnulib
+
+2009-09-07  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	vc-chlog: new command line option --no-functions.
+	* vc-chlog.in (find_functions): New variable, true by default and
+	false if --no-functions was passed.
+	(func_help): Document it.
+	(func_extract_identifiers): Do not extract identifiers if false.
+	* tests/t-vc-chlog (run_vc_chlog): Test it.
+	* doc/vc-dwim.texi (vc-chlog Invocation, vc-chlog Internals):
+	Document it.
+	* NEWS: Update.
+
+2009-09-01  Jim Meyering  <meyering@redhat.com>
+
+	* NEWS: Mention improvements.
+
+	vc-dwim: correct example code to spell out "commit" rather than "ci"
+	* vc-dwim.pl (main): Don't use private alias, "ci".
+	Spotted by Ralf Wildenhues.
+
+	update all copyright year lists to include 2009
+	* Coda.pm: Likewise.
+	* Makefile.am: Likewise.
+	* ProcessStatus.pm: Likewise.
+	* README: Likewise.
+	* VC.pm: Likewise.
+	* bootstrap: Likewise.
+	* vc-chlog.in: Likewise.
+
+	build: ignore all of build-aux/
+	* .gitignore: Ignore all of build-aux.
+	* build-aux/.gitignore: Remove file.
+
+	build: include update-copyright
+	* bootstrap.conf (gnulib_modules): Add update-copyright.
+	* cfg.mk (update-copyright-env): Define.
+
+	build: make build slightly less verbose
+	* Makefile.am (vc-dwim): Use $(AM_V_GEN) and $(AM_V_at).
+
+	doc: you can use vc-dwim when ChangeLog is not version-controlled
+	* vc-dwim.pl (--help): Give an example describing how to use vc-dwim
+	in a project that does not maintain a version-controlled ChangeLog file.
+
+2009-08-11  Jim Meyering  <meyering@redhat.com>
+
+	vc-dwim: fix SCALAR(0x...) log pollution
+	Under rather unusual circumstances, vc-dwim would erroneously
+	insert an extra "SCALAR(0x...)" line in a commit log.
+	* vc-dwim.pl (main): Do not record any references in @log_msg_lines.
+
+	* tests/scalar: New test for the above.
+	* tests/Makefile.am (TESTS): Add scalar.
+
+2009-07-11  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	Fix testsuite setup error.
+	* tests/subdir-cvs: Move require_cvs_ after sourcing trap-setup.
+
+	vc-chlog: correctly detect files removed in git tree.
+	* vc-chlog.in (record_file): Record file name from the `^--- '
+	line, use it in case the `^+++ ' line contains `/dev/null'.
+	* tests/t-vc-chlog (run_vc_chlog): New test diff, from git,
+	for a removed file.
+
+2009-06-25  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* NEWS: Post-release update.
+
+2009-06-20  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* NEWS: Update.
+
+2009-06-20  Jim Meyering  <meyering@redhat.com>
+
+	FIXME: to merge onto require-* removal changes
+	* tests/Makefile.am (EXTRA_DIST): Remove these:
+	require-bzr require-cvs require-git require-hg.
+
+2009-06-19  Jim Meyering  <meyering@redhat.com>
+
+	tests: move require-* files into trap-setup as functions
+	* tests/trap-setup: (require_bzr_, require_cvs_): New functions.
+	(require_hg_, require_git_): New functions.
+	* tests/require-bzr: Remove file.
+	* tests/require-cvs: Likewise.
+	* tests/require-hg: Likewise.
+	* tests/require-git: Likewise.
+	* tests/add-empty: Update users to invoke the function rather than
+	to source the file.
+	* tests/author: Likewise.
+	* tests/cl-but-no-diff: Likewise.
+	* tests/cl-other-user: Likewise.
+	* tests/git-log-summary: Likewise.
+	* tests/git-mv: Likewise.
+	* tests/leading-comment: Likewise.
+	* tests/no-star: Likewise.
+	* tests/subdir: Likewise.
+	* tests/subdir-cvs: Likewise.
+	* tests/subdir-middle: Likewise.
+	* tests/trap-setup: Likewise.
+	* tests/two-line-attr: Likewise.
+	* tests/two-vc: Likewise.
+
+2009-06-19  Jim Meyering  <meyering@redhat.com>
+
+	* tests/require-git: Remove file.
+
+	build: revert part of an earlier change
+	* tests/Makefile.am: Do include *this* check.mk.
+
+	* tests/trap-setup (skip_test_): New function.
+
+	doc: update build-from-sources instructions
+	* README-hacking: Update.
+
+	build: remove now-imported or unused files
+	* maint.mk: Remove file. (now from gnulib)
+	* build-aux/check.mk: Remove file.
+	* bootstrap.conf (gnulib_modules): Add maintainer-makefile.
+	Remove thus-subsumed modules: gnumakefile, vc-list-files.  Sort.
+	* configure.ac: Require automake-1.11, and enable its
+	color-tests, parallel-tests and silent-rules options.
+	* tests/Makefile.am (TESTS): Don't include build-aux/check.mk.
+	* tests/check.mk: Likewise.
+	* cfg.mk: Don't mention check.mk.
+	(old_NEWS_hash): Remove trailing "  -", to align with adjusted
+	rule in gnulib's maint.mk.
+
+	avoid "make syntax-check" failure
+	* doc/vc-dwim.texi: Remove trailing space.
+
+2009-03-16  Jim Meyering  <meyering@redhat.com>
+
+	accept new git diff output: diff --git c/... w/...
+	* vc-dwim.pl (cross_check): a/ and b/ prefix strings may be c/ and w/,
+	so accept any one-letter prefix.
+	Also, record each such name as "seen".
+
+	* configure.ac: Use dist-xz, not dist-lzma.
+
+2008-08-21  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* vc-chlog.in (func_extract_changed_lines): Accept
+	single-character prefixes other than `a/' and `b/' for diff file
+	names, for git.
+
+2008-07-23  Jim Meyering  <meyering@redhat.com>
+
+	tests: also accept bzr-1.3 and 1.4-based versions.
+	* tests/require-bzr (bzr_version): Relax test.
+
+2008-07-06  Jim Meyering  <meyering@redhat.com>
+
+	* bootstrap: Remove $bt and $bt2 also when not using gettext.
+
+2008-07-06  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* doc/vc-dwim.texi (@ovar): Fix macro description.
+
+2008-07-05  Jim Meyering  <meyering@redhat.com>
+
+	vc-chlog: use new bug-reporting address
+	* vc-chlog.in: Use <@PACKAGE_BUGREPORT@>.
+	* TODO: Update.
+
+2008-07-02  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	Do not build libvc_dwim.a by default.
+	* gnulib-local/modules/extra-lib: New file.
+	* bootstrap.conf (gnulib_modules): Add extra-lib.
+	(gnulib_tool_option_extras): Add --local-dir=gnulib-local.
+	* TODO: Update.
+
+2008-07-01  Jim Meyering  <meyering@redhat.com>
+
+	* TODO: Add some build-related items.
+
+	update bug-reporting address
+	* vc-dwim.pl (main): Point to the ...@gnu.org mailing list.
+	* Makefile.am (do_subst): Propagate $(PACKAGE_BUGREPORT).
+
+	build-related update
+	* Makefile.am (EXTRA_DIST): Add bootstrap and bootstrap.conf.
+	* bootstrap: New file, from coreutils with slight modifications.
+	* bootstrap.conf: New file, based on the one from coreutils.
+	* build-aux/install-sh: Remove now-generated file.
+	* build-aux/missing: Likewise.
+	* INSTALL: Likewise.
+
+	add README-hacking
+	* README-hacking: New file.  From coreutils, with adaptations.
+	* README-devel: Remove file.
+	* TODO: Remove item.
+
+2008-07-01  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	doc: add texinfo documentation
+	* doc/vc-dwim.texi: New file.
+	* Makefile.am (SUBDIRS): Add doc.
+	* doc/Makefile.am: New file.
+	* configure.ac, Makefile.am: Adjust.
+
+2008-06-28  Jim Meyering  <meyering@redhat.com>
+
+	use "#!/usr/bin/env perl"
+	* vc-dwim.pl: Use "#!/usr/bin/env perl" rather than a substituted
+	string, to make the resulting code more likely to be transportable.
+	* Makefile.am (do_subst): Remove PERL substitution.  No longer used.
+	Suggested by Karl Berry.
+
+2008-06-28  Jim Meyering  <meyering@redhat.com>
+
+	avoid hg here -- 1.0.1 gets an internal error due to hierarchy depth
+	* tests/symlinked-changelog: Use bzr instead.
+	Mercurial bug report: <https://www.selenic.com/mercurial/bts/msg6450>.
+
+	add support for bzr
+	* tests/require-bzr (bzr_version): New file.
+	* tests/Makefile.am (EXTRA_DIST): Add require-bzr.
+	* VC.pm (BZR): Define.
+	($vc_cmd): Add a stanza for bzr.
+	(new): Handle ".bzr".
+	* README: Add bzr to the list.
+	* NEWS: Mention this.
+
+	tests: clean up
+	* tests/symlinked-changelog: Simplify.
+	Don't redirect so much to /dev/null; better, w/new test framework.
+
+	* Makefile.am (EXTRA_DIST): Add .prev-version
+
+	adjust spelling of git commands: s/git-/git /; s/init-db/init/
+	* VC.pm (VC): Likewise.
+	* tests/author: Likewise.
+	* tests/git-log-summary: Likewise.
+	* tests/git-mv: Likewise.
+	* tests/subdir-middle: Likewise.
+	* vc-dwim.pl: Likewise.
+
+	more build reworking
+	* Makefile.am (EXTRA_DIST): Add cfg.mk and maint.mk.
+	(MOSTLYCLEANFILES, noinst_LIBRARIES): Define.
+	Include gnulib.mk.
+	* bootstrap: Add gnulib-tool options.
+	Run autoreconf.
+
+	build-related revamp
+	* Makefile.am (ACLOCAL_AMFLAGS): Define to "-I m4".
+	* bootstrap (modules): Add gitlog-to-changelog, gnu-make, posix-shell.
+	* configure.ac: Use gnulib's gl_EARLY and gl_INIT.
+	* tests/Makefile.am (TESTS_ENVIRONMENT): Move definition...
+	* tests/check.mk: ...to here.  New file, based on coreutils'.
+	* build-aux/check.mk: New file, from coreutils.
+
+2008-06-20  Jim Meyering  <meyering@redhat.com>
+
+	* Makefile.am: Add copyright.
+
+2008-06-18  Jim Meyering  <meyering@redhat.com>
+
+	* vc-dwim.pl: Specify GPLv3+.  Pointed out by Karl Berry.
+
+2008-06-14  Jim Meyering  <meyering@redhat.com>
+
+	* TODO: Remove distcheck-related item.  Add one for README-devel.
+
+	* bootstrap, AUTHORS: New files.
+
+	* cfg.mk, maint.mk, .prev-version: New files
+
+	* Makefile.am: remove vestiges of hg support
+
+	update configure.ac
+	* configure.ac: Add copyright, use git-version-gen,
+	require dist-lzma and new automake.
+
+	* NEWS: update template
+
+	update to GPLv3
+
+	add copyright notices everywhere
+	* vc-chlog.in: update copyright, with permission from Ralf
+
+	* tests/multiple-chlogs: Remove trailing blanks.
+
+	* tests/t-vc-chlog: Remove trailing blanks in emitted patches.
+
+	avoid test failure due to change in "git diff" output
+	* tests/symlinked-changelog: Adjust expected output and
+	arrange to accept both variants of "git diff" output.
+	Don't emit expected output twice.
+
+2008-01-03  Jim Meyering  <meyering@redhat.com>
+
+	Avoid test failure due to cvs's diff heuristic vs coarse FS time stamps
+	* tests/subdir-cvs: Manually change mtimes of ChangeLog and "f" to be
+	at least two seconds later.
+	Based on a patch by by Ralf Wildenhues.
+
+2007-11-30  Jim Meyering  <meyering@redhat.com>
+
+	Derive the author name+email string in more cases.
+	* vc-dwim.pl (find_author): New function.
+	(main): Use it.
+
+2007-10-11  Jim Meyering  <meyering@redhat.com>
+
+	Version 1.0.
+	* configure.ac: Version 1.0.
+	* NEWS: Update release date.
+
+2007-10-10  Jim Meyering  <meyering@redhat.com>
+
+	* NEWS: Describe some of the vc-dwim changes.
+
+	Insert a blank line in log after the first (and not just for git).
+	* vc-dwim.pl (do_commit): If the commit log has two or more lines,
+	and the second one is not already empty, then insert a blank line
+	after the first.
+	* tests/git-log-summary: New test for the above.
+	* tests/Makefile.am (TESTS): Add git-log-summary.
+	Suggestion from Eric Blake.
+
+	Include cwd in diagnostic, if possible.
+	* vc-dwim.pl (run_command): Fix a typo: use cwd if eval succeeds.
+
+2007-05-01  Jim Meyering  <jim@meyering.net>
+
+	Give a better diagnostic for a failed sub-process.
+	* vc-dwim.pl (run_command): Don't try to set $?;
+	use process_status($rc) instead of $PROCESS_STATUS.
+
+	"use Cwd" before calling Cwd::getcwd()
+	* vc-dwim.pl (run_command): When diagnosing a failed command,
+	"use Cwd", but don't fail early if Cwd::getcwd() fails.
+	Prompted by a report from Ralf Wildenhues.
+
+2007-04-29  Jim Meyering  <jim@meyering.net>
+
+	Use git (not cg) for commits
+	* VC.pm (DIFF_COMMAND): Likewise, use "git-diff -B -C HEAD --",
+	rather than "cg-diff --".
+	* tests/symlinked-changelog: Update expected output accordingly.
+
+	Use git (not cg) for commits
+	* VC.pm (COMMIT_COMMAND): Use git, not cg.
+
+	* vc-dwim.pl (run_command): Remove useless trailing "\n".
+	(run_command): When failing, report CWD, too.
+	(main): When committing symlinked-ChangeLog, use a non-zero-length
+	commit message (git would object about the old, empty one).
+
+	* vc-dwim.pl (main): Don't set GIT_PAGER.
+
+2007-03-25  Jim Meyering  <jim@meyering.net>
+
+	Determine the --author='...' string automatically from ChangeLog
+	when the first line of the delta is a "DATE  NAME  EMAIL" line.
+	* vc-dwim.pl (check_attribution): New function.
+	(main): Use it.
+	* tests/author: Add tests for this.
+
+2007-03-09  Jim Meyering  <jim@meyering.net>
+
+	Allow template values to be substituted into --help output.
+	* vc-dwim.pl (PodTemplate): New package.
+	(usage): Put $ME in PodTemplate's dictionary.
+	(__END__): Replace each literal "vc-dwim" with "@@ME@@".
+
+2007-01-20  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* man/Makefile.am: Create vc-dwim.1 with pod2man instead of
+	help2man.
+	* configure.ac: Test for pod2man.
+
+2007-01-13  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (is_changelog): Relax naming requirements for ChangeLog
+	files.  Accept a file if its name _starts_ with "ChangeLog".
+
+2007-01-04  Jim Meyering  <jim@meyering.net>
+
+	* tests/symlinked-changelog: Avoid spurious failure with different
+	versions of cogito.
+
+	Accept new option: --author='User Name <user@example.org>' option.
+	* vc-dwim.pl (main): Accept new option.
+	(do_commit): Take an $AUTHOR parameter.  Update callers.
+	Document new option.
+	* tests/author: New file, to test the above.
+	* tests/Makefile.am (TESTS): Add author.
+
+2007-01-03  Jim Meyering  <jim@meyering.net>
+
+	* tests/symlinked-changelog: Append "f" to expected output,
+	to match what git/cg-commit now does.
+
+2006-12-20  Jim Meyering  <jim@meyering.net>
+
+	Redirect stdout, not stderr, to align with newer (1.4.4.2) git.
+	* tests/add-empty, tests/cl-but-no-diff, tests/cl-other-user:
+	* tests/git-mv, tests/leading-comment, tests/no-star, tests/subdir:
+	* tests/subdir-middle, tests/symlinked-changelog:
+	* tests/two-line-attr, tests/two-vc:
+
+	* vc-dwim.pl (exists_editor_backup): Check for "-l" (is-symlink),
+	and for "-f" (is-regular-file).
+	Check for ".#$f" (created by latest emacs) before "#$f#".
+
+2006-12-09  Jim Meyering  <jim@meyering.net>
+
+	These test changes are required to accommodate changes in the
+	underlying tools.  Both started failing recently, and this changes
+	makes the tests pass.  We may have to revisit, to make them pass
+	on systems with older tools.
+	* tests/symlinked-changelog: Don't expect a trailing file name ("f"),
+	since hg no longer generates that output.
+	* tests/subdir-cvs: Include "-p" in expected diff output,
+	since VC.pm invokes cvs with -Nup.
+
+2006-12-05  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (exists_editor_backup): If ChangeLog is a symlink,
+	then look for a backup indicator in the directory of the referent.
+
+2006-11-20  Jim Meyering  <jim@meyering.net>
+
+	* VC.pm ($vc_cmd) [DIFF_COMMAND]: Add cvs diff's -p option.
+
+2006-11-14  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	Implement heuristic for end-of-function tags.
+	* vc-chlog.in (func_taglist): For C/C++, Shell, and Perl code,
+	tag an empty line, preceded by a line containing a closing
+	brace in column one and optionally a comment, as end-of-function
+	marker, with an empty identifier.
+	* tests/t-vc-chlog (expected-exuberant, expected-emacs): Improve
+	expected output accordingly.
+	* TODO: One more down, in the hope that this is an overall
+	improvement.
+	* README, NEWS: Update.
+
+	* vc-chlog.in (func_extract_changed_lines): Factor array deletion
+	in awk script into a function delete_array.
+
+2006-11-10  Jim Meyering  <jim@meyering.net>
+
+	* README: Change narrating style not to speak of "I".
+	* configure.ac: Version 0.2.3-devel.
+	* NEWS: Update.
+
+	Version 0.2.2.
+	* configure.ac: Version 0.2.2.
+	* NEWS: Update the release date.
+
+	If there appear to be unsaved changes, report the temp. file name.
+	* vc-dwim.pl (exists_editor_backup): Rather than returning 0/1,
+	return undef/name-of-temporary.  Update each caller to report the
+	name of any offending temporary file.
+
+2006-11-10  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* tests/t-vc-chlog: Separate out add-to-empty.c and new.c
+	patches, so that with Solaris patch, the test errors out at the
+	first genuine failure, but does not cause 'patch' to ask the
+	user questions.
+
+	* vc-chlog.in: Fix handling of '--' command line argument.
+
+	* README: Add paragraph about multiple ChangeLogs.
+
+2006-11-09  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	Add man pages, generated by help2man.
+	* man/Makefile.am: New file.  Build man pages in the source
+	tree.  Use a separate Makefile to avoid parallel 'make' issues
+	as we may not use build tree files as prerequisites.  Distribute
+	the man pages.
+	* Makefile.am: Adjust.
+	* configure.ac: Adjust.  Check for help2man.
+
+2006-11-07  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* tests/t-vc-chlog: Solaris patch asks questions about a diff
+	that changes multiple files, unless the names may be inferred
+	e.g. from an `Index:' line.  So add some here.  The test will
+	still fail, but now for other reasons.
+
+	* vc-chlog.in (func_recreate_oldfile): New function.  Do the
+	patch reversing in $tmp, to avoid flaky 'patch' implementations
+	to leave .orig files in the source tree.
+	(func_extract_identifiers): Use it.
+
+2006-11-03  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	Fix vc-chlog to deal properly with Texinfo node names.
+	* vc-chlog.in (func_taglist): For Exuberant Ctags, apply some
+	heuristic to deal with spaces in identifiers in the -x list.
+	(func_pretty_changelog_entry): Deal with spaces in `ident:'
+	lines.
+	* README: Update Texinfo ~/.ctags suggestions.
+	* TODO: One more down.
+
+2006-11-02  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	Implement handling of multiple ChangeLog files.
+	* vc-chlog.in (func_dirname): New function; just calls `dirname'
+	for now.
+	(func_sortby_chlog): New function to sort files by Changelog
+	files.  Longest matching prefix of the dirname of the ChangeLog
+	path wins.
+	(func_pretty_changelog_entry): Adjust.
+	(func_help): New option `--changelog'.
+	* tests/multiple-chlogs: New tests.
+	* tests/Makefile.am: Update.
+	* README, TODO: Update.
+
+	* vc-chlog.in (func_extract_identifiers): Ignore stdout output
+	of `patch' if not --debug, otherwise send to stderr, to avoid
+	it in the normal data flow.
+
+	* tests/t-vc-chlog: Kill one superfluous verbose output.
+
+2006-10-28  Jim Meyering  <jim@meyering.net>
+
+	* README-devel: Don't say to run "autoheader" anymore.
+	It's no longer needed, and now it would fail.
+
+	Adapt test to new restrictions.
+	* tests/two-vc (vc-dwim): Rewrite to test the same thing, without
+	hitting new restriction that the working directory be "in" the
+	git- or hg-managed tree.
+
+	Work when ChangeLog is in a subdirectory and when run from some
+	other directory.
+	* VC.pm (new): Rewrite to record better-named $self->{cwd_depth}.
+	Add comments.
+	(full_file_name): Use it.  Add comments.
+	* tests/subdir-middle: New test for the above fix.
+	* tests/Makefile.am: Add subdir-middle.
+
+	* tests/trap-setup: Don't clean up if $DEBUG is set.
+
+2006-10-27  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* tests/t-vc-chlog: Reversing a unidiff that removes the only
+	line of a file seems not to be portable to non-GNU patch, so
+	ignore failure for those.
+
+	* tests/t-vc-chlog: Using a checked eval does not work with BSD
+	'sh -e'; drop this idea.  Instead, redirect most output and print
+	it if $VERBOSE.  Use...
+	(run_vc_chlog): New function, to help.  Use everywhere.
+	(diff_u): New variable.  Test for `diff -u', and for now, just
+	SKIP the whole test if it does not know it.  Use everywhere.
+	FreeBSD patch is quite verbose on stderr at times, relax a
+	couple of tests for this.
+
+	* tests/t-vc-chlog: Do the plus_at_beginning test at the end,
+	separately from tests that have less chance of failing a dumb
+	'patch' program.
+
+	* configure.ac (PATCH): New precious variable; prefer gpatch
+	over patch.
+	* vc-chlog.in (func_extract_identifiers): substitute and use it.
+	* tests/Makefile.am (TESTS_ENVIRONMENT): Set it.
+	* tests/t-vc-chlog: Use it.
+
+	* vc-chlog.in (func_tempdir): Move the trap initialization
+	outside of the shell function into the main code flow.
+	Otherwise AIX 5.3 sh will invoke the 0 trap at the end of
+	func_tempdir.
+
+	* vc-chlog.in (func_extract_changed_lines): Solaris awk and nawk
+	does not delete a whole array.  Delete individual items instead.
+
+	* vc-chlog.in: Invert logic for initfile existence test to avoid
+	`set -e' from halting the script.
+
+2006-10-27  Jim Meyering  <jim@meyering.net>
+
+	Don't emit distracting output during "make check".
+	* tests/git-mv: Redirect both stdout and stderr to /dev/null
+	for the first comparison.
+
+	* vc-dwim.pl (main): When accepting a second ChangeLog attribution
+	line, don't require an "and " before the name and email address.
+	Suggestion from Ralf Wildenhues.
+
+	* tests/git-mv: Remove useless trailing backslashes.
+
+2006-10-26  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* vc-chlog.in (func_extract_changed_lines): Fix the diff lines
+	computation.  Now they should be the exact boundaries of the per
+	file patch in any case (no trailing lines any more).  This
+	change requires that the awk variable NR be writable.
+
+	* tests/t-vc-chlog: Remove debugging leftover `--debug'.
+
+	* vc-chlog.in [debug] (func_tempdir, func_extract_changed_lines):
+	Add 'set -x'; ksh resets it at function entry.
+	(func_taglist, func_extract_identifiers): Likewise.
+	(func_pretty_changelog_entry): Likewise.
+
+	* tests/require-cvs: New test, for systems without CVS.
+	* tests/subdir-cvs: Use it.
+	* tests/Makefile.am: Distribute it.
+
+	* Makefile.am: Use `cmd` instead of $(cmd).
+	(vc-dwim): Change to srcdir before determining $dirty.
+	For this target only, wrap calls to hg in subshell, append
+	'|| :', to avoid output and make failure when hg is not found.
+	* tests/require-git: Use `cmd` instead of $(cmd).
+	* tests/require-hg: Likewise.
+
+	* configure.ac: No need for a config header in this game.
+
+2006-10-26  Jim Meyering  <jim@meyering.net>
+
+	* tests/git-mv: Use the correct expected output for older git.
+	Reported by Ralf Wildenhues.
+
+	* vc-dwim.pl (cross_check): Handle another style of git-diff
+	header output.
+	* tests/add-empty: New test for the above fix.
+	* tests/git-mv: Remove nonessential version-sensitive check.
+	Accept diff output from older versions of git.
+
+	* tests/Makefile.am (TESTS): Add add-empty.
+
+	* vc-dwim.pl (cross_check): New function, factored out of...
+	(main): ...here.
+
+2006-10-25  Jim Meyering  <jim@meyering.net>
+
+	* VC.pm ($vc_cmd): Add an option to quiet each commit command.
+
+	* vc-dwim.pl (get_new_changelog_lines): Recognize a header line
+	with no comma, e.g., "@@ -1 +1 @@".
+
+2006-10-25  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* .ctags:  Added.  README refers to it, so let's have it.
+
+	* README: Add a section about vc-chlog, including suggestions
+	for .ctags additions.  Add section header for vc-dwim.
+
+	* vc-chlog.in: Move TODO list...
+	* TODO: ...here, and add headings for vc-dwim and vc-chlog.
+
+	* configure.ac: Fix error message not to refer to Automake.
+
+	* vc-chlog.in (func_extract_changed_lines): Fix treatment of
+	diffs where either the old or the new file consisted of a single
+	line, i.e., the '@@ ... @@' line has less than four numbers.
+	This involved some reordering and renaming, in order to keep
+	thing consistent.
+	* tests/t-vc-chlog: Add a couple of tests.
+
+	* vc-chlog.in (func_extract_changed_lines): GNU diff 2.8.8 may
+	strip the prefix space from unchanged empty lines.  Accommodate.
+	* tests/t-vc-chlog: Add test for this.
+
+2006-10-25  Jim Meyering  <jim@meyering.net>
+
+	* tests/git-mv: Specifically test for "rename from..." and
+	"rename to..." syntax in diff output.
+
+	* tests/cl-but-no-diff: Use "set -e" and clean up syntax.
+
+	* VC.pm (GIT DIFF_COMMAND): Change from 'git-diff' to 'cg-diff'.
+	The latter detects renames by default.
+	* vc-dwim.pl (main): Handle git-diff's rename-indicating syntax.
+	* vc-dwim.pl (get_new_changelog_lines): Recognize a header line
+	with only one comma, e.g., "@@ -1 +1,4 @@".
+	* tests/git-mv: New file.  Test for both of the above changes.
+	* tests/Makefile.am (TESTS): Add git-mv.
+	* NEWS: Mention this fix.
+
+2006-10-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* tests/t-vc-chlog: Fail gracefully upon setup failure.  Compare
+	output of the large test against three possibilities: the "perfect"
+	output, that created by Exuberant Ctags, and that created by Emacs
+	ctags.  Write all comparisons in the form `diff expected actual'.
+	Report of failures fixed by this and the previous patch by
+	Jim Meyering.
+
+	* vc-chlog.in (func_extract_changed_lines): Rewrite to also output
+	the number of prefix slashes to strip, and the start and ending line
+	for each file the patch addresses.
+	(func_extract_identifiers): Adjust, and get rid of...
+	(func_extract_diff): ...removed.  Buggy and unusable.
+
+2006-10-23  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* vc-chlog.in (func_help): Update TODO.
+	* vc-dwim.pl (get_diffs, get_new_changelog_lines): Add some
+	semicolons.
+	(exists_editor_backup): Actually test the other suffixes.
+
+2006-10-22  Jim Meyering  <meyering@rho.meyering.net>
+
+	* tests/trap-setup: New file.  Factor trap-related code out of tests.
+	* tests/Makefile.am (EXTRA_DIST): Add trap-setup.
+	* tests/cl-but-no-diff: Use trap-setup, rather than open-coding it.
+	* tests/cl-other-user: Likewise.
+	* tests/leading-comment: Likewise.
+	* tests/no-star: Likewise.
+	* tests/no-vc: Likewise.
+	* tests/subdir: Likewise.
+	* tests/subdir-cvs: Likewise.
+	* tests/symlinked-changelog: Likewise.
+	* tests/t-vc-chlog: Likewise.
+	* tests/two-line-attr: Likewise.
+	* tests/two-vc: Likewise.
+
+2006-10-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac: Compute and substitute AWK, CTAGS,
+	ctags_strip_type_column.  Prefer Exuberant Ctags, do a feature
+	test for the extra column.  Make `vc-chlog' a config file.
+	* Makefile.am: Adjust, no need for manual rule any more.
+	* vc-chlog.in: Adjust.
+
+	* tests/Makefile.am: Ensure `cd' does not fail.
+	* tests/cl-but-no-diff: Likewise.
+	* tests/cl-other-user: Likewise.
+	* tests/leading-comment: Likewise.
+	* tests/no-star: Likewise.
+	* tests/no-vc: Likewise.
+	* tests/subdir: Likewise.
+	* tests/subdir-cvs: Likewise.
+	* tests/symlinked-changelog: Likewise.
+	* tests/t-vc-chlog: Likewise.
+	* tests/two-line-attr: Likewise.
+	* tests/two-vc: Likewise.
+
+	* tests/cl-but-no-diff: Quote to allow spaces in `pwd` output.
+	* tests/cl-other-user: Likewise.
+	* tests/leading-comment: Likewise.
+	* tests/no-star: Likewise.
+	* tests/no-vc: Likewise.
+	* tests/subdir: Likewise.
+	* tests/subdir-cvs: Likewise.
+	* tests/symlinked-changelog: Likewise.
+	* tests/two-line-attr: Likewise.
+	* tests/two-vc: Likewise.
+
+	* tests/t-vc-chlog: Adjust to style of other tests.
+
+2006-10-21  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* vc-chlog.in (func_extract_changed_lines): Factor code a bit.
+
+	* vc-chlog.in (func_extract_changed_lines): Detect diffs that
+	contain zero hunks for some file.  Warn, do not output its name.
+	* tests/t-vc-chlog: Adjust.
+
+2006-10-20  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (exists_editor_backup): Check for less-common Vim
+	backup file names.  Suggestion from Ralf Wildenhues.
+
+2006-10-20  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* vc-chlog.in: New script.
+	* NEWS: Update.
+	* Makefile.am: Update.
+	* tests/t-vc-chlog: New test.
+	* tests/Makefile.am: Update.
+
+2006-10-14  Jim Meyering  <jim@meyering.net>
+
+	* VC.pm: Add comments outlining functions-to-be.
+
+2006-10-11  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (main): Disable git's pager, which would otherwise
+	default to pipe to $PAGER, now, for "git diff".
+
+2006-10-06  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (main): Accept a two-line ChangeLog attribution.
+	* tests/two-line-attr: New test for the above.
+	* tests/Makefile.am (TESTS): Add new test name.
+
+2006-09-28  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (main): Make a single ChangeLog argument optional,
+	when it's in the current directory.
+	With --diff, don't require a command line argument.  I.e., assume "."
+
+2006-09-27  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (DESCRIPTION): In the default mode, mention that
+	the ChangeLog must be locally modified.
+	(get_new_changelog_lines): Bail out right away if diff output is empty.
+	Give a diagnostics, when "diff" shows no newly added lines,
+	and when it produces no output at all.
+
+2006-09-23  Jim Meyering  <jim@meyering.net>
+
+	* configure.ac: Version 0.2.2-devel.
+	* NEWS: Update.
+
+	* configure.ac: Version 0.2.1.
+	* NEWS: Update the release date.
+
+	* Makefile.am (release): Don't allow reuse of a release tag.
+
+	* Makefile.am (vc-dwim): Get revision from ".", not vc-dwim.pl.
+	(release): Don't tag if there are pending changes.
+
+	* Makefile.am (vc-dwim): Factor: s/vc-dwim/$@/.
+	(release): New target.
+
+	* tests/require-hg: Discard stderr output.
+	* tests/require-git: Likewise.
+	* Makefile.am (vc-dwim): Likewise.
+
+	* tests/cl-but-no-diff: Require git.
+
+	* tests/Makefile.am (EXTRA_DIST): Add require-git and require-hg.
+
+	Arrange to skip tests that use hg or git, if they're not available.
+	* tests/require-git, tests/require-hg: New files.
+	* tests/two-vc: Require git and hg.
+	* tests/symlinked-changelog: Likewise.
+	* tests/cl-other-user: Require git.
+	* tests/leading-comment: Likewise.
+	* tests/no-star: Likewise.
+	* tests/subdir: Likewise.
+
+	* tests/subdir-cvs: Clarify comment.
+
+	* Makefile.am (gen_vc_name_list): Remove stray closing paren.
+	Don't use double quotes.
+
+	* tests/Makefile.am (perllibdir): Use $(am__cd), rather than
+	just "cd", since the former may produce unwanted output.
+	Suggestion from Ralf Wildenhues.
+
+2006-09-22  Jim Meyering  <jim@meyering.net>
+
+	* VC.pm: Undo last change.  Instead, add this...
+	(vc_names): ...new function.
+	* Makefile.am (gen_vc_name_list): Use the function, not the variable.
+
+	* configure.ac (AM_INIT_AUTOMAKE): Add 'check-news'.
+
+	* NEWS: Mention these portability fixes.
+
+	* Makefile.am (vc-dwim): Compute hg version string of vc-dwim.pl even
+	when doing a non-srcdir build.  Suggestion from Ralf Wildenhues.
+
+	* Makefile.am (vc-dwim): Don't fail if hg doesn't recognize the
+	--limit or --template options.  Reported by Ralf Wildenhues.
+	(gen_vc_name_list): Adjust so it works also in a non-srcdir build.
+
+	* vc-dwim.pl: Consistently say that this file is covered by the
+	GPL (rather than a mix of GPL and LGPL).  Reported by Ralf Wildenhues.
+
+	* VC.pm ($vc_cmd): Declare via "our", so that we can ...
+	* Makefile.am (gen_vc_name_list): ...get the list of VC programs
+	without relying on ./vc-dwim, a circular dependency.
+	(vc-dwim): Use $(srcdir)/vc-dwim.pl, not the GNU-make specific "$<".
+	Reported by Ralf Wildenhues.
+
+2006-09-21  Jim Meyering  <jim@meyering.net>
+
+	* configure.ac (VERSION): 0.2.
+	* NEWS: Record today's date.
+
+	* Makefile.am (vc-dwim): Don't include parentheses in --version
+	output if they would be empty.
+
+	* configure.ac (VERSION): 0.1.5.
+	* README: Write it.
+
+	* tests/Makefile.am (XFAIL): Remove.
+	* tests/no-vc: New test.  Disabled for now.
+
+	* vc-dwim.pl: Add copyright.
+	* Coda.pm: Update comments.
+
+	* vc-dwim.pl (find_relevant_file_name): Don't die for irregular
+	ChangeLog lines.  Instead, return (undef, 1).  Adjust caller.
+	(main): Allow a blank line between summary line(s) and per-file entries.
+
+	* tests/cl-other-user: New file.
+	* tests/Makefile.am (TESTS): Add it.
+
+	* vc-dwim.pl (main): Simplify a regexp.
+
+2006-09-19  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (main): Factor out some chdir/run-cmd/chdir-back
+	duplication, into...
+	(do_at): ...this new function.  Used for both --diff and --commit.
+	Die also if Cwd::getcwd fails -- yes, it can happen.
+
+2006-09-18  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (main): Rewrite not to use Tie::IxHash.
+
+	* vc-dwim.pl (main): Remove the --vc=VC_NAME option.
+
+2006-09-17  Jim Meyering  <jim@meyering.net>
+
+	* configure.ac (VERSION): 0.1.4.
+	* vc-dwim.pl (DESCRIPTION): Describe new feature.
+	* TODO: Remove this item.
+
+	With this change, commits also work with a symlinked ChangeLog.
+	* vc-dwim.pl (main): Don't create the log message file and perform
+	the commit here.  Instead, do both...
+	(do_commit): ...here, in this new function.
+
+	* tests/symlinked-changelog: Test for the above.
+
+	With this change, diffs work with a symlinked ChangeLog.
+	* vc-dwim.pl (main): Handle a ChangeLog that is symlinked to a
+	version-controlled ChangeLog file in another directory.
+
+	* tests/symlinked-changelog: Now this test passes.
+	* tests/Makefile.am (XFAIL_TESTS): Remove it.
+
+	* VC.pm (GIT): Change string value from 'cg' to 'git'.
+	* tests/two-vc: Adjust expected output accordingly.
+	* tests/cl-but-no-diff: Likewise.
+
+	* Makefile.am: Include date and hash in --version output.
+	(vc-dwim): Declare to be "-dirty" if *any* file in this
+	hierarchy has not-checked-in changes.
+
+	* tests/symlinked-changelog: New file.
+	* tests/Makefile.am (TESTS): Add symlinked-changelog.
+	(XFAIL_TESTS): Expect two failures.
+
+	* vc-dwim.pl (main): Indent the list of offending file-name/VC-name
+	pairs in a diagnostic.
+	* tests/two-vc (vc-dwim): Update expected output, accordingly.
+
+	* VC.pm: Rename constant: CG -> GIT.
+	* vc-dwim.pl (main): Likewise.
+
+2006-09-15  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (main): Fix detection of multiple VCS.
+	* tests/two-vc: New file.  Test for the above.
+
+2006-09-14  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (valid_file_name): Fix erroneous regexp.
+
+	* vc-dwim.pl (get_diffs): Simplify a loop.  From Ed Santiago.
+
+	* vc-dwim.pl: Move a bunch of comments into...
+	* TODO: ...this new file.
+
+	* configure.ac: Require automake 1.9.6 and autoconf-2.59.
+
+2006-09-13  Jim Meyering  <jim@meyering.net>
+
+	* README-devel: New file.
+
+	* vc-dwim.pl (Doc): Say to report bugs to the author.
+
+	* VC.pm (new): Remove trailing newline.
+	Unlike die/warn, croak doesn't need/use it.  From Ed Santiago.
+
+2006-09-12  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (exists_editor_backup): Recognize Vim temporaries, too.
+
+2006-09-09  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl: Update comments.
+	(usage): Calling parse_from_filehandle with *DATA doesn't
+	work after all.  Revert that part of the 2006-09-05 change.
+	(get_diffs): Remove some useless trailing spaces from unidiff output.
+	(main): Handle unidiff output that may now include empty lines.
+
+	* configure.ac: Version 0.1.3.
+
+	Work even when run from a subdir with git or hg.
+	* VC.pm (full_file_name, diff_outputs_full_file_names): New methods.
+	(new): Record depth of "." relative to "top" level directory, when
+	using a VC like hg or git.
+	* vc-dwim.pl (main): When checking whether each affected file
+	is listed in the "diff" output, look up full name, if necessary,
+	i.e., for hg or git.
+	* tests/subdir: Adapt test, now that this finally works.
+	* tests/Makefile.am (XFAIL_TESTS): Remove, now that this test
+	no longer fails.
+
+2006-09-08  Jim Meyering  <jim@meyering.net>
+
+	* VC.pm: New file.  Factored out of...
+	* vc-dwim.pl: ...here.
+	* Makefile.am (dist_perllib_DATA): Add VC.pm.
+
+2006-09-06  Jim Meyering  <jim@meyering.net>
+
+	* configure.ac: Version 0.1.3-pre.
+	* configure.ac: Version 0.1.2.
+
+	Performance tweak.  Probably not worthwhile, seeing as how it's
+	not based on profiling, but for a command like "./vc-dwim --diff",
+	it does avoid loading the module.
+	* vc-dwim.pl (main): "use" Tie::IxHash only if we'll need it.
+
+	* vc-dwim.pl: Remove now-unnecessary "use dir ...".
+
+	* tests/Makefile.am (TESTS): Add cl-but-no-diff and subdir-cvs.
+	* tests/subdir-cvs: New file.
+
+2006-09-05  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim.pl (verbose_cmd): Quote meta-characters.
+
+	* vc-dwim.pl (usage): Remove now-duplicated/redundant --help text.
+	Instead, generate nearly the same output using Pod::PlainText.
+	(usage): Use *DATA directly, suggestion from Ed Santiago.
+	Remove now-unused local.
+
+	* Makefile.am (SUBDIRS): Prepend ".", so that we're sure to build
+	in this directory, updating vc-dwim if needed, before running tests.
+
+	Better parsing.
+	* vc-dwim.pl (change_log_line_extract_file_list): Move this function
+	"up", to precede new use...
+	(find_relevant_file_name): ...here, rather than requiring a more
+	limited syntax.
+	* tests/cl-but-no-diff: New file.
+
+	* Makefile.am (gen_vc_name_list): Define.  Used to put list
+	of recognized version control systems in perldoc output.
+
+	* configure.ac: Version 0.1.1.
+	* vc-dwim.pl: Add --print-vc-list option.  Clean up documentation.
+
+	Don't annotate summary lines, and fix a bug.
+	* vc-dwim.pl (find_relevant_file): Return a pair.
+	(main): Update caller.  Don't add prefix on a summary line.
+	(main): Update $offset also when removing leading blank lines.
+
+	* tests/leading-comment: Fix it.
+
+	* vc-dwim.pl (find_relevant_file): Rename from find_parent_file.
+
+2006-09-04  Jim Meyering  <jim@meyering.net>
+
+	* tests/subdir: New file.  Currently expected to fail.
+	* tests/Makefile.am (TESTS): Add subdir.
+
+	* vc-dwim.pl: Use $PROCESS_STATUS in place of equivalent code.
+
+	Autoconfiscate, Automakify, and add tests.
+	* vc-dwim.pl: Set @INC.  Use @PERL@.
+
+	* ProcessStatus.pm, Coda.pm: New files.
+
+	* vc-dwim.pl: Rename from vc-dwim.
+	* vc-dwim: Rename to vc-dwim.pl.
+
+	* vc-dwim: Put documentation in perldoc format.
+	Make $VERSION substitutable.
+
+	* vc-dwim (main): Adjust $offset to reflect removal of two lines.
+	Depend on Coda.pm and ProcessStatus.pm being in the directory alongside
+	this script.
+	(main): Add a colon after $file, in the constructed "*"-line.
+	(find_parent_file): If the "*" line looks like "* file_name:", don't
+	return the ":" as part of the extracted file name.
+	(main): Push log file lines onto @log_msg_lines list only *after*
+	they might be modified by the find_parent_file()-using code.
+	Fix some ?: regexp modifiers that were written as :?.
+
+2006-09-02  Jim Meyering  <jim@meyering.net>
+
+	* vc-dwim: Rename from cvci.
+	* cvci: Rename to vc-dwim cvci.
+	(main): Tighten up a regexp.
+	Add FIXME comment.
+
+2006-09-01  Jim Meyering  <jim@meyering.net>
+
+	* cvci (verbose_cmd): New function.  For consistent verbose output.
+	(get_diffs): Use 4+-arg form of open, to avoid quoting problems.
+
+	Allow the user to specify VC manually, in case s/he is using more
+	than one (e.g., CVS + RCS).
+	* cvci: Implement this, via new --vc=VC_NAME option.
+	(usage): Document --vc=VC_NAME.
+
+	* cvci (main): Use a more accurate regexp for +++/--- diff lines.
+	Don't print log-summary or diff output unless everything is ok.
+	Don't require the existence of a file if it's marked for deletion.
+	On the contrary, require its *non*-existence.
+	(vc_name): Return undef, rather than 'unknown'.
+	(main): Make the code to handle non-'*'-prefixed lines work again.
+
+	* cvci: Use git-diff, not cg-diff, since I don't like being forced
+	to use a pager.
+
+	* cvci: New option: --diff.
+
+	* cvci (main): Use a non-greedy (shy) ".*", in case there are two
+	or more ":"s on a "*" line.
+	E.g., the new-option line, above.
+
+2006-08-30  Jim Meyering  <jim@meyering.net>
+
+	* cvci (main): Handle a diff reflecting an hg-added file.
+
+2006-08-29  Jim Meyering  <jim@meyering.net>
+
+	* cvci (HG, CG, CVS, SVN): Factor out constant names of the version
+	control systems we know about.
+	Ensure that each affected file is mentioned in @$diff_lines
+	Thus, if a new file is listed in a ChangeLog entry, but not e.g.,
+	"hg add"ed, this will catch the error.  Another explanation: a typo,
+	in case you manually (mis)typed the file name in the ChangeLog.
+
+	* cvci (change_log_line_extract_file_list): New function.
+	(main): Handle multiple, comma-separated file names per "*"-
+	ChangeLog line.
+
+2006-08-25  Jim Meyering  <jim@meyering.net>
+
+	* cvci (main): Work once again when the first added line is blank.
+	(main): Remove the first line, if it is blank.
+	Fix a couple of other minor bugs.
+	(main): New function.
+
+2006-08-24  Jim Meyering  <jim@meyering.net>
+
+	Work when the first added ChangeLog line doesn't start with '*'.
+	* cvci (get_new_changelog_lines): Allow removed ChangeLog lines.
+	(get_new_changelog_lines): Update to handle offsets.
+	(get_new_changelog_lines): Push offset only once per @@ marker.
+
+	* cvci (get_new_changelog_lines): Rewrite to use get_diffs().
+	(exists_editor_backup): Work also for files not in ".".
+
+	* cvci: Add svn.
+
+2006-08-23  Jim Meyering  <jim@meyering.net>
+
+	* cvci (get_new_changelog_lines): Work better for hg.
+	(vc_name): Remove debugging cruft.
+
+	* cvci (vc_name): New function.
+	(main): Use it.
+
+2006-08-22  Jim Meyering  <jim@meyering.net>
+
+	* cvci (get_new_changelog_lines): Don't require 2nd "@@"
+	to be at the end of line.  With hg diff -p, it's not.
+
+	* cvci: Add hg support, fix cg commit command.
+	Really check in yesterday's change.
+	Unlink message file only after the commit command.
+
+2006-08-21  Jim Meyering  <jim@meyering.net>
+
+	* cvci: Now, works for cogito/git, too.
+	* cvci: Clean up.  Detect unsaved temps of the affected files, too,
+	not just of the ChangeLogs.

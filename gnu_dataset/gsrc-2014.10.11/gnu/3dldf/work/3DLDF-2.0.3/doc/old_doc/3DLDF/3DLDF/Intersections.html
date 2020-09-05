@@ -1,0 +1,140 @@
+<html lang="en">
+<head>
+<title>Intersections - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="prev" href="Pictures.html#Pictures" title="Pictures">
+<link rel="next" href="Installing-and-Running-3DLDF.html#Installing-and-Running-3DLDF" title="Installing and Running 3DLDF">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Intersections"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Installing-and-Running-3DLDF.html#Installing-and-Running-3DLDF">Installing and Running 3DLDF</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Pictures.html#Pictures">Pictures</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="index.html#Top">Top</a>
+<hr>
+</div>
+
+<h2 class="chapter">10 Intersections</h2>
+
+<p><a name="index-intersection-81"></a><a name="index-intersection-points-82"></a><a name="index-Path-intersections-83"></a><a name="index-output-file-84"></a><a name="index-arbitrary-Path-85"></a>There are no functions for finding the intersection points of two (or
+more) arbitrary <code>Paths</code>.  This is impossible, so long as 3DLDF
+outputs MetaPost code. 
+3DLDF only &ldquo;knows&rdquo; about the <code>Points</code> on a
+<code>Path</code>;  it doesn't actually generate the curve or other figure
+that passes through the <code>Points</code>, and consequently doesn't &ldquo;know&rdquo;
+how it does this.
+
+   <p><a name="index-arbitrary-Path-86"></a><a name="index-intersection-87"></a><a name="index-intersection-points-88"></a><a name="index-Path-intersections-89"></a><a name="index-connectors-90"></a><a name="index-Path-connectors-91"></a>In addition, an arbitrary <code>Path</code> can contain connectors. 
+In 3DLDF, the connectors are
+merely <code>strings</code> and are written verbatim to the output file,
+however, in MetaPost they influence the form of a <code>Path</code>.
+
+   <p><a name="index-non_002darbitrary-Path-92"></a><a name="index-intersection-93"></a><a name="index-intersection-points-94"></a><a name="index-Path-intersections-95"></a>3DLDF can, however, find the intersection points of some
+<em>non-arbitrary</em> <code>Paths</code>.  So far, it can find the intersection
+point of the following combinations of <code>Paths</code>:
+
+   <p><a name="index-Point_003a_003aintersection_005fpoints-96"></a>
+     <ol type=1 start=1>
+<li>Two linear <code>Paths</code>, i.e., <code>Paths</code>
+for which <code>Path::is_linear()</code> returns <code>true</code>
+(see <a href="Querying-Paths.html#Querying-Paths">Path Reference; Querying</a>). 
+In addition, the <code>static Point</code> member function
+<code>Point::intersection_points()</code> can be called with four <code>Point</code>
+arguments.  The first and second arguments are treated as the end points
+of one line, and the third and fourth arguments as the end points of the
+other.
+
+     <li>A line and a <code>Polygon</code>.  Currently, <code>Reg_Polygon</code> and
+<code>Rectangle</code> are the only classes derived from <code>Polygon</code>.
+
+     <li>Two <code>Polygons</code>.
+
+     <li>A line and a Regular Closed Plane Curve (<code>Reg_Cl_Plane_Curve</code>,
+see <a href="Regular-Closed-Plane-Curve-Intersections.html#Regular-Closed-Plane-Curve-Intersections">Regular Closed Plane Curve Reference; Intersections</a>).  Currently,
+<code>Ellipse</code> and <code>Circle</code> are the only classes derived from
+<code>Reg_Cl_Plane_Curve</code>.
+
+     <li>Two <code>Ellipses</code>.  Since a <code>Circle</code> is also an <code>Ellipse</code>,
+one or both of the <code>Ellipses</code> may be a <code>Circle</code>. 
+See <a href="Ellipse-Intersections.html#Ellipse-Intersections">Ellipse Reference; Intersections</a>.
+        </ol>
+
+   <p>Adding more functions for finding the intersections of various geometric
+figures is one of my main priorities with respect to extending 3DLDF.
+
+   <p>There are currently no special
+functions for finding the intersection points
+of a line and a <code>Circle</code> or two <code>Circles</code>.  Since the
+<code>class Circle</code> is derived from <code>class Ellipse</code>,
+<code>Circle::intersection_points()</code> resolves to
+<code>Ellipse::intersection_points()</code>, which, in turn, calls
+<code>Reg_Cl_Plane_Curve::intersection_points()</code>. 
+This does the trick, but it's much easier to find the intersections for
+<code>Circles</code> that it is for <code>Ellipses</code>.  In particular, the
+intersections of two coplanar <code>Circles</code> can be found
+algebraically, whereas I've had to implement a numerical solution for
+the case of two coplanar <code>Ellipses</code> with different centers and/or
+axis orientation.  It may also be worthwhile to write
+a specialization for
+finding the intersection points of a <code>Circle</code> and an
+<code>Ellipse</code>.
+
+   <p><a name="index-intersection-theory-97"></a><a name="index-theory-of-intersection-98"></a><a name="index-future-plans-99"></a><a name="index-contributing-to-3DLDF-100"></a>The theory of intersections is a fascinating and non-trivial branch of
+mathematics.<a rel="footnote" href="#fn-1" name="fnd-1"><sup>1</sup></a>
+As I learn more about it, I plan to define more
+<code>classes</code> to represent various curves (two-dimensional ones to
+start with) and functions for finding their intersection points.
+
+<!-- instlrun.texi -->
+<!-- This file is part of the 3DLDF User and Reference Manual. -->
+<!-- Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation -->
+<!-- See the section "GNU Free Documentation License" in the file -->
+<!-- fdl.texi for copying conditions. -->
+   <div class="footnote">
+<hr>
+<h4>Footnotes</h4><p class="footnote"><small>[<a name="fn-1" href="#fnd-1">1</a>]</small> The books on computer graphics and the fairly elementary
+mathematics books that I own or have referred to don't go into
+intersections very deeply.  One that does is
+Fischer, Gerd.  <cite>Ebene Algebraische Kurven</cite>, which is a bit over my
+head.</p>
+
+   <hr></div>
+
+   </body></html>
+

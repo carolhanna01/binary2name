@@ -1,0 +1,6229 @@
+@q io.web @>
+      
+@q * Copyright and License.@>
+
+@q This file is part of 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation. @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * I/O.@>
+@** I/O\quad ({\tt io\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2003.11.12.}  
+Removed the version control identifiers from the CWEB
+files for the distribution of 3DLDF 1.1.  They're still used in my
+development versions.
+
+\initials{LDF 2003.12.10.}  
+Put the version control identifiers back
+into my release versions for 3DLDF 1.1.4.  I've already put some of
+them back in, now I'm doing the rest of them.  However, the release
+versions are now in their own RCS repository.
+\ENDLOG
+
+@q * Include files.@>
+@ Include files.
+@<Include files@>=
+#include "loader.h++"
+#include <time.h>
+#include "pspglb.h++"
+
+@q * Structures for input and output.@>
+@* Structures for input and output.
+@f Io_Struct int  
+
+@q ** (0) |Io_Struct|.@>
+@*1 {\bf Io\_Struct}.@>
+
+\LOG
+\initials{LDF 2004.06.19.}
+Moved |pthread_mutex_t mutex| and |pthread_cond_t cond_var| here from 
+|Output_Struct|.
+
+\initials{LDF 2004.06.19.}
+Now including the section |@<Declare |Io_Struct| functions@>|, which
+currently contains only the default constructor, which I've defined today. 
+
+\initials{LDF 2004.06.29.}
+Removed |pthread_mutex_t mutex| and |pthread_cond_t cond_var|.
+Now deriving |Io_Struct| from |Mutex_Type|, if the preprocessor macro 
+|HAVE_PTHREAD_H| is defined.  Currently not using condition variables.
+
+\initials{LDF 2004.09.09.}
+Replaced |bool is_file| with |unsigned short type|.
+Added the |static const unsigned short| data members 
+|INVALID_TYPE|, |FILE_TYPE|, |STDIN_TYPE|, |STDOUT_TYPE|,
+|COND_STRING_TYPE|, |COND_FILE_TYPE|, |LOOP_STRING_TYPE|,
+|LOOP_FILE_TYPE|, |MACRO_STRING_TYPE|, and |MACRO_FILE_TYPE|
+for setting |type|.
+
+\initials{LDF 2004.12.01.}
+Added the |static const unsigned short| data members
+|SCANTOKENS_STRING_TYPE| and |SCANTOKENS_FILE_TYPE|.
+
+\initials{LDF 2004.12.21.}
+Added the |static const unsigned short| data members
+|DEFUN_STRING_TYPE| and |DEFUN_FILE_TYPE|.
+
+\initials{LDF 2005.06.09.}
+Removed the |static const unsigned short| data members
+|DEFUN_STRING_TYPE| and |DEFUN_FILE_TYPE|.
+\ENDLOG 
+
+@q *** Declaration.@>
+
+@<Declare I/O |structs|@>=
+
+struct
+Io_Struct
+
+#ifdef HAVE_PTHREAD_H 
+  : public Mutex_Type
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+{
+  string filename;
+  
+  unsigned short type;
+
+
+  static const unsigned short INVALID_TYPE;
+
+  static const unsigned short FILE_TYPE;
+
+  static const unsigned short STDIN_TYPE;
+  static const unsigned short STDOUT_TYPE;
+
+  static const unsigned short COND_STRING_TYPE;
+  static const unsigned short COND_FILE_TYPE;
+
+  static const unsigned short LOOP_STRING_TYPE;
+  static const unsigned short LOOP_FILE_TYPE;
+
+  static const unsigned short MACRO_STRING_TYPE;
+  static const unsigned short MACRO_FILE_TYPE;
+
+  static const unsigned short SCANTOKENS_STRING_TYPE;
+  static const unsigned short SCANTOKENS_FILE_TYPE;
+
+  @<Declare |Io_Struct| functions@>@;
+
+};
+
+@q *** (3) Initialize |static Io_Struct| member constants.@>
+@*2 Initialize |static Io_Struct| member constants.
+\initials{LDF 2004.09.09.}
+
+\LOG
+\initials{LDF 2004.09.09.}
+Added this section.
+
+\initials{LDF 2004.12.01.}
+Now initializing |SCANTOKENS_STRING_TYPE| and 
+|SCANTOKENS_FILE_TYPE|.
+
+\initials{LDF 2004.12.21.}
+Now initializing |DEFUN_STRING_TYPE| and |DEFUN_FILE_TYPE|.
+
+\initials{LDF 2005.06.09.}
+No longer initializing |DEFUN_STRING_TYPE| and |DEFUN_FILE_TYPE|,
+since I've removed these data members.
+\ENDLOG
+
+@<Initialize |static Io_Struct| member constants@>=
+
+   const unsigned short Io_Struct::INVALID_TYPE      = 0;
+
+   const unsigned short Io_Struct::FILE_TYPE         = 1;
+
+   const unsigned short Io_Struct::STDIN_TYPE        = 2;
+   const unsigned short Io_Struct::STDOUT_TYPE       = 3;
+
+   const unsigned short Io_Struct::COND_STRING_TYPE  = 4;
+   const unsigned short Io_Struct::COND_FILE_TYPE    = 5;
+
+   const unsigned short Io_Struct::LOOP_STRING_TYPE  = 6;
+   const unsigned short Io_Struct::LOOP_FILE_TYPE    = 7;
+
+   const unsigned short Io_Struct::MACRO_STRING_TYPE = 8;
+   const unsigned short Io_Struct::MACRO_FILE_TYPE   = 9;
+
+   const unsigned short Io_Struct::SCANTOKENS_STRING_TYPE = 10;
+   const unsigned short Io_Struct::SCANTOKENS_FILE_TYPE   = 11;
+
+@q *** (3) |Io_Struct| functions.@>
+@*2 {\bf Io\_Struct} functions.
+
+@q **** (4) Default constructor.@>
+@*3 Default constructor.
+
+\LOG
+\initials{LDF 2004.06.19.}
+Added this function.
+\ENDLOG 
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.06.19.}
+Add error handling for the cases that |pthread_cond_init| or
+|pthread_cond_mutex| fails.
+
+\initials{LDF 2004.06.29.}
+Removed code for handling |pthread_mutex_t mutex| and 
+|pthread_cond_t cond_var|.  Now deriving |Io_Struct| from |Mutex_Type| 
+using |public| derivation  if the preprocessor macro  
+|HAVE_PTHREAD_H| is defined.  Currently not using condition variables.
+\ENDTODO 
+
+@q **** (4) Declaration@>
+
+@<Declare |Io_Struct| functions@>=
+Io_Struct(void);
+
+@q **** (4) Definition@>
+
+@
+@<Define |Io_Struct| functions@>=
+Io_Struct::Io_Struct(void)
+{
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  filename = "";
+
+}
+
+@q **** (4) Destructor.@>
+@*3 Destructor.
+
+\LOG
+\initials{LDF 2004.06.19.}
+Added this function.
+
+\initials{LDF 2004.06.29.}
+Removed code for handling |pthread_mutex_t mutex| and 
+|pthread_cond_t cond_var|.  Now deriving |Io_Struct| from |Mutex_Type| 
+using |public| derivation  if the preprocessor macro  
+|HAVE_PTHREAD_H| is defined.  Currently not using condition variables.
+\ENDLOG 
+
+@q ***** (5) Declaration@>
+@<Declare |Io_Struct| functions@>=
+~Io_Struct(void);
+
+
+@q ***** (5) Definition@>
+@
+@<Define |Io_Struct| functions@>=
+Io_Struct::~Io_Struct(void)
+{
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+   if (DEBUG)
+     cerr << "Entering `Io_Struct::~Io_Struct()'."  
+          << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     cerr << "Exiting `Io_Struct::~Io_Struct()'."  
+          << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return;
+
+}
+
+@q ** |Input_Struct|.@>
+@*1 {\bf Input\_Struct}.
+
+\LOG
+\initials{LDF 2004.05.02.}  Added |Input_Struct* up|.
+
+
+\initials{LDF 2004.06.19.}
+Now including the section |@<Declare |Input_Struct| functions@>|, 
+which currently contains only the default constructor, which I've 
+defined today. 
+\ENDLOG 
+
+@f Input_Struct Io_Struct
+
+@q *** Declaration@>
+
+@<Declare I/O |structs|@>=
+struct
+Input_Struct : public Io_Struct
+{
+  istream* stream_ptr;
+  Input_Struct* up;
+  @<Declare |Input_Struct| functions@>@;
+
+};
+
+@q *** |Input_Struct| functions.@>
+@*2 {\bf Input\_Struct} functions.
+
+
+@q **** (4) Default constructor.@>
+@*3 Default constructor.
+
+This constructor initializes |stream_ptr| and |up| to 0 
+(just for insurance).
+\initials{LDF 2004.06.19.}
+
+
+\LOG
+\initials{LDF 2004.06.19.}
+Added this function.
+\ENDLOG 
+
+@q ***** (5) Declaration@>
+
+@
+@<Declare |Input_Struct| functions@>=
+Input_Struct(void);
+
+
+@q ***** (5) Definition@>
+@
+@<Define |Input_Struct| functions@>=
+Input_Struct::Input_Struct(void)
+{
+  stream_ptr = static_cast<istream*>(0);
+  up = static_cast<Input_Struct*>(0);
+}
+
+
+@q **** (4) Destructor.@>
+@*3 Destructor.
+
+
+\LOG
+\initials{LDF 2004.07.01.}
+Rewrote this function.  Added loop for deleting |up|, 
+|up->up|, etc.  Added debugging code.
+
+\initials{LDF 2004.07.02.}
+Added code to this function.  It now tests whether |stream_ptr| points to an
+|ifstream|.  If it does, and the file stream is open, it closes it before
+deleting it and pointing |stream_ptr| at 0.
+
+\initials{LDF 2004.09.09.}
+@:BUG FIX@> BUG FIX:  
+Now only deleting |stream_ptr| if |is_file == true|.
+
+\initials{LDF 2004.09.09.}
+Now testing |ype == FILE_TYPE| instead of |is_file == true|.
+
+
+\initials{LDF 2004.09.13.}
+Now deleting |stream_ptr|  and pointing it at 0 if 
+|type == LOOP_STRING_TYPE|. 
+
+\initials{LDF 2004.09.14.}
+No longer deleting |stream_ptr|  and pointing it at 0 if 
+|type == LOOP_STRING_TYPE|.  This is now done in the |Loop_Info_Type|
+destructor. 
+
+\initials{LDF 2004.09.14.}
+Commented-out the code for deleting |up|.
+\ENDLOG 
+
+@q ***** (5) Declaration@>
+
+@
+@<Declare |Input_Struct| functions@>=
+~Input_Struct(void);
+
+
+@q ***** (5) Definition@>
+@
+@<Define |Input_Struct| functions@>=
+Input_Struct::~Input_Struct(void)
+{
+
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+   if (DEBUG)
+     cerr << "Entering `Input_Struct' destructor."
+          << "\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  if (type == FILE_TYPE)
+    {
+      ifstream* i= static_cast<ifstream*>(stream_ptr);
+      if (i->is_open())
+        {
+
+#if DEBUG_COMPILE
+          if (DEBUG) 
+            cerr << "Closing " << filename << ".\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          i->close();
+        }
+
+    } /* |if (type == FILE_TYPE)|  */@;
+        
+
+  if (type == FILE_TYPE && stream_ptr != static_cast<ifstream*>(0))
+    {
+#if DEBUG_COMPILE
+      if (DEBUG) 
+        cerr << "Deleting stream_ptr and pointing it at 0"
+             << ".\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      delete (stream_ptr);
+      stream_ptr = static_cast<ifstream*>(0);
+
+    }  /* |if (type == FILE_TYPE && stream_ptr != static_cast<ifstream*>(0))|  */
+
+
+#if DEBUG_COMPILE
+   else if (!type == FILE_TYPE && DEBUG)
+     {
+       cerr_mutex.lock(); 
+       cerr << "In `Input_Struct' destructor: "
+            << endl << "`type' isn't `FILE_TYPE'."  
+            << endl 
+            << " Not deleting `stream_ptr'." << endl;
+       cerr << "Type <RETURN> to continue. ";
+       getchar(); 
+       cerr_mutex.unlock(); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  Input_Struct* i;
+
+#if DEBUG_COMPILE
+   int j = 0;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6) Commented-out code.@>
+
+@ Commented-out.  |up| should not be deleted.
+\initials{LDF 2004.09.14.}
+@<Define |Input_Struct| functions@>=
+
+#if 0 
+  while (up != static_cast<Input_Struct*>(0))
+    {
+
+#if DEBUG_COMPILE
+      if (DEBUG)
+        {
+          cerr << "`up' " << j++ << " is non-null. Deleting"
+               << "\n";
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      i = up;
+      up = i->up;
+      delete i;
+      i = static_cast<Input_Struct*>(0);
+    }
+#endif  
+
+@q ****** (6) |type == SCANTOKENS_STRING_TYPE|.@>
+
+@ |type == SCANTOKENS_STRING_TYPE|.
+\initials{LDF 2004.12.01.}
+
+\LOG
+\initials{LDF 2004.12.01.}
+Added this section.
+\ENDLOG
+
+@<Define |Input_Struct| functions@>=
+
+  if (type == SCANTOKENS_STRING_TYPE && stream_ptr != static_cast<istream*>(0))
+    {
+#if DEBUG_COMPILE
+      if (DEBUG) 
+        cerr << "Deleting stream_ptr and pointing it at 0"
+             << ".\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      delete (stream_ptr);
+      stream_ptr = static_cast<istream*>(0);
+
+    }  /* |if (type == SCANTOKENS_STRING_TYPE && stream_ptr != static_cast<istream*>(0))|  */
+  
+
+@q ****** (6) |type == MACRO_STRING_TYPE|.@>
+
+@ |type == MACRO_STRING_TYPE|.
+\initials{LDF 2004.12.23.}
+
+\LOG
+\initials{LDF 2004.12.23.}
+Added this section.
+\ENDLOG
+
+@<Define |Input_Struct| functions@>=
+
+  if (type == MACRO_STRING_TYPE && stream_ptr != static_cast<istream*>(0))
+    {
+
+      delete stream_ptr;
+      stream_ptr = static_cast<istream*>(0);
+
+    }  /* |if (type == MACRO_STRING_TYPE && stream_ptr != static_cast<istream*>(0))|  */
+  
+
+
+
+
+@q ****** (6) Exit destructor.@>
+
+@ Exit destructor.
+\initials{LDF 2004.09.14.}
+
+@<Define |Input_Struct| functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr << "Exiting `Input_Struct' destructor."
+            << "\n";
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return;
+}
+
+@q ** |Output_Struct|.@>
+@*1 {\bf Output\_Struct}.
+
+\LOG
+\initials{LDF 2004.06.19.}
+Added |pthread_mutex_t mutex| and |pthread_cond_t cond_var|.
+
+\initials{LDF 2004.06.19.}
+Now including the section |@<Declare |Output_Struct| functions@>|, which
+currently contains only the default constructor, which I've defined today. 
+
+\initials{LDF 2004.06.19.}
+Moved |pthread_mutex_t mutex| and |pthread_cond_t cond_var| to 
+|Io_Struct|.
+\ENDLOG 
+
+@f Output_Struct Io_Struct
+
+@q *** Declaration@>
+
+@<Declare I/O |structs|@>=
+struct
+Output_Struct : public Io_Struct
+{
+  ostream* stream_ptr;
+
+ @<Declare |Output_Struct| functions@>@;
+
+};
+
+
+@q *** |Output_Struct| functions.@>
+@*2 {\bf Output\_Struct} functions.
+
+
+@q **** (4) Default constructor.@>
+@*3 Default constructor.
+
+This constructor initializes |stream_ptr| to 0 (just for insurance).
+\initials{LDF 2004.06.19.}
+
+\LOG
+\initials{LDF 2004.06.19.}  
+Added this function.  
+\ENDLOG 
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Output_Struct| functions@>=
+Output_Struct(void);
+
+@q ***** (5) Definition.@>
+
+@
+@<Define |Output_Struct| functions@>=
+Output_Struct::Output_Struct(void)
+{
+  stream_ptr = static_cast<ostream*>(0);
+}
+
+
+@q **** (4) Destructor.@>
+@*3 Destructor.
+
+\LOG
+
+\initials{LDF 2004.07.02.}
+Added code to this function.  It now tests whether |stream_ptr| points to an
+|ofstream|.  If it does, and the file stream is open, it closes it before
+deleting it and pointing |stream_ptr| at 0.
+\ENDLOG 
+
+
+@q ***** (5) Declaration@>
+
+@<Declare |Output_Struct| functions@>=
+~Output_Struct(void);
+
+@q ***** (5) Definition.@>
+
+@
+@<Define |Output_Struct| functions@>=
+Output_Struct::~Output_Struct(void)
+{
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+  if (DEBUG) 
+    cerr << "Entering `Output_Struct' destructor."
+         << endl; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  if (type == FILE_TYPE)
+    {
+      ofstream* o= static_cast<ofstream*>(stream_ptr);
+      if (o->is_open())
+        {
+#if DEBUG_COMPILE
+          if (DEBUG) 
+            cerr << "Closing " << filename << ".\n";
+#endif /* |DEBUG_COMPILE|  */@; 
+          
+          o->close();
+        }
+    } /* |if (type == FILE_TYPE)|  */@;
+    
+  if (stream_ptr != static_cast<ostream*>(0))
+    {
+          
+#if DEBUG_COMPILE
+      if (DEBUG) 
+        cerr << "Deleting `stream_ptr' and pointing it at 0."
+             << endl;
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      delete (stream_ptr);
+      stream_ptr = 0;
+    }
+
+  return;
+}
+
+
+@q * Global variables.@>
+@* Global variables.
+
+\initials{LDF 2002.10.16.}  |in_stream| is an input stream attached to a file
+with user code for input.  Currently, it is used, but it fulfills no
+useful function, because I haven't defined an input routine yet.
+|out_stream| is an output stream attached to the file of \MP/ code
+that 3DLDF currently produces as its output.  |tex_stream| is an
+output stream attached to a file of {\TeX} code.  The user can write
+{\TeX} code to this file and load it into \filename{persp.tex} or use
+it for some other purpose.  3DLDF makes no use of it itself.
+
+\LOG
+\initials{LDF 2002.08.30.}  Added |tex_stream| so that
+I can include {\TeX} code in my user code.
+Code written by 3DLDF to |tex_stream| will
+be loaded by \filename{persp.tex}, or whatever
+{\TeX} file includes the PostScript file
+generated by \MP/ from the output of 3DLDF.
+User code is currently in \filename{main.web}. 
+In production versions user code will be
+in \filename{user.web}. 
+
+\initials{LDF 2003.07.16.}  Added |fig_num|.
+
+\initials{LDF 2004.03.26.}  Removed |fig_num|.  It won't work with
+multiprocess or multithread input and output.
+
+\initials{LDF 2004.04.02.}  Removed |in_stream| and |tex_stream|.
+|in_stream| has been replaced by an |istream*| in an |Input_Struct| in 
+|class Scanner_Type|.  |tex_stream| was never used.
+
+\initials{LDF 2004.05.25.}  Removed |out_stream|.
+It has been replaced by an |ostream*| in an |Output_Struct| in 
+|class Scanner_Type|.
+\ENDLOG
+  
+
+@f ifstream int
+@f ofstream int
+@<Global variables@>=
+
+
+string default_out_filename_metapost = "3DLDFput.mp";
+string default_out_filename_png = "3DLDFput.png";
+string default_out_filename_libplot = "3DLDFput.lpt";
+
+@q * extern declarations for the global variables.@>
+@ |extern| declarations for the global variables.
+
+\LOG
+\initials{LDF 2004.04.02.}  Removed the |extern| declarations of
+|in_stream| and |tex_stream|.  
+
+\initials{LDF 2004.05.25.}  Removed the 
+|extern| declaration of |out_stream|.
+\ENDLOG 
+
+@<|extern| variable declarations@>=
+
+
+
+extern string default_out_filename_metapost;
+extern string default_out_filename_png;
+extern string default_out_filename_libplot;
+
+
+@q * I/O functions.@>
+@* I/O functions.
+
+@q ** Initialize I/O.@>
+@*1 Initialize I/O.
+\LOG
+\initials{LDF 2003.08.29.}  Changed, so that |in_stream| isn't opened.
+
+\initials{LDF 2004.04.02.}  Commented-out.  This function is not
+currently being used. 
+\ENDLOG 
+
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+Adapt for use with |class Scanner_Node|. 
+\initials{LDF 2004.04.02.}
+\ENDTODO 
+@<Declare I/O functions@>=
+#if 0 
+void
+initialize_io(string in_stream_name, string out_stream_name,
+              string tex_stream_name, char* program_name);
+#endif 
+
+@ 
+@s tm int
+@<Define I/O functions@>=
+#if 0 
+void
+initialize_io(string in_stream_name, string out_stream_name,
+              string tex_stream_name, char* program_name)
+{
+  time_t tt;
+  tm *lt;
+  tt = time(0);
+  lt =localtime(&tt);
+
+  string datestamp(asctime(lt));
+  datestamp.erase(datestamp.size() - 1); // Remove terminal line-feed.
+
+@ Open |out_stream| and |tex_stream|.  
+|in_stream| is currently not opened.  \initials{LDF 2003.08.29.}  
+@<Define I/O functions@>=
+#if 0 
+  in_stream.open(in_stream_name.c_str());
+#endif 
+
+  out_stream.open(out_stream_name.c_str());
+
+#ifdef __DECCXX
+  out_stream.setf(ios_base::fixed, ios_base::floatfield);
+#else
+#ifdef __GNUC__ 
+  out_stream.setf(ios::fixed, ios::floatfield);
+#endif 
+#endif 
+
+
+
+  tex_stream.open(tex_stream_name.c_str());
+
+  /* Write datestamp to |out_stream|. */
+  out_stream << "%%%% This is " << out_stream_name << "." << endl
+    << "%%%% Generated on " << datestamp << " from " << program_name
+      << ".\n\n";
+
+  /* Write datestamp to |tex_stream|. */
+  tex_stream << "%%%% This is " << tex_stream_name << "." << endl
+    << "%%%% Generated on " << datestamp << " from " << program_name
+      << ".\n\n";
+}    
+
+#endif 
+
+@q ** Write footers.@>  
+@*1 Write footers. 
+\initials{LDF 2002.10.16.}
+Footers can be written to |output stream| and 
+|tex_stream|.  I use them for Local
+Variables lists for Emacs.  Other users may not want this, which is
+why this code is commented out here.
+@:!!@> !! Comment out this code in production versions!
+
+\LOG
+\initials{LDF 2004.04.02.}  Commented-out.  This function is not
+currently being used. 
+\ENDLOG 
+\TODO
+@:TO DO}{{\bf TO DO}@>
+Adapt for use with |class Scanner_Node|. 
+\initials{LDF 2004.04.02.}
+\ENDTODO 
+
+@<Declare I/O functions@>=
+#if 0 
+void 
+write_footers();
+#endif 
+
+@
+@<Define I/O functions@>=
+#if 0 
+void 
+write_footers()
+{
+  out_stream << endl << endl << "%% L" << "ocal Variables:" << endl
+    << "%% mode:Metafont" << endl 
+    << "%% eval:(if metapost-keymap nil (load \"metapost-keymap\"))"
+    << endl << "%% eval:(use-local-map metapost-mode-map)" << endl
+    << "%% eval:(local-set-key [f9] 'mp-file)" << endl
+    << "%% run-mp-on-file:\"persp.mp\"" << endl
+    << "%% run-cweb-on-file:\"main.web\"" << endl
+    << "%% run-tex-on-file:\"persp.tex\"" << endl
+    << "%% run-dvips-on-file:\"persp.ps\"" << endl
+    << "%% End:" << endl << endl;
+
+  tex_stream << "\n\n%% L" << "ocal Variables:\n"
+    << "%% mode:tex\n"
+    << "%% eval:(local-set-key [f9] 'mp-file)\n"
+    << "%% run-mp-on-file:\"persp.mp\"\n"
+    << "%% run-cweb-on-file:\"main.web\"\n"
+    << "%% run-tex-on-file:\"persp.tex\"\n"
+    << "%% run-dvips-on-file:\"persp.ps\"\n"
+    << "%% End:\n";
+  return;
+}
+#endif 
+
+@q * (1) Identifier mapping.@>
+@* Identifier mapping.
+
+@q ** (2) Id_Map_Entry_Node.@>
+@*1 {\bf Id\_Map\_Entry\_Node}.
+
+
+\LOG
+\initials{LDF 2004.04.20.}  
+Added this section. 
+\ENDLOG 
+
+@<|Id_Map_Entry_Node| declaration@>=
+
+typedef Id_Map_Entry_Type* Id_Map_Entry_Node;
+
+@q ** (2) Id_Map_Entry_Type.@>
+@*1 {\bf Id\_Map\_Entry\_Type}.
+No |Id_Map_Entry_Type| objects should ever be declared.  They should
+only ever be accessed via |Id_Map_Entry_Nodes|, which should be
+created by dynamically on the free store by using
+|new Id_Map_Entry_Type|.  
+\initials{LDF 2004.04.20.}
+
+@q *** (3) Beginning of LOG.@>
+
+\LOG
+\initials{LDF 2004.04.16.}  
+Moved to this file from
+\filename{scanprse.web}. 
+
+\initials{LDF 2004.04.20.}  
+Changed |Id_Map_Entry_Node| 
+to |Id_Map_Entry_Type|.  Added |string name|, removed |bool b|, changed
+|void* ptr| to |void* object|.
+
+\initials{LDF 2004.04.20.}  
+Changed |Id_Map_Entry_Type| from a
+|struct| to a |class| and declared |Id_Map_Type| to be a |friend|.
+
+
+\initials{LDF 2004.04.20.}  
+Declared |Scanner_Type| to be a |friend|.
+
+
+\initials{LDF 2004.04.23.}  
+Replaced |bool known| with |unsigned short
+known_state|.  Added the |static const unsigned shorts INDEPENDENT|,
+|DEPENDENT|, and |KNOWN|.  |known_state| should only ever be set by
+using one of these constants.
+
+\initials{LDF 2004.04.29.}  
+Replaced |bool spark_flag| with 
+|unsigned short category|.  Added the |static const unsigned shorts| 
+|SPARK|, |REGULAR|, and |INTERNAL|.  |category| should only ever be set using
+one of these constants.
+
+\initials{LDF 2004.04.29.}  
+Removed |real real_value| and |bool bool_value|.
+Now |object| is used for storing values of all types.
+
+\initials{LDF 2004.05.09.}  
+Added |const_flag|.  Changed |is_array| to
+|array_flag|. 
+
+\initials{LDF 2004.06.22.}
+Added |pthread_mutex_t mutex| and |pthread_cond_t cond_var|.
+
+
+\initials{LDF 2004.06.24.}
+Now conditionally compiling the declarations of |mutex| and |cond_var|,
+depending upon whether |HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2004.06.29.}
+Removed |pthread_mutex_t mutex| and |pthread_cond_t cond_var|.
+Now deriving |Id_Map_Entry_Type|
+from |Mutex_Type| using |public| derivation
+if the preprocessor macro  |HAVE_PTHREAD_H| is defined.  
+Currently not using condition variables.
+
+
+\initials{LDF 2004.08.24.}
+Added the private data member 
+|Id_Map_Entry_Node superordinate_vector|.  It will only be non-null in
+array entries that are created by means of vector-type declarations.
+
+\initials{LDF 2004.08.25.}
+Added the private data member 
+|Id_Map_Entry_Node subordinate_array|.
+It will only be non-null in the vector-type entries created by means of 
+vector-type declarations.  For example, |color_vector c;| will  
+create two |Id_Map_Entry_Nodes|.  The first will have |name == c|, 
+|type == COLOR_VECTOR|, |array_flag == false|, |subordinate_array != 0|, and 
+|superordinate_vector == 0|.  The other will have
+|name == c-|, 
+|type == COLOR|, |array_flag == true|, |subordinate_array == 0|, and 
+|superordinate_vector != 0|.  The non-null |superordinate_vector| and 
+|subordinate_array| will point to the other |Id_Map_Entry_Node| 
+of the pair. 
+
+
+\initials{LDF 2004.08.28.}
+Added the private data member |Scanner_Node scanner_node|.
+
+\initials{LDF 2004.09.08.}
+Now including 
+|@<|friend| declarations for functions in |namespace Scan_Parse|@>|.
+
+\initials{LDF 2004.11.11.}
+Added |static const unsigned short TRUE_INTERNAL|.  It's meant to be used
+for setting |category|. 
+\ENDLOG 
+
+@q **** (4) End of LOG.@>
+
+
+@f Id_Map_Entry_Type int@>
+@f Id_Map_Entry_Node Id_Map_Entry_Type
+
+@q *** (3) Declaration.  @>
+@<|Id_Map_Entry_Type| declaration@>=
+class 
+Id_Map_Entry_Type 
+
+#ifdef HAVE_PTHREAD_H  
+: public Mutex_Type
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+{
+
+@q **** (4) Private members.  @>
+
+@ Private members.
+\initials{LDF 2004.08.24.}
+
+@q ***** (5) |friend| declarations.  @>
+
+|friend| declarations.
+\initials{LDF 2004.08.24.}
+
+@<|Id_Map_Entry_Type| declaration@>=
+
+  friend class Id_Map_Type;
+  friend class Scanner_Type;
+  friend int yyparse(yyscan_t);
+
+  @<|friend| declarations for functions in |namespace Scan_Parse|@>@;
+
+@q ***** (5) Data members.  @>
+
+@ Data members.
+\initials{LDF 2004.08.24.}
+
+\LOG
+\initials{LDF 2004.08.29.}
+Replaced |Scanner_Node scanner_node| with |Id_Map_Node id_map_node|.
+\ENDLOG 
+
+@<|Id_Map_Entry_Type| declaration@>=
+
+  string name;
+
+  bool const_flag;
+  bool array_flag;
+
+
+  unsigned short known_state;
+  unsigned short category;
+
+  unsigned int type;
+
+  void* object;
+
+  Id_Map_Entry_Node up;
+  Id_Map_Entry_Node left;
+  Id_Map_Entry_Node right;
+  Id_Map_Entry_Node superordinate_vector;
+  Id_Map_Entry_Node subordinate_array;
+
+  Id_Map_Node id_map_node;
+
+
+@q **** (4) Public members.  @>
+
+@ Public members.
+\initials{LDF 2004.08.24.}
+
+@<|Id_Map_Entry_Type| declaration@>=
+
+
+ public:
+
+
+@q ***** (5) Static constants.  @>
+
+@ Static constants.
+\initials{LDF 2004.08.24.}
+
+
+\LOG
+\initials{LDF 2004.08.27.}
+Added |EXPIRED|.
+
+\initials{LDF 2004.08.29.}
+Removed |EXPIRED|.
+\ENDLOG 
+
+@<|Id_Map_Entry_Type| declaration@>=
+
+  static const unsigned short INDEPENDENT;  /* For setting |known_state|.  */
+  static const unsigned short DEPENDENT;
+  static const unsigned short KNOWN;
+
+
+  static const unsigned short SPARK;   /* For setting |category|.  */
+  static const unsigned short REGULAR;
+  static const unsigned short INTERNAL;
+  static const unsigned short TRUE_INTERNAL;
+
+
+
+@q ***** (5) Function declarations.  @>
+
+@ Function declarations.
+\initials{LDF 2004.08.24.}
+
+@<|Id_Map_Entry_Type| declaration@>=
+
+  @<Declare |Id_Map_Entry_Type| functions@>@;
+};
+
+
+@q *** (3) |static Id_Map_Entry_Type| member constants.  @>
+@*2 {\bf static Id\_Map\_Entry\_Type} member constants.
+
+\LOG
+\initials{LDF 2004.04.23.}  Added this section.
+\ENDLOG 
+
+@<Initialize |static Id_Map_Entry_Type| member constants@>=
+
+const unsigned short Id_Map_Entry_Type::INDEPENDENT      = 0;
+const unsigned short Id_Map_Entry_Type::DEPENDENT        = 1;
+const unsigned short Id_Map_Entry_Type::KNOWN            = 2;
+
+const unsigned short Id_Map_Entry_Type::SPARK            = 0;   
+const unsigned short Id_Map_Entry_Type::REGULAR          = 1;
+const unsigned short Id_Map_Entry_Type::INTERNAL         = 2; 
+const unsigned short Id_Map_Entry_Type::TRUE_INTERNAL    = 3;
+
+
+@q *** (3) |Id_Map_Entry_Type| functions.  @>
+@*2 {\bf Id\_Map\_Entry\_Type} functions.
+
+@q **** (4)  Default constructor.  @>
+@*3 Default constructor.
+
+\LOG
+\initials{LDF 2004.09.14.}
+Added this function declaration.  The definition is in
+\filename{imetfncs.web} 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+Id_Map_Entry_Type(void);
+
+
+@q **** (4)  Setting function.  @>
+@*3 Setting function.
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this function.
+
+\initials{LDF 2004.04.22.}  Moved definition to \filename{scan.web}.
+
+\initials{LDF 2004.04.29.}  Changed |bool sspark_flag| argument to 
+|unsigned short ccategory|. 
+
+\initials{LDF 2004.04.29.}  Changed the name of this function from |set| to 
+|set_entry|.  It was too difficult to find the places where it's invoked
+before, since the classes derived from |Shape| also have |set| functions.
+
+\initials{LDF 2004.05.09.}  
+Added |cconst_flag| argument.  Changed |iis_array|
+argument to |aarray_flag|.
+
+\initials{LDF 2004.08.24.}
+Added |Id_Map_Entry_Node ssuperordinate_vector| 
+argument with default 0.
+
+\initials{LDF 2004.08.25.}
+Added |Id_Map_Entry_Node ssubordinate_array| 
+argument with default 0.
+
+\initials{LDF 2004.08.28.}
+Added |Scanner_Node sscanner_node| argument.
+
+\initials{LDF 2004.08.29.}
+Replaced |Scanner_Node sscanner_node| argument with 
+|Id_Map_Node iid_map_node|.  |id_map_node| is set to it.
+\ENDLOG 
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+bool
+set_entry(string nname,
+          unsigned int ttype,
+          Id_Map_Node iid_map_node,
+          unsigned short ccategory = Id_Map_Entry_Type::REGULAR,
+          bool cconst_flag = false,
+          bool aarray_flag = false,
+          unsigned short kknown_state = Id_Map_Entry_Type::INDEPENDENT,
+          void* oobject = 0,
+          Id_Map_Entry_Node uup = 0,
+          Id_Map_Entry_Node lleft = 0,
+          Id_Map_Entry_Node rright = 0,
+          Id_Map_Entry_Node ssuperordinate_vector = 0,
+          Id_Map_Entry_Node ssubordinate_array = 0);
+                  
+
+@q **** (4)  Destructor.  @>
+@*3 Destructor.
+
+\LOG
+\initials{LDF 2004.06.22.}
+Added this function.
+
+\initials{LDF 2004.06.29.}
+Removed code for handling |pthread_mutex_t mutex| and 
+|pthread_cond_t cond_var|.  Now deriving |Id_Map_Entry_Type| from 
+|Mutex_Type| using |public| derivation  if the preprocessor macro  
+|HAVE_PTHREAD_H| is defined.  Currently not using condition variables.
+
+\initials{LDF 2004.07.01.}
+Rewrote this function.  It now tests for the type of |object|, casts it to the
+proper type, and frees the memory that had been allocated for it.  If 
+the object pointed to by |object| is a |Shape|, |clear| is called for it
+before the memory is freed.  Loops ensure that the |Shapes| are cleared (where
+appropriate), and memory is freed for |left|, |left->left|, |right|, 
+|right->right|, etc., when they are non-null.
+
+\initials{LDF 2004.07.01.}
+Moved the definition from \.{io.web} (this file) to \.{scan.web}.
+
+\initials{LDF 2004.07.16.}
+Moved the definition from \filename{scan.web} to 
+\filename{imetfncs.web}.
+\ENDLOG 
+
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+~Id_Map_Entry_Type(void);
+
+@q **** (4)  Destroy array subentries.@>
+@*3 Destroy array subentries.
+
+\LOG
+\initials{LDF 2004.08.21.}
+Added this function.  It's defined in \filename{imetfncs.web}.
+\ENDLOG
+
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+int
+destroy_array_subentries(Scanner_Node scanner_node = 0);
+
+
+@q **** (4)  Assignment operator.  @>
+@*3 Assignment operator.
+
+\LOG
+\initials{LDF 2004.09.14.}
+Added this declaration.  This function is defined in
+\filename{imetfncs.web}. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+const Id_Map_Entry_Type&
+operator=(const Id_Map_Entry_Type& idet);
+
+
+
+
+@q **** (4)  Setting values of date members.@>
+@*3 Setting values of date members.
+
+@q ***** (5)  Set |superordinate_vector|.@>
+@*4 Set {\bf superordinate\_vector}.
+
+\LOG
+\initials{LDF 2004.08.24.}
+Added this function.  
+
+\initials{LDF 2004.09.17.}
+Added |bool traverse| argument with default |false|.
+Made non-inline and moved definition to \filename{imetfncs.web}. 
+
+\initials{LDF 2004.09.17.}
+Added |bool set_vector| argument with default |false| and |int type|
+argument with default 0.
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+int
+set_superordinate_vector(Id_Map_Entry_Node s,
+                         bool set_vector = false,
+                         bool traverse = false,
+                         int type = 0);
+
+
+
+@q ***** (5)  Set |id_map_node|.@>
+@*4 Set {\bf id\_map\_node}.
+
+\LOG
+\initials{LDF 2004.09.17.}
+Added this declaration.  This function is defined in 
+\filename{imetfncs.web}.
+\ENDLOG 
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+int
+set_id_map_node(const Id_Map_Node i, bool traverse = false); 
+
+@q ***** (5)  Set |subordinate_array|.@>
+@*4 Set {\bf subordinate\_array}.
+
+\LOG
+\initials{LDF 2004.08.25.}
+Added this function.  
+
+\initials{LDF 2004.09.17.}
+Added |bool traverse| argument with default |false|.
+Made non-inline and moved definition to \filename{imetfncs.web}. 
+
+\initials{LDF 2004.09.17.}
+Added |int type| argument.  It's only needed when |traverse| is
+|true|, hence the default of 0.
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+int
+set_subordinate_array(Id_Map_Entry_Node s,
+                      bool traverse = false,
+                      int type = 0);
+
+
+
+@q **** (4) Get object.@>   
+@*3 Get object.
+\initials{LDF 2005.03.14.}
+
+\LOG
+\initials{LDF 2005.03.14.}
+Added this function.
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+void*
+get_object(void)
+{
+   return object;
+}
+
+@q **** (4) Transformations.  @>
+@*3 Transformations.
+
+\LOG
+\initials{LDF 2004.09.29.}
+Added this section.
+\ENDLOG
+
+@q ***** (5) Multiplying by a |Transform| with assignment.@>
+@*4 Multiplying by a {\bf Transform} with assignment.
+
+\LOG
+\initials{LDF 2004.09.29.}
+Added this function declaration.
+\ENDLOG
+
+@
+@<Declare |Id_Map_Entry_Type| functions@>=
+Transform
+operator*=(const Transform& t);
+
+@q **** (4)  Returning elements and information.  @>
+@*3 Returning elements and information.
+
+@q ***** (5)  Is const.  @>
+@*4 Is const.
+
+\LOG
+\initials{LDF 2005.05.12.}  
+Added this function. 
+\ENDLOG
+
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+bool
+is_const(void) const
+{
+  return const_flag;
+}
+
+
+@q ***** (5)  Is |Shape|.  @>
+@*4 Is {\bf Shape}.
+
+This function is defined in \.{scan.web}.
+\initials{LDF 2004.07.01.}
+
+\LOG
+\initials{LDF 2005.07.01.}  
+Added this function. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+bool
+is_shape(void) const;
+
+
+
+@q ***** (5) Is |Shape|-vector-type.@>
+@*4 Is {\bf Shape}-vector-type.
+\initials{LDF 2004.12.12.}
+
+This function is defined in \filename{imetfncs.web}.
+\initials{LDF 2004.12.12.}
+
+\LOG
+\initials{LDF 2004.12.12.}
+Added this declaration. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+
+bool
+is_shape_vector_type(void) const;
+
+
+
+
+@q ***** (5) Is Non-|Shape|-vector-type.@>
+@*4 Is Non-{\bf Shape}-vector-type.
+\initials{LDF 2004.12.12.}
+
+
+This function is defined in \filename{imetfncs.web}.
+\initials{LDF 2004.12.12.}
+
+\LOG
+\initials{LDF 2004.12.12.}
+Added this declaration. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+
+bool
+is_non_shape_vector_type(void) const;
+
+
+@q ***** (5) Is Vector-type.@>
+@*4 Is Vector-type.
+\initials{LDF 2004.12.12.}
+
+This function is defined in \filename{imetfncs.web}.
+\initials{LDF 2004.12.12.}
+
+\LOG
+\initials{LDF 2004.12.12.}
+Added this declaration. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+
+bool
+is_vector_type(void) const;
+
+
+@q ***** (5)  Get object.  @>
+@*4 Get object.
+
+\LOG
+\initials{LDF 2004.04.29.}  Added this function. 
+\ENDLOG
+
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+void*
+get_object(void) const
+{
+  return object;
+}
+
+
+
+@q ***** (5)  Get name.  @>
+@*4 Get name.
+
+\LOG
+\initials{LDF 2004.04.29.}  Added this function. 
+\ENDLOG
+
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+string
+get_name(void) const
+{
+  return name;
+}
+
+@q ***** (5)  Get category.  @>
+@*4 Get category.
+
+\LOG
+\initials{LDF 2004.04.29.}  Added this function. 
+\ENDLOG
+
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+unsigned short
+get_category(void) const
+{
+  return category;
+}
+
+@q ***** (5)  Get type.  @>
+@*4 Get type.
+
+\LOG
+\initials{LDF 2004.04.22.}  Added this function. 
+\ENDLOG
+
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+unsigned int
+get_type(void) const
+{
+  return type;
+}
+
+@q ***** (5) Is spark.  @>
+@*4 Is spark.
+
+\LOG
+\initials{LDF 2004.04.27.}  Added this function. 
+
+\initials{LDF 2004.04.29.}  Changed this function so that it returns |true| 
+if |category == SPARK|, otherwise |false|.  
+I've replaced |bool spark_flag| with |unsigned short category| today.
+\ENDLOG
+
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+bool
+is_spark(void) const
+{
+  return (category == SPARK);
+}
+
+@q ***** (5) Is regular.  @>
+@*4 Is regular.
+
+\LOG
+\initials{LDF 2004.04.29.}  Added this function. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+bool
+is_regular(void) const
+{
+  return (category == REGULAR);
+}
+
+@q ***** (5) Is internal.  @>
+@*4 Is internal.
+
+\LOG
+\initials{LDF 2004.04.29.}  
+Added this function. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+bool
+is_internal(void) const
+{
+  return (category == INTERNAL);
+}
+
+@q ***** (5) Is true internal.  @>
+@*4 Is true internal.
+
+\LOG
+\initials{LDF 2004.11.11.}
+Added this function. 
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+inline
+bool
+is_true_internal(void) const
+{
+  return (category == TRUE_INTERNAL);
+}
+
+
+
+@q ***** (5)  Is 3DLDF object type.  @>
+@*4 Is 3DLDF object type.
+
+This function is defined in \filename{scan.web}, because it uses 
+C preprocessor macros generated by Bison from `token' declarations in
+\filename{parser.w}. 
+\initials{LDF 2004.04.23.}
+
+\LOG
+\initials{LDF 2004.04.23.}  Added this function. 
+\ENDLOG
+
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+bool
+is_ldf_type(void) const;
+  
+
+@q **** (4)  Showing.  @>
+@*3 Showing.
+
+This function is defined in \filename{scan.web}, because it uses
+|name_map|, and the constants |TRANSFORM|, and |TRUNC_OCTAHEDRON|,
+which are all declared in \filename{parser.w}.   
+
+\LOG
+\initials{LDF 2004.04.22.}  
+Added this function.
+
+\initials{LDF 2004.08.23.}
+Added |Scanner_Node| argument with default 0.
+
+\initials{LDF 2004.09.14.}
+Added |bool traverse| argument with default |false|.
+
+\initials{LDF 2004.09.19.}
+Removed |Scanner_Node scanner_node| argument.  Now declaring
+|scanner_node| locally and setting it to |id_map_node->scanner_node|,
+or 0, if |id_map_node| is 0.
+
+\initials{LDF 2004.10.26.}
+Added optional |bool verbose| argument with default |false|.
+\ENDLOG
+
+@<Declare |Id_Map_Entry_Type| functions@>=
+void 
+show(string s = "",
+     bool traverse = false,
+     bool verbose = false) const;
+
+
+@q ** Declare |Id_Map_Sub_Type|.@>
+@*1 Declare {\bf Id\_Map\_Sub\_Type}.
+
+\LOG
+\initials{LDF 2004.04.20.}  Changed this |typedef|, so that |second|
+is an |Id_Map_Entry_Node| rather than a |pair| with |first| an
+|unsigned int| and |second| a |void*|.  Changed name of type from
+|id_map_type| to |Id_Map_Sub_Type|.
+\ENDLOG 
+
+@f Id_Map_Sub_Type int
+@f Id_Map_Iterator Id_Map_Sub_Type
+@f Id_Map_Const_Iterator Id_Map_Iterator
+
+@<|Id_Map_Sub_Map_Type| declaration@>=
+typedef map <string, Id_Map_Entry_Node > Id_Map_Sub_Type; 
+typedef Id_Map_Sub_Type::iterator Id_Map_Iterator;
+typedef Id_Map_Sub_Type::const_iterator Id_Map_Const_Iterator;
+
+@q ** Declare |Id_Map_Node|.@>
+@*1 Declare {\bf Id\_Map\_Node}.
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this section.
+\ENDLOG 
+@<|Id_Map_Node| declaration@>=
+typedef Id_Map_Type* Id_Map_Node;
+
+
+@q ** Declare |Id_Map_Type|.@>
+@*1 Declare {\bf Id\_Map\_Type}.
+
+\LOG
+\initials{LDF 2004.04.16.}  Moved to this file from
+\filename{scanprse.web}. 
+
+\initials{LDF 2004.04.20.}  Changed |Id_Map_Node| to |Id_Map_Type| and made 
+|Id_Map_Node| a pointer type that points to |Id_Map_Type| using
+|typedef| (see above).
+
+\initials{LDF Undated.  Probably 2004.07.03.}
+Declared |Scanner_Type| to be a |friend|.
+
+\initials{LDF 2004.04.16.}  Moved to this file from
+\filename{scanprse.web}. 
+
+\initials{LDF 2004.04.20.}  Changed |Id_Map_Type| from a
+|struct| to a |class|.
+
+\initials{LDF 2004.07.22.} 
+Added |friend| declaration for |Scan_Parse::shape_decl_func|.
+
+\initials{LDF 2004.07.23.}
+Added default value for the |C*| argument to 
+|Scan_Parse::shape_decl_func| in the |friend| declaration. 
+
+\initials{LDF 2004.08.29.}
+Added the private data member |Scanner_Node Scanner_node|.
+
+\initials{LDF 2004.09.19.}
+Now including the section
+|@<|friend| declarations for functions in |namespace Scan_Parse|@>|.
+\ENDLOG 
+
+@f Id_Map_Type int
+@f Id_Map_Node Id_Map_Type 
+
+
+
+@q *** Declaration.  @>
+@<|Id_Map_Type| declaration@>=
+class
+Id_Map_Type
+{
+  friend class Scanner_Type;
+  friend class Id_Map_Entry_Type;
+  friend int yyparse(yyscan_t);
+
+
+  Scanner_Node scanner_node;
+
+  Id_Map_Sub_Type id_map; 
+  Id_Map_Node up;
+
+
+  @<|friend| declarations for functions in |namespace Scan_Parse|@>@;
+
+ public:
+  @<Declare |Id_Map_Type| functions@>@;
+};
+
+@q *** |Id_Map_Type| functions.  @>
+@*2 {\bf Id\_Map\_Type} functions.  @>
+
+@q **** (4) Destructor.  @>
+@*3 Destructor.
+\initials{LDF 2004.07.01.}
+
+\LOG
+\initials{LDF 2004.07.01.}
+Added this function.
+
+\initials{LDF 2004.08.21.}
+Made debugging and error output thread-safe.  Now calling
+|Id_Map_Entry_Type::destroy_array_subentries|.
+\ENDLOG 
+
+
+@<Declare |Id_Map_Type| functions@>=
+~Id_Map_Type(void);
+
+@
+@<Define |Id_Map_Type| functions@>=
+Id_Map_Type::~Id_Map_Type(void)
+{
+
+  stringstream cerr_strm;
+
+  Thread_Info_Type* thread_info = Thread_Info_Type::get_thread_info(true);
+  
+  string thread_name = Thread_Info_Type::get_thread_name(thread_info);
+
+  bool error_stop_value = true; /* |false|  */
+
+  using namespace Scan_Parse;
+
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+  if (DEBUG)
+    {
+      cerr_strm << thread_name << "Entering `Id_Map_Type' destructor.";
+      
+      log_message(cerr_strm); 
+      cerr_message(cerr_strm); 
+      cerr_strm.str(""); 
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  Id_Map_Entry_Node n;
+
+  for (Id_Map_Iterator iter = id_map.begin();
+       iter != id_map.end();
+       ++iter)
+    {
+
+#if DEBUG_COMPILE
+      if (DEBUG) 
+        {
+          cerr_strm << thread_name << "In `Id_Map_Type' destructor:"
+                    << endl
+                    << "iter->first == " << iter->first << ".";
+          log_message(cerr_strm);
+          cerr_message(cerr_strm); 
+          cerr_strm.str(""); 
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      n = iter->second;
+
+      if (n != static_cast<Id_Map_Entry_Node>(0))
+        {
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_mutex.lock();
+              cerr << thread_name << "In `Id_Map_Type' destructor:" 
+                   << endl;
+              n->show("n:");
+              cerr << "Destroying `n'." << endl;
+              cerr_mutex.unlock();
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          n->destroy_array_subentries();
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_strm << thread_name << "In `Id_Map_Type' destructor:"
+                        << endl 
+                        << "Deleting `n' and setting it to 0.";
+              
+              log_message(cerr_strm);
+              cerr_message(cerr_strm); 
+              cerr_strm.str(""); 
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+/* Error was here, before I put a kludge in |Scan_Parse::vector_type_decl|.
+   \initials{LDF 2006.10.08.}  */
+
+        delete n;
+
+        n = 0;
+
+        } /* |if (n != static_cast<Id_Map_Entry_Node>(0))|  */
+
+    } /* |for|  */
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr_strm << thread_name << "Exiting `Id_Map_Type' destructor.";
+      log_message(cerr_strm); 
+      cerr_message(cerr_strm); 
+      cerr_strm.str(""); 
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+  if (up != static_cast<Id_Map_Node>(0))
+    {
+#if DEBUG_COMPILE
+      if (DEBUG) 
+        {
+          cerr_strm << thread_name << "In `Id_Map_Type' destructor:"
+                    << endl
+                    << "`up' != 0.  Deleting `up'.";
+
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str(""); 
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      delete up;
+      up = 0;
+
+    } /* |if (up != static_cast<Id_Map_Entry_Node>(0))|  */
+
+#if DEBUG_COMPILE
+
+  else if (DEBUG) /* (|up == static_cast<Id_Map_Entry_Node>(0)|)  */
+    {
+      cerr_strm << thread_name << "In `Id_Map_Type' destructor:"
+                << endl
+                << "`up' == 0.  Not deleting `up'.";
+
+      log_message(cerr_strm); 
+      cerr_message(cerr_strm); 
+      cerr_strm.str(""); 
+
+    }   /* |else| (|up == static_cast<Id_Map_Entry_Node>(0)|)  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  return;
+}
+
+@q **** (4) Assignment Operator.  @>
+@*3 Assignment Operator.
+
+\LOG
+\initials{LDF 2004.09.14.}
+Started working on this function.
+
+\initials{LDF 2004.09.15.}
+Moved the definition to \filename{imetfncs.web}.
+\ENDLOG 
+
+@q ***** (5)  Declaration.@>
+
+@<Declare |Id_Map_Type| functions@>=
+
+const Id_Map_Type&
+operator=(const Id_Map_Type& i);
+
+
+
+@q **** (4) Show.  @>
+@*3 Show.
+
+If the |show_all| argument is |false| (the default),
+|Id_Map_Entry_Type::show| is only called for entries whose types are 
+|NUMERIC|, |TRANSFORM|, or one of the |Shape| types.  If |show_all| is
+|true|, |Id_Map_Entry_Type::show| is called for all entries,
+including predefined |sparks| such as |END|, |NULL_VALUE|, etc.  
+\initials{LDF 2004.04.23.}
+
+\LOG
+\initials{LDF 2004.04.23.}
+Added this function.  
+\ENDLOG 
+
+
+@q ***** (5)  Declaration.@>
+
+@<Declare |Id_Map_Type| functions@>=
+void
+show(string s = "", bool show_all = false) const;
+
+@q ***** (5) Definition.  @>
+@
+@<Define |Id_Map_Type| functions@>=
+void
+Id_Map_Type::show(string s, bool show_all) const
+{
+   if (s == "")
+      s = "Id_Map_Type:";
+
+   cerr << s << endl << "id_map:" << endl;
+
+   for (Id_Map_Const_Iterator iter = id_map.begin();
+        iter != id_map.end();
+        ++iter)
+      {
+ 
+
+/* !! TO DO:  Show other types of entries.  \initials{LDF 2004.04.25.}  */@;
+                                                                                
+         if (show_all || (!iter->second->is_const()
+                          && iter->second->is_regular()))
+           iter->second->show();   
+
+    } /* |for|  */@;
+
+  if (up == static_cast<Id_Map_Node>(0))
+    cerr << "up == 0\n";
+  else
+    {
+      cerr << "up != 0.  Showing up." << endl;
+      up->show();
+    }
+  return;
+}
+
+@q * (1) Loop Information.@>
+@* Loop Information.
+
+\LOG
+\initials{LDF 2004.09.13.}
+Added this section.
+\ENDLOG 
+
+@q ** (2) |Loop_Info_Node|.@>
+@*1 {\bf Loop\_Info\_Node}.
+\initials{LDF 2004.09.13.}
+
+\LOG
+\initials{LDF 2004.09.13.}
+Added this section.
+\ENDLOG
+
+@<|Loop_Info_Node| declaration@>=
+typedef Loop_Info_Type* Loop_Info_Node;
+
+
+@q ** (2) |Loop_Info_Type|.@>
+@*1 {\bf Loop\_Info\_Type}.
+\initials{LDF 2004.09.13.}
+
+\LOG
+\initials{LDF 2004.09.13.}
+Added this section.
+
+\initials{LDF 2004.09.14.}
+Removed |bool first_time| and |stringstream::pos_type end_of_prefix|.
+Added |istream* loop_strm_ptr| and |Id_Map_Entry_Node entry|.
+
+\initials{LDF 2004.09.22.}
+Added the |unsigned short| data member |type| and the 
+|static const unsigned short| data members |INVALID_TYPE|, |FOR_TYPE|, 
+|FOREVER_TYPE|, and |FOR_SUFFIXES_TYPE|. 
+
+\initials{LDF 2004.10.28.}
+Removed |real start_value|.  It's not needed, because 
+|*static_cast<real*>(entry->object)| can be used instead.
+In addition, this makes it possible to change the value of 
+the variable declared in the loop header within the loop.
+
+\initials{LDF 2005.01.18.}
+Added |vector<string> suffix_vector|.
+
+\initials{LDF 2005.01.18.}
+Added |size_t skip_value|.
+
+\initials{LDF 2005.01.19.}
+Changed |vector<string> suffix_vector| to 
+|list<string> suffix_list|.
+
+\initials{LDF 2005.01.19.}
+Added |string suffix_parameter|.
+
+\initials{LDF 2005.01.20.}
+Removed |size_t skip_value|.
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<|Loop_Info_Type| declaration@>=
+struct
+Loop_Info_Type
+{
+  real step_value;
+  real limit_value;
+
+  stringstream* loop_strm_ptr;
+
+  list<string> suffix_list;
+ 
+  string suffix_parameter;
+
+  Id_Map_Entry_Node entry;
+
+  Loop_Info_Node up;
+
+  unsigned short type;
+
+  static const unsigned short INVALID_TYPE;
+  static const unsigned short FOR_TYPE;
+  static const unsigned short FOREVER_TYPE;
+  static const unsigned short FOR_SUFFIXES_TYPE;
+
+  @<Declare |Loop_Info_Type| functions@>@;
+
+};
+
+@q *** (3) Initialize |static Loop_Info_Type| member constants.@>
+@*2 Initialize |static Loop_Info_Type| member constants.
+\initials{LDF 2004.09.22.}
+
+\LOG
+\initials{LDF 2004.09.22.}
+Added this section.
+\ENDLOG
+
+@<Initialize |static Loop_Info_Type| member constants@>=
+
+   const unsigned short Loop_Info_Type::INVALID_TYPE      = 0;
+   const unsigned short Loop_Info_Type::FOR_TYPE          = 2;
+   const unsigned short Loop_Info_Type::FOREVER_TYPE      = 3;
+   const unsigned short Loop_Info_Type::FOR_SUFFIXES_TYPE = 4;
+
+
+
+@q *** (3) |Loop_Info_Type| functions.@>
+@*2 {\bf Loop\_Info\_Type} functions.
+\initials{LDF 2004.09.13.}
+
+\LOG
+\initials{LDF 2004.09.13.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Default constructor.@>
+@*3 Default constructor.
+\initials{LDF 2004.09.13.}
+
+\LOG
+\initials{LDF 2004.09.13.}
+Added this function.
+
+\initials{LDF 2004.09.14.}
+No longer initializing |first_time| and |end_of_prefix|, since I've removed
+these data members.  Now initializing |loop_strm_ptr| and |entry|.  I
+allocate memory for a new |stringstream| for |loop_strm_ptr|.
+
+\initials{LDF 2004.10.28.}
+No longer setting |real start_value| to 0, because I've removed it.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Loop_Info_Type| functions@>=
+Loop_Info_Type(void);
+
+@q ***** (5) Definition.@>
+
+@
+@<Define |Loop_Info_Type| functions@>=
+Loop_Info_Type::Loop_Info_Type(void)
+{
+
+  step_value  = 0;  /* |real|  */
+  limit_value = 0;  /* |real|  */
+
+  entry = 0;
+
+  loop_strm_ptr = new stringstream;
+
+  up = 0; 
+ 
+  return;
+}
+
+@q **** (4) Destructor.@>
+@*3 Destructor.
+\initials{LDF 2004.09.14.}
+
+\LOG
+\initials{LDF 2004.09.14.}
+Added this function.
+
+\initials{LDF 2004.10.28.}
+No longer setting |real start_value| to 0, because I've removed it.
+
+\initials{LDF 2005.01.18.}
+Now clearing |suffix_vector|.  Not that it's really necessary.
+
+\initials{LDF 2005.01.19.}
+Changed |vector<string> suffix_vector| to 
+|list<string> suffix_list|.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Loop_Info_Type| functions@>=
+~Loop_Info_Type(void);
+
+@q ***** (5) Definition.@>
+
+@
+@<Define |Loop_Info_Type| functions@>=
+Loop_Info_Type::~Loop_Info_Type(void)
+{
+
+  step_value  = 0;  
+  limit_value = 0;  
+
+  if (loop_strm_ptr != static_cast<stringstream*>(0))
+    delete loop_strm_ptr; 
+
+  loop_strm_ptr = 0;
+
+  entry = 0;
+
+  up = 0;
+
+  suffix_list.clear();
+
+  return;
+
+} /* End of |Loop_Info_Type| destructor definition.  */
+
+
+@q * (1) Definition Information.@>
+@* Definition Information.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this section.
+\ENDLOG 
+
+@q ** (2) |Definition_Info_Node|.@>
+@*1 {\bf Definition\_Info\_Node}.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this section.
+\ENDLOG
+
+@<|Definition_Info_Node| declaration@>=
+typedef Definition_Info_Type* Definition_Info_Node;
+
+@q ** (2) |Definition_Info_Type|.@>
+@*1 {\bf Definition\_Info\_Type}.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this section.
+
+\initials{LDF 2004.12.21.}
+Changed |stringstream* strm_ptr| to |stringstream* definition_strm_ptr[2]|. 
+
+\initials{LDF 2004.12.22.}
+Added |vector<string> definition_parameter_vector|.
+
+\initials{LDF 2004.12.29.}
+Changed the name of |vector<string> definition_parameter_vector|
+to |untyped_parameter_vector| and added 
+|vector<Int_String> typed_parameter_vector|.
+
+\initials{LDF 2005.01.02.}
+Replaced |vector<string> untyped_parameter_vector| and 
+|vector<Int_String> typed_parameter_vector| with 
+|unsigned int untyped_parameter_ctr| and 
+|unsigned int typed_parameter_ctr|, respectively.
+
+\initials{LDF 2005.01.03.}
+Removed |string name|, |Definition_Info_Node up|, and
+|Id_Map_Entry_Node entry|.
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<|Definition_Info_Type| declaration@>=
+struct
+Definition_Info_Type
+{
+
+  stringstream* definition_strm_ptr[2];
+
+  unsigned int untyped_parameter_ctr;
+  unsigned int typed_parameter_ctr;
+
+  unsigned short type;
+
+  @<Declare |Definition_Info_Type| functions@>@;
+
+};
+
+@q *** (3) Initialize |static Definition_Info_Type| member constants.@>
+@*2 Initialize |static Definition_Info_Type| member constants.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this section.
+\ENDLOG
+
+@<Initialize |static Definition_Info_Type| member constants@>=
+
+@q *** (3) |Definition_Info_Type| functions.@>
+@*2 {\bf Definition\_Info\_Type} functions.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Default constructor.@>
+@*3 Default constructor.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this function.
+
+\initials{LDF 2005.01.02.}
+Now setting |unsigned int untyped_parameter_ctr| and 
+|unsigned int typed_parameter_ctr| to 0.
+
+\initials{LDF 2005.01.03.}
+No longer setting |Id_Map_Entry_Node entry| to 0, because I've removed
+this data member.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Definition_Info_Type| functions@>=
+Definition_Info_Type(void);
+
+@q ***** (5) Definition.@>
+
+@
+@<Define |Definition_Info_Type| functions@>=
+Definition_Info_Type::Definition_Info_Type(void)
+{
+
+   untyped_parameter_ctr = 0;
+   typed_parameter_ctr   = 0;
+
+   try 
+      {   
+         definition_strm_ptr[0] = new stringstream;
+         definition_strm_ptr[1] = new stringstream;
+      }
+    catch (bad_alloc)
+       {
+           cerr_mutex.lock(); 
+           cerr << "ERROR!  In the default `Definition_Info_Type' constructor:"
+                << endl << "`new stringstream' failed.  Rethrowing `bad_alloc'."
+                << endl;
+           cerr_mutex.unlock(); 
+     
+           throw;
+
+       }  /* |catch (bad_alloc)|  */
+
+   return;
+
+}  /* End of the |Definition_Info_Type::Definition_Info_Type(void)|
+      definition.  */
+
+@q **** (4) Destructor.@>
+@*3 Destructor.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Definition_Info_Type| functions@>=
+~Definition_Info_Type(void);
+
+@q ***** (5) Definition.@>
+
+@
+@<Define |Definition_Info_Type| functions@>=
+Definition_Info_Type::~Definition_Info_Type(void)
+{
+
+
+  delete definition_strm_ptr[0]; 
+  delete definition_strm_ptr[1]; 
+
+  definition_strm_ptr[0] = 0; 
+  definition_strm_ptr[1] = 0; 
+
+  return;
+
+} /* End of |Definition_Info_Type| destructor definition.  */
+
+
+@q **** (4) Assignment operator.@>
+@*3 Assignment operator.
+\initials{LDF 2004.12.30.}
+
+\LOG
+\initials{LDF 2004.12.30.}
+Added this function.
+
+\initials{LDF 2005.01.02.}
+Removed code using |untyped_parameter_vector| and 
+|typed_parameter_vector|.  Now setting 
+|untyped_parameter_ctr = d.untyped_parameter_ctr|
+and 
+|typed_parameter_ctr   = d.typed_parameter_ctr|.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Definition_Info_Type| functions@>=
+const 
+Definition_Info_Type&
+operator=(const Definition_Info_Type& d);
+
+@q ***** (5) Definition.@>
+
+@
+@<Define |Definition_Info_Type| functions@>=
+const 
+Definition_Info_Type&
+Definition_Info_Type::operator=(const Definition_Info_Type& d)
+{
+
+   untyped_parameter_ctr = d.untyped_parameter_ctr;
+   typed_parameter_ctr   = d.typed_parameter_ctr;
+
+
+   definition_strm_ptr[0]->str(d.definition_strm_ptr[0]->str()); 
+   definition_strm_ptr[1]->str(d.definition_strm_ptr[1]->str()); 
+
+   return *this;
+
+} /* End of |Definition_Info_Type| destructor definition.  */
+
+
+@q **** (4) Clear.@>
+@*3 Clear.
+\initials{LDF 2004.12.29.}
+
+\LOG
+\initials{LDF 2004.12.29.}
+Added this function declaration.  This function is defined in 
+\filename{deftfncs.web}.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Definition_Info_Type| functions@>=
+void
+clear(void);
+
+
+@q **** (4) Show.@>
+@*3 Show.
+\initials{LDF 2004.12.21.}
+
+This function requires |type_name_map|, so it's defined in 
+\filename{deftfncs.web}.
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this function declaration.
+
+\initials{LDF 2004.12.22.}
+Made this function |const|.
+\ENDLOG
+
+@q ***** (5) Declaration.@>
+
+@<Declare |Definition_Info_Type| functions@>=
+void
+show(string text = "") const;
+
+@q * (1) Scanning.@>
+@* Scanning.
+
+@q ** (2) Scanner_Node.@>
+@*1 {\bf Scanner\_Node}.
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this section.
+\ENDLOG 
+@<|Scanner_Node| declaration@>=
+typedef Scanner_Type* Scanner_Node;
+
+@q ** (2) class Scanner_Type.@>
+@*1 {\bf class Scanner\_Type}.
+
+It's not possible to make |yylex| and |sub_yylex| |friends| of
+|Scanner_Type|, because they have arguments of the types |YYSTYPE*|
+and |YYLTYPE*|, and |YYSTYPE| and |YYLTYPE| haven't been declared
+yet when \filename{io.c} is compiled.  
+
+@q *** (3) Log.@> 
+
+\LOG
+\initials{LDF 2004.04.16.}  
+Moved this |class| definition to this file (\filename{io.web})
+from \filename{scanprse.web}. 
+
+\initials{LDF 2004.04.20.}  
+Changed name of this |struct| from |Scanner_Node| 
+to |Scanner_Type|.
+
+\initials{LDF 2004.04.20.}  
+Changed |Scanner_Type| from |struct| to |class|.
+Added |friend| declaration for |yyparse|.
+Made |Input_Struct* in| private.
+
+\initials{LDF 2004.04.20.}  
+Removed |bool is_on_free_store|.
+|Scanner_Types| should only ever be accessed via |Scanner_Nodes|, and
+the latter should only ever be dynamically allocated on the free store. 
+
+\initials{LDF 2004.05.03.}  
+Added |rescan_stack|.
+
+\initials{LDF 2004.06.02.}  
+Added the pointers to |void| |draw_color_ptr|, 
+|fill_color_ptr|, |pen_ptr|, |dash_pattern_ptr|,
+and |picture_ptr|.  They're used in the rules for 
+\§drawing command>.  
+
+\initials{LDF 2004.06.03.}  
+Added |void* color_ptr|.
+
+\initials{LDF 2004.07.02.}
+Now deriving |Scanner_Type| from |Thread_Info_Type| using 
+|public| derivation.
+
+\initials{LDF 2004.07.03.}
+No longer deriving |Scanner_Type| from |Thread_Info_Type|.  Added
+|Thread_Info_Type* thread_info| instead.  This is necessary in order to be able
+pass |Thread_Info_Type*| to |pthread_setspecific| in the thread start
+functions. 
+
+\initials{LDF 2004.07.05.}
+Removed |Thread_Info_Type* thread_info|.  There's no reason for it to be
+included in |Scanner_Type|.
+
+\initials{LDF 2004.07.18.}
+Added |Thread_Info_Type* thread_info|.  I was having trouble getting 
+|Thread_Info_Type::get_thread_info| to work in one of the parser rules.
+
+\initials{LDF 2004.07.29.}
+Changed |string type_name| and |C* expr| arguments of 
+|Scan_Parse::assign_simple| to |const| in |friend| declaration.
+
+\initials{LDF 2004.09.08.}
+Now including 
+|@<|friend| declarations for functions in |namespace Scan_Parse|@>|.
+
+\initials{LDF 2004.09.09.}
+Added |bool first_call_yylex|.  It's set to |true| in 
+|Scanner_Type::create| and |false| in |yylex|.  It's needed in
+|yylex| in order to get the message 
+``(Please type a command or say `end')'' to  
+be printed to standard error correctly when reading from standard
+input. 
+\ENDLOG 
+
+@q **** (4) End of log.@> 
+
+@f Scanner_Type int
+@f Scanner_Node Scanner_Type 
+
+@q *** (3) Declaration. @>
+
+@<|Scanner_Type| declaration@>=
+class
+Scanner_Type 
+{
+
+@q **** (4) |friend| declarations. @>
+@*3 |friend| declarations.
+\initials{LDF 2004.06.28.}
+
+\LOG
+\initials{LDF 2007.08.03.}
+Added |friend| declaration for |Conic_Section_Lattice|.
+
+\initials{LDF 2007.10.12.}
+Added |friend| declaration for |class Dodecahedron|.
+
+\initials{LDF 2007.10.24.}
+Added |friend| declaration for |class Rhombic_Triacontahedron|.
+\ENDLOG 
+
+@<|Scanner_Type| declaration@>=
+
+
+  friend class Id_Map_Type;
+  friend class Id_Map_Entry_Type;
+
+  friend class Matrix;
+
+  friend class Conic_Section_Lattice;
+  friend class Dodecahedron;
+  friend class Rhombic_Triacontahedron;
+
+  friend int yyparse(yyscan_t);
+  friend int main(int, char**);
+
+  friend int Id_Map_Entry_Type::destroy_array_subentries(Scanner_Node);
+
+  @<|friend| declarations for functions in |namespace Scan_Parse|@>@;
+
+  
+
+@q **** (4) |private| data members. @>
+@*3 |private| data members.
+\initials{LDF 2004.06.28.}
+
+\LOG
+\initials{LDF 2004.09.10.}
+Added |unsigned int if_ctr|.  It's used in 
+|Scan_Parse::conditional|, which is defined in
+\filename{scanprsf.web}. 
+
+\initials{LDF 2004.09.12.}
+Added |unsigned int group_ctr| and |unsigned int loop_ctr|.
+They're used to keep track of the nesting of groups and loops,
+respectively. 
+
+\initials{LDF 2004.09.13.}
+Added |Loop_Info_Node loop_info_node|.
+
+\initials{LDF 2004.09.15.}
+@:BUG FIX@> BUG FIX:  
+Now conditionally compiling the declaration of 
+|Thread_Info_Type* thread_info|.  It's now only compiled if 
+|HAVE_PTHREAD_H| is defined.
+
+\initials{LDF 2004.09.22.}
+Added |vector<string> suffix_vector|.
+
+\initials{LDF 2005.01.19.}
+Removed |vector<string> suffix_vector|.
+
+\initials{LDF 2007.11.25.}
+Added |vector <real> numeric_list_real_vector|.
+\ENDLOG 
+
+@q ***** (5) Code.@> 
+
+@<|Scanner_Type| declaration@>=
+
+  Run_State run_state;
+
+#ifdef HAVE_PTHREAD_H  
+
+  Thread_Info_Type* thread_info;
+
+
+  vector<pthread_t*> thread_vector;
+  pthread_mutex_t    thread_vector_mutex;
+
+
+  Cond_Var_Type<bool, unsigned int> output_pending;
+
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+   Input_Struct* in;
+
+   Id_Map_Node id_map_node;
+   Scanner_Node up;
+
+   bool array_switch;
+   bool known_switch;
+ 
+   int action_switch;
+
+   vector <String_Bool> token_string_bool_vector;
+
+   vector <real> token_real_vector;
+
+   vector <real> numeric_list_real_vector;
+
+   bool first_call_yylex;
+
+   unsigned int if_ctr;
+
+   unsigned int group_ctr;
+
+   unsigned int loop_ctr;
+
+   string token_string;
+
+   Loop_Info_Node loop_info_node;
+
+
+@q ***** (5) Pointers for true internal quantities.@> 
+@*4 Pointers for true internal quantities.
+\initials{LDF 2004.11.11.}
+
+\LOG
+\initials{LDF 2004.11.11.}
+Added this section with declarations of
+the |Pen**| variables |current_pen| and |default_pen|,
+the |Color**| variables |current_color|, |current_draw_color|,
+|current_fill_color|, |default_color|,
+|default_draw_color|, and |default_fill_color|,
+and the |Dash_Pattern**| variables |current_dash_pattern| and
+|default_dash_pattern|.
+\ENDLOG
+
+@q ****** (6) Code.@> 
+
+@<|Scanner_Type| declaration@>=
+
+  Pen** current_pen;
+  Pen** default_pen;
+
+  Color** current_color;
+  Color** current_draw_color;
+  Color** current_fill_color;
+
+  Color** default_color;
+  Color** default_draw_color;
+  Color** default_fill_color;
+
+  Dash_Pattern** current_dash_pattern;
+  Dash_Pattern** default_dash_pattern;
+
+@q ***** (5) Data members for setting non-|Shape|-types.@> 
+
+@*4 Data members for setting non-|Shape|-types.
+\initials{LDF 2007.09.19.}
+
+\LOG
+\initials{LDF 2007.09.19.}
+Added this section with the declaration of 
+|Focus_Options* focus_options|.
+
+\initials{LDF 2007.11.28.}
+Added the declaration of |Matrix_Options* matrix_options|.
+\ENDLOG
+
+@q ****** (6) Code.@>
+
+@<|Scanner_Type| declaration@>=
+
+   Matrix_Options* matrix_options;
+   Focus_Options* focus_options;
+
+
+@q ***** (5) Data members for setting |Shape|-types.@> 
+
+@*4 Data members for setting |Shape|-types.
+\initials{LDF 2005.05.19.}
+
+\LOG
+\initials{LDF 2005.05.19.}
+Added this section with the declaration of 
+|Helix_Set_Option_Struct* helix_set_option_struct|.
+
+\initials{LDF 2005.05.25.}
+Added the declarations of 
+|Cone_Set_Option_Struct* cone_set_option_struct|
+and 
+|Cylinder_Set_Option_Struct* cylinder_set_option_struct|.
+
+\initials{LDF 2005.05.26.}
+Added the declaration of 
+|Ellipsoid_Set_Option_Struct* ellipsoid_set_option_struct|.
+
+\initials{LDF 2005.06.06.}
+Added the declaration of 
+|Sphere_Set_Option_Struct* sphere_set_option_struct|.
+
+\initials{LDF 2005.11.07.}
+Added the declaration of 
+|Parabola_Set_Option_Struct* parabola_set_option_struct|.
+
+\initials{LDF 2005.11.14.}
+Added the declaration of 
+|Hyperbola_Set_Option_Struct* hyperbola_set_option_struct|.
+
+\initials{LDF 2006.01.25.}
+Added the declaration of 
+|Paraboloid_Set_Option_Struct* paraboloid_set_option_struct|.
+
+\initials{LDF 2007.07.29.}
+Added the declaration of 
+|Conic_Section_Lattice_Options* conic_section_lattice_options|.
+
+\initials{LDF 2007.10.12.}
+Added the declaration of 
+|Polyhedron_Options* polyhedron_options|.
+
+\initials{LDF 2007.11.25.}
+Added the declaration of |Arc_Options* arc_options|.
+
+\initials{LDF 2009.11.17.}
+Added the declaration of 
+|Sphere_Development_Set_Option_Struct* sphere_development_set_option_struct|.
+\ENDLOG
+
+@q ****** (6) Code.@>
+
+@<|Scanner_Type| declaration@>=
+
+   Parabola_Set_Option_Struct* parabola_set_option_struct;
+   Hyperbola_Set_Option_Struct* hyperbola_set_option_struct;
+
+   Conic_Section_Lattice_Options* conic_section_lattice_options;
+
+   Arc_Options* arc_options;
+
+   Helix_Set_Option_Struct* helix_set_option_struct;
+   Cone_Set_Option_Struct* cone_set_option_struct;
+   Cylinder_Set_Option_Struct* cylinder_set_option_struct;
+
+   Polyhedron_Options* polyhedron_options;
+
+   Ellipsoid_Set_Option_Struct* ellipsoid_set_option_struct;
+   Sphere_Set_Option_Struct* sphere_set_option_struct;
+
+   Sphere_Development_Set_Option_Struct* sphere_development_set_option_struct;
+
+   Paraboloid_Set_Option_Struct* paraboloid_set_option_struct;
+
+@q ***** (5) Pointers for |with_clause_draw|. @>
+@*4 Pointers for |with_clause_draw|.
+\initials{LDF 2004.06.28.} 
+
+\LOG
+\initials{LDF 2004.08.29.}
+Added |color_vector_ptr|, |draw_color_vector_ptr|, and 
+|fill_color_vector_ptr|.
+
+\initials{LDF 2005.03.18.}
+Added |pen_vector_ptr| and |dash_pattern_vector_ptr|.
+\ENDLOG 
+
+@<|Scanner_Type| declaration@>=
+
+   void* color_ptr;
+   void* color_vector_ptr;
+
+   void* draw_color_ptr;
+   void* draw_color_vector_ptr;
+
+   void* fill_color_ptr;
+   void* fill_color_vector_ptr;
+
+   void* pen_ptr;
+   void* pen_vector_ptr;
+
+   void* dash_pattern_ptr;
+   void* dash_pattern_vector_ptr;
+
+
+@q ***** (5) Pointers for |with_clause_output|. @>
+@*4 Pointers for |with_clause_output|.
+\initials{LDF 2004.06.28.}
+
+\LOG
+\initials{LDF 2004.06.28.}
+Added this section.
+
+\initials{LDF 2004.06.28.}
+Changed all these variables to |void*|.
+
+
+\initials{LDF 2004.06.28.}
+Added ``|_ptr|'' to the end of the names of all of the variables in this
+section, except for |focus_ptr|, which already had it.
+
+\initials{LDF 2004.07.14.}
+Added |clear_ptr| and |endfig_ptr|.
+
+\initials{LDF 2005.03.13.}
+Added |surface_hiding_value_ptr|.
+\ENDLOG 
+
+@q ****** (6) Code.@>
+
+@<|Scanner_Type| declaration@>=
+
+  void* picture_entry_ptr;
+
+  void* clear_ptr;
+  void* endfig_ptr;  
+
+
+  void* focus_ptr;
+  void* projection_ptr;
+  void* factor_ptr;
+  void* sort_value_ptr;
+  void* min_x_proj_ptr;
+  void* max_x_proj_ptr;
+  void* min_y_proj_ptr;
+  void* max_y_proj_ptr;
+  void* min_z_proj_ptr;
+  void* max_z_proj_ptr;
+
+  void* surface_hiding_value_ptr;
+
+@q ***** (5) Pointers for |predicate_clause|. @>
+@*4 Pointers for |predicate_clause|.
+\initials{LDF 2005.10.26.}
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this section with the declaration of |tolerance|.
+\ENDLOG 
+
+@q ****** (6) Code.@>
+
+@<|Scanner_Type| declaration@>=
+
+   real* tolerance;
+
+
+@q ***** (5) Data members for macro definitions.@> 
+
+@*4 Data members for macro definitions.
+\initials{LDF 2004.12.21.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Added this section.
+
+\initials{LDF 2004.12.21.}
+Changed the type of |definition_parameter_vector| from 
+|vector<pair<int, string> >| to |vector<Int_String>|. 
+
+\initials{LDF 2004.12.22.}
+Changed the type of |definition_parameter_vector| from 
+|vector<Int_String>| to |vector<string>|. 
+
+\initials{LDF 2004.12.29.}
+Replaced |vector<string> definition_parameter_vector| with
+|vector<string> macro_untyped_parameter_vector| and
+|vector<Int_String> macro_typed_parameter_vector|.
+
+\initials{LDF 2005.01.02.}
+Removed |int definition_ctr|.
+\ENDLOG
+
+@q ****** (6) Code.@>
+
+@<|Scanner_Type| declaration@>=
+   
+   vector<string>     macro_untyped_parameter_vector;
+   vector<Int_String> macro_typed_parameter_vector;
+
+
+
+
+
+@q **** (4) |public| data and function members.@>
+@*3 |public| data and function members.
+\initials{LDF 2004.06.28.}
+
+\LOG
+\initials{LDF 2004.07.03.}
+Added |vector<pthread_t*> pthread_t_ptr_vector|.
+
+\initials{LDF 2004.07.05.}
+Removed |Thread_Info_Type* thread_info|.  There's no reason for it to be
+included in |Scanner_Type|.
+
+\initials{LDF 2005.12.05.}
+Added |bool ulong_long_switch|.
+\ENDLOG 
+
+@q ***** (5) Code.@>
+
+@<|Scanner_Type| declaration@>=
+
+ public:
+
+  bool ulong_long_switch;
+
+  stack<Int_Void_Ptr_Bool> rescan_stack;
+
+  Output_Struct* out[3];
+  @<Declare |Scanner_Type| functions@>@;  
+};
+
+@q *** (3) Scanner_Type functions.@>
+@*2 {\bf Scanner\_Type} functions.   
+
+@q **** (4) Destructor.    @>
+@*3 Destructor.
+This function is defined in \filename{sctpfncs.web}.
+\initials{LDF 2004.09.22.}
+
+\LOG
+\initials{LDF 2004.07.01.}
+Added this function declaration.  
+\ENDLOG 
+
+@q ***** (5) Declaration.    @>
+
+@<Declare |Scanner_Type| functions@>=
+~Scanner_Type(void);
+
+
+
+@q **** (4) Pseudo-constructor for dynamic allocation.    @>
+@*3 Pseudo-constructor for dynamic allocation.
+
+@q ***** (5) Declaration.    @>
+\LOG
+\initials{LDF 2004.03.28.}  Added this function.
+
+\initials{LDF 2004.04.16.}  Moved to this file from
+\filename{scanprse.web}. 
+
+
+\initials{LDF 2004.04.16.}  Changed |metafont_output|, |png_output|, and
+|libplot_output| to |do_output[Run_State::METAFONT]|,
+|do_output[Run_State::PNG]|, and |do_output[Run_State::LIBPLOT]|,
+respectively.  
+
+
+\initials{LDF 2004.04.16.}  Moved definition to
+\filename{colors.web}.  This was necessary because it now calls
+|Color::initialize_colors| to write the |Color| definitions to the
+MetaPost output file.
+
+\initials{LDF 2004.04.20.}  Added |bool top_level| argument.  If it's
+|true|, then |scanner_node->id_map_node| will be initialized.  Just 
+started working on this.  
+
+\initials{LDF 2004.04.20.}
+Removed the definition of |Scanner_Type::create| from
+\filename{colors.web} to \filename{scan.web}.  This was necessary because it
+uses |LDF_TYPE|, which is declared in \filename{parser.w}.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+static
+Scanner_Node
+create(string str, const Run_State& r, bool top_level = false);
+
+@q **** (4) Setting function.@>
+@*3 Setting function.
+
+Currently, this function is only used for setting |scanner_node_stdin|
+in |@<Main@>|. 
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:@>
+\initials{LDF 2004.04.20.}  Add arguments and code for handling |out|.
+\ENDTODO 
+ 
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this function.
+
+\initials{LDF 2004.05.02.}  Now setting |scanner_node->in->up| to 0.
+Added |Input_Struct* up| to |struct Input_Struct| today.
+
+\initials{LDF 2004.09.09.}
+Replaced the |bool iis_file| argument with 
+|const unsigned short ttype|.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+void
+set(string in_filename,
+    istream* in_stream_ptr,
+    Scanner_Node uup,
+    const unsigned short ttype,
+    Run_State& rrun_state = run_state_initial);
+
+
+@
+@<Define |Scanner_Type| functions@>=
+void
+Scanner_Type::set(string in_filename,
+                  istream* in_stream_ptr,
+                  Scanner_Node uup,
+                  const unsigned short ttype,
+                  Run_State& rrun_state)
+{
+      in = new Input_Struct;
+      in->up = 0;
+      up = uup;
+      in->filename = in_filename;
+      in->stream_ptr = in_stream_ptr;
+      in->type = ttype;
+
+
+      arc_options = 0;
+
+      for (int i = 0; i < Run_State::MAX_OUTPUT_FORMATS; ++i)
+        out[i] = 0;
+
+      return;
+}
+
+@q **** (4) Assignment operator. @>
+@*3 Assignment operator.
+
+\LOG
+\initials{LDF 2004.09.15.}
+Added this declaration.  This function is defined in 
+\filename{sctpfncs.web}.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+const Scanner_Type&
+operator=(const Scanner_Type& s);
+
+@q **** (4) Open default output file. @>
+@*3 Open default output file.
+
+\LOG
+\initials{LDF 2004.04.16.}  Moved to this file from
+\filename{scanprse.web}. 
+
+\initials{LDF 2004.04.16.}  Changed |metafont_output|, |png_output|, and
+|libplot_output| to |do_output[Run_State::METAFONT]|,
+|do_output[Run_State::PNG]|, and |do_output[Run_State::LIBPLOT]|,
+respectively.  
+
+
+\ENDLOG 
+
+
+@<Declare |Scanner_Type| functions@>=
+bool
+open_default_out_file(const unsigned short format, Run_State& r);
+
+@q ***** (5) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+bool
+Scanner_Type::open_default_out_file(const unsigned short format, Run_State& r)
+{
+  bool DEBUG = false; /* |true| */ @; 
+
+  if (DEBUG)
+    cerr << "Entering Scanner_Type::open_default_out_file()" << endl
+         << "format == " << format << endl;
+
+
+  run_state = r;
+
+  bool do_output;
+  string filename;
+
+  string conditional_string;
+
+  if (format == Run_State::METAPOST)
+    {
+      do_output = run_state.do_output[Run_State::METAPOST];
+      filename = default_out_filename_metapost;
+      if (DEBUG) 
+        conditional_string = "do_output[Run_State::METAPOST]";
+    }
+  else if (format == Run_State::PNG)
+    {
+      do_output = run_state.do_output[Run_State::PNG];
+      filename = default_out_filename_png;
+      if (DEBUG) 
+        conditional_string = "do_output[Run_State::PNG]";
+    }
+  else if (format == Run_State::LIBPLOT)
+    {
+      do_output = run_state.do_output[Run_State::LIBPLOT];
+      filename = default_out_filename_libplot;
+      if (DEBUG) 
+        conditional_string = "do_output[Run_State::LIBPLOT]";
+    }
+  else
+    {
+      cerr << "ERROR! In Scanner_Type::open_default_out_file():\n"
+           << "Invalid `format\' argument: " << format << endl
+           << "Returning `false\'." << endl << endl;
+      return false;
+    }
+
+  if (do_output)
+    {
+      ofstream* out_file_stream = new ofstream;
+      out_file_stream->open(filename.c_str());
+
+      if (!(*out_file_stream))
+        {
+          delete out_file_stream;
+          out_file_stream = 0;
+          cerr << "ERROR! In Scanner_Type::open_default_out_file():"
+               <<  "Opening " << filename 
+               << " failed!  Returning false.\n\n";
+
+          return false;
+        }
+      else
+        {
+          out[format] = new Output_Struct;      
+          out[format]->stream_ptr
+            = static_cast<ostream*>(out_file_stream);
+          out[format]->filename = filename;
+          if (DEBUG)
+            cerr << "Opening " << filename 
+                 << " succeeded! returning `true\'" << endl
+                 << "Exiting Scanner_Type::open_default_out_file()" << endl
+                 << endl;
+          return true;
+        } /* |else|  */@;
+    } /* |if (do_output)|  */@;
+  else if (DEBUG)
+    {
+      cerr << conditional_string << " == false.  Returning `false\'.\n"
+        << "Exiting Scanner_Type::open_default_out_file()" << endl;
+
+      return false;
+    }
+} /* |Scanner_Type::open_default_out_file| */@;
+
+
+@q **** (4) Get thread name and stop value.@>
+@*3 Get thread name and stop value.
+\initials{LDF 2004.10.03.}
+
+\LOG
+\initials{LDF 2004.10.03.}
+Added this function.
+
+
+\initials{LDF 2004.10.05.}
+Now setting |*error_stop_value| to |Run_State::STOPPING| rather than
+|Run_State::ERRORSTOP|. 
+Now setting |*warning_stop_value| to |Run_State::STOPPING|.
+
+\initials{LDF 2005.11.03.}
+Made all of the arguments optional, with the default 0.
+\ENDLOG
+
+@<Declare |Scanner_Type| functions@>=
+
+int
+get_thread_name_and_stop_values(string* thread_name = 0,
+                                bool* error_stop_value = 0,
+                                bool* warning_stop_value = 0);
+
+
+@q ***** (5) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+int 
+Scanner_Type::get_thread_name_and_stop_values(string* thread_name,
+                                              bool* error_stop_value,
+                                              bool* warning_stop_value)
+{
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   if (thread_name)
+      *thread_name = "";
+
+   if (error_stop_value)
+      *error_stop_value = (run_state.error_stop_mode == Run_State::STOPPING)
+                          ? true : false;
+
+   if (warning_stop_value)
+      *warning_stop_value = (run_state.warning_stop_mode == Run_State::STOPPING)
+                            ? true : false;
+
+#ifdef HAVE_PTHREAD_H  
+   if (thread_name)
+      {
+          Thread_Info_Type* thread_info;
+
+          if (   run_state.multithread_input 
+              || run_state.multithread_output
+              || run_state.multithread_include)
+            {
+              thread_info = Thread_Info_Type::get_thread_info();
+              *thread_name = thread_info->name;
+            }
+          else
+            {
+              thread_info = 0;
+              *thread_name = "";
+            }
+       }  /* |if (thread_name)|  */  
+#endif /* |HAVE_PTHREAD_H|  */@; 
+
+    return 0;
+
+}  /* End of |Scanner_Type::get_thread_name_and_stop_values| definition.  */
+
+
+@q **** (4) Handling input. @>
+@*3 Handling input.
+
+@q ***** (5) Get. @>
+@*4 Get.
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this function.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+char
+get() const;
+
+
+@q ****** (6) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+char
+Scanner_Type::get() const
+{
+  return in->stream_ptr->get();
+}
+
+@q ***** (5) Peek. @>
+@*4 Peek.
+\LOG
+\initials{LDF 2004.04.20.}  Added this function.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+char
+peek() const;
+
+
+@q ****** (6) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+char
+Scanner_Type::peek() const
+{
+  return in->stream_ptr->peek();
+}
+
+@q ***** (5) Ignore. @>
+@*4 Ignore.
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this function.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+void
+ignore() const;
+
+
+
+@q ****** (6) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+void
+Scanner_Type::ignore() const
+{
+  in->stream_ptr->ignore();
+  return;
+}
+
+@q ***** (5) Put back. @>
+@*4 Put back.
+
+\LOG
+\initials{LDF 2004.09.13.}  
+Added this function.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+inline 
+void
+putback(char c)
+{
+  in->stream_ptr->putback(c);
+  return;
+}
+
+
+
+
+@q **** (4) Querying. @>
+@*3 Querying.
+
+@q ***** (5) Is open for input. @>
+@*4 Is open for input.
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this function.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+bool
+is_open_in() const;
+
+
+@q ****** (6) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+bool
+Scanner_Type::is_open_in() const
+{
+  return in->stream_ptr;
+}
+
+@q ***** (5) Get input filename. @>
+@*4 Get input filename.
+
+\LOG
+\initials{LDF 2004.04.20.}  Added this function.
+
+\initials{LDF 2004.04.20.}  Added error handling and debugging code.
+Added |silent| argument.  Changed return type from |const string&| to
+|const string|.   This was necessary in order to be able to return the
+empty |string| if |in| is a null pointer.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+const
+string
+get_in_filename(const bool silent = false) const;
+
+
+@q ****** (6) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+const
+string
+Scanner_Type::get_in_filename(const bool silent) const
+{
+  bool DEBUG = false; /* |true| */ @; 
+  if (in == static_cast<Input_Struct*>(0))
+    {
+      if (!silent || DEBUG)
+        cerr << "WARNING! In Scanner_Type::get_in_filename():\n"
+             << "Scanner_Type.in is a null pointer. Returning "
+             << "empty string.\n";
+      return "";
+    }
+  else
+    {
+      if (DEBUG)
+        cerr << "In Scanner_Type::get_in_filename():\n"
+             << "returning " << in->filename << ".\n";
+      return in->filename;
+    }
+}
+
+
+@q ***** (5) Get |run_state|. @>
+@*4 Get |run_state|.
+
+\LOG
+\initials{LDF 2004.06.01.}  Added this function. 
+\ENDLOG 
+
+@q ****** (6) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+inline 
+Run_State const*
+get_run_state(void) const
+{
+  return &run_state;
+}
+
+
+
+@q ***** (5) Pop |in|.@>
+@*4 Pop {\bf in}.
+
+\LOG
+\initials{LDF 2004.09.09.}  
+Added this function. 
+
+\initials{LDF 2004.09.20.}
+Made this function non-inline.
+
+\initials{LDF 2004.09.20.}
+@:BUG FIX@> BUG FIX:  Now testing whether |in->up| is null
+rather than whether |up| is null.
+\ENDLOG 
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.09.20.}
+Get thread information and revise warning output.
+\ENDTODO 
+
+@q ****** (6) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+int
+pop_in(void);
+
+@
+@<Define |Scanner_Type| functions@>=
+int
+Scanner_Type::pop_in(void)
+{
+
+  if (in->up == static_cast<Input_Struct*>(0))
+    {
+      cerr_mutex.lock(); 
+      cerr << "WARNING: In `Scanner_Type::pop_in()': "
+           << "`in->up' == 0. Not popping."
+           << endl << "Exiting function with return value 1."
+           << endl;
+      cerr_mutex.unlock(); 
+
+      return 1;
+
+    } /* |if (in->up == static_cast<Input_Struct*>(0))|  */
+
+  Input_Struct* i = in;
+  in = in->up;
+  i->up = static_cast<Input_Struct*>(0);
+  delete i;
+  i = static_cast<Input_Struct*>(0);
+  
+  return 0;
+  
+}   /* End of |Scanner_Type::pop_in| definition.  */
+
+
+
+@q ***** (5) Get the type of |in| (|in->type|). @>
+@*4 Get the type of {\bf in}.
+
+\LOG
+\initials{LDF 2004.09.09.}  
+Added this function. 
+\ENDLOG 
+
+@q ****** (6) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+inline 
+unsigned short
+get_in_type(void) const
+{
+  return in->type;
+}
+
+@q ***** (5) |get_in_eof|. @>
+@*4 {\bf get\_in\_eof}.
+
+\LOG
+\initials{LDF 2004.09.13.}  
+Added this function. 
+\ENDLOG 
+
+@q ****** (6) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+inline 
+bool
+get_in_eof(void) const
+{
+  return in->stream_ptr->eof();
+}
+
+@q ***** (5) |get_in_good|. @>
+@*4 {\bf get\_in\_good}.
+
+\LOG
+\initials{LDF 2004.09.13.}  
+Added this function. 
+\ENDLOG 
+
+@q ****** (6) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+inline 
+bool
+get_in_good(void) const
+{
+  return in->stream_ptr->good();
+}
+
+
+@q ***** (5) |get_in_bad|. @>
+@*4 {\bf get\_in\_bad}.
+
+\LOG
+\initials{LDF 2004.09.13.}  
+Added this function. 
+\ENDLOG 
+
+@q ****** (6) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+inline 
+bool
+get_in_bad(void) const
+{
+  return in->stream_ptr->bad();
+}
+
+
+@q ***** (5) |get_in_fail|. @>
+@*4 {\bf get\_in\_fail}.
+
+\LOG
+\initials{LDF 2004.09.13.}  
+Added this function. 
+\ENDLOG 
+
+@q ****** (6) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+inline 
+bool
+get_in_fail(void) const
+{
+  return in->stream_ptr->fail();
+}
+
+@q **** (4) Add entry.  @>
+@*3 Add entry.
+
+\LOG
+\initials{LDF 2004.08.20.}
+Moved the definition from this file (\filename{io.web}) to 
+\filename{sctpfncs.web}.  See that file for additional log entries. 
+
+\initials{LDF 2004.08.24.}
+Added |Id_Map_Entry_Node ssuperordinate_vector| 
+argument with default 0.
+
+\initials{LDF 2004.08.25.}
+Added |Id_Map_Entry_Node ssubordinate_array| 
+argument with default 0.
+
+\initials{LDF 2004.08.28.}
+Added the |Scanner_Node sscanner_node| argument.
+
+\initials{LDF 2004.08.29.}
+Removed the |Scanner_Node sscanner_node| argument.
+\ENDLOG  
+
+@q ***** (5) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+Id_Map_Entry_Node
+add_entry(string nname,
+          unsigned int ttype,
+          unsigned short ccategory = Id_Map_Entry_Type::REGULAR,
+          bool cconst_flag = false,
+          bool aarray_flag = false,
+          unsigned short kknown_state = Id_Map_Entry_Type::INDEPENDENT,
+          void* oobject = 0,
+          Id_Map_Entry_Node uup = 0,
+          Id_Map_Entry_Node lleft = 0,
+          Id_Map_Entry_Node rright = 0,
+          Id_Map_Entry_Node ssuperordinate_vector = 0,
+          Id_Map_Entry_Node ssubordinate_array = 0);
+
+
+
+
+@q **** (4) Add synonym.  @>
+@*3 Add synonym.
+
+\LOG
+\initials{LDF 2004.05.17.}  Added this function.
+
+\initials{LDF 2004.07.01.}
+Moved the definition of this function from \filename{io.web} (this file)
+to \filename{scan.web}. 
+\ENDLOG  
+
+@q ***** (5) Declaration.  @>
+
+@<Declare |Scanner_Type| functions@>=
+Id_Map_Entry_Node
+add_synonym(string synonym, string name);
+
+
+
+@q **** (4) Lookup. @>
+@*3 Lookup.
+  
+\LOG
+\initials{LDF 2004.02.05.}  
+Added this function. 
+
+\initials{LDF 2004.03.17.}  
+Changed return value from 
+|Id_Map_Entry_Node| to |Id_Map_Entry_Node*|.
+
+\initials{LDF 2004.04.16.}  
+Moved this function to this file from \filename{scanprse.web}. 
+
+\initials{LDF 2004.04.20.}  
+Changed this function to account for
+changes to types used for identifier mapping.
+
+\initials{LDF 2004.04.20.}  
+Made this function a member function of
+|Scanner_Type|. 
+
+\initials{LDF 2004.04.22.}  
+Changed the name of this function from 
+|check_id| to |lookup| and rewrote it.  
+
+
+\initials{LDF 2004.04.24.}  
+Moved this function definition from \filename{io.web} 
+to \filename{scan.web} because I'm now using |name_map| in it.
+\ENDLOG 
+
+@q ***** (5) Declaration. @>
+
+@<Declare |Scanner_Type| functions@>=
+Id_Map_Entry_Node
+lookup(string s,
+       bool traverse = true,
+       unsigned short level = 0,
+       Id_Map_Node local_id_map_node = 0);
+ 
+@q **** (4) Erase entry. @>
+@*3 Erase entry.
+
+\LOG
+\initials{LDF 2004.08.25.}
+Added this declaration.  This function is defined in 
+\filename{sctpfncs.web} 
+\ENDLOG 
+
+@q ***** (5) Declaration. @>
+
+@<Declare |Scanner_Type| functions@>=
+int 
+erase_entry(string s);
+
+
+
+@q **** (4) Resolve array name. @>
+@*3 Resolve array name.
+
+\LOG
+\initials{LDF 2004.05.03.}  
+Added this function.
+
+\initials{LDF 2004.12.28.}
+Now using the character octal 243 (British Pound) as the placeholder
+for subscripts rather than \.{-}.
+\ENDLOG 
+
+
+@<Declare |Scanner_Type| functions@>=
+string
+resolve_array_name(string s);
+
+@
+@<Define |Scanner_Type| functions@>=
+string
+Scanner_Type::resolve_array_name(string s)
+{
+  stringstream real_stream;
+  string::size_type s_size;
+  
+  for (vector<real>::const_iterator iter
+       = token_real_vector.begin();
+       iter != token_real_vector.end();
+       ++iter)
+    {
+      real_stream << '[' << *iter << ']';
+      
+      s_size = s.find('£');
+      
+      if (s_size != string::npos)
+        s.replace(s_size, 1, real_stream.str());
+      real_stream.str("");
+    }
+  token_real_vector.clear();
+  return s;
+
+}  /* End of |Scanner_Type::resolve_array_name| definition.  */
+ 
+@q **** (4) Get array entry. @>
+@*3 Get array entry.
+\initials{LDF 2004.05.03.}  
+
+\LOG
+\initials{LDF 2004.05.03.}  
+Added this function.
+
+\initials{LDF 2004.05.09.}  
+Added an argument for |cconst_flag| in calls to
+|Id_Map_Entry_Type::set_entry|. 
+
+\initials{LDF 2004.08.23.}
+Made debugging and error output thread-safe.
+
+\initials{LDF 2004.08.23.}
+@:BUG FIX@> BUG FIX: 
+Now returning |root->left|, if this is the newly-created 
+|Id_Map_Entry_Node|.  Formerly, |root| was returned.
+
+\initials{LDF 2004.08.25.}
+Now passing |root->superordinate_vector| as an argument in calls to 
+|Id_Map_Entry_Type::set_entry|.
+
+
+\initials{LDF 2004.08.28.}
+Now passing |this| as the |Scanner_Node| argument in calls to 
+|Id_Map_Entry_Type::set_entry|.
+
+\initials{LDF 2004.08.29.}
+Now passing |id_map_node| as an |Id_Map_Node| argument in calls to
+|Id_Map_Entry_Type::set_entry| instead of |this| as a |Scanner_Node|
+argument.
+
+\initials{LDF 2005.01.08.}
+Added the argument |bool create_if_none| with the default |true|.  
+If it's |false| and there is no array entry corresponding to the 
+|string s| argument, this function returns 0.  Previously, a new 
+entry was always created if none existed.
+\ENDLOG 
+
+@q ***** (5) Declaration. @>
+
+
+@<Declare |Scanner_Type| functions@>=
+Id_Map_Entry_Node 
+get_array_entry(string s, 
+                Id_Map_Entry_Node head, 
+                bool create_if_none = true);
+
+
+@q ***** (5) Definition. @>
+
+@
+@<Define |Scanner_Type| functions@>=
+Id_Map_Entry_Node 
+Scanner_Type::get_array_entry(string s, 
+                              Id_Map_Entry_Node root,
+                              bool create_if_none) 
+{
+
+  using namespace Scan_Parse;
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  string thread_name;
+
+#ifdef HAVE_PTHREAD_H  
+  
+  Thread_Info_Type* thread_info;
+  
+  if (   run_state.multithread_input 
+      || run_state.multithread_output
+      || run_state.multithread_include)
+    {
+      thread_info = Thread_Info_Type::get_thread_info(true);
+      thread_name = Thread_Info_Type::get_thread_name(thread_info);
+    }
+
+  else
+    {
+      thread_info = 0;
+      thread_name = "";
+    }
+
+#else  /* |HAVE_PTHREAD_H| is undefined.  */@;  
+
+  thread_name = "";
+
+#endif /* |HAVE_PTHREAD_H| is undefined.  */@; 
+ 
+  stringstream cerr_strm;
+
+  bool error_stop_value = (run_state.error_stop_mode == Run_State::STOPPING)
+                     ? true : false;
+
+  int status;
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << thread_name 
+                 << "Entering `Scanner_Type::get_array_entry()'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm); 
+       cerr_strm.str(""); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+  
+  if (root == static_cast<Id_Map_Entry_Node>(0))
+    {
+
+
+      cerr_strm << thread_name 
+                << "ERROR! In `Scanner_Type::get_array_entry()':"
+                << endl
+                << "root == 0. Returning static_cast<Id_Map_Entry_Node>(0).";
+
+      log_message(cerr_strm); 
+      cerr_message(cerr_strm, error_stop_value); 
+      cerr_strm.str(""); 
+
+      return static_cast<Id_Map_Entry_Node>(0); 
+
+    } /* |if (root == static_cast<Id_Map_Entry_Node>(0))|  */
+
+  int curr_type = root->type;
+
+@q ****** (6) |root->left == static_cast<Id_Map_Entry_Node>(0)|.@>  
+@ |root->left == static_cast<Id_Map_Entry_Node>(0)|.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2005.01.08.}
+Added the condition |create_if_none == true|.
+\ENDLOG 
+
+
+@<Define |Scanner_Type| functions@>=
+
+  if (root->left == static_cast<Id_Map_Entry_Node>(0) && create_if_none)
+    {
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+
+       cerr_strm << thread_name 
+                 << "In `Scanner_Type::get_array_entry()':" << endl
+                 << "`root->left' == 0 && `create_if_none == true'.  "
+                 << "Creating new `Id_Map_Entry_Node' "
+                 << "and setting it.";
+  
+       log_message(cerr_strm); 
+       cerr_message(cerr_strm); 
+       cerr_strm.str(""); 
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      root->left = new (Id_Map_Entry_Type);
+
+      root->left->set_entry(s,
+                            curr_type,
+                            id_map_node,
+                            Id_Map_Entry_Type::REGULAR,
+                            false,
+                            true,
+                            Id_Map_Entry_Type::INDEPENDENT,
+                            static_cast<void*>(0), /* |object|  */
+                            root, /* |up|  */
+                            static_cast<Id_Map_Entry_Node>(0), /* |left|  */ 
+                            static_cast<Id_Map_Entry_Node>(0), /* |right|  */ 
+                            root->superordinate_vector);
+
+#if DEBUG_COMPILE
+      if (DEBUG)
+        {
+          cerr_strm << thread_name 
+                    << "Exiting `Scanner_Type::get_array_entry()'.";
+
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm);
+          cerr_strm.str(""); 
+        }
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+      return root->left;
+
+    } /* |if (root->left == static_cast<Id_Map_Entry_Node>(0))|  */
+
+@q ****** (6) |root->left == static_cast<Id_Map_Entry_Node>(0) && !create_if_none|.@> 
+@ |root->left == static_cast<Id_Map_Entry_Node>(0) && !create_if_none|.
+\initials{LDF 2005.01.08.}
+
+\LOG
+\initials{LDF 2005.01.08.}
+Added this section.
+\ENDLOG
+
+@<Define |Scanner_Type| functions@>=
+
+   else if (root->left == static_cast<Id_Map_Entry_Node>(0) && !create_if_none)
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+
+              cerr_strm << thread_name 
+                        << "In `Scanner_Type::get_array_entry()':" << endl
+                        << "`root->left' == 0 && `create_if_none == false'.  "
+                        << "Returning 0.";
+  
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str(""); 
+            }   
+#endif /* |DEBUG_COMPILE|  */@; 
+
+         return 0;
+
+      } /* |else if (   root->left == static_cast<Id_Map_Entry_Node>(0) 
+                     && !create_if_none)|  */
+
+@q ****** (6) |root->left != static_cast<Id_Map_Entry_Node>(0)|.@>  
+@ |root->left != static_cast<Id_Map_Entry_Node>(0)|.
+@<Define |Scanner_Type| functions@>=
+
+
+  else /* (|root->left != static_cast<Id_Map_Entry_Node>(0)|)  */
+    {
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << thread_name 
+                 << "In `Scanner_Type::get_array_entry()':" << endl
+                 << "root->left != 0. Will traverse.";
+       log_message(cerr_strm);
+       cerr_message(cerr_strm); 
+       cerr_strm.str(""); 
+     }
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   root = root->left;
+
+   for(;;)
+        {
+
+@q ******* (7) There's an existing entry with this name.  @>
+@ There's an existing entry with this name.  We just return it.
+\initials{LDF 2004.05.03.}
+@<Define |Scanner_Type| functions@>=
+
+  if (s == root->name)
+    {
+      
+#if DEBUG_COMPILE
+      if (DEBUG)
+        {
+          cerr_strm << thread_name 
+                    << "In `Scanner_Type::get_array_entry()':" << endl
+                    << "`s' == `root_name':" << endl
+                    << "`s' == " << s << ", `root->name' == " 
+                    << root->name << "." << endl
+                    << "Exiting `get_array_entry()' with return value `root'.";
+
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str("");
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      return root;
+
+    } /* |if (s == root->name)| */@;
+
+
+@q ***** (5) |(s < root->name)|.@>
+@ |s < root->name|.  If |left| is a null pointer, put the new
+|Id_Map_Entry_Node| there, otherwise continue traversing the tree structure.
+\initials{LDF 2004.04.27.}
+@<Define |Scanner_Type| functions@>=
+
+
+                else if (s < root->name)
+                  {
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << thread_name 
+                 << "In `Scanner_Type::get_array_entry()':" << endl
+                 << "`s' (" << s << ") < `root->name' (" << root->name
+                 << ").";
+
+       log_message(cerr_strm); 
+       cerr_message(cerr_strm); 
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+@q ****** (6) |(root->left == static_cast<Id_Map_Entry_Node>(0)|.@>  
+@ |(root->left == static_cast<Id_Map_Entry_Node>(0))|.
+\initials{LDF 2004.08.23.}
+
+@<Define |Scanner_Type| functions@>=
+ 
+  if (root->left == static_cast<Id_Map_Entry_Node>(0))
+    {
+                        
+#if DEBUG_COMPILE
+      if (DEBUG) 
+        {
+
+          cerr_strm << thread_name 
+                 << "In `Scanner_Type::get_array_entry()':" << endl
+                 << "`" << root->name << "->left' == 0. "
+                 << "Creating new `Id_Map_Entry_Node'.";
+          
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str("");
+          
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      root->left = new (Id_Map_Entry_Type);
+
+      root->left->set_entry(s,
+                            curr_type,
+                            id_map_node,
+                            Id_Map_Entry_Type::REGULAR,
+                            false,
+                            true,
+                            Id_Map_Entry_Type::INDEPENDENT,
+                            static_cast<void*>(0),  /* |object|  */
+                            root, /* |up|  */
+                            static_cast<Id_Map_Entry_Node>(0), /* |left|  */ 
+                            static_cast<Id_Map_Entry_Node>(0), /* |right|  */ 
+                            root->superordinate_vector);
+
+
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << thread_name 
+                 << "Exiting `Scanner_Type::get_array_entry()' "
+                 << "with return value `root->left' (" << root->left->name << ").";
+       
+       log_message(cerr_strm); 
+       cerr_message(cerr_strm); 
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+      
+      return root->left;
+      
+
+    } /* |if (root->left == static_cast<Id_Map_Entry_Node>(0))|  */@;
+
+
+@q ****** (6) |(root->left != static_cast<Id_Map_Entry_Node>(0))|.@>  
+@ |(root->left != static_cast<Id_Map_Entry_Node>(0))|.
+\initials{LDF 2004.08.23.}
+
+@<Define |Scanner_Type| functions@>=
+
+  else /* |if (root->left != static_cast<Id_Map_Entry_Node>(0))|  */@;
+   {
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+
+       cerr_strm << thread_name 
+                 << "In `Scanner_Type::get_array_entry()':" << endl
+                 << "`" << root->name << "->left' != 0. Traversing.";
+
+       log_message(cerr_strm); 
+       cerr_message(cerr_strm); 
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+     root = root->left;
+     continue;
+
+   } /* |else| (|root->left != static_cast<Id_Map_Entry_Node>(0)|) */@;
+
+ } /* |if (s < root->name)|  */@;
+
+@q ***** (5) |s > root->name|.@>
+
+@ |s > root->name|.  
+If |right| is a null pointer, put the new
+|Id_Map_Entry_Node| there, otherwise continue traversing the tree structure.
+\initials{LDF 2004.04.27.}
+
+@<Define |Scanner_Type| functions@>=
+
+                else if (s > root->name)
+                  {
+                    
+
+@q ****** (6) |root->right == static_cast<Id_Map_Entry_Node>(0)|.@>  
+
+@ |root->right == static_cast<Id_Map_Entry_Node>(0)|.
+\initials{LDF 2004.08.23.}
+
+@<Define |Scanner_Type| functions@>=
+
+                    if (root->right == static_cast<Id_Map_Entry_Node>(0))
+                      {
+
+#if DEBUG_COMPILE
+                        if (DEBUG) 
+                          {
+                            cerr_strm << thread_name 
+                                      << "In `Scanner_Type::get_array_entry()':" 
+                                      << endl
+                                      << "`" << root->name << "->right' == 0. "
+                                      << "Creating new `Id_Map_Entry_Node'.";
+ 
+                            log_message(cerr_strm); 
+                            cerr_message(cerr_strm); 
+                            cerr_strm.str("");
+                          }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                        root->right = new (Id_Map_Entry_Type);
+
+                        root->right->set_entry(s,
+                                               curr_type,
+                                               id_map_node,
+                                               Id_Map_Entry_Type::REGULAR,
+                                               false,
+                                               true,
+                                               Id_Map_Entry_Type::INDEPENDENT,
+                                               static_cast<void*>(0),  /* |object|  */
+                                               root, /* |up|  */
+                                               static_cast<Id_Map_Entry_Node>(0), /* |left|  */ 
+                                               static_cast<Id_Map_Entry_Node>(0), /* |right|  */ 
+                                               root->superordinate_vector);
+#if DEBUG_COMPILE
+                        if (DEBUG)
+                          {
+                            cerr_strm << thread_name 
+                                      << "Exiting `Scanner_Type::get_array_entry()' "
+                                      << "with return value `root->right' "
+                                      << "(" << root->right->name << ").";
+
+                            log_message(cerr_strm); 
+                            cerr_message(cerr_strm); 
+                            cerr_strm.str("");
+                          }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+                        return root->right;
+
+                      } /* |if (root->right == static_cast<Id_Map_Entry_Node>(0))|  */@;
+
+
+@q ****** (6) |root->right != static_cast<Id_Map_Entry_Node>(0)|.@>  
+
+@ |root->right != static_cast<Id_Map_Entry_Node>(0)|.
+\initials{LDF 2004.08.23.}
+
+@<Define |Scanner_Type| functions@>=
+
+
+                    else /* |root->right != static_cast<Id_Map_Entry_Node>(0)| */
+                      {
+#if DEBUG_COMPILE
+                        if (DEBUG) 
+                          {
+                            cerr_strm << thread_name 
+                                      << "In `Scanner_Type::get_array_entry()':" 
+                                      << endl
+                                      << "`" << root->name 
+                                      << "->right' != 0. Traversing.";
+                            
+                            log_message(cerr_strm); 
+                            cerr_message(cerr_strm); 
+                            cerr_strm.str("");
+                          }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                        root = root->right;
+                        continue;
+                      } /* |else| (|root->right != static_cast<Id_Map_Entry_Node>(0)|) */
+
+                    } /* |else if (s > root->name)|  */
+
+                 } /* |for|  */
+ 
+   } /* |else| (|root->left != static_cast<Id_Map_Entry_Node>(0)|)  */
+
+} /* End of |Scanner_Type::get_array_entry| definition.  */
+
+@q **** (4) Set |first_call_yylex|. @>
+@*3 Set {\bf first\_call\_yylex}.
+
+\LOG
+\initials{LDF 2004.09.09.}
+Added this function.
+\ENDLOG
+
+@<Declare |Scanner_Type| functions@>=
+inline
+void
+set_first_call_yylex(bool arg = false)
+{
+  first_call_yylex = arg;
+  return;
+}
+
+@q **** (4) Get |first_call_yylex|. @>
+@*3 Get {\bf first\_call\_yylex}.
+
+\LOG
+\initials{LDF 2004.09.09.}
+Added this function.
+\ENDLOG
+
+@<Declare |Scanner_Type| functions@>=
+inline
+bool
+get_first_call_yylex(void) const
+{
+  return first_call_yylex;
+}
+
+@q **** (4) Set |token_string|. @>
+@*3 Set {\bf token\_string}.
+
+\LOG
+\initials{LDF 2004.09.12.}
+Added this function.
+\ENDLOG
+
+@<Declare |Scanner_Type| functions@>=
+inline
+void
+set_token_string(const string s)
+{
+  token_string = s;
+  return;
+}
+
+@q **** (4) Get |token_string|. @>
+@*3 Get {\bf token\_string}.
+
+\LOG
+\initials{LDF 2004.09.12.}
+Added this function.
+\ENDLOG
+
+@<Declare |Scanner_Type| functions@>=
+inline
+string
+get_token_string(void)
+{
+  return token_string;
+}
+
+
+
+@q **** (4) Showing. @>
+@*3 Showing.
+
+\LOG
+\initials{LDF 2004.04.16.}  Moved to this file from
+\filename{scanprse.web}. 
+
+\ENDLOG 
+
+
+@<Declare |Scanner_Type| functions@>=
+void
+show(string s, bool show_all = false) const;
+
+@q ***** (5) Definition. @>
+@
+@<Define |Scanner_Type| functions@>=
+void
+Scanner_Type::show(string s, bool show_all) const
+{
+  if (s == "")
+    cerr << "Scanner_Type:\n";
+  else
+    cerr << s << ":" << endl;
+
+  if (in == static_cast<Input_Struct*>(0))
+    cerr << "in == 0" << endl;
+  else
+    cerr << "in->filename == " << in->filename << endl;    
+      
+  for (int i = Run_State::METAPOST; i <= Run_State::LIBPLOT; ++i)
+    {
+      if (out[i] == static_cast<Output_Struct*>(0))
+        cerr << "out[" << i << "] == 0" << endl;
+      else
+        cerr << "out[" << i << "]->filename == " << out[i]->filename
+             << endl;
+    }
+
+
+  id_map_node->show("", show_all);
+
+  return;
+}
+
+@q **** (4) Handle |numeric_list|.  @>
+@*3 Handle {\bf numeric\_list}.
+
+This function is defined in \filename{scan.web}.
+\initials{LDF 2004.05.13.}
+
+\LOG
+\initials{LDF 2004.05.13.}  Added this function.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+Bool_Void_Pointer
+handle_numeric_list(int transform_token, void* r);
+     
+
+@q ** Extract |Picture| output arguments.  @>
+@*1 Extract {\bf Picture} output arguments.
+This function is defined in \filename{scan.web}.
+\initials{LDF 2004.07.12.}
+
+\LOG
+\initials{LDF 2004.07.12.}  Added this function 
+declaration.
+\ENDLOG 
+
+@<Declare |Scanner_Type| functions@>=
+Scan_Parse::Picture_Output_Arg_Type*
+extract_picture_output_args();
+
+
+
+@q * |friend| declarations for functions in |namespace Scan_Parse|.@>
+@* {\bf friend} declarations for functions in 
+{\bf namespace Scan\_Parse}.
+\initials{LDF 2004.09.08.}
+
+This section is included in |@<|Id_Map_Entry_Type| declaration@>| 
+and |@<|Scanner_Type| declaration@>|.
+\initials{LDF 2004.09.08.}
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.09.08.}
+Consider making these functions members of |Scanner_Type|.
+\ENDTODO 
+
+@q ** (2) LOG.@>
+
+\LOG
+\initials{LDF 2004.09.08.}
+Added this section.  The following log entries with an earlier date
+than this one have been moved here
+from the logs for |@<|Id_Map_Entry_Type| declaration@>| and 
+|@<|Scanner_Type| declaration@>|.
+
+\initials{LDF 2004.07.03.}
+Declared |Scan_Parse::parse_func| to be a |friend|.
+
+\initials{LDF 2004.07.16.}
+Removed |friend| declaration for |Scan_Parse::endfig_func|, which I've
+removed.  Added |friend| declaration for |Scan_Parse::beginfig_func|, which
+I've added.
+
+\initials{LDF 2004.07.21.}
+Added |friend| declaration for |Scan_Parse::variable_func|.
+
+\initials{LDF 2004.07.21.}
+Added |friend| declaration for |Scan_Parse::non_shape_decl_func|.
+
+\initials{LDF 2004.07.22.} 
+Added |friend| declaration for |Scan_Parse::shape_decl_func|.
+
+
+\initials{LDF 2004.07.23.}
+Added default value for the |C*| argument to 
+|Scan_Parse::shape_decl_func| in the |friend| declaration. 
+
+\initials{LDF 2004.07.24.}
+Added |friend| declaration for |Scan_Parse::assign_simple|.
+
+\initials{LDF 2004.07.26.} 
+Added |friend| declaration for |Scan_Parse::assign_chained|.
+
+\initials{LDF 2004.07.27.}
+@:BUG FIX@> BUG FIX:  Added ``|Scan_Parse::|'' before  
+``|assign_chained|'' in |friend| declaration.
+
+\initials{LDF 2004.07.27.}
+Added |friend| declaration for 
+|Scan_Parse::assign_simple_1|.
+
+\initials{LDF 2004.07.28.}
+Removed |friend| declaration for 
+|Scan_Parse::assign_simple_1| and changed arguments for 
+|Scan_Parse::assign_simple|.
+
+\initials{LDF 2004.07.29.}
+Changed |string type_name| and |C* expr| arguments of |assign_simple|
+to |const| in |friend| declaration.
+
+\initials{LDF 2004.08.08.}
+In the |friend| declaration of |Scan_Parse::assign_chained|:
+Changed the |void* expr| argument to |const C* expr| and removed the 
+|const C* dummy| argument. 
+
+\initials{LDF 2004.08.12.}
+Added |friend| declaration for 
+|Scan_Parse::assign_picture_simple|.
+
+\initials{LDF 2004.08.13.}
+Added |friend| declaration for 
+|Scan_Parse::assign_picture_chained|.
+
+\initials{LDF 2004.08.13.}
+Added |friend| declaration for 
+|Scan_Parse::assign_point_numeric|.
+
+\initials{LDF 2004.08.14.}
+Added |friend| declaration for 
+|Scan_Parse::set_color|.
+
+\initials{LDF 2004.08.14.}
+Added |friend| declaration for 
+|Scan_Parse::set_focus|.
+
+\initials{LDF 2004.08.14.}
+In |friend| declaration for |set_focus|:
+Changed the type of the arguments |position| and |direction| 
+from |void*| to |Point*|. 
+
+\initials{LDF 2004.08.14.}
+Added the |int| arguments |x_axis|, |y_axis|, and |z_axis| 
+to the |friend| declaration of |set_focus|.  This makes it possible to leave
+the definition in \filename{scanprse.web}.  The values passed are 
+|X_AXIS|, |Y_AXIS|, and |Z_AXIS|, which are
+terminal symbols declared in the parser file and therefore unknown when 
+\filename{scanprse.web} is compiled.
+
+\initials{LDF 2004.08.14.}
+In the |friend|  declaration for |set_focus|:
+Made the |int| arguments |x_axis|, |y_axis|, and |z_axis| 
+|const|.
+
+\initials{LDF 2004.08.16.}
+Added |friend| declaration for 
+|Scan_Parse::label_command|.
+
+\initials{LDF 2004.08.17.}
+Added |friend| declaration for 
+|Scan_Parse::on_picture_optional_0|.
+
+\initials{LDF 2004.08.17.}
+Added |friend| declaration for |Scan_Parse::drawing_command|.
+
+\initials{LDF 2004.08.17.}
+Added |friend| declaration for |Scan_Parse::drawdot_command|.
+
+
+\initials{LDF 2004.08.18.}
+Added |friend| declaration for |Scan_Parse::variable_type|.
+
+
+\initials{LDF 2004.08.24.}
+Added |friend| declaration for |Scan_Parse::vector_type_decl|.
+
+\initials{LDF 2004.08.24.}
+Changed the |friend| declaration of |Scan_Parse::vector_type_decl|:
+It's now a non-template function and I've changed its arguments.
+
+\initials{LDF 2004.08.25.}
+Changed the |friend| declaration for |Scan_Parse::vector_type_decl|
+to reflect the fact that I've made it a template function again.
+
+\initials{LDF 2004.08.30.}
+Changed name of |Scan_Parse::drawing_command| to
+|drawing_command_path| in |friend| declaration. 
+
+\initials{LDF 2004.08.30.}
+Added |friend| declaration for 
+|Scan_Parse::drawing_command_solid|.
+
+\initials{LDF 2004.09.01.}
+Added |friend| declaration for 
+|Scan_Parse::vector_type_plus_assign|.
+
+\initials{LDF 2004.09.01.}
+Added |Id_Map_Entry_Node entry| argument to
+|vector_type_plus_assign| in |friend| declaration.
+
+\initials{LDF 2004.09.06.}
+Added |friend| declaration for 
+|Scan_Parse::intersection_point_command|.
+
+\initials{LDF 2004.09.06.}
+In the |friend| declaration of
+|Scan_Parse::intersection_point_command|:
+Changed the |Id_Map_Entry_Node path_entry_0| and 
+|Id_Map_Entry_Node path_entry_1| arguments 
+to |Path* path_0| and |Path* path_1|.
+
+
+\initials{LDF 2004.09.07.}
+In |friend| declaration for |intersection_point_command|:
+Changed name of |Id_Map_Entry_Node point_entry| argument to 
+|entry| and added |int type| argument.
+
+\initials{LDF 2004.09.07.}
+Added |friend| declaration for 
+|Scan_Parse::intersection_point_command|.
+
+\initials{LDF 2004.09.08.}
+Added |friend| declaration for the template function
+|Scan_Parse::intersection_points_ellipse_like|.
+
+\initials{LDF 2004.09.10.}
+Added |friend| declaration for |Scan_Parse::conditional|.
+
+\initials{LDF 2004.09.10.}
+In |friend| declaration for |Scan_Parse::conditional|:
+Changed |bool bool_value| argument to |int arg|.
+
+\initials{LDF 2004.09.14.}
+Added |friend| declaration for |Scan_Parse::input_command|.
+
+\initials{LDF 2004.09.24.}
+Added |friend| declaration for |Scan_Parse::transformation_command_func|.
+
+\initials{LDF 2004.09.25.}
+In |Scan_Parse::transformation_command_func|:  
+Changed the |Pointer_Vector<real>* pvr| argument to |void* v|.
+
+\initials{LDF 2004.09.29.}
+Added |friend| declaration for |Scan_Parse::rotate_around_func|.
+
+\initials{LDF 2004.10.01.}
+Added |friend| declaration for 
+|Scan_Parse::transformation_assignment_command_func|.
+
+\initials{LDF 2004.10.01.}
+Added |friend| declaration for 
+|Scan_Parse::intersection_points_polygon_like|.
+
+
+\initials{LDF 2004.10.04.}
+Added |friend| declaration for the template function 
+|Scan_Parse::reflect_func|.
+
+\initials{LDF 2004.10.08.}
+Added |friend| declaration for |Scan_Parse::label_path_command|.
+
+\initials{LDF 2004.10.12.}
+Changed the name of |Scan_Parse::reflect_func| to 
+|reflect_in_func| in the |friend| declaration.
+
+\initials{LDF 2004.10.25.}
+Made |C* expr| argument of |Scan_Parse::assign_simple| 
+non-|const| in |friend| declaration.
+
+
+\initials{LDF 2004.10.26.}
+Added |friend| declaration for the specialization of
+|Scan_Parse::assign_simple| for |real|.
+
+\initials{LDF 2004.10.26.}
+Removed the |friend| declaration for the specialization of
+|Scan_Parse::assign_simple| for |real|, which didn't work.
+Added |friend| declaration for |Scan_Parse::assign_real|, which
+replaces the former function.
+
+\initials{LDF 2004.10.27.}
+In the |friend| declaration for the template function
+|Scan_Parse::assign_simple|:
+Added the argument |bool use_or_delete|.
+Removed the declaration of |Scan_Parse::assign_real|.
+
+\initials{LDF 2004.10.28.}
+Added |friend| declaration for |Scan_Parse::for_loop_func|.
+
+\initials{LDF 2004.11.08.}
+Added |friend| declaration for the template function 
+|Scan_Parse::vector_type_assign|.
+
+\initials{LDF 2004.11.10.}
+Removed the |friend| declarations for 
+|Scan_Parse::intersection_point_command|,
+|Scan_Parse::intersection_points_path_ellipse|,
+|Scan_Parse::intersection_points_ellipse_like|, and
+|Scan_Parse::intersection_points_polygon_like|.
+These functions are no longer used.
+
+\initials{LDF 2004.11.11.}
+Added a second type parameter to the template function
+|Scan_Parse::vector_type_assign| and removed the |int|
+arguments |vector_type_num| and |array_type_num|, which
+weren't used.
+
+\initials{LDF 2004.11.13.}
+Added |friend| declaration for the template function 
+|Scan_Parse::pickup_command|.
+
+\initials{LDF 2004.11.14.}
+Added the |friend| declaration for the template function
+|Scan_Parse::drop_command|.
+
+\initials{LDF 2004.12.02.}
+In the |friend| declaration for |Scan_Parse::assign_picture_simple|:
+Changed |Id_Map_Entry_Node entry_0| argument to
+|Picture* p|.
+
+\initials{LDF 2004.12.03.}
+In the |friend| declaration for |Scan_Parse::assign_picture_simple|:
+Changed |Picture* p| argument back to |Id_Map_Entry_Node entry_0|.
+
+\initials{LDF 2004.12.04.}
+Added |friend| declaration for the template function 
+|Scan_Parse::reflect_off_func|.
+
+\initials{LDF 2004.12.09.}
+In the |friend| declaration for the template function
+|Scan_Parse::reflect_off_func|:
+Changed the |C* reflection| argument to |Point_Vector<C>* pv|.
+It's passed to |C::reflect_off|.  
+
+\initials{LDF 2004.12.13.}
+Added the |friend| declaration for 
+|Scan_Parse::verbatim_metapost_func|.
+
+\initials{LDF 2004.12.29.}
+Added the |friend| declaration for 
+|Scan_Parse::macro_definition_func|.
+
+\initials{LDF 2005.01.02.}
+Added the |friend| declaration for |Scan_Parse::is_symbolic_token|.
+
+\initials{LDF 2005.01.02.}
+Added the |friend| declaration for |Scan_Parse::macro_call_func|.
+
+\initials{LDF 2005.01.03.}
+In the |friend| declaration for 
+|Scan_Parse::macro_call_func|:
+Added |bool left_brace_predicate| argument. 
+
+\initials{LDF 2005.01.03.}
+Added the |friend| declaration for 
+|Scan_Parse::macro_vector_definition_func|.
+
+\initials{LDF 2005.01.03.}
+In the |friend| declaration for 
+|Scan_Parse::vector_type_plus_assign|:
+Added |bool copy_object| argument.
+
+\initials{LDF 2005.01.03.}
+@:BUG FIX@> BUG FIX: 
+In the |friend| declaration for 
+|Scan_Parse::vector_type_plus_assign|:
+Now specifying the default (|true|) for the |bool copy_object|
+argument.  Compilation failed when it was not specified.
+
+\initials{LDF 2005.01.03.}
+Added the |friend| declaration for |Scan_Parse::clear_vector_func|.
+
+\initials{LDF 2005.01.05.}
+Added |friend| declarations for |Scan_Parse::push_back_func| 
+and |Scan_Parse::pop_back_func|.
+
+\initials{LDF 2005.01.18.}
+Added |friend| declaration for |Scan_Parse::for_suffixes_loop_func|.
+
+\initials{LDF 2005.01.19.}
+Added |friend| declaration for 
+|Scan_Parse::for_suffixes_internal_func|.
+
+\initials{LDF 2005.01.19.}
+In the |friend| declaration for 
+|Scan_Parse::for_suffixes_internal_func|:
+Added |unsigned short ctr| argument.
+
+\initials{LDF 2005.01.26.}
+Added |friend| declaration for |Scan_Parse::let_func|.
+
+\initials{LDF 2005.01.26.}
+In the |friend| declaration for |Scan_Parse::let_func|:
+Removed the second |string| argument.
+
+\initials{LDF 2005.01.29.}
+In the |friend| declaration for |Scan_Parse::label_point_command|:
+Added |Color* text_color| and |Color* dot_color| 
+arguments.
+
+\initials{LDF 2005.01.29.}
+In the |friend| declaration for |Scan_Parse::label_path_command|:
+Added |Color* text_color| and |Color* dot_color| 
+arguments.
+
+\initials{LDF 2005.02.23.}
+Added |friend| declaration for |Scan_Parse::decompose_func|.
+
+\initials{LDF 2005.02.24.}
+Added the arguments |void* object_2| and |int type_2| to 
+|Scan_Parse::decompose_func|.
+
+\initials{LDF 2005.03.10.}
+Added |friend| declaration for |Scan_Parse::drawing_command_path_vector|.
+
+\initials{LDF 2005.08.14.}
+Added |Transform* transform| argument to |Scan_Parse::label_point_command|.
+
+\initials{LDF 2007.08.14.}
+Added the |friend| declaration for |Scan_Parse::reverse_func|.
+
+\initials{LDF 2007.08.16.}
+Made |Scan_Parse::reverse_func| a template function.
+\ENDLOG 
+
+@q *** (3) End of LOG.@>
+
+@q **** (4) Functions for groups.@>   
+@*3 Functions for groups.
+\initials{LDF 2007.10.09.}
+
+\LOG
+\initials{LDF 2007.10.09.}
+Added this section with the |friend| declaration for |end_group_func|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+friend
+void
+Scan_Parse::end_group_func(void* parameter);
+
+@q **** (4) Function for numerics.@>   
+@*3 Function for numerics.
+\initials{LDF 2005.08.29.}
+
+\LOG
+\initials{LDF 2005.08.29.}
+Added this section with the |friend| declaration for 
+|Scan_Parse::measure_text_func|.
+
+\initials{LDF 2005.08.30.}
+In the |friend| declaration for |Scan_Parse::measure_text_func|:
+Replaced the argument |real* r| with |Pointer_Vector<real>* pv|.
+
+\initials{LDF 2005.08.30.}
+Added the |friend| declaration for 
+|Scan_Parse::numeric_vector_assignment_func|.
+
+\initials{LDF 2007.02.06.}
+Added the friend declaration for |Scan_Parse::numeric_primary_rule_func_0|.
+
+\initials{LDF 2007.11.04.}
+Added the friend declaration for |Scan_Parse::numeric_primary_rule_func_1|.
+
+\initials{LDF 2007.11.04.}
+Added the friend declaration for |Scan_Parse::numeric_list_rule_func_0|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+friend
+int
+Scan_Parse::measure_text_func(Scanner_Node scanner_node, 
+                              void* v,
+                              Pointer_Vector<real>* pv);
+friend
+void*
+Scan_Parse::numeric_vector_assignment_func(Scanner_Node scanner_node,
+                                           void* v,
+                                           void* w);
+
+
+friend
+int
+Scan_Parse::numeric_primary_rule_func_0(int          operator_value,
+                                        real         operand,
+                                        real*        result,
+                                        Scanner_Node scanner_node);
+
+
+friend
+real
+Scan_Parse::numeric_primary_rule_func_1(int point_part,
+                                        void* v,
+                                        void* parameter);
+
+friend
+void*
+Scan_Parse::numeric_list_rule_func_0(void* v, void* parameter);
+
+
+@q **** (4) Functions for complex numbers.@>   
+@*3 Functions for complex numbers.
+\initials{LDF 2007.12.11.}
+
+\LOG
+\initials{LDF 2007.12.11.}
+Added this section with the |friend| declarations for 
+|complex_arith_op_rule_func| and |complex_primary_rule_func_0|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+friend
+void*
+Scan_Parse::complex_arith_op_rule_func(void* v,
+                                       void* w,
+                                       int op,
+                                       void* parameter);
+
+friend
+void*
+Scan_Parse::complex_primary_rule_func_0(void* v,
+                                        int op,
+                                        void* parameter);
+
+
+@q **** (4) Functions for matrices.@>   
+@*3 Functions for matrices.
+\initials{LDF 2007.12.20.}
+
+\LOG
+\initials{LDF 2007.12.20.}
+Added this section with the |friend| declaration for 
+|matrix_secondary_rule_func_0|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+friend
+void*
+Scan_Parse::matrix_secondary_rule_func_0(void* v, void* w, void* parameter);
+
+@q **** (4) Functions for |Points|.@>   
+@*3 Functions for {\bf Points}.
+\initials{LDF 2005.10.25.}
+
+\LOG
+\initials{LDF 2005.10.25.}
+Added this section with the |friend| declaration for the template function
+|get_center_func|.
+
+\initials{LDF 2005.11.09.}
+Added the |friend| declarations for the template functions
+|get_focus0_func| and |get_vertex_func|.
+
+\initials{LDF 2005.11.09.}
+Added the |friend| declaration for the template function
+|get_point_func|.
+
+\initials{LDF 2005.11.14.}
+Changed the names of |get_focus0_func| and |get_vertex_func|
+to |get_focus_0_func| and |get_vertex_0_func|, respectively.
+Added the |friend| declarations for |get_focus_1_func| and |get_vertex_1_func|.
+
+\initials{LDF 2005.11.17.}
+Changed the name of |get_focus_0_func| to |get_focus_func|
+and the name of |get_vertex_0_func| to |get_vertex_func|.
+Added optional |const unsigned short s| arguments with the default 0.
+Removed |get_focus_1_func| and |get_vertex_1_func|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+   template <class C>
+   friend 
+   void*
+   Scan_Parse::get_point_func(real r, C* c, void* parameter = 0);
+
+   template <class C>
+   friend
+   void*
+   Scan_Parse::get_center_func(C* c, void* parameter = 0);
+
+   template <class C>
+   friend
+   void*
+   Scan_Parse::get_focus_func(C* c, const unsigned short s = 0, void* parameter = 0);
+
+   template <class C>
+   friend
+   void*
+   Scan_Parse::get_vertex_func(C* c, const unsigned short s = 0, void* parameter = 0);
+
+
+@q **** (4) Functions for |Focuses|.@>   
+@*3 Functions for {\bf Focuses}.
+\initials{LDF 2007.09.19.}
+
+\LOG
+\initials{LDF 2007.09.19.}
+Added this section with the |friend| declaration for the function
+|rotate_focus_func|.
+
+\initials{LDF 2007.09.19.}
+Added |real tolerance| argument to |rotate_focus_func|.
+
+\initials{LDF 2007.09.24.}
+Removed the |real tolerance| argument from |rotate_focus_func|.
+\ENDLOG
+
+@q ***** (5) Code.@> 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+friend
+int
+Scan_Parse::rotate_focus_func(void* id, 
+                              void* num, 
+                              int axes, 
+                              void* parameter);
+
+@q **** (4) Functions for |strings|.@>   
+@*3 Functions for {\bf strings}.
+\initials{LDF 2005.09.09.}
+
+\LOG
+\initials{LDF 2005.09.09.}
+Added this section with |friend| declarations for
+|binary_number_string_func| and 
+|sub_binary_number_string_func|.
+
+\initials{LDF 2005.09.10.}
+In the declaration of |sub_binary_number_string_func|:
+Added optional |bool oversize_switch| argument with 
+the default |false|.  This required making 
+|Scanner_Node scanner_node| optional, too.  The default is 0.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+   friend
+   string*
+   Scan_Parse::binary_number_string_func(real r, Scanner_Node scanner_node);
+
+   template<class C>
+   friend
+   string*
+   Scan_Parse::sub_binary_number_string_func(C c, 
+                              bool oversize_switch = false,
+                              Scanner_Node scanner_node = 0);
+
+
+@q **** (4) @>   
+@
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+  friend void* Scan_Parse::parse_func(void*);
+  
+  friend void* Scan_Parse::output_func(void*);
+  friend int Scan_Parse::output_command_func(Scanner_Node);
+  friend int Scan_Parse::beginfig_func(Scanner_Node, int);
+  friend String_Bool Scan_Parse::variable_func(Scanner_Node,
+                                               char*,
+                                               char*,
+                                               int,
+                                               int);
+
+  friend int Scan_Parse::non_shape_decl_func(Scanner_Node, int);
+
+   template <class C>
+     friend 
+       int 
+       Scan_Parse::shape_decl_func(Scanner_Node,
+                                   int,
+                                   C* dummy = 0);
+
+   template <class C>
+     friend
+       Int_Void_Ptr
+       Scan_Parse::assign_simple(Scanner_Node scanner_node,
+                                 const string type_name,
+                                 void* var,
+                                 C* expr,
+                                 bool use_or_delete_expr);
+
+   template <class C>
+     friend 
+     Int_Void_Ptr
+     Scan_Parse::assign_chained(Scanner_Node scanner_node,
+                                void* var,
+                                const C* expr);
+
+
+   friend  
+     Int_Void_Ptr
+     Scan_Parse::assign_picture_simple(Scanner_Node scanner_node,
+                                       Id_Map_Entry_Node entry,
+                                       Id_Map_Entry_Node entry_0);
+
+
+   friend  
+     Int_Void_Ptr
+     Scan_Parse::assign_picture_chained(Scanner_Node scanner_node,
+                                        Id_Map_Entry_Node entry,
+                                        Id_Map_Entry_Node entry_0);
+
+
+  friend  
+    Int_Void_Ptr
+    Scan_Parse::assign_point_numeric(Scanner_Node scanner_node,
+                                     Id_Map_Entry_Node entry,
+                                     real x);
+
+
+
+   friend  
+     Int_Void_Ptr
+     Scan_Parse::set_color(Scanner_Node scanner_node,
+                           Id_Map_Entry_Node entry,
+                           real red_part,
+                           real green_part,
+                           real blue_part);
+
+
+   friend
+     Int_Void_Ptr
+     Scan_Parse::set_focus(Scanner_Node scanner_node,
+                           Id_Map_Entry_Node entry,
+                           Point* position,
+                           Point* direction,
+                           real distance,
+                           real angle,
+                           int axis,
+                           const int x_axis,
+                           const int y_axis,
+                           const int z_axis);
+
+@q **** (4) Functions for labels.@> 
+@ Functions for labels.
+\initials{LDF 2005.12.01.}
+
+\LOG
+\initials{LDF 2005.12.01.}
+Added the |friend| declaration for |label_bool_point_func|.
+\ENDLOG 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+     friend
+     int
+     Scan_Parse::label_point_command(Scanner_Node scanner_node,
+                                     int label_or_dotlabel,
+                                     int label_suffix,
+                                     string* text_str,
+                                     Point* position,
+                                     Transform* transform,
+                                     Color* text_color,
+                                     Color* dot_color,
+                                     Id_Map_Entry_Node entry);
+
+   friend 
+   int
+   Scan_Parse::label_bool_point_func(void* parameter,
+                                     int label_type, 
+                                     int suffix, 
+                                     void* str, 
+                                     real num, 
+                                     void* bp, 
+                                     void* col, 
+                                     void* dot_col,
+                                     void* pict);
+
+
+
+
+
+     friend
+     int
+     Scan_Parse::label_path_command(Scanner_Node scanner_node,
+                                    int label_or_dotlabel,
+                                    int label_suffix,
+                                    string* text_str,
+                                    Color* text_color,
+                                    Color* dot_color,
+                                    int start_ctr,
+                                    Path* position,
+                                    Id_Map_Entry_Node entry);
+
+
+@q **** (4) Functions for |Points|.@> 
+@ Functions for {\bf Points}.
+\initials{LDF 2005.12.09.}
+
+\LOG
+\initials{LDF 2005.12.09.}
+Added this section with the |friend| declaration for |Scan_Parse::normal_func|.
+\ENDLOG 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+template <class C>
+friend 
+void*
+Scan_Parse::normal_func(C* c, Scanner_Node scanner_node = 0);
+
+
+@q **** (4)@> 
+@
+
+\LOG
+\initials{LDF 2009.11.16.}
+Added |friend| declaration for |Scan_Parse::drawing_command_sphere_development|.
+\ENDLOG 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+     friend
+     void*
+     Scan_Parse::on_picture_optional_0(Scanner_Node scanner_node);
+
+     friend
+     int
+     Scan_Parse::drawing_command_path(Scanner_Node scanner_node,
+                                      int basic_drawing_command,
+                                      Path* ppath);
+
+     friend 
+     int
+     Scan_Parse::drawing_command_path_vector(Scanner_Node scanner_node,
+                                           int basic_drawing_command,
+                                           Pointer_Vector<Path>* pv);
+
+     friend
+     int
+     Scan_Parse::drawing_command_solid(Scanner_Node scanner_node,
+                                     int basic_drawing_command,
+                                     Solid* solid);
+
+
+     friend
+     int
+     Scan_Parse::drawing_command_sphere_development(Scanner_Node scanner_node,
+                                                    int basic_drawing_command,
+                                                    Sphere_Development* sd);
+
+     friend
+     int
+     Scan_Parse::drawdot_command(Scanner_Node scanner_node,
+                                 int drawdot_or_undrawdot,
+                                 Point* ppoint);
+
+
+
+     friend 
+       Int_Void_Ptr
+       Scan_Parse::variable_type(Scanner_Node scanner_node,
+                               Id_Map_Entry_Node entry,
+                               string curr_name,
+                               int curr_type);
+     template <class C>
+     friend
+     int 
+     Scan_Parse::vector_type_decl(Scanner_Node scanner_node,
+                                       int vector_type_num,
+                                       int array_type_num,
+                                       C* dummy = 0);
+
+
+     template <class C>
+     friend
+     int 
+       Scan_Parse::vector_type_plus_assign(Scanner_Node scanner_node,
+                                           Id_Map_Entry_Node entry,
+                                           int vector_type_num,
+                                           int array_type_num,
+                                           C* object,
+                                           bool copy_object = true);
+
+     template <class C, class D>
+     friend
+     int 
+     Scan_Parse::vector_type_assign(Scanner_Node scanner_node,
+                                    Id_Map_Entry_Node entry,
+                                    const Pointer_Vector<D>* object_vector,
+                                    C* dummy = 0);
+     friend
+     int 
+     Scan_Parse::conditional(Scanner_Node scanner_node,
+                              int arg);
+
+     friend
+     int
+     Scan_Parse::input_command(Scanner_Node scanner_node, string* filename);
+
+     friend   
+     int
+     Scan_Parse::transformation_command_func(Scanner_Node scanner_node,
+                                              int transformation_type,
+                                              Id_Map_Entry_Node entry,
+                                              void* v);
+
+     friend   
+     Transform* 
+     Scan_Parse::rotate_around_func(Scanner_Node scanner_node,
+                                     Point* p,
+                                     Point* q,
+                                     real r);       
+     friend   
+     Transform*
+     Scan_Parse::transformation_assignment_command_func(Scanner_Node scanner_node,
+                                                         Id_Map_Entry_Node entry,
+                                                         Transform* t);
+     template <class C>
+     friend
+     C*
+     Scan_Parse::reflect_in_func(Scanner_Node scanner_node,
+                                 C* object,
+                                 Path* plane_path);
+
+     friend
+     int
+     Scan_Parse::for_loop_func(Scanner_Node scanner_node,
+                               const unsigned short loop_type,
+                               string curr_symbol,
+                               real start_value,
+                               real step_value,
+                               real limit_value);
+
+     friend 
+     int 
+     Scan_Parse::for_suffixes_loop_func(Scanner_Node scanner_node,
+                                        string curr_symbol);
+
+     friend 
+     int
+     Scan_Parse::for_suffixes_internal_func(Scanner_Node scanner_node,
+                                            unsigned int ctr);
+
+     template<class C>
+     friend
+     int
+     Scan_Parse::pickup_command(Scanner_Node scanner_node,
+                                C* expression,
+                                C* pointer);
+ 
+     template<class C>
+     friend
+     int
+     Scan_Parse::drop_command(Scanner_Node scanner_node,
+                              C** pointer,
+                              string pointer_name);
+
+     template <class C>
+     friend
+     int
+     Scan_Parse::reflect_off_func(Scanner_Node scanner_node,
+                                  C* object,
+                                  Path* plane_path,
+                                  Point* direction,
+                                  Pointer_Vector<C>* pv);
+
+     friend
+     int
+     Scan_Parse::verbatim_metapost_func(Scanner_Node scanner_node, 
+                                        const string* s);
+
+
+     friend
+     int
+     Scan_Parse::macro_definition_func(Scanner_Node scanner_node,
+                                       Id_Map_Entry_Node entry);
+
+     friend 
+     int
+     Scan_Parse::macro_vector_definition_func(Scanner_Node scanner_node,
+                                              Id_Map_Entry_Node entry);
+
+     friend 
+     int
+     Scan_Parse::macro_call_func(Scanner_Node scanner_node,
+                                 Id_Map_Entry_Node entry,
+                                 bool left_brace_predicate);
+
+     friend 
+     bool
+     Scan_Parse::is_symbolic_token(int curr_token);
+
+
+     friend 
+     int
+     Scan_Parse::clear_vector_func(Scanner_Node scanner_node, 
+                                   Id_Map_Entry_Node entry);
+
+
+     friend 
+     int
+     Scan_Parse::push_back_func(Scanner_Node scanner_node, 
+                                Id_Map_Entry_Node entry);
+     friend 
+     int
+     Scan_Parse::pop_back_func(Scanner_Node scanner_node, 
+                               Id_Map_Entry_Node entry);
+
+     template<class C>
+     friend 
+     int
+     Scan_Parse::reverse_func(void* v, void* parameter, C* c = 0);
+
+
+     friend 
+     int
+     Scan_Parse::let_func(Scanner_Node scanner_node, 
+                          string s);
+
+     friend 
+     int
+     Scan_Parse::decompose_func(Scanner_Node scanner_node, 
+                                void* object_0, 
+                                int type_0, 
+                                void* object_1, 
+                                int type_1,
+                                void* object_2, 
+                                int type_2,
+                                void* vector_object,
+                                int vector_type);
+
+@q **** (4) Parser rule functions.@>   
+@*3 Parser rule functions.
+\initials{LDF 2005.04.15.}
+
+\LOG
+\initials{LDF 2005.04.15.}
+Added this section.
+\ENDLOG
+
+
+@q ***** (5) |string| expressions.@>  
+@*4 {\bf string} expressions.
+\initials{LDF 2005.11.03.}
+
+\LOG
+\initials{LDF 2005.11.03.}
+Added this section with the |friend| declaration for 
+|string_primary_rule_func|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+friend 
+void*
+Scan_Parse::string_primary_rule_func(void* v, void* parameter);
+
+
+@q ***** (5) Functions for |Transforms|.@>  
+@*4 Functions for {\bf Transforms}.
+
+\LOG
+\initials{LDF 2005.04.15.}
+Added this section with the |friend| declaration for 
+|transform_primary_rule_0|.
+
+\initials{LDF 2005.04.16.}
+Added the |friend| declaration for |transform_primary_rule_1|.
+
+\initials{LDF 2005.11.18.}
+Added the |friend| declaration for |standardize_func|.
+
+\initials{LDF 2007.10.02.}
+Added the |friend| declaration for |align_path_func|.
+
+\initials{LDF 2007.10.14.}
+Added the |int command| argument to |transform_primary_rule_func_1|.
+Changed the |void* ttransform| argument to |Transform* transform|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+friend
+void*
+Scan_Parse::transform_primary_rule_func_1(Transform* transform,
+                                          int command,
+                                          Scanner_Node scanner_node);
+
+template<class C>
+friend 
+void*
+standardize_func(C* c, void* v = 0);
+
+friend
+void*
+Scan_Parse::align_path_func(void* v, int ax, void* parameter);
+   
+
+@q ***** (5) |point| expressions.@>  
+@*4 {\bf point} expressions.
+
+\LOG
+\initials{LDF 2005.04.15.}
+Added this section with the declaration of |point_primary_rule_0|.
+
+\initials{LDF 2005.04.15.}
+Changed the name of |Scan_Parse::point_primary_rule_0| to 
+|point_primary_rule_func_0| and added the argument 
+|void* ffocus|.
+
+\initials{LDF 2005.04.15.}
+In the |friend| declaration of |Scan_Parse::point_primary_rule_0|:
+Added optional |Scanner_Node scanner_node| argument with default 0.
+
+\initials{LDF 2005.04.19.}
+Changed the name of |point_primary_rule_func_0| 
+to |point_secondary_rule_func_0|.
+
+\initials{LDF 2005.04.19.}
+Added the argument |int with_z| to |point_secondary_rule_0|.
+
+\initials{LDF 2007.11.04.}
+Added the |friend| declaration of |Scan_Parse::point_primary_rule_func_0| 
+(a new version).
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+friend
+void*
+Scan_Parse::point_primary_rule_func_0(void* v, void* parameter);
+
+friend
+void*
+Scan_Parse::point_secondary_rule_func_0(void* ppoint, 
+                                        void* ffocus,
+                                        int with_z,
+                                        Scanner_Node scanner_node);
+
+@q ***** (5) |path| expressions.@>  
+@*4 {\bf path} expressions.
+
+\LOG
+\initials{LDF 2005.04.15.}
+Added this section with the declaration of |path_primary_rule_0|.
+
+\initials{LDF 2005.04.19.}
+Changed the name of |path_primary_rule_func_0| 
+to |path_secondary_rule_func_0|.
+
+\initials{LDF 2005.04.19.}
+Added the argument |int with_z| to |path_secondary_rule_0|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+   friend
+   void*
+   Scan_Parse::path_secondary_rule_func_0(void* ppath, 
+                                          void* ffocus,
+                                          int with_z,
+                                          Scanner_Node scanner_node);
+
+
+
+@q ***** (5) |polygon| expressions.@>  
+@*4 {\bf polygon} expressions.
+
+\LOG
+\initials{LDF 2005.04.15.}
+Added this section with the declaration of |polygon_primary_rule_0|.
+
+\initials{LDF 2005.04.19.}
+Changed the name of |polygon_primary_rule_func_0| 
+to |polygon_secondary_rule_func_0|.
+
+\initials{LDF 2005.04.19.}
+Added the argument |int with_z| to |path_secondary_rule_0|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+friend
+void*
+Scan_Parse::polygon_secondary_rule_func_0(void* ppolygon, 
+                                          void* ffocus,
+                                          int with_z,
+                                          Scanner_Node scanner_node);
+
+
+
+@q ***** (5) Functions for conic sections and |Conic_Section_Lattices|.@>  
+@*4 Functions for conic sections and {\bf Conic\_Section\_Lattices}.
+\initials{LDF 2007.07.03.}
+
+\LOG
+\initials{LDF 2007.07.03.}
+Added this section with the |friend| declaration for |get_conic_section_func|.
+
+\initials{LDF 2007.07.03.}
+Added |const unsigned short conic_section_type| argument
+to |Scan_Parse::get_conic_section_func|.
+
+\initials{LDF 2007.07.09.}
+Added the |friend| declaration for 
+|Scan_Parse::get_hyperbola_branch_func|.
+
+\initials{LDF 2007.07.15.}
+Added |real tolerance| and |bool ignore_extra_points| arguments 
+to |Scan_Parse::get_conic_section_func|.
+
+\initials{LDF 2007.07.20.}
+Added optional |bool test_points| argument with the default |true|.
+
+\initials{LDF 2007.07.20.}
+Added optional |bool rectify_points| argument with the default |true|.
+
+\initials{LDF 2007.07.20.}
+In the |friend| declaration for |Scan_Parse::get_conic_section|:
+Changed the default value of |real tolerance| argument from |INVALID_REAL|
+to -1.
+
+\initials{LDF 2007.08.05.}
+Added |friend| declaration for |Scan_Parse::get_conic_section_lattice_func|.
+
+\initials{LDF 2007.08.08.}
+Added |friend| declaration for 
+|Scan_Parse::traverse_conic_section_lattice_func|.
+
+\initials{LDF 2007.08.16.}
+Added |friend| declaration for 
+|Scan_Parse::conic_section_lattice_intersection_func|.
+
+\initials{LDF 2007.08.21.}
+Added |real| arguments |tolerance| and |increment| 
+to the |friend| declaration for 
+|Scan_Parse::conic_section_lattice_intersection_func|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+friend
+void*
+Scan_Parse::get_hyperbola_branch_func(real r, 
+                                      void* v, 
+                                      void* parameter);
+
+template<class C>
+friend
+void*
+Scan_Parse::get_conic_section_func(Pointer_Vector<Point>* pv,
+                                   int increment_value,
+                                   const unsigned short conic_section_type,
+                                   C* c, 
+                                   void* parameter = 0,
+                                   bool test_points = true,
+                                   bool rectify_points = true,
+                                   real tolerance = -1,
+                                   bool ignore_extra_points = true);
+
+friend 
+void* 
+Scan_Parse::get_conic_section_lattice_func(Pointer_Vector<Point>* pv, 
+                                           Scanner_Node scanner_node,
+                                           Conic_Section_Lattice_Options* options);
+
+template<class C>
+friend
+void*
+Scan_Parse::conic_section_lattice_intersection_func(
+      Scanner_Node scanner_node,
+      Conic_Section_Lattice* conic_section_lattice,
+      C* c,
+      real tolerance,
+      real increment);
+
+friend 
+void* 
+Scan_Parse::traverse_conic_section_lattice_func(void* parameter,
+                                                void* c,
+                                                real start, 
+                                                real end);
+
+@q ***** (5) Functions for |Pointer_Vectors|.@> 
+@*4 Functions for {\bf Pointer\_Vectors}.
+\initials{LDF 2007.07.23.}
+
+\LOG
+\initials{LDF 2007.07.23.}
+Added this section with the |friend| declaration for |cull_func|.
+
+\initials{LDF 2007.07.23.}
+Added optional |const unsigned short comparison| argument
+to |cull_func|.  The default is 0.
+
+\initials{LDF 2007.07.27.}
+Added optional |real tolerance| argument to |cull_func|.  
+The default is -1.
+
+\initials{LDF 2007.07.27.}
+Added the |friend| declaration for |rectify_func|.
+
+\initials{LDF 2007.08.05.}
+Changed types of arguments of |Scan_Parse::rectify_func|.
+
+\initials{LDF 2007.08.06.}
+Added optional |Transform* transform| argument to 
+|Scan_Parse::rectify_func|.  The default is 0.
+
+\initials{LDF 2007.08.06.}
+Added optional |bool do_transform| argument to 
+|Scan_Parse::rectify_func|.  The default is |true|.
+\ENDLOG
+
+@q ****** (6) Code  @> 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+template<class C>
+friend 
+int
+Scan_Parse::cull_func(void* v, 
+                      const unsigned short comparison = 0,
+                      Scanner_Node scanner_node = 0, 
+                      real tolerance = -1,
+                      C* c = 0);
+
+template<class C>
+friend
+int 
+Scan_Parse::rectify_func(void* v,
+                         Scanner_Node scanner_node = 0,
+                         bool do_test = true,
+                         bool do_cull = true,
+                         bool do_transform = true,
+                         real tolerance = -1,
+                         Transform* t = 0,
+                         C* c = 0);
+
+@q ***** (5) |cuboid| expressions.@>  
+@*4 {\bf cuboid} expressions.
+
+\LOG
+\initials{LDF 2005.12.07.}
+Added this section with the |friend| declarations for |in_cuboid_func|
+and |out_cuboid_func|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+template<class C>
+friend 
+void*
+Scan_Parse::in_cuboid_func(C* c, void* parameter = 0);
+
+template<class C>
+friend 
+void*
+Scan_Parse::out_cuboid_func(C* c, void* parameter = 0);
+
+@q ***** (5) Functions for |Polyhedra|.@>   
+@*4 Functions for {\bf Polyhedra}.
+\initials{LDF 2005.12.20.}
+
+\LOG
+\initials{LDF 2005.12.20.}
+Added this section with the |friend| declaration for 
+|polyhedron_get_net_func|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+friend 
+void*
+Scan_Parse::polyhedron_get_net_func(int type,
+                                    real diameter, 
+                                    int do_half, 
+                                    void* parameter);
+
+
+@q ***** (5) Functions for Quadric Surfaces.@> 
+@ Functions for Quadric Surfaces.
+\initials{LDF 2006.11.09.}
+
+\LOG
+\initials{LDF 2006.11.09.}
+Added this section with the |friend| declaration for |quad_surf_get_element_func|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=   
+
+friend
+void*
+Scan_Parse::quad_surf_get_element_func(void* parameter, 
+                                       unsigned int command,
+                                       unsigned int type,
+                                       void* object,
+                                       int arg_0,
+                                       int arg_1);
+
+
+@q ***** (5) Operation assignments.@>  
+@*4 Operation assignments.
+
+\LOG
+\initials{LDF 2005.05.12.}
+Added this section.
+\ENDLOG
+
+
+@q ****** (6) Operation assignments for |Pictures|.@>  
+@*5 Operation assignments for {\bf Pictures}.
+
+\LOG
+\initials{LDF 2005.05.12.}
+Added this section with the declaration of 
+|operation_assignment_picture_rule_func_0|.
+\ENDLOG
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+   friend
+   int
+   Scan_Parse::operation_assignment_picture_rule_func_0(
+                                        void* to_picture_entry,
+                                        void* from_picture_entry,
+                                        Scanner_Node scanner_node);
+
+
+@q ***** (5) Set commands.@>  
+@*4 Set commands.
+\initials{LDF 2005.05.19.}
+
+
+\LOG
+\initials{LDF 2005.05.19.}
+Added this section.
+\ENDLOG
+
+@q ****** (6) Set commands for non-|Shape|-types.@>  
+@*5 Set commands for non-{\bf Shape}-types.
+\initials{LDF 2007.11.28.}
+
+\LOG
+\initials{LDF 2007.11.28.}
+Added this section with the |friend| declaration for 
+|set_matrix_rule_func_0|.
+
+\ENDLOG
+
+@q ******* (7) Code.@> 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+friend 
+int
+Scan_Parse::set_matrix_rule_func_0(void* curr_var,
+                                   real rrows,
+                                   real ccolumns,
+                                   void* parameter);
+
+@q ****** (6) Set commands for |Shape|-types.@>  
+@*5 Set commands for {\bf Shape}-types.
+\initials{LDF 2005.05.19.}
+
+\LOG
+\initials{LDF 2005.05.19.}
+Added this section with the |friend| declaration for 
+|set_helix_rule_func_0|.
+
+\initials{LDF 2005.05.21.}
+Removed the |void* option_list| argument from |set_helix_rule_func_0|.
+The |void* parameter| argument is now required.
+
+\initials{LDF 2005.05.25.}
+Added |friend| declarations for 
+|set_cone_rule_func_0| and |set_cylinder_rule_func_0|.
+
+\initials{LDF 2005.05.26.}
+Added |friend| declaration for |set_ellipsoid_rule_func_0|.
+
+\initials{LDF 2005.06.06.}
+Added |friend| declaration for |set_sphere_rule_func_0|.
+
+\initials{LDF 2005.06.08.}
+Added |friend| declaration for 
+|glyph_vector_variable_rule_func_0|.
+
+\initials{LDF 2005.06.08.}
+In the declaration of |glyph_vector_variable_rule_func_0|:
+Changed the type of |arg1| from |void*| to |char*|.
+
+\initials{LDF 2005.06.08.}
+Removed the declaration of |glyph_vector_variable_func|
+and replaced it with the declaration of 
+|vector_variable_decl_func<class C>|.
+
+\initials{LDF 2005.06.09.}
+Added |friend| declaration for |simple_variable_decl_func|.
+
+\initials{LDF 2005.06.09.}
+Removed the |friend| declaration for |simple_variable_decl_func|.
+Changed |vector_variable_decl_func| to |variable_decl_func|.
+There's no need for separate versions for simple and vector-type
+variables.
+
+\initials{LDF 2005.08.16.}
+Added the |friend| declaration for |clip_to_func|.
+
+\initials{LDF 2005.10.24.}
+Added the |friend| declaration for |is_cycle_func|.
+
+\initials{LDF 2005.10.26.}
+Added the |friend| declaration for |is_whatever_func|.
+
+\initials{LDF 2005.10.26.}
+Added the |friend| declaration for |is_on_sphere_func|.
+
+\initials{LDF 2005.10.27.}
+Added the |friend| declaration for |intersection_points_func|.
+
+\initials{LDF 2005.10.27.}
+Added the |friend| declaration for |convert|.
+
+\initials{LDF 2005.10.28.}
+Added the |friend| declaration for 
+|ellipse_intersection_func|
+
+\initials{LDF 2005.10.28.}
+Replaced the |friend| declaration for |ellipse_intersection_func| 
+with the |friend| declaration for the template function
+|ellipse_like_intersection_func|.
+
+\initials{LDF 2005.10.28.}
+Added the |friend| declaration for |polygon_like_intersection_func|
+
+\initials{LDF 2005.10.28.}
+Added the |friend| declaration for |sphere_plane_intersection_func|.
+
+\initials{LDF 2005.10.28.}
+Added the |friend| declaration for |sphere_line_intersection_func|.
+
+\initials{LDF 2005.10.30.}
+In the |friend| declaration for |sphere_plane_intersection_func|:
+Changed the |Path*| argument to a |Plane*|.
+
+\initials{LDF 2005.10.30.}
+Added the |friend| declaration for |plane_cast_func|.
+
+\initials{LDF 2005.10.30.}
+Added the |friend| declaration for |plane_assignment_func|.
+
+\initials{LDF 2005.10.31.}
+Added the |friend| declaration for |show_func|.
+
+\initials{LDF 2005.10.31.}
+Replaced |sphere_plane_intersection_func| with the 
+template function |ellipsoid_like_plane_intersection_func|.
+
+\initials{LDF 2005.11.03.}
+Added the |friend| declaration for |message_command_func|.
+
+\initials{LDF 2005.11.04.}
+Added the |friend| declaration for the template function
+|ellipse_like_plane_intersection_func|.
+
+\initials{LDF 2005.11.07.}
+Added the |friend| declaration for |set_parabola_rule_func_0|.
+
+\initials{LDF 2005.11.14.}
+Added the |friend| declaration for |set_hyperbola_rule_func_0|.
+
+\initials{LDF 2005.11.17.}
+Added |friend| declaration for the template function
+|conic_section_line_intersection_func|.
+
+\initials{LDF 2005.11.21.}
+Changed the name of |conic_section_line_intersection_func|
+to |conic_section_intersection_func| and added a second 
+template parameter.  Changed the |Path*| argument to 
+a pointer to the type of the new template parameter.
+
+\initials{LDF 2006.01.20.}
+Added the |friend| declaration for |polyhedron_path_intersection_func|.
+
+\initials{LDF 2006.01.25.}
+Added the |friend| declaration for |set_paraboloid_rule_func_0|.
+
+\initials{LDF 2007.10.06.}
+Added the |friend| declaration for |plane_intersection_func|.
+
+\initials{LDF 2007.11.25.}
+Added the |friend| declaration for |set_arc_rule_func_0|.
+
+\initials{LDF 2009.09.09.}
+Added the |friend| declaration for |sphere_size_func|.
+
+\initials{LDF 2009.11.17.}
+Added |friend| declaration for |set_sphere_development_rule_func_0|.
+\ENDLOG
+
+@q ******* (7) Code.@> 
+
+@<|friend| declarations for functions in |namespace Scan_Parse|@>=
+
+friend 
+int
+Scan_Parse::set_parabola_rule_func_0(void* curr_var,
+                                     void* parameter);
+
+friend 
+int
+Scan_Parse::set_hyperbola_rule_func_0(void* curr_var,
+                                      void* parameter);
+
+friend 
+int
+Scan_Parse::set_arc_rule_func_0(void* curr_var,
+                                void* parameter);
+
+friend 
+int
+Scan_Parse::set_helix_rule_func_0(void* curr_var,
+                                  void* parameter);
+
+friend 
+int
+Scan_Parse::set_cone_rule_func_0(void* curr_var,
+                                 void* parameter);
+
+friend 
+int
+Scan_Parse::set_cylinder_rule_func_0(void* curr_var,
+                                     void* parameter);
+
+friend 
+int
+Scan_Parse::set_ellipsoid_rule_func_0(void* curr_var,
+                                      void* parameter);
+
+
+friend 
+int
+Scan_Parse::set_sphere_rule_func_0(void* curr_var,
+                                   void* parameter);
+
+friend 
+int
+Scan_Parse::set_sphere_development_rule_func_0(void* curr_var,
+                                               void* parameter);
+
+
+friend 
+int
+Scan_Parse::set_paraboloid_rule_func_0(void* curr_var,
+                                       void* parameter);
+
+friend 
+void*
+Scan_Parse::variable_decl_func(char* arg1,
+                               void* arg2,
+                               unsigned int type,
+                               void* parameter);
+friend 
+void*
+Scan_Parse::clip_to_func(void* arg1,
+                         void* parameter);
+
+friend 
+void*
+Scan_Parse::is_cycle_func(void* arg1,
+                          void* parameter);
+
+
+template<class C>
+friend
+void*
+Scan_Parse::is_whatever_func(C* c, void* parameter = 0);
+
+
+friend
+void*
+Scan_Parse::is_on_sphere_func(void* ppoint, 
+                              void* ssphere, 
+                              void* parameter,
+                              real tolerance);
+
+
+template <class C, class D, class E>
+friend
+void*
+Scan_Parse::intersection_points_func(C* c, 
+                                     D* d, 
+                                     void* parameter = 0, 
+                                     E* e = 0);
+friend
+Pointer_Vector<Bool_Point>*
+Scan_Parse::convert(Bool_Point_Quadruple* bpq, 
+                    void* parameter,
+                    bool delete_bpq);
+
+
+template<class C, class D>
+friend
+void*
+Scan_Parse::ellipse_like_intersection_func(C* c, D* d, void* parameter = 0);
+
+template<class C>
+friend 
+void*
+Scan_Parse::ellipse_like_plane_intersection_func(C* c, void* w, void* parameter = 0);
+
+template<class C, class D>
+friend 
+void*
+Scan_Parse::conic_section_intersection_func(C* c, D* d, void* parameter = 0);
+
+template<class C, class D>
+friend
+void*
+Scan_Parse::polygon_like_intersection_func(C* c, D* d, void* parameter = 0);
+
+
+template<class C>
+friend 
+void*
+Scan_Parse::ellipsoid_like_plane_intersection_func(C* c,
+                                                   Plane* p,
+                                                   void* parameter = 0);
+friend 
+void*
+Scan_Parse::sphere_line_intersection_func(Sphere* s,
+                                          Path* p,
+                                          void* parameter);
+                
+friend
+void*
+Scan_Parse::polyhedron_path_intersection_func(Polyhedron* p,
+                                              Path* q,
+                                              void* parameter);  
+
+template<class C>
+friend 
+void*
+Scan_Parse::plane_cast_func(C* c, void* parameter = 0); 
+
+template <class C>
+friend 
+void*
+Scan_Parse::plane_assignment_func(void* entry, C* c, void* parameter = 0);
+
+friend 
+int
+Scan_Parse::message_command_func(int message_type, void* v, void* parameter);
+
+template <class C>
+friend 
+int
+Scan_Parse::show_func(C* c, string text = "", void* parameter = 0);
+
+friend
+void*
+Scan_Parse::plane_intersection_func(void* v, void* w, void* parameter);
+
+friend
+int
+Scan_Parse::sphere_size_func(void* v, void* parameter);
+
+
+
+@q * (1) Putting I/O together.@>
+@* Putting I/O together.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Now including |@<|Definition_Info_Node| declaration@>|, 
+|@<|Definition_Info_Type| declaration@>|, and 
+|@<Define |Definition_Info_Type| functions@>|.
+\ENDLOG 
+
+@q ** (2).@> 
+  
+@ This is what's compiled.
+@c
+@<Include files@>@;
+@<Declare I/O |structs|@>@;
+@<Initialize |static Io_Struct| member constants@>@;
+@<Define I/O functions@>@;
+@<Define |Io_Struct| functions@>@;
+@<Define |Input_Struct| functions@>@;
+@<Define |Output_Struct| functions@>@;
+@<|Id_Map_Entry_Node| declaration@>@;
+@<|Id_Map_Entry_Type| declaration@>@;
+@<Initialize |static Id_Map_Entry_Type| member constants@>@;
+@<|Id_Map_Sub_Map_Type| declaration@>@;
+@<|Id_Map_Node| declaration@>@;
+@<|Id_Map_Type| declaration@>@;
+@<Global variables@>@;
+@<|Loop_Info_Node| declaration@>@;
+@<|Loop_Info_Type| declaration@>@;
+@<Initialize |static Loop_Info_Type| member constants@>@;
+@<|Definition_Info_Node| declaration@>@;
+@<|Definition_Info_Type| declaration@>@;
+@<|Scanner_Node| declaration@>@;
+@<|Scanner_Type| declaration@>@;
+@<Define |Id_Map_Type| functions@>@;
+@<Define |Loop_Info_Type| functions@>@;
+@<Define |Definition_Info_Type| functions@>@;
+@<Define |Scanner_Type| functions@>@;
+
+@q ** (2).@> 
+
+@ This is what's written to \filename{io.h}.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2004.12.21.}
+Now including |@<|Definition_Info_Node| declaration@>| and
+|@<|Definition_Info_Type| declaration@>|.
+
+\initials{LDF 2007.04.04.}
+Now writing declaration of |yyparse| to \filename{io.h}.
+\ENDLOG 
+
+@(io.h@>=
+#ifndef LDF_IO_H_KNOWN
+#define LDF_IO_H_KNOWN
+int yyparse(yyscan_t);
+@<Declare I/O |structs|@>@;
+@<Declare I/O functions@>@;
+@<|Id_Map_Entry_Node| declaration@>@;
+@<|Id_Map_Entry_Type| declaration@>@;
+@<|Id_Map_Sub_Map_Type| declaration@>@;
+@<|Id_Map_Node| declaration@>@;
+@<|Id_Map_Type| declaration@>@;
+@<|Loop_Info_Node| declaration@>@;
+@<|Loop_Info_Type| declaration@>@;
+@<|Definition_Info_Node| declaration@>@;
+@<|Definition_Info_Type| declaration@>@;
+@<|Scanner_Node| declaration@>@;
+@<|Scanner_Type| declaration@>@;
+@<|extern| variable declarations@>@;
+#endif
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 70))    @>
+
+
+
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q fill-column:70 @>
+@q End: @>
+ 

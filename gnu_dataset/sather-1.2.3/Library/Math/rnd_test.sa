@@ -1,0 +1,83 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class RND_TEST is
+   include TEST;
+   
+   main is
+      -- Should test out the beginning of the sequence at least...
+      -- Don't know if these test results are correct. These are just
+      -- the current values that are being printed out.
+      -- If the test fails, it just indicates that something has
+      -- changed in FLTD/int arithmetic, not necc. an error
+      class_name("RND");
+      RND::seed(1947);
+      r ::= RND::uniform;
+      test("random 1 See comment about errors",r.str,"0.984762");
+      r := RND::uniform;
+      test("random 2 See comment about errors",r.str,"0.895927");
+      res ::= "";
+      loop 15.times!; res := res+(RND::uniform).str+" "; end;
+      test("Random numbers",res,"0.840446 0.38292 0.733271 0.0907076 0.521828 0.368842 0.127799 0.913153 0.363649 0.841891 0.66553 0.555878 0.64514 0.860668 0.242018 ");
+      gen_test("uniform",bind(RND::uniform)," 0.604307 0.592128 0.89596 0.405448 0.358913 0.244053 0.801675 0.746111 0.888431 0.86543");
+      gen_test("uniform range 15,150",bind(RND::uniform_range(15.0d,150.0d))," 53.8613 26.5779 68.9318 55.9969 145.527 26.9381 49.0974 149.674 66.3973 119.913");
+      gen_test_bool("bit test 0.7",bind(RND::bit(0.7d))," true true true true true false true false true true");
+      gen_test("std normal",bind(RND::standard_normal)," 0.436422 -0.0258952 1.05381 -0.291703 0.135248 0.507359 0.0195931 1.02667 0.861847 0.46873");
+      gen_test("exponential 5.0",bind(RND::exponential(5.0d))," 18.6575 2.22134 7.52532 7.87595 3.31319 0.931957 0.263958 1.48063 6.83303 6.08545");
+      gen_test("gamma 5.0",bind(RND::gamma(5.0d))," 9.18251 8.66992 9.84637 8.6968 9.52329 8.97641 10.3628 9.45715 12.1352 9.79364");
+      gen_test("beta 15,25",bind(RND::beta(15,25))," 0.345777 0.40645 0.437808 0.305283 0.435131 0.368686 0.338753 0.357162 0.473408 0.383873");
+      gen_test("chis 5",bind(RND::chi_square(5))," 8.9483 9.11864 10.4902 9.06079 9.45604 8.63848 9.37974 10.2448 9.77918 9.45877");
+      gen_test("fdist 5 2 ",bind(RND::f_dist(5,2))," 1.15726 0.914027 0.900682 1.11575 1.91446 1.08353 0.662009 2.15683 1.17889 1.06949");
+      gen_test("tdist 5 ",bind(RND::t_dist(5))," -0.482065 0.308781 0.296745 -1.32781 -0.131137 -0.186107 -0.486129 1.06714 -1.08554 -0.15105");
+      gen_test_int("geom 0.5 ",bind(RND::geometric(0.5d))," 1 1 1 1 1 1 1 2 1 1");
+      gen_test_int("bin 400,0.5 ",bind(RND::binomial(400,0.5d))," 213 180 181 190 217 196 215 178 200 213");
+      gen_test_int("poiss 5.0 ",bind(RND::poisson(5.0d))," 8 2 5 7 0 3 4 8 6 4");
+      gen_test("cauchy ",bind(RND::cauchy)," -1.12929 -0.683807 1.37987 -9.26681 -3.62188 -1.55968 -2.49613 0.01433 -1.84742 -1.02489");
+      gen_test("std cantor ",bind(RND::standard_cantor)," 0.332272 0.258005 0.297313 0.33291 0.74353 0.323871 0.769429 0.0278756 0.107009 0.751851");
+      finish;
+   end;
+
+   gen_test(nm: STR, br: ROUT:FLTD,res:STR) is
+      r: ARRAY{FLTD} := #(10);
+      s:STR;
+      loop i ::= 10.times!;
+	 r[i] := br.call;
+	 s:=s+" "+r[i];
+      end;
+      test(nm,s,res);
+   end;
+
+   gen_test_int(nm: STR, br: ROUT:INT,res:STR) is
+      r: ARRAY{INT} := #(10);
+      s:STR;
+      loop i ::= 10.times!;
+	 r[i] := br.call;
+	 s:=s+" "+r[i];
+      end;
+      test(nm,s,res);
+   end;
+
+   gen_test_bool(nm: STR, br: ROUT:BOOL,res:STR) is
+      r: ARRAY{BOOL} := #(10);
+      s:STR;
+      loop i ::= 10.times!;
+	 r[i] := br.call;
+	 s:=s+" "+r[i];
+      end;
+      test(nm,s,res);
+   end;
+
+end; 
+-------------------------------------------------------------------

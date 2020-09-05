@@ -1,0 +1,662 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Matt Kennel <mbk@inls.ucsd.edu>
+-- modified, integrated by gomes@icsi.berkeley.edu
+
+-----------------------------------------------------------------------    
+abstract class $MAT{ET<$NFE{ET},VT<$VEC{ET,VT},MT<$MAT{ET,VT,MT}}
+   -- The specification of a general Basic matrix.
+   --   "ET" is the *element_type* which must be a $NFE, a.k.a. numerical
+   --   field element.
+   --   "VT" is its associated vector type, needed to
+   --    define matrix-vector operations.
+   --   "MT" ought to be the same matrix type as the concrete implementations 
+   --    that subtype from this type.
+   -- This appears to be somewhat odd, but it serves to give a concrete type
+   -- so as to allow proper covariance in arguments.  Just as a matrix/
+   -- vector multiplication method needs to have a specific vector type
+   -- to go along with the matrix type, matrix/matrix operations like
+   -- multiplication need to be defined to accept arguments of the same
+   -- matrix type as "self".  For example, a concrete matrix class
+   -- implementaion MAT_DC (double complex dense matrix) would need to
+   -- define "plus(arg:MAT_DC)", allowing one to add a MATDC to another,
+   -- but not allowing one to add a MAT_DC to a MAT_UT_F (upper triangular).
+   -- The subtyping clause of MAT_DC would then read like
+   -- 
+   --    class MAT_DC < $MAT{CPXD,VEC_DC,MAT_DC} is ...
+   --
+   -- In this way, this $MAT{ET,VT,MT} class is less useful for
+   -- allowing run-time substitutability of many implementations than
+   -- as a precise specification of responsibilities of its subtypes.
+   -- 
+   -- However, both Basic and Fancy concrete matrices may subtype 
+   -- from $MAT{*,*,*}. 
+   -- 
+   -- If proven to be useful, more general $MAT{} abstract types above
+   -- this one that
+   -- do not have covarying features (and thus be useful for run-time
+   -- polymorphism) may be written in the future.
+   --
+   --                     Routine naming convention.
+   --                     ==========================
+   -- The idea is that reading the routine name in order ought to generate
+   -- the actual meaning of the operation.
+   -- 
+   --     A := B{^T} OP {s*}C{^T}
+   -- 
+   -- (brackets denote optional operation.)
+   -- 
+   -- For A,B,C:  if B=self, write nothing.  If a matrix argument then write
+   -- "arg".  If transpose is desired append "arg" with "_trans", or just
+   -- add "trans" if self. If an argument is a vector type then use
+   -- "vec" instead of "arg".
+   -- 
+   -- For OP, write "plus" for addition, "minus" for subtraction and 
+   -- "times" for multiplication.
+   -- 
+   -- If "self" is modified, overall routine name has the prefix "inplace_" 
+   -- 
+   -- If there is a scalar multiplication, the second arg has "scaled_" prefix
+   -- 
+   -- If the routine modifies data in some reference argument,
+   -- then "into" denotes the argument that will be changed.
+   -- 
+   -- Example:    A := B^T - C.
+   --             B /= self, so "arg".  Transposed argument.  "arg_trans".
+   --             operation is subtraction.  "arg_trans_minus".
+   --             another argument, so "arg_trans_minus_arg(arg1,arg2:MT)"
+   --             is the signature.
+   -- Example:    B := B + s*C^T
+   --             Modifies self.  "inplace_".  B is self so nothing.
+   --             "inplace_".  operation is addition.  "inplace_plus".
+   --             scalar multiplication.  "inplace_plus_scaled".
+   --             matrix argument, transposed. 
+   --             "inplace_plus_scaled_arg_trans(s:ET,arg:MT)" 
+   --             is the routine signature.
+is
+   
+--
+-- COMMON OPERATIONS.
+-- 
+
+   nr:INT;			-- number of rows.
+   nc:INT;			-- number of columns.
+   
+   size: INT;                   -- Total number of elements (nr*nc)
+   size1:INT;			-- First dimension (nr)
+   size2:INT;			-- Second dimension (nc)
+
+   is_same_shape(arg:MT):BOOL;
+   -- true if arg has the same dimensions as self.
+   
+   is_same_shape_trans(arg:MT):BOOL;
+   -- true if arg^T has the same dimensions as self.
+   
+   fits(arg:MT):BOOL;
+   -- is the total number of elements in 'arg' the same as that in self?
+   
+   is_eq(arg:MT):BOOL;		-- equal to
+      
+   create(nr,nc:INT):MT;
+   -- 
+   -- result := "new matrix, 'nr' x 'nc'"
+   -- 
+   -- Example:  m ::= #MAT_D(10,4);
+   
+   create(arg:MT):MT;
+   -- 
+   -- result := "matrix, same size as 'arg',
+   --            data initialized to *zero*."
+   -- 
+   -- Example:  m2 ::= #MAT_D(m);
+   
+   str:STR;
+   -- 
+   -- A string representation of self.  Creates return value.
+   -- 
+
+   copy:MT;
+   -- 
+   -- result := copy of self.  Creates new return value.
+   -- 
+   -- Example:  m2 ::= m.copy;
+
+   contents(arg:MT);
+   -- 
+   -- "array portion of self" := "array portion of arg"
+   -- 
+   -- Example:  m2.contents(m);
+   -- With syntax extension, m2.contents := m; Synonym for
+   -- "inplace_contents".
+
+   inplace_contents(arg:MT);
+   -- 
+   -- "array portion of self" := "array portion of arg"
+   -- 
+   -- Example:  m2.inplace_contents(m);
+   
+   inplace_contents_from_function(function:ROUT{INT,INT}:ET); 
+   --
+   -- "array portion of self"(i,j) = function(i,j) all i,j
+   -- 
+   -- Example:
+   -- fun ::= #ROUT( MY_CLASS::hilbert_elements(_:INT,_:INT) )
+   -- m:MAT; m.inplace_contents_from_function(fun)
+
+   ident:MT;
+   -- 
+   -- result "new matrix same size as self " := "identity matrix"
+   -- 
+   -- Example:  m2 ::= m.id;  
+   -- This is the identity under multiplication, of course. 
+   
+   inplace_ident;
+   -- 
+   -- "array portion of self" := "identity matrix"
+   -- 
+   -- Example:  m.inplace_ident;
+   
+   trans:MT;
+   -- 
+   -- result (created) := "transpose of self"		
+   -- 
+   -- Example:  mt ::= m.trans;
+   
+   inplace_trans;
+   -- 
+   -- "array portion of self " := "transpose of self "
+   -- 
+   -- Example:  m.inplace_trans;  
+
+   inplace_arg_trans(arg:MT);
+   -- 
+   -- "array portion of self" := "transpose of arg"
+   -- 
+   -- Example:  m2:MAT_D; m.inplace_arg_trans(m2); 
+   -- 
+
+
+   times_elt(s:ET):MT;
+   -- 
+   -- result (created) := self * s;
+   -- 
+   -- Example:  m2 ::= m * 0.40d0;
+   -- Sugar for "mat * scalar", synonym for 'scaled_by'.
+   
+   scaled_by(s:ET):MT;
+   -- 
+   -- result (created) := self * s;
+   -- 
+   -- Example:  m2 ::= m * 0.40d0;
+   -- 
+
+   inplace_scaled_by(s:ET);
+   -- 
+   -- self := self * s;
+   -- 
+   -- Example:  m.inplace_scaled_by(4.0d0);
+
+   inplace_elements(s:ET);
+   -- 
+   -- self := s "for all elements"
+   -- Example:  m.inplace_elements(0.0) -- clear matrix. 
+
+--
+-- ELEMENT ACCESS
+-- 
+   aget(i,j:INT):ET;
+   -- 
+   -- result := self[i,j];
+   -- 
+   -- Example:  m:MAT_D;  s:FLTD := m[1,2];
+   
+   aset(i,j:INT,s:ET);
+   -- 
+   -- self[i,j] := s;
+   -- 
+   -- Example:  m:MAT_D;  m[1,2] := 3.0d0;
+
+--
+-- BASIC MATRIX/MATRIX ADDITIVE OPERATIONS.  
+-- 
+   
+   plus(arg:MT):MT;
+   -- 
+   -- result (created) := self + arg.
+   -- 
+   -- Example:  a,b,c:MAT_D;  c := a + b;
+   -- Sugar for "a + b", synonym for "plus_arg".
+   
+   plus_arg(arg:MT):MT;
+   -- 
+   -- result (created) := self + arg.
+   -- 
+   -- Example:  a,b,c:MAT_D;  c := a + b;
+   
+   minus(arg:MT):MT;
+   -- 
+   -- result (created) := self + arg.
+   -- 
+   -- Example:  a,b,c:MAT_D;  c := a - b;
+   -- Sugar for "a - b", synonym for "minus_arg".
+
+   minus_arg(arg:MT):MT;
+   -- 
+   -- result (created) := self - arg.
+   -- 
+   -- Example:  a,b,c:MAT_D;  c := a - b;
+
+   inplace_plus_arg(arg:MT);
+   -- 
+   -- self := self + arg.  
+   -- 
+   -- Example:  a,b:MAT_D; a.inplace_plus_arg(b); 
+
+   inplace_minus_arg(arg:MT);
+   -- 
+   -- self := self - arg.  
+   -- 
+   -- Example:  a,b:MAT_D; a.inplace_minus_arg(b); 
+
+   plus_arg_trans(arg:MT):MT;
+   -- 
+   -- result (created) := self + arg^T;
+   -- 
+   -- Example:  a,b,c:MAT_D; c := a.plus_arg_trans(b); 
+
+   minus_arg_trans(arg:MT):MT;
+   -- 
+   -- result (created) := self - arg^T;
+   -- 
+   -- Example:  a,b,c:MAT_D; c := a.plus_arg_trans(b); 
+
+   inplace_plus_arg_trans(arg:MT);
+   -- 
+   -- self := self + arg^T;
+   -- 
+   -- Example:  a,b,c:MAT_D; c := a.plus_arg_trans(b); 
+
+   inplace_minus_arg_trans(arg:MT);
+   -- 
+   -- result (created) := self - arg^T;
+   -- 
+   -- Example:  a,b,c:MAT_D; c := a.plus_arg_trans(b); 
+   
+   inplace_arg_plus_arg(arg1,arg2:MT);
+   -- 
+   -- self := arg1 + arg2
+   -- 
+   -- Example:  a,b,c:MAT_D; c.inplace_arg_plus_arg(a,b); 
+
+   inplace_arg_minus_arg(arg1,arg2:MT);
+   -- 
+   -- self := arg1 - arg2
+   -- 
+   -- Example:  a,b,c:MAT_D; c.inplace_arg_minus_arg(a,b); 
+
+   inplace_arg_plus_arg_trans(arg1,arg2:MT); 
+   --
+   -- self := arg1 + arg2^T;
+   -- 
+   -- Example: a,b,c:MAT_D; c.inplace_arg_plus_arg_trans(a,b);
+   -- Requires: self/=arg2. 
+   
+   inplace_arg_minus_arg_trans(arg1,arg2:MT); 
+   -- 
+   -- self := arg1 - arg2^T; 
+   -- 
+   -- Example: a,b,c:MAT_D; c.inplace_arg_minus_arg_trans(a,b);
+   -- Requires: self/=arg2. 
+   
+   inplace_arg_trans_plus_arg_trans(arg1,arg2:MT); 
+   --
+   -- self := arg1^T + arg2^T;
+   -- 
+   -- Example: a,b,c:MAT_D; c.inplace_arg_trans_plus_arg_trans(a,b);
+   -- Requires: self /= arg1, self/=arg2. 
+   
+   inplace_arg_trans_minus_arg_trans(arg1,arg2:MT); 
+   -- 
+   -- self := arg1^T - arg2^T; 
+   -- 
+   -- Example: a,b,c:MAT_D; c.inplace_arg_trans_minus_arg_trans(a,b);
+   -- Requires: self /= arg1, self/=arg2. 
+
+-- 
+-- Note what is missing: 
+-- 
+-- "inplace_arg_trans_plus_arg" is not needed given commutative matrix
+-- elements, it is equivalent to "inplace_arg_plus_arg_trans" switching
+-- the order of the arguments.
+-- 
+-- "inplace_trans_plus_arg" (i.e. self := self^T + arg) cannot really
+-- be implemented more efficiently than self := self^T, self := self+arg;
+-- Correct me if I'm wrong.
+   
+--
+-- MATRIX ADDITIVE OPERATIONS WITH SCALAR MULTIPLICATION
+-- 
+   plus_scaled_arg(s:ET,arg:MT):MT;
+   -- 
+   -- result := self + s*arg;
+   -- 
+   -- Example:  a,b,c:MAT_D;  c := a.plus_scaled_arg(3.0d0,b);
+
+   inplace_plus_scaled_arg(s:ET,arg:MT);
+   -- 
+   -- self := self + s*arg;
+   -- 
+   -- Example:  a,b:MAT_D;  a.inplace_plus_scaled_arg(3.0d0,b);
+   
+   plus_scaled_arg_trans(s:ET,arg:MT):MT;
+   -- 
+   -- result := self + s*arg^T;
+   -- 
+   -- Example:  a,b,c:MAT_D;  c := a.plus_scaled_arg_trans(3.0d0,b);
+   
+   inplace_plus_scaled_arg_trans(s:ET,arg:MT);
+   -- 
+   -- self := self + s*arg^T;
+   -- 
+   -- Example:  a,b:MAT_D;  a.inplace_plus_scaled_arg_trans(3.0d0,b);
+   
+-- triplets
+   
+   inplace_arg_plus_scaled_arg(arg1:MT,s:ET,arg2:MT);
+   -- 
+   -- self := arg1 + s*arg2;
+   -- 
+   -- Example:  a,b,c:MAT_D; c.inplace_arg_plus_scaled_arg(a,3.1415d0,b); 
+
+   inplace_arg_plus_scaled_arg_trans(arg1:MT,s:ET,arg2:MT);
+   -- 
+   -- self := arg1 + s*arg2^T;
+   -- 
+   -- Example:  a,b,c:MAT_D;
+   -- c.inplace_arg_plus_scaled_arg_trans(a,3.1415d0,b); 
+
+--
+-- MULTIPLICATIVE OPERATIONS
+-- 
+   times(arg:MT):MT;
+   -- 
+   -- result := self * arg.
+   -- 
+   -- Example:  c ::= a * b;
+   -- Sugar for "a * b"
+   
+   trans_times_arg(arg:MT):SAME;
+   -- 
+   -- result := self^T * arg
+   -- 
+   -- Example:  c ::= a.trans_times_arg(b);
+
+   times_arg_trans(arg:MT):SAME;
+   -- 
+   -- result := self * arg^T
+   -- 
+   -- Example:  c ::= a.times_arg_trans(b);
+   
+   trans_times_arg_trans(arg:MT):SAME;
+   -- 
+   -- result := self^T * arg^T;
+   -- 
+   -- Example:  c ::= a.trans_times_arg_trans(b);
+
+-- in place versions 
+
+   inplace_arg_times_arg(arg1,arg2:MT);
+   -- 
+   -- self := arg1 * arg2.
+   -- 
+   -- Example:  c ::= #MATD(a);  c.inplace_arg_times_arg(a,b);
+
+   inplace_arg_trans_times_arg(arg1,arg2:MT);
+   -- 
+   -- self := arg1^T * arg2;
+   -- 
+   -- Example:  c ::= #MATD(a);  c.inplace_arg_trans_times_arg(a,b);
+
+   inplace_arg_times_arg_trans(arg1,arg2:MT);
+   -- 
+   -- self := arg1 * arg2^T;
+   -- 
+   -- Example:  c ::= #MATD(a);  c.inplace_arg_times_arg_trans(a,b);
+
+   inplace_arg_trans_times_arg_trans(arg1,arg2:MT);
+   -- 
+   -- self := arg1^T * arg2^T;
+   -- 
+   -- Example:  c ::= #MATD(a);  c.inplace_arg_trans_times_arg_trans(a,b);
+
+-- Multiplicative operations with embedded scalar multiplication
+-- are not needed; the scalar can be distributed out of the multiplication,
+-- and "inplace_scaled_by(s)" used on the result.  It may be faster however,
+-- to provide them.  I'd like input on this issue.
+   
+--
+-- MATRIX/VECTOR MULTIPLICATION.
+--
+   times_vec(arg:VT):VT;
+   -- 
+   -- result := self * arg;
+   -- 
+   -- Example:  a:MAT_D; b:VEC_D; c:VEC_D:= a * b;
+   -- Sugar for "a * b"
+   
+   trans_times_vec(arg:VT):VT;	
+   -- 
+   -- result := self^T * arg.
+   -- 
+   -- Example:  a:MAT_D; b:VEC_D; c:VEC_D:= a.trans_times_vec(b);
+
+   times_vec_into_vec(arg:VT,dest:VT);
+   -- 
+   -- dest := self * arg;
+   -- 
+   -- Example:  a:MAT_D; b,c:VEC_D; a.times_vec_into_vec(b,c);
+
+   trans_times_vec_into_vec(arg:VT,dest:VT);
+   -- 
+   -- dest := self^T * arg;
+   -- 
+   -- Example:  a:MAT_D; b,c:VEC_D; a.trans_times_vec_into_vec(b,c);
+
+   times_scaled_vec_into_vec(s:ET,arg:VT,dest:VT);
+   -- 
+   -- dest := self * s*arg;
+   -- 
+   -- Example:  a:MAT_D; b,c:VEC_D; a.times_scaled_vec_into_vec(-1.0,
+   --           b,c);
+
+   trans_times_scaled_vec_into_vec(s:ET,arg:VT,dest:VT);
+   -- 
+   -- dest := self^T * s*arg;
+   -- 
+   -- Example:  a:MAT_D; b,c:VEC_D; a.trans_times_scaled_vec_
+   -- into_vec(-2.0,b,c);
+   
+--
+-- OTHER MATRIX/VECTOR ROUTINES
+-- 
+
+   inplace_plus_scaled_vec_times_vec(s:ET,v1,v2:VT);
+   --
+   -- self := self + s*v1*v2^T
+   -- (Add scaled outer product of v1 and v2 to self.  A BLAS operation)
+   -- 
+   -- Example:  covariance_mat:MAT_D; datum:VEC_D;
+   --           covariance_mat.inplace_plus_scaled_vec_times_vec(1.0/n.fltd,
+   --                          datum,datum);
+
+
+--
+-- MATRIX/VECTOR MANIPULATION
+-- 
+   create_col_matrix(arg:VT):SAME;
+   -- 
+   -- Create a "column" matrix, an N by 1 matrix with 
+   -- elements of arg, and N the size of arg.
+   --
+   -- Example: v:VEC_D;  m ::= MAT_D::create_col(v);
+
+   create_row_matrix(arg:VT):SAME;
+   -- 
+   -- Create a "row" matrix, a 1 by N matrix with 
+   -- elements of arg, and N the size of arg.
+   --
+   -- Example: v:VEC_D;  m ::= MAT_D::create_(row);
+
+   col(i:INT):VT;
+   -- 
+   -- result := the i'th column of self into a vector.
+   -- 
+   -- Example:  v ::= m.col(4);
+   
+   row(i:INT):VT;		
+   -- 
+   -- result := "ith row of self as a vector"
+   -- 
+   -- Example:  v ::= m.row(4);
+   
+   col(i:INT,v:VT);
+   -- 
+   -- Set the i'th col of self to v
+   -- 
+   -- Example:  m.col(4,v);
+   
+   row(i:INT,v:VT);
+   -- 
+   -- Set the i'th row of self to v.
+   -- 
+   -- Example:  v:VEC_D; m.row(4,v);
+   -- With proposed syntax extension:  m.row(4) := v;
+
+   inplace_scaled_col(s:ET,i:INT);
+   -- 
+   -- Scale the i'th column of self by "s".
+   -- 
+   -- Example:  v:MAT_D; m.scale_col(4,3.1415d0);
+   
+   inplace_scaled_row(s:ET,i:INT);
+   -- 
+   -- Scale the i'th row of self by "s".
+   -- 
+   -- Example:  v:MAT_D; m.scale_row(4,3.1415d0);
+
+   inplace_col_plus_scaled_vec(i:INT,s:ET,v:VT);
+   -- 
+   -- Add "s*v" to ith column of self.
+   -- 
+   -- Example: m:MAT_D; v:VEC_D;  m.inplace_col_plus_scaled_vec(4,2.0,v);
+
+   inplace_row(i: INT, v:VT);
+   -- 
+   -- Set ith row of self to "v"
+   -- 
+   -- Example: v:VEC;  m.inplace_row_scaled(v);
+   
+   inplace_row_plus_scaled_vec(i:INT,s:ET,v:VT);
+   -- 
+   -- Add "s*v" to ith row of self.
+   -- 
+   -- Example: m:MAT_D; v:VEC_D;  
+   --    m.inplace_row_plus_scaled_vec(4,2.0,v);
+
+   inplace_swapped_col(i:INT,v:VT);
+   -- 
+   -- swap "i"'th column of self with "v".
+   -- 
+   -- Example: m:MAT_D; v:VEC_D;  m.swap_column(4,v);
+
+   inplace_swapped_row(i:INT,v:VT);
+   -- 
+   -- swap "i"'th row of self with "v".
+   -- 
+   -- Example: m:MAT_D; v:VEC_D;  m.swap_row(4,v);
+
+
+--
+-- MISC MATRIX MANIPULATION
+-- 
+
+   submatrix(lr,ur:INT, lc,uc:INT):SAME;
+   -- 
+   -- Result a subsection of self[lr..ur,lc..uc] in a
+   -- newly created return value.
+   --
+   -- Example:  m:MAT_D;  m2 ::= m.submatrix(0,9,0,1); -- m2 is 10 x 2
+
+   inplace_submatrix_to_arg(lr,ur:INT, lc,uc:INT,arg:MT);
+   -- 
+   -- Set a subsection of self[lr..ur,lc..uc] to the argument.
+   -- 
+   -- Example:  m:MAT_D;  m2.submatrix(0,9,0,1,m);
+   -- Or with syntax extension, m2.submatrix(0,9,0,1) := m;
+
+   inplace_swapped(arg:MT);
+   -- 
+   -- Swap contents of self with same sized "arg".
+   -- 
+   -- Example:  m2.swap(m1);
+
+--
+-- ITERS
+-- {somebody suggest some good ones please}
+--
+
+   ind1!:INT;
+      -- Yield each value of the first index in order. The rows
+
+   ind2!:INT;
+      -- Yield each value of the second index in order. The columns
+
+   diag_elt!:ET;
+      -- Yield values along the diagonal (square in smaller dimension)
+   
+   inplace_diag_elt!(val:ET); 
+      -- Set values along the diagonal (square in smaller dimension)
+
+   inds!:TUP{INT,INT};
+      -- Yield tuples of the indices of self in same order as storage.
+
+   elt!: ET; 
+      -- Yield all elements in storage order, usually column-major for
+      -- new BLAS compatible matrices.
+   
+   inplace_elt!(val:ET);
+   -- Set elements in storage order
+   
+   elt1!(once i1:INT):ET;
+      -- Yield elements by varying index 2 and holding index 1 at `i1'.
+      -- The elements of a row "i1"
+      -- this is the same as row_elt!
+   
+   elt2!(once i2:INT):ET;
+      -- Yield elements by varying index 1 and holding index 2 at `i2'.
+      -- The elements of a "column" i2
+      -- this is the same as col_elt!
+
+   row_elt!(once row:INT):ET;
+      -- Yield elements by varying index 2 and holding index 1 at `row'.
+      -- The elements of a row "row"
+
+   col_elt!(once col:INT):ET;
+      -- Yield elements by varying index 1 and holding index 2 at `col'.
+      -- The elements of a "column" col
+   
+end; -- type $MAT{ET,VT,MT}
+
+-------------------------------------------------------------------
+

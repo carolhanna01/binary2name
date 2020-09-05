@@ -1,0 +1,72 @@
+# This file is part of GNU Rush. 
+# Copyright (C) 2019 Sergey Poznyakoff
+#
+# GNU Rush is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# GNU Rush is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Rush.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([compound])
+AT_KEYWORDS([match compound])
+
+AT_RUSH_TEST([
+rush 2.0
+rule
+  match \$0 == "/bin/ls" && \$# == 2 && (\$1 ~ "^/usr" || \$1 == "/")
+],
+[cmdline,argv,prog],
+
+[/bin/ls /usr/lib],
+[0],
+[{
+    "cmdline":"/bin/ls /usr/lib",
+    "argv":[[
+        "/bin/ls",
+        "/usr/lib"
+    ]],
+    "prog":null
+}
+],
+[],
+
+[/bin/ls /],
+[0],
+[{
+    "cmdline":"/bin/ls /",
+    "argv":[[
+        "/bin/ls",
+        "/"
+    ]],
+    "prog":null
+}
+],
+[],
+
+[/bin/ls /usr/lib /],
+[1],
+[],
+[rush: Error: no matching rule for "/bin/ls /usr/lib /", user $MY_USER
+],
+
+[/bin/ls /lib],
+[1],
+[],
+[rush: Error: no matching rule for "/bin/ls /lib", user $MY_USER
+],
+
+[/bin/stat /usr/lib],
+[1],
+[],
+[rush: Error: no matching rule for "/bin/stat /usr/lib", user $MY_USER
+])
+
+AT_CLEANUP
+

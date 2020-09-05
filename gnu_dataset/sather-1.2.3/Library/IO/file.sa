@@ -1,0 +1,394 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class FILE < $OSTREAM is
+   -- Buffered file.  Uses the C standard "FILE".  To avoid buffering
+   -- penalties, read or write entire files using an FSTR.  For systems
+   -- which do funny things for linefeeds and cntl-z, this is a text
+   -- file, not a binary finle, for which you should use BFILE.
+   --   f: FILE :=  FILE::open_for_read("test_file");
+   --   line: STR := f.get_line; -- gets the next line
+   --  
+   -- A more convenient way to parse files is to read them into a string
+   -- and then use a STR_CURSOR on them. This may even have significantly
+   -- better performance
+   --   f2: FILE := FILE::open_for_read("test_file");
+   --   whole_file: STR := f2.str;  -- The whole file as a string
+   --   cursor: STR_CURSOR := whole_file.cursor;
+   --   next_integer: INT := cursor.get_int; -- Get an integer from the file
+   --                     -- string
+   --   next_word: STR := cursor.get_word;    -- Read a word from the file
+   -- 
+
+   readonly attr fp:EXT_OB;       -- The FILE pointer readonly attr
+
+   stdin_macro:EXT_OB is builtin FILE_STDIN; end;
+   stdout_macro:EXT_OB is builtin FILE_STDOUT; end;
+   stderr_macro:EXT_OB is builtin FILE_STDERR; end;
+
+   stdin:SAME is
+      -- A file object for stdin.
+      r::=new; r.fp:=stdin_macro; return r 
+   end;
+
+   stdout:SAME is
+      -- A file object for stdout.
+      r::=new; r.fp:=stdout_macro; return r 
+   end;
+
+   stderr:SAME is
+      -- A file object for stderr.
+      r::=new; 
+      r.fp:=stderr_macro; 
+      return r 
+   end;
+
+   open_for_write(nm:STR):SAME is
+      -- Create a new file with name `nm' and default permissions.
+      -- File is truncated and opened for writing. 
+      r::=new; 
+      r.fp:=RUNTIME::fopen(nm,"w"); 
+      return r 
+   end;
+
+   open_for_read(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for reading. 
+      r::=new; 
+      r.fp:=RUNTIME::fopen(nm,"r"); 
+      return r 
+   end;
+
+   open_for_append(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for appending.  File is created if not existing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"a"); 
+      return r 
+   end;
+
+   open_for_update_truncating(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for reading and writing.  File is truncated if existing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"w+"); 
+      return r 
+   end;
+
+   open_for_update(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for reading and writing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"r+"); 
+      return r 
+   end;
+
+   open_for_update_appending(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for reading and appending.  File is created if not existing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"a+"); return r 
+   end;
+
+   eof:BOOL pre ~void(fp) is
+      -- true if EOF has been encountered.  Cleared by "clear".
+      return RUNTIME::feof(fp) 
+   end;
+
+   error:BOOL is
+      -- true is an error has occurred with this file.  Cleared by "clear".
+      return void(fp) or RUNTIME::ferror(fp) 
+   end;
+   
+   clear pre ~void(fp) is
+      -- resets end_seen and error status.  Built-in.
+      builtin FILE_CLEAR;
+   end;
+   
+   size:INT pre ~void(fp) is
+      -- The size of self in characters. -1 for error.
+      current::=current_loc;
+      seek_from_end(0);
+      r::=current_loc;
+      seek_from_front(current);
+      return r 
+   end;
+
+   seek_from_front(off:INT) pre ~void(fp) is
+      -- Attempt to move to character `off' in self.
+      dummy::=RUNTIME::fseek(fp,off,0) 
+   end;
+   
+   seek_from_current(off:INT) pre ~void(fp) is
+      -- Attempt to move `off' characters forward.
+      dummy::=RUNTIME::fseek(fp,off,1) 
+   end;
+
+   seek_from_end(off:INT) pre ~void(fp) is
+      -- Attempt to move `off' characters back from the end of self.
+      dummy::=RUNTIME::fseek(fp,off,2) 
+   end;
+   
+   current_loc:INT pre ~void(fp) is
+      -- The current location in the file.
+      return RUNTIME::ftell(fp) 
+   end;
+
+   str: STR pre ~void(fp) is return  fstr.str end;
+   
+   fstr:FSTR pre ~void(fp) is
+      -- A string buffer containing the contents of self.
+      --
+      -- Due to conversions on some systems, the number of
+      -- characters read may be less than the total number
+      -- of characters in the file.
+      fsize::=size;
+      if fsize = -1 then return void; end;
+      if fsize =  0 then
+	 return #FSTR(1);
+      end;
+      r::=#FSTR(fsize);
+      seek_from_front(0);
+      bsize::=RUNTIME::fread(r,1,fsize,fp);
+      r.loc:=bsize;
+      return r 
+   end;
+
+   fstr(start,msize:INT):FSTR pre ~void(fp) and start<size is
+      -- A string buffer of size at most `msize' containing successive
+      -- characters from self beginning at `start'.
+      --
+      -- The number of characters read may be less than 'msize'
+      -- if end-of-file was encountered or some characters have
+      -- been discarded due to system-specific conversions.
+      r::=#FSTR(msize);
+      seek_from_front(start);
+      bsize::=RUNTIME::fread(r,1,msize,fp);
+      r.loc:=bsize;
+      return r 
+   end;
+
+   get_char:CHAR pre ~void(fp) is
+      return RUNTIME::fgetc(fp); 
+   end;
+
+   get_str:STR is
+      -- A string containing the characters up to the next newline.
+      return get_line.str;
+   end;
+
+   get_line:FSTR is
+      -- A string buffer containing the characters up to the next newline.
+      res::=#FSTR;
+      loop 
+          c::=get_char;
+	  if eof then return res end;
+	  res:=res.push(c);
+	  until!(c='\n');
+      end;
+      return res;
+   end;
+
+   get_up_to(sc:CHAR):STR is
+       -- A string buffer containing the characters up to the next c.
+       res::=#FSTR;
+       loop
+	  c::=get_char;
+	  if eof then return res.str end;
+	  res:=res.push(c);
+	  until!(c=sc);
+       end;
+       return res.str;
+    end;
+
+   plus(s:$STR) is
+      -- Append the $STR "s" to the file
+      
+      if void(s) then return end;
+      -- This is a hack, to get around the void representation of "".
+
+      -- Note that if this is ever called, we are assured
+      -- that s is _not_ one of CHAR, STR, FSTR, since these
+      -- cases are handled by the proper overloading. Hence,
+      -- this is the most general case and we call str.
+      -- BV (4/26/96)
+      ss::=s.str;
+      fs::=fwrite_str(ss,ss.length,fp)
+   end;
+   
+   plus(s:STR) is
+      -- Append the string "s" to the file
+      if void(s) then return end;
+      -- This is a hack, to get around the void representation of "".
+      fs::=fwrite_str(s,s.length,fp);
+   end;
+   
+   plus(s:FSTR) is
+      -- Append the string "s" to the file
+
+      if void(s) then return end;
+      -- This is a hack, to get around the void representation of "".
+      fs::=fwrite_fstr(s,s.length,fp);
+   end;
+
+   plus(c:CHAR) is
+      RUNTIME::fputc(c,fp)      
+   end;
+
+   private fwrite_str(f:STR,sz:INT,fp:EXT_OB):INT is  -- Built in
+      builtin FILE_FWRITE_STR;
+   end;
+   
+   private fwrite_fstr(f:FSTR,sz:INT,fp:EXT_OB):INT is  -- Built in
+      builtin FILE_FWRITE_FSTR;
+   end;
+   
+   plus(s:$STR):SAME is
+      plus(s);
+      return self;
+   end;
+   
+   plus(s:STR):SAME is
+      plus(s);
+      return self;
+   end;   
+   
+   plus(s:FSTR):SAME is
+      plus(s);
+      return self;
+   end;      
+
+   plus(c:CHAR):SAME is
+      RUNTIME::fputc(c,fp);
+      return self;
+   end;
+
+   flush pre ~void(fp) is
+      -- Forces write of any buffered data.
+      RUNTIME::fflush(fp) 
+   end;
+   
+   buffer_size(sz:INT) pre ~void(fp) is
+      -- Set buffer size to `sz' bytes.  Must be called after
+      -- a file is opened but before reading or writing.
+      RUNTIME::setbuffer(fp,#FSTR(sz),sz) 
+   end;
+
+   close pre ~void(fp) is
+      -- Close the file corresponding to self.
+      RUNTIME::fclose(fp) 
+   end;
+   
+   delete(nm:STR) is
+      -- Delete a file.
+      RUNTIME::unlink(nm) end;
+
+   temp_file:SAME is
+      -- Open a temporary file for writing.  It will be deleted
+      -- automatically when the process terminates.
+      r::=new; r.fp:=RUNTIME::tmpfile; return r 
+   end;
+
+   temp_filename(prefix:STR):STR is
+      -- Generate a unique name somewhere appropriate.
+      e::=RUNTIME::tempnam(void,prefix);
+      if void(e) then raise "Couldn't get temporary filename"; end;
+      return STR::create_from_c_string(e);
+   end;
+
+   resolve_path(fn:STR):STR is
+      -- Path with ".", "..", and any symbolic links resolved.
+      -- NOT IMPLEMENTED CORRECTLY.
+      return fn;
+   end;
+
+   current_directory:STR is
+      -- Absolute path of the current directory.
+      buf::=#FSTR(1024); -- Buffer to hold C string
+      e::=RUNTIME::getwd(buf);
+      if void(e) then raise "Couldn't get current directory path"; end;
+      return STR::create_from_c_string(e);
+   end;
+
+   create_directory(nm:STR) is
+      -- Make a directory with the path `nm'.
+      RUNTIME::mkdir(nm,0o777);
+   end;
+
+end; -- class FILE
+-------------------------------------------------------------------------
+class BFILE is
+   -- A binary file.  For many systems this should behave the
+   -- same as FILE.  This class is untested and not used in the
+   -- compiler.
+
+   include FILE;
+
+   open_for_write(nm:STR):SAME is
+      -- Create a new file with name `nm' and default permissions.
+      -- File is truncated and opened for writing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"wb"); return r 
+   end;
+
+   open_for_read(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for reading.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"rb"); return r 
+   end;
+
+   open_for_append(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for appending.  File is created if not existing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"ab"); return r 
+   end;
+
+   open_for_update_truncating(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for reading and writing.  File is truncated if existing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"w+b"); return r 
+   end;
+
+   open_for_update(nm:STR):SAME is
+      -- Returns a  new object representing the file named `nm' accessible
+      -- for reading and writing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"r+b"); return r 
+   end;
+
+   open_for_update_appending(nm:STR):SAME is
+      -- A new object representing the file named `nm' accessible
+      -- for reading and appending.  File is created if not existing.
+      r::=new; r.fp:=RUNTIME::fopen(nm,"a+b"); return r 
+   end;
+
+   fstr:FSTR pre ~void(fp) is
+      -- Returns a string buffer containing the contents of self.
+      sz::=size; 
+      if sz = -1 then return void; end;
+      if sz =  0 then return #FSTR(1); end;
+      r::=#FSTR(sz);
+      seek_from_front(0);
+      fs::=RUNTIME::fread(r,sz,1,fp);
+      r.loc:=sz;
+      return r 
+   end;
+   
+   fstr(st,sz:INT):FSTR pre ~void(fp) is
+      -- A string buffer of size at most `sz' containing successive 
+      -- characters from self beginning at `st'.
+      fsz::=size;
+      asz::=(fsz-st).min(sz);
+      r::=#FSTR(asz);
+      seek_from_front(0);
+      fs::=RUNTIME::fread(r,asz,1,fp);
+      r.loc:=asz;
+      return r 
+   end;
+
+end;
+-----------------------------------------------------------------------------

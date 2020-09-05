@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>Mifluz: Page compression in Mifluz</title>
+
+<meta name="description" content="Mifluz: Page compression in Mifluz">
+<meta name="keywords" content="Mifluz: Page compression in Mifluz">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Concept-Index.html#Concept-Index" rel="index" title="Concept Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="Compression.html#Compression" rel="up" title="Compression">
+<link href="Development.html#Development" rel="next" title="Development">
+<link href="Berkeley-DB-Compression.html#Berkeley-DB-Compression" rel="previous" title="Berkeley DB Compression">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Page-compression-in-Mifluz"></a>
+<div class="header">
+<p>
+Previous: <a href="Berkeley-DB-Compression.html#Berkeley-DB-Compression" accesskey="p" rel="previous">Berkeley DB Compression</a>, Up: <a href="Compression.html#Compression" accesskey="u" rel="up">Compression</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Page-compression-in-Mifluz-1"></a>
+<h4 class="subsection">8.1.2 Page compression in Mifluz</h4>
+
+<p>The <code>mifluz</code> classes WordDBCompress and WordBitCompress do the compression/decompression
+work. From the list of keys stored in a page it extracts several lists
+of numbers. Each list of numbers has common statistical properties that
+allow good compression.
+</p>
+<p>The  WordDBCompress_compress_c and WordDBCompress_uncompress_c
+functions are C callbacks that  are called by the the page compression
+code  in  BerkeleyDB. The  C  callbacks  then  call the  WordDBCompress
+compress/uncompress  methods. The  WordDBCompress creates a WordBitCompress
+object that acts as a buffer holding the compressed stream.
+</p>
+<p>Compression algorithm.
+</p>
+<p>Most DB pages contain redundant data because <code>mifluz</code> chose
+to store one word occurrence per entry.
+Because of this choice the pages have a very simple structure.
+</p>
+<p>Here is a real world example of what a page can look like:
+(key structure: word identifier + 4 numerical fields)
+</p>
+<div class="example">
+<pre class="example">756     1 4482    1  10b    
+756     1 4482    1  142    
+756     1 4484    1   40    
+756     1 449f    1  11e    
+756     1 4545    1   11    
+756     1 45d3    1  545    
+756     1 45e0    1  7e5    
+756     1 45e2    1  830    
+756     1 45e8    1  545    
+756     1 45fe    1   ec    
+756     1 4616    1  395    
+756     1 461a    1  1eb    
+756     1 4631    1   49    
+756     1 4634    1   48    
+.... etc ....
+</pre></div>
+
+<p>To compress we chose to only code differences between adjacent entries.
+A flag is stored for each entry indicating which fields have changed.
+When a field is different from the previous one, the compression stores
+the difference which is likely to be small since the entries are sorted.
+</p>
+<p>The basic idea is to build columns of numbers, one for each field, and
+then compress them individually. One can see that the first and second
+columns will compress very well since all the values are the same. The
+third column will also compress well since the differences between the 
+numbers are small, leading to a small set of numbers.
+</p>
+<hr>
+<div class="header">
+<p>
+Previous: <a href="Berkeley-DB-Compression.html#Berkeley-DB-Compression" accesskey="p" rel="previous">Berkeley DB Compression</a>, Up: <a href="Compression.html#Compression" accesskey="u" rel="up">Compression</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

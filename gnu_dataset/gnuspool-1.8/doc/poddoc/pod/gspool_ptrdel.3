@@ -1,0 +1,110 @@
+=head1 NAME
+
+gspool_ptrdel - delete a printer
+
+=head1 SYNOPSIS
+
+=for man
+\&\fB#include <gspool.h>\fR
+.PP
+
+=for html
+<STRONG>#include &lt;gspool.h&gt;</STRONG>
+<br>
+
+B<int gspool_ptrdel(const int>
+I<fd>B<, const unsigned>
+I<flags>B<, const slotno_t>
+I<slot>B<)>
+
+=head1 DESCRIPTION
+
+The function B<gspool_ptrdel()> is used to delete a printer.
+
+I<fd> is a file descriptor previously returned by B<gspool_open>
+
+I<flags> is either zero, or C<GSPOOL_FLAG_IGNORESEQ> to ignore changes
+since the list was last read.
+
+I<slot> is the slot number corresponding to the printer as previously
+returned by B<gspool_ptrlist>, or B<gspool_ptrfindslot>.
+
+=head1 RETURN VALUES
+
+=for html
+<P>The function returns 0 if successful otherwise one of the error codes
+<a href="TxtAPI-3.html#Error_codes">listed in Chapter 3</a>.</p>
+
+=for man
+The function \fBgspool_ptrdel()\fR returns 0 if successful, otherwise one
+of the following codes:
+.IP "GSPOOL_INVALID_FD" 8
+Invalid File descriptor
+.IP "GSPOOL_BADWRITE" 8
+failure writing to the network
+.IP "GSPOOL_BADREAD" 8
+failure reading from the network
+.IP "GSPOOL_SEQUENCE" 8
+Sequence error, slot may be out of date
+.IP "GSPOOL_UNKNOWN_PTR" 8
+Printer not found
+.IP "GSPOOL_INVALIDSLOT" 8
+Invalid slot number
+.IP "GSPOOL_PTR_RUNNING" 8
+The printer is running.
+.IP "GSPOOL_NOPERM" 8
+The user does not have permission to delete printers.
+
+=head1 EXAMPLE
+
+An example to delete all printers:
+
+ int fd, ret, np, i;
+ slotno_t *slots;
+
+ fd = gspool_open("myhost", (char *)0, 0);
+ if (fd < 0) { /* error handling */
+     ...
+ }
+
+ ret = gspool_ptrlist(fd, GSPOOL_LOCALONLY, &np, &slots);
+ if (ret < 0) { /* error handling */
+     ...
+ }
+
+ for (i = 0; i < np; i++) {
+     ret = gspool_ptrdel(fd, 0, slots[i]);
+     if (ret < 0) { /* error handling */
+         ...
+     }
+ }
+ gspool_close(fd);
+
+=head1 SEE ALSO
+
+gspool_ptrlist(3),
+gspool_ptrread(3),
+gspool_ptradd(3),
+gspool_ptrfind(3),
+gspool_ptrfindslot(3),
+gspool_ptrupd(3),
+gspool_ptrmon(3),
+gspool_ptrop(3).
+
+=head1 COPYRIGHT
+
+Copyright (c) 2009 Free Software Foundation, Inc.
+This is free software. You may redistribute copies of it under the
+terms of the GNU General Public License
+<http://www.gnu.org/licenses/gpl.html>.
+There is NO WARRANTY, to the extent permitted by law.
+
+=head1 AUTHOR
+
+John M Collins, Xi Software Ltd.
+
+=cut
+
+## Local Variables:
+## mode: nroff
+## End:

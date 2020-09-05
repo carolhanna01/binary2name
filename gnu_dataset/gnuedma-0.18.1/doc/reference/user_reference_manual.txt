@@ -1,0 +1,1347 @@
+GNU/EDMA Reference Manual
+----------------------------------------------------------------------------
+Copyright (C) 1998, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2010
+          by David Martínez Oliveira
+
+      Permission is granted to copy, distribute and/or modify this
+      document under the terms of the GNU Free Documentation License,
+      Version 1.3 or any later version published by the Free Software
+      Foundation; with no Invariant Sections, no Front-Cover Texts and
+      no Back-Cover Texts.  A copy of the license is included in the
+      section entitled "GNU Free Documentation License".
+----------------------------------------------------------------------------
+
+* Query Class Functions
+ESint32 EDMAPROC edma_get_class_name (CLASSID IdC,EPChar name);
+- Description:
+This functions retrieves the symbolic name of the class IdC in the output parameter name
+
+- Parameters:
+CLASSID IdC: Class identifier of the class to query
+EPChar  name: Output buffer to store class name
+
+- Returns:
+  0  : OK
+  -1 : if error
+
+- Example:
+
+EChar   class_name[EDMA_CLASS_NAME_LEN];
+
+edma_get_class_name (0, class_name);
+=======================================================================
+SOID    EDMAPROC edma_get_class_so_id (CLASSID IdC);
+- Description:
+This function gets the Operating System Identifier of the specified class
+
+- Parameters:
+CLASSID IdC: The class identifier we want to query
+
+- Returns:
+  Returns the related operating system identifier or -1 on error
+
+- Example:
+SOID so_id = edma_get_class_so_id (0);
+=========================================================================
+edma_get_class_arch_id
+MAQID   EDMAPROC edma_get_class_arch_id (CLASSID IdC);
+
+- Description
+THis functions gets the Architecture Identifier of the specified class
+
+- Parameter
+CLASSID IdC; The class identifier we want to query
+
+- Returns:
+  Returns the related architecture identifier or -1 on error
+
+- Example:
+MAQID arch_id = edma_get_class_arch_id (0);
+==========================================================================
+edma_get_class_module
+ESint32 EDMAPROC edma_get_class_module (CLASSID id, EPChar module_name);
+- Description:
+This function retrieves the module name which contains the implementation for the class IdC
+
+- Parameter
+CLASSID id         : Idendentifier of the class we want to query
+EPChar  module_name: Buffer to store the module name of the class being queried
+
+- Returns:
+  -1 on error, 0 otherwise
+
+- Example:
+CLASSID  cid;
+EChar    module_name[EDMA_MODULE_NAME_LEN];
+
+cid = edma_get_class_id ("HELLO_WORLD");
+edma_get_class_module (cid, module_name);
+
+==========================================================================
+ESint32 EDMAPROC edma_get_class_namespace (CLASSID id, EPChar namesapce);
+- Description:
+This function retrieves the related namespace for the specified class
+
+- Parameter
+CLASSID id       : Idendentifier of the class we want to query
+EPChar  namespace: Buffer to store the namespace of the class being queried
+
+- Returns:
+  -1 on error, 0 otherwise
+
+- Example:
+CLASSID  cid;
+EChar    namespace[EDMA_NAMESPACE_LEN];
+
+cid = edma_get_class_id ("HELLO_WORLD");
+edma_get_class_namespace (cid, namespace);
+
+==========================================================================
+ESint32 EDMAPROC edma_get_class_major_version (CLASSID id);
+- Description:
+This function retrieves the major version number for the specified class
+
+- Parameters:
+CLASSID id			: Identifier of the class we want to query
+
+- Returns:
+	-1 on error or the major version number otherwise
+
+-Example:
+CLASSID  cid;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+edma_printf ("HELLO_WORLD class version is: %d.%d",
+    edma_get_class_major_version (cid),
+    edma_get_class_minor_version (cid));
+
+==========================================================================
+ESint32 EDMAPROC edma_get_class_minor_version (CLASSID id);
+- Description:
+This function retrieves the minor version number for the specified class
+
+- Parameters:
+CLASSID id			: Identifier of the class we want to query
+
+- Returns:
+	-1 on error or the minor version number otherwise
+
+-Example:
+CLASSID  cid;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+edma_printf ("HELLO_WORLD class version is: %d.%d",
+    edma_get_class_major_version (cid),
+    edma_get_class_minor_version (cid));
+==========================================================================
+ESint32 EDMAPROC edma_get_class_current_version (CLASSID id);
+- Description:
+This function retrieves the current version for the specified class, that is, it returns the class identifier for the latest version of the parameter class
+
+- Parameters:
+CLASSID id			: Identifier of the class we want to query
+
+- Returns:
+	-1 on error or class identifier of the latest version available
+
+-Example:
+CLASSID  cid, latest;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+
+/* A new version of HELLO_WORLD was externally installed at this point*/
+
+latest = edma_get_class_current_version (cid);
+==========================================================================
+EUint32 EDMAPROC edma_get_num_reg_classes (void);
+- Description:
+This function gets the number of register classes in the system
+
+- Parameters:
+  NONE
+
+- Returns:
+  Number of registered classes in system
+
+-Example
+
+printf ("Your GNU/EDMA system has %d classes registered",
+        edma_get_num_reg_classes ());
+==========================================================================
+CLASSID EDMAPROC edma_get_real_id (EPChar class_name, CLASSID begin);
+- Description:
+Returns the class id for the class which name is 'Name' begining the search from 'begin' and without version translation
+
+- Parameters:
+  EPChar   class_name	: Name of the class we want to query
+	CLASSID  begin			: The identifier from where we will begin the query
+
+- Returns:
+  -1 on error or the class identifier for class 'class_name' greater than 'begin'
+
+- Example:
+  CLASSID   cid;
+
+	cid = edma_get_real_id ("HELLO_WORLD", 10);
+==========================================================================
+CLASSID EDMAPROC edma_get_class_id_with_version (EPChar class_name, ESint32 major_version, ESint32 minor_version);
+- Description:
+This function gets the class identifier for the class named 'class_name' with version number major_version.minor_version
+
+- Parameters:
+	EPChar class_name	: Class name we are looking for
+	ESInt32 major			: Major version we are looking for
+	ESint32 minor			: Minor version we are looking for
+
+- Returns
+	-1 on error or the requested class id otherwise
+
+- Example:
+CLASSID    cid, latest;
+
+cid = edma_get_class_id_with_version ("HELLO_WORLD", 1, 0);
+/* Gets the current latest version */
+latest = edma_get_class_id ("HELLO_WORLD");
+==========================================================================
+CLASSID EDMAPROC edma_get_class_id (EPChar class_name);
+- Description:
+This function returns the class identifier for latest version of the class named 'class_name'
+
+- Parameters:
+  EPChar class_name: The class name we want to retrieve its identifier
+
+- Returns:
+	-1 on error or the requested class id otherwise
+
+- Example:
+CLASSID   cid;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+
+==========================================================================
+ESint32 EDMAPROC edma_is_class_IDF_parser (CLASSID id);
+- Description:
+This function tell us if the class 'id' is an IDF Parser
+
+- Parameters:
+  CLASSID  id: THe class identifier we want to query
+
+- Return:
+  -1 on error, 1 if the queried class is an IDF parser and 0 otherwise
+
+- Example:
+CLASSID   cid;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+
+if (edma_is_class_IDF_parser (cid))
+   edma_printf ("%s", "Class HELLO_WORLD is an IDF parser");
+
+==========================================================================
+ESint32 EDMAPROC edma_is_class_SIU_proxy (CLASSID id);
+- Description:
+This function tell us if the class 'id' is a SIU Proxy
+
+- Parameters:
+  CLASSID  id: THe class identifier we want to query
+
+- Return:
+  -1 on error, 1 if the queried class is an SIU Proxy and 0 otherwise
+
+- Example:
+CLASSID   cid;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+
+if (edma_is_class_SIU_proxy (cid))
+   edma_printf ("%s", "Class HELLO_WORLD is a SIU Proxy");
+
+==========================================================================
+ESint32 EDMAPROC edma_is_class_EMI_handler (CLASSID id);
+- Description:
+This function tell us if the class 'id' is EMI handler
+
+- Parameters:
+  CLASSID  id: THe class identifier we want to query
+
+- Return:
+  -1 on error, 1 if the queried class is a EMI Handler and 0 otherwise
+
+- Example:
+CLASSID   cid;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+
+if (edma_is_class_EMI_handler (cid))
+   edma_printf ("%s", "Class HELLO_WORLD is a EMI handler");
+
+==========================================================================
+ESint32 EDMAPROC edma_get_class_num_superclasses (CLASSID id);
+- Description:
+This function returns the number of superclassed for the class 'id'
+
+- Parameters:
+	CLASSID  id: The class identifier we want to query
+
+- Returns:
+	-1 on error or the number of superclasses of id otherwise
+
+- Example:
+CLASSID   cid;
+
+cid = edma_get_class_id ("NFILE");
+
+edma_printf ("Class 'NFILE' has %d superclasses", 
+	edma_get_class_num_superclasses (cid));
+==========================================================================
+CLASSID EDMAPROC edma_get_class_superclass (CLASSID id, ESint32 Indx);
+- Description:
+This function returns the class identifier for the Indx-th superclass of class 'id'
+
+- Parameters:
+	CLASSID  id		: The class identifier we want to query
+	ESint32  indx	: Index of the superclass we are querying
+
+- Returns:
+	-1 on error or the requested class identifier otherwise
+
+- Example:
+CLASSID   cid;
+
+cid = edma_get_class_id ("NFILE");
+
+edma_printf ("First 'NFILE' superclass is %d", 
+	edma_get_class_superclass (cid, 0));
+
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_num (CLASSID id);
+- Description:
+This function retrieves the number of propertied defined by class 'id'
+
+- Parameters
+  CLASSID		id: Class identifier we want to query
+
+- Returns:
+	-1 on error or the number of properties defined by class 'id'
+
+- Example:
+CLASSID		cid;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+edma_printf ("Class 'HELLO_WORLD' has %d properties", 
+             edma_get_prop_num (cid));
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_name (CLASSID id,EUint32 indx,EPChar prop_name);
+- Description:
+This function stores the name of the indx-nth property of class 'id' in the prop_name output parameter.
+
+- Parameters:
+  CLASSID		id: Identifier of the class to query
+	EUint32   indx: Index of the indx-th property to query
+	EPChar		prop_name: Buffer to store the selected property name
+
+- Returns:
+	-1 on error, 0 otherwise
+
+- Example:
+CLASSID		cid;
+EChar			pname[EDMA_PROP_NAME_LEN];
+
+cid = edma_get_class_id ("HELLO_WORLD");
+edma_get_prop_name (cid, 0, pname);
+edma_printf ("Property 0 of class HELLO_WORLD is: %s", pname);
+
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_indx (CLASSID id,EPChar prop_name);
+- Description:
+This function gets the index of the property named 'prop_name' in class 'id'
+
+- Parameters:
+  CLASSID		id: Identifier of the class to query
+	EPChar		prop_name: Name of the property we are quering
+
+- Returns:
+	-1 on error, the property index on success
+
+- Example:
+CLASSID		cid;
+ESint32   pindx;
+
+cid = edma_get_class_id ("HELLO_WORLD");
+pindx = edma_get_prop_indx (cid, "Name");
+edma_printf ("Property Name of class HELLO_WORLD has index: %d", pindx);
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_type (CLASSID id,EUint32 indx,EPChar type);
+- Description:
+This function stores in type output parameter the datatype of the indx-nth propery of class 'id'
+==========================================================================
+ESint32 EDMAPROC edma_get_met_num (CLASSID id);
+- Description:
+This function returns the number of methods in class 'id'
+==========================================================================
+ESint32 EDMAPROC edma_get_met_name (CLASSID id,EUint32 indx,EPChar met_name);
+- Description:
+This function stores the indx-nth method name of class 'id' in the met_name output parameter
+==========================================================================
+ESint32 EDMAPROC edma_get_met_sig (CLASSID id, EUint32 indx, EPChar sig);
+- Description:
+THis function stores the signature of indx-nth method of class 'id' in the 'sig' output parameter
+==========================================================================
+ESint32 EDMAPROC edma_is_met_virtual (CLASSID id,EUint32 indx);
+- Description:
+This function queries if the indx-nth method in class 'id' is virtual
+==========================================================================
+ESint32 EDMAPROC edma_is_met_abstract (CLASSID id,EUint32 indx);
+- Description:
+This function queries if the indx-nth method in class 'id' is abstract (has no implementation)
+==========================================================================
+ESint32 EDMAPROC edma_is_met_static (CLASSID,EUint32);
+- Description:
+This function queries if the indx-nth method in class 'id' is static
+==========================================================================
+ESint32 EDMAPROC edma_get_class_met_indx (CLASSID id,EPChar met_name);
+- Description:
+This function gets the index of the method 'met_name' in class 'id'
+==========================================================================
+HMEM          EDMAPROC edma_salloc (EUint32 size, EPChar mem_name);
+- Description:
+This function allocates a shared memory chunck of size 'size' with name 'mem_name'
+==========================================================================
+void          EDMAPROC edma_sfree (HMEM h, EPVoid p);
+- Description:
+This function releases the shared memory chuncj referenced by handler 'h' and pointer 'p'
+==========================================================================
+EPVoid        EDMAPROC edma_sget (HMEM h);
+- Description:
+This function maps a shared memory chunk for the allocated block referenced by 'h'
+==========================================================================
+EPVoid        EDMAPROC edma_sunget (EPVoid p);
+- Description:
+This function unmaps a shared memory chunk associated with pointer 'p'
+==========================================================================
+HMEM         EDMAPROC edma_palloc (EUint32 size);
+- Description:
+This function allocated a private memory chunk of size 'size'
+==========================================================================
+HMEM         EDMAPROC edma_prealloc (HMEM h,EUint32 size);
+- Description:
+This function allows to change the size of the private memory block referenced by handler 'h' to size 'size'
+==========================================================================
+EPVoid       EDMAPROC edma_pget (HMEM h);
+- Description:
+This function maps the private memory block referenced by handler 'h'
+==========================================================================
+void         EDMAPROC edma_pfree (HMEM h,EPVoid p);
+- Description:
+THis function release the private memory block referenced by handler 'h' and mapped at 'p'
+==========================================================================
+EUint32 EDMAPROC edma_get_so_id (EPChar so_name);
+- Description:
+This function returns the operating system identifier of 'so_name'
+==========================================================================
+EUint32 EDMAPROC edma_get_arch_id (EPChar arch_name);
+- Description:
+This function returns the architecture identifier of 'arch_name'
+==========================================================================
+EUint32 EDMAPROC edma_get_so_name (EUint32 so_id, EPChar *so_name);
+- Description:
+This function stores in the output parameter 'so_name' the operating system name associated with the identifier 'so_id'
+==========================================================================
+EUint32 EDMAPROC edma_get_arch_name (EUint32 arch_id,EPChar *arch_name);
+- Description:
+This function stores in the output parameter 'arch_name' the architecture name assocaited with the identifier 'arch_name'
+==========================================================================
+EUint32 EDMAPROC edma_get_so_num (void);
+- Description:
+This function returns the number of operating systems known by the system
+==========================================================================
+EUint32 EDMAPROC edma_get_arch_num (void);
+- Description:
+This function returns the number of architectures known by the system
+==========================================================================
+OBJID   EDMAPROC edma_new_obj (EPChar class_name,...);
+
+- Description:
+This function created a new object of class 'class_name'
+
+- Parameters:
+EPChar class_name: The class name of the class we want to instantiate
+
+- Returns:
+-1 on error or a valid object identifier otherwise
+
+- Example:
+OBJID id;
+
+if ((id = edma_new_obj ("HELLO_WORLD")) == -1)
+   fprintf (stderr, "Can't create object of class 'HELLO_WORLD'");
+==========================================================================
+EUint32 EDMAPROC edma_free_obj (OBJID id);
+- Description:
+This function destroys the object 'id'
+
+- Parameters:
+OBJID id: The object identifier of the instance we want to destroy
+
+- Returns:
+  -1 on error or 0 if the operation completed successfully
+
+- Example:
+OBJID id = edma_new_obj ("MYCLASS");
+
+....
+
+edma_free_obj (id);
+==========================================================================
+EDWord  EDMAPROC edma_make_obj_virtual (OBJID id);
+- Description:
+This function makes the object 'id' a virtual object. OBSOLETE
+
+==========================================================================
+EUint32 EDMAPROC edma_set_obj_final (OBJID id, EUint32 new_final);
+- Description:
+This function changes the final status of object 'id' to 'new_final'. A final object can't change its inheritance hierarchy
+==========================================================================
+POBJ    EDMAPROC edma_get_obj_pobj  (OBJID Id);
+- Description:
+This function gets the 'POBJ' identifier associated to object 'id' (required by some functions).
+==========================================================================
+OBJID   EDMAPROC edma_get_obj_father_id (OBJID id);
+- Description:
+This function returns the object identifier of 'id' object's father
+==========================================================================
+OBJID   EDMAPROC edma_get_obj_pseudofather_id (OBJID id);
+- Description:
+This function returns the object identifier of 'id' object's pseudofather
+==========================================================================
+EPChar  EDMAPROC edma_get_obj_class_name (OBJID id,EPChar *class_name);
+- Description:
+This function stores in the output parameter 'class_name' the name of the class of the object 'id'
+==========================================================================
+CLASSID EDMAPROC edma_get_obj_class_id (OBJID id);
+- Description:
+THis function gets the class identifier of object 'id'
+==========================================================================
+ESint32 EDMAPROC edma_get_obj_status (OBJID id);
+- Description:
+This function gets the current status of object 'id'
+==========================================================================
+EUint32 EDMAPROC edma_get_num_objects (void);
+- Description:
+This function gets the number of current objects in the system
+
+- Parameters:
+  NONE
+
+- Returns:
+  Number of current object used by the application
+
+- Example:
+
+  printf ("This application is using %d objects", edma_get_num_objects());
+==========================================================================
+ESint32 EDMAPROC edma_get_obj_num_superobjects (OBJID id);
+- Description:
+This function returns the number of superobjects attached to object 'id'
+==========================================================================
+OBJID   EDMAPROC edma_get_obj_superobject (OBJID id, ESint32 indx);
+- Description:
+This function gets the indx-nth superobject identifier attached to object id
+==========================================================================
+ESint32 EDMAPROC edma_get_obj_num_subobjects (OBJID id);
+- Description:
+This function returns the number of subobjects currently attached to object 'id'
+==========================================================================
+OBJID   EDMAPROC edma_get_obj_subobject (OBJID id, ESint32 indx);
+- Description:
+This function gets the indx-nth subobject identifier attached to object id
+==========================================================================
+OBJID   EDMAPROC edma_get_obj_app (OBJID id);
+- Description:
+This function returns the Application Identifier associated to object 'id'
+==========================================================================
+EUint32 EDMAPROC edma_get_app_id (void);
+- Description:
+This function returns the Application Identifier of current thread
+==========================================================================
+ESint32 EDMAPROC edma_obj_report (OBJID id);
+- Description:
+This functions dumps to stdout a report about object 'id'
+==========================================================================
+EPVoid  EDMAPROC edma_wprop1 (OBJID id,EUint32 indx,...);
+- Description:
+This function allows to write the indx-nth property of object 'id'
+==========================================================================
+EPVoid  EDMAPROC edma_rprop1 (OBJID,EUint32,...);
+- Description:
+This function allows to read the indx-nth property of object 'id'
+==========================================================================
+EUint32 EDMAPROC edma_met1 (OBJID id,EUint32 indx,EByte real,EPVoid parms);
+- Description:
+This function allows to execute the indx-nth method of object 'if', with parameters 'parms', selection if to run the real method of the method currently overidding it.
+==========================================================================
+EPVoid  EDMAPROC _edma_wprop1_pargs (OBJID,EUint32,EPVoid);
+- Description:
+==========================================================================
+EPVoid  EDMAPROC _edma_rprop1_pargs (OBJID,EUint32,EPVoid);
+- Description:
+==========================================================================
+EUint32 EDMAPROC _edma_met1_pargs (OBJID,EUint32,EByte,EPVoid);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_derive_classd (EPChar class_name,EPChar *class_list,EPChar *ap_list,EPChar *pap_list);
+- Description:
+This function attachs to class 'class_name' the superclasses in 'class_list' with default anchor points 'ap_list', and prefered anchor point list 'pap_list'
+==========================================================================
+ESint32 EDMAPROC edma_add_superclasses_obj (POBJ pobj,EPChar *class_list,EPChar *ap_list);
+- Description:
+This function adds to object 'pobj' the classes specified in 'class_list' with the associated anchor points included in 'ap_list'
+==========================================================================
+ESint32 EDMAPROC edma_over_superclasses_obj (POBJ pObj, EUint32 indx, EPChar class,EPChar class_id);
+- Description:
+This function overwrites the indx-nth superclass in object 'pObj' with 'class' and anchor point 'class_id'
+==========================================================================
+ESint32 EDMAPROC edma_mutate_obj (POBJ pobj,EPChar *class_list,EPChar *ap_list);
+- Description:
+This function changes the inheritance hierarchy of object 'pobj' with the list of superclasses in 'class_list' and related anchor points 'ap_list'. If some class or anchor point already exist the function overwrites it
+==========================================================================
+ESint32 EDMAPROC edma_merge_superclass_obj (OBJID id, EPChar anchor_ponint, OBJID superobj);
+- Description:
+This function attach object 'superobj' to object 'id' at anchor point 'anchor_point'
+==========================================================================
+ESint32 EDMAPROC edma_free_superclass_obj (OBJID id,EPChar anchor_point);
+- Description:
+This function removes the superclass attached at 'anchor_point' in object 'id'
+==========================================================================
+ESint32 EDMAPROC edma_add_subclasses_obj (POBJ pobj,EPChar *class_list, EPChar *ap_list);
+- Description:
+This function attachs subclasses in 'class_list' to object 'pobj' using the anchor points in 'ap_list'
+==========================================================================
+ESint32 EDMAPROC edma_over_subclasses_obj (POBJ pobj, EUint32 indx, EPChar class_name, EPChar ap_name);
+- Description:
+This function overwrites the indx-nth subclass in object 'pobj' with class 'class_name' and related anchor point 'pa_name'
+==========================================================================
+ESint32 EDMAPROC edma_mutate_obj1 (POBJ,EPChar*,EPChar*);
+- Description:
+This function changes the inheritance hierarchy of object 'pobj' with the list of subclasses in 'class_list' and related anchor points 'ap_list'. If some class or anchor point already exist the function overwrites it
+==========================================================================
+ESint32 EDMAPROC edma_merge_subclass_obj (OBJID id, EPChar anchor_point, OBJID subobj);
+- Description:
+This function attach subobject 'subobj' to object 'id' at anchor point 'anchor_point'
+==========================================================================
+ESint32 EDMAPROC edma_free_subclass_obj (OBJID id, EPChar anchor_point);
+- Description:
+This function removes the subclass attached to 'anchor_point' in object 'id'
+==========================================================================
+EPVoid  EDMAPROC edma_wprop3_old (OBJID,EPChar,...);
+- Description:
+==========================================================================
+EPVoid  EDMAPROC edma_rprop3_old (OBJID,EPChar,...);
+- Description:
+==========================================================================
+EPVoid  EDMAPROC edma_met3s_old (OBJID,EPChar,EPChar,...);
+- Description:
+==========================================================================
+EPVoid  EDMAPROC edma_met3_old  (OBJID,EPChar,...);
+- Description:
+==========================================================================
+EPVoid  EDMAPROC edma_get_data_ref (OBJID id);
+- Description:
+This function returns a pointer to the property raw data memory block of object id. Application must know the data structure. Typically used in class implementation
+
+-Parameters:
+OBJID id: The object identifier we want to get a pointer to properties
+
+-Returns:
+A pointer to the memory block contained the properties values of object 'id'
+or NULL on error
+
+-Example:
+
+ESint32 EDMAPROC
+MYCLASSmy_method (OBJID id)
+{
+  MYCLASSdt  *data;
+
+  if ((data = edma_get_data_ref (id)) == NULL)
+		return -1;
+  ...
+}
+==========================================================================
+EUint32 EDMAPROC edma_over_met (OBJID id, EPChar met_name,POBJ pobj, PPROC func);
+- Description:
+This function overrides method 'met_name' in object 'id' with function 'func' in object 'pobj'. To use an arbitrary function 'pobj' must be NULL
+
+- Parameters:
+  OBJID   id      : Identifier of the object we want to override method
+  EPChar  met_name: Name of the method we want to override
+  POBJ    pObj    : Pointer to the object that overrides de method
+                    NULL for overriding with a C function
+  PPROC   func    : Pointer to the new implementation of the method
+
+- Returns:
+  -1 on error 0 otherwise
+
+- Example:
+
+int my_load (OBJID id, EPChar file_name)
+{
+  printf ("About to load file %s", file_name);
+  return edma_old_met3 (id, "Load", file_name);
+}
+....
+OBJID id = edma_new_obj ("STREAM");
+edma_over_met (id, "Load", NULL, my_load);
+edma_met3 (id, "Load");
+==========================================================================
+EUint32 EDMAPROC edma_over_met3 (OBJID id, EPChar src_met_name, EPChar dst_met_name);
+- Description:
+This function overrides virtual method 'src_met_name' with method 'dst_met_name' in object 'id'
+
+- Parameters:
+  OBJID   id          : Identifier of the object we want to override a virtual method
+  EPChar  src_met_name: Name of the method to override
+  EPChar  dst_met_name: Name of the overrider method
+
+- Returns
+  -1 on error, 0 otherwise
+
+- Example:
+
+OBJID   id = edma_new_obj ("NFILE");
+
+edma_add_subclass (id, "GZIP_STREAM_COMPRESS", "COMPRESSOR");
+edma_over_met3 (id, "Load", "COMPRESOR>load_stream");
+
+/* Executes COMPRESOR>load_stream */
+edma_met3 (id, "Load", "myfile.gz");
+==========================================================================
+EUint32 EDMAPROC edma_restore_met (OBJID id, EPChar met_name);
+- Description:
+This function restores original code for virtual method 'met_name' in object 'id'
+
+- Parameters:
+  OBJID  id      : Identifier of the object containing the virtual method to restore
+  EPChar met_name: Virtual method we want to restore.
+
+- Returns
+  -1 on error, 0 otherwise
+
+- Example:
+OBJID   id = edma_new_obj ("NFILE");
+
+edma_add_subclass (id, "GZIP_STREAM_COMPRESS", "COMPRESSOR");
+edma_over_met3 (id, "Load", "COMPRESOR>load_stream");
+
+/* Executes COMPRESOR>load_stream */
+edma_met3 (id, "Load", "myfile.gz");
+edma_rest_met (id, "Load");
+/* Executes Load on NFILE */
+edma_met3 (id, "Load", "other_file.txt");
+==========================================================================
+EUint32 EDMAPROC edma_old_met3 (OBJID id,EPChar met_name,...);
+- Description:
+This function executes the original code for virtual method 'met_name' in object 'id'
+
+- Parameters:
+  OBJID  id: Identifier of the object to work in
+  EPChar met_name: Name of the method we want to execute
+
+- Returns:
+  Returns the value returned by the original method executed or throws an
+exception
+
+- Example:
+OBJID   id = edma_new_obj ("NFILE");
+
+edma_add_subclass (id, "GZIP_STREAM_COMPRESS", "COMPRESSOR");
+edma_over_met3 (id, "Load", "COMPRESOR>load_stream");
+
+/* Executes COMPRESOR>load_stream */
+edma_met3 (id, "Load", "myfile.gz");
+/* Executes Load on NFILE */
+edma_old_met3 (id, "Load", "other_file.txt");
+==========================================================================
+CLASSID EDMAPROC edma_idf_get_class_id ();
+- Description:
+This function allows an IDF Parser get a class identifier for the class it is about to process
+==========================================================================
+ESint32 EDMAPROC edma_idf_set_general (CLASSID id, EPChar,EPChar,EPChar,EPChar);
+- Description:
+Sets general information for class id
+==========================================================================
+ESint32 EDMAPROC edma_idf_set_def (CLASSID id,EUint32,EUint32,EUint32);
+- Description:
+Sets specific information for class id
+==========================================================================
+ESint32 EDMAPROC edma_idf_set_prop (CLASSID,EUint32,EPChar,EPChar,EPChar,EUint32);
+- Description:
+Defines a property for class id
+==========================================================================
+ESint32 EDMAPROC edma_idf_set_met (CLASSID iC,EUint32 iP,EPChar ,EPChar,EByte,EByte,EByte);
+- Description:
+Defines a method for class id
+==========================================================================
+ESint32 EDMAPROC edma_idf_set_sclist (CLASSID ,EPChar *);
+- Description:
+Sets the superclass list for class id
+==========================================================================
+ESint32 EDMAPROC edma_idf_set_class_id (CLASSID id);
+- Description:
+Makes a just defined class 'id' available to the system
+==========================================================================
+ESint32 EDMAPROC edma_add_stock_class (CLASS_INFO ,EPChar,EPChar);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_del_stock_class (EPChar);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_get_EMI_handler (EPChar);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_add_EMI_handler (EPChar,EPChar);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_hook_get_class (CLASSID);
+- Description:
+==========================================================================
+EUint32 EDMAPROC edma_set_app_name (EPChar);
+- Description:
+==========================================================================
+EUint32 EDMAPROC edma_set_debug_level (EUint32 l);
+- Description:
+==========================================================================
+EPChar  EDMAPROC edma_get_system_path ();
+- Description:
+Get the current system path
+==========================================================================
+EUint32 EDMAPROC edma_print (EPChar);
+- Description:
+==========================================================================
+EUint32 EDMAPROC edma_printf_obj (OBJID IdObj,EPChar f,...);
+- Description:
+==========================================================================
+EUint32 EDMAPROC edma_printf (EPChar f,...);
+- Description:
+==========================================================================
+EUint32 EDMAPROC edma_printf_err (EPChar f,...);
+- Description:
+==========================================================================
+EUint32 EDMAPROC edma_printf_dbg (EUint32 l,OBJID IdObj,EPChar f,...);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_buffer_alloc (EDMAT_BUFFER *buf,EUint32 size);
+- Description:
+This function allocates a memory buffer of size 'size'
+
+- Parameters:
+  EDMAT_BUFFER *buf: Handler for the buffer being allocated
+  EUint32      size: Size in bytes of the buffer we want to allocate
+
+- Returns:
+  -1 on error, 0 otherwise
+
+- Example:
+EDMAT_BUFFER  my_buffer;
+
+edma_buffer_alloc (&my_buffer, 128);
+strcpy ((char *)my_buffer.dat, "Hello World!!!");
+edma_buffer_realloc (&my_buffer, 256);
+printf ("New size for buffer is %d", my_buffer.Size);
+edma_buffer_free (&my_buffer);
+==========================================================================
+ESint32 EDMAPROC edma_buffer_free (EDMAT_BUFFER *buf);
+- Description:
+This function releases the 'buf' memory buffer
+
+- Parameters:
+  EDMAT_BUFFER *buf: Handler for the buffer being allocated
+
+- Returns:
+  -1 on error, 0 otherwise
+
+- Example:
+EDMAT_BUFFER  my_buffer;
+
+edma_buffer_alloc (&my_buffer, 128);
+strcpy ((char *)my_buffer.dat, "Hello World!!!");
+edma_buffer_realloc (&my_buffer, 256);
+printf ("New size for buffer is %d", my_buffer.Size);
+edma_buffer_free (&my_buffer);
+==========================================================================
+ESint32 EDMAPROC edma_buffer_realloc (EDMAT_BUFFER *buf,EUint32 size);
+- Description:
+This functions reallocs the 'buf' memory buffer
+
+- Parameters:
+  EDMAT_BUFFER *buf: Handler for the buffer being allocated
+  EUint32      size: Size in bytes of the buffer we want to allocate
+
+- Returns:
+  -1 on error, 0 otherwise
+
+- Example:
+EDMAT_BUFFER  my_buffer;
+
+edma_buffer_alloc (&my_buffer, 128);
+strcpy ((char *)my_buffer.dat, "Hello World!!!");
+edma_buffer_realloc (&my_buffer, 256);
+printf ("New size for buffer is %d", my_buffer.Size);
+edma_buffer_free (&my_buffer);
+==========================================================================
+ESint32 EDMAPROC edma_wprop3_pargs (OBJID id, EPChar prop_name, EPVoid va_list);
+- Description:
+This function writes property 'prop_name' on object 'id' with 'va_list'
+Typically used on SIU Proxies
+==========================================================================
+ESint32 EDMAPROC edma_rprop3_pargs (OBJID id,EPChar prop_name, EPVoid va_list);
+- Description:
+This function reads property 'prop_name' of object 'id' storing the result in 'va_list'
+Typically used on SIU Proxies
+==========================================================================
+ESint32 EDMAPROC edma_met3s_pargs (OBJID id,EPChar met_name, EPChar signature,ESint32 real, EPVoid va_list);
+- Description:
+This function runs the method 'met_name' with signature 'sig' on object 'id' passing as parameter 'va_list'. 'real' indicates if to run the real method or the overriden one.
+Typically used on SIU Proxies
+==========================================================================
+ESint32 EDMAPROC edma_met3_pargs (OBJID id,EPChar met_name, ESint32 real, EPVoid va_list);
+- Description:
+Runs the method 'met_name' on object 'id' with parameters 'va_list'. 'real' indicates if to run the real method of the overriden one, if 'met_name' is a virtual method
+Typically used on SIU Proxies
+==========================================================================
+ESint32 EDMAPROC edma_wprop3_pargs_old (OBJID,EPChar,EPVoid);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_rprop3_pargs_old (OBJID,EPChar,EPVoid);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_met3s_pargs_old (OBJID,EPChar,EPChar,EPVoid);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_met3_pargs_old (OBJID,EPChar,EPVoid);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_type_id (CLASSID id, EUint32 indx);
+- Description:
+Gets the datatype identifier for the indx-th property in class 'id'
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_type_sig (CLASSID id, EUint32 indx, EPChar sig);
+- Description:
+Gets the datatype signature for the indx-th propery in class 'id', storing it in 'sig'
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_num_elements (CLASSID id, EUint32 indx);
+- Description:
+Gets the number of elements of propery indx-th in class 'id'
+==========================================================================
+ESint32 EDMAPROC edma_get_type_size (EUint32 datatype_id);
+- Description:
+Gets the size in bytes of datatype 'datatype_id'
+==========================================================================
+EUint32 EDMAPROC edma_get_type_sig (EUint32 datatype_id, EPChar sig);
+- Description:
+Stores the datatype signature of 'datatype_id' in 'sig'
+==========================================================================
+ESint32 EDMAPROC edma_get_prop_indx3 (OBJID,EPChar,CLASSID*);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_load_class_int (CLASSID id);
+- Description:
+Load class interface definition for class 'id'
+==========================================================================
+ESint32 EDMAPROC edma_unload_class_int (CLASSID id);
+- Description:
+Unloads the class interface for class 'id'
+==========================================================================
+PINIFILE EDMAPROC edma_open_ini (EPChar file_name);
+- Description:
+Open INI file 'file_name' for processing
+==========================================================================
+ESint32  EDMAPROC edma_close_ini (PINIFILE pini);
+- Description:
+Closes INI file 'pini'
+==========================================================================
+ESint32  EDMAPROC edma_clean_ini_string (EPChar);
+- Description:
+==========================================================================
+ESint32  EDMAPROC edma_get_ini_int (PINIFILE,EPChar,EPChar,EUint32);
+- Description:
+==========================================================================
+EUint32  EDMAPROC edma_get_ini_string (PINIFILE,EPChar,EPChar,EPChar,EPChar,EUint32);
+- Description:
+==========================================================================
+EPVoid EDMAPROC edma_smet3s (EPChar class_name, EPChar met_name,EPChar met_sig,...);
+- Description:
+Runs static method 'met_name' with signature 'met_sig' of class 'class_name'
+
+-Parameters:
+EPChar class_name: Name of the class which static method we want to run
+EPChar met_name  : Name of the static method we want to run
+EPChar met_sig   : Signature of the static method we want to run
+...              : Parameters for the static method
+
+-Returns:
+Returns the value returned by the method or an exception is launched
+
+-Example:
+ESint32  free_space; 
+OBJID    the_exception;
+
+EDMA_TRY 
+  {
+    free_space = edma_smet3 ("FILESYSTEM", "ZrS32", "FreeSpace", "/home");
+  }
+EDMA_CATCH (the_exception)
+  {
+    edma_met3 (the_exception, "print");
+  }
+EDMA_TRY_END;
+==========================================================================
+EPVoid EDMAPROC edma_smet3 (EPChar class_name, EPChar met_name,...);
+- Description:
+Runs static method 'met_name' of class 'class_name'
+
+-Parameters:
+EPChar class_name: Name of the class which static method we want to run
+EPChar met_name  : Name of the static method we want to run
+...              : Parameters for the static method
+
+-Returns:
+Returns the value returned by the method or an exception is launched
+
+-Example:
+EUint32  free_space; 
+OBJID    the_exception;
+
+EDMA_TRY 
+  {
+    free_space = edma_smet3 ("FILESYSTEM", "FreeSpace", "/home");
+  }
+EDMA_CATCH (the_exception)
+  {
+    edma_met3 (the_exception, "print");
+  }
+EDMA_TRY_END;
+==========================================================================
+EPVoid EDMAPROC edma_smet3sx (CLASSID cid, EPChar met_name, EPChar met_sig, EPVoid params);
+- Description:
+Runs method 'met_name' with 'met_sig' of class 'cid' with parameters 'params'
+==========================================================================
+EPVoid EDMAPROC edma_smet3x (CLASSID cid, EPChar met_name, EPVoid params);
+- Description:
+Runs method 'met_name' of class 'cid' with parameters 'params'
+==========================================================================
+OBJID EDMAPROC edma_upcast_obj (OBJID id, EPChar class_name);
+- Description:
+Get a superobject identifier from object 'id' of class 'class_name' or attached to an anchor point named 'class_name'
+
+-Parameters:
+OBJID  id        : Identifier of the object we want to upcast
+EPChar class_name: Class name or anchor point we want to cast object
+
+-Returns:
+-1 on error or the identifier of the subobject matching 'class_name'
+
+-Example:
+OBJID   id, subid;
+
+id = edma_new_obj ("MYCLASS");
+met3 (id, "OTHER_CLASS@ANCHOR_POINT<my_met");
+
+subid = edma_upcast_obj (id, "OTHER_CLASS");
+subid = edma_upcast_obj (id, "ANCHOR_POINT");
+==========================================================================
+OBJID EDMAPROC edma_downcast_obj (OBJID id, EPChar class_name);
+- Description:
+Get a subobject identifier from object 'id' of class 'class_name' or attached to an anchor point named 'class_name'
+
+-Parameters:
+OBJID  id        : Identifier of the object we want to upcast
+EPChar class_name: Class name or anchor point we want to cast object
+
+-Returns:
+-1 on error or the identifier of the subobject matching 'class_name'
+
+-Example:
+OBJID   id, subid;
+
+id = edma_new_obj ("MYCLASS");
+met3 (id, "OTHER_CLASS@ANCHOR_POINT>my_met");
+
+subid = edma_downcast_obj (id, "OTHER_CLASS");
+subid = edma_downcast_obj (id, "ANCHOR_POINT");
+==========================================================================
+OBJID EDMAPROC edma_cast_obj (OBJID id, EPChar class_name);
+- Description:
+Get a sub/superobject, from object 'id' of class 'class_name' or attached to an anchor point named 'class_name'
+
+-Parameters:
+OBJID  id        : Identifier of the object we want to upcast
+EPChar class_name: Class name or anchor point we want to cast object
+
+-Returns:
+-1 on error or the identifier of the subobject matching 'class_name'
+
+-Example:
+OBJID   id, subid, superid;
+
+id = edma_new_obj ("MYCLASS");
+met3 (id, "SUPER_CLASS@SUPER<my_met");
+met3 (id, "SUB_CLASS@INNER>my_met");
+
+subid   = edma_cast_obj (id, "SUPER");
+superid = edma_cast_obj (id, "INNER");
+=========================================================================
+OBJID EDMAPROC edma_clone_obj (OBJID id);
+- Description:
+Clones object id, creating new instances of each sub/superobject
+
+- Parameters:
+  OBJID  id: Identifier of the object to be clonned
+
+- Returns:
+  -1 on error or the object identifier of the clonned object
+
+- Example:
+
+OBJID   id, clon;
+EChar   Id1[50], Id2[50];
+
+id = edma_new_obj ("GAP");
+/* Adds AP_TEST as superclass using on-demand inheritance*/
+edma_wprop3 (id, "AP_TEST@SUPER1>Id", "BASE Object");
+
+clon = edma_clone_object (id);
+edma_wprop3 (id, "Id", "CLONED Object");
+
+/* Id1 and Id2 are different */
+edma_rprop3 (id,   "Id", Id1);
+edma_rprop3 (clon, "Id", Id2);
+==========================================================================
+OBJID EDMAPROC edma_shallow_clone_obj(OBJID id);
+- Description:
+Clones object id, linking the new instance to the existing sub/superobjects
+
+- Parameters:
+  OBJID  id: Identifier of the object to be clonned
+
+- Returns:
+  -1 on error or the object identifier of the clonned object
+
+- Example:
+
+OBJID   id, clon;
+EChar   Id1[50], Id2[50];
+
+id = edma_new_obj ("GAP");
+/* Adds AP_TEST as superclass using on-demand inheritance*/
+edma_wprop3 (id, "AP_TEST@SUPER1>Id", "BASE Object");
+
+clon = edma_shallow_clone_object (id);
+edma_wprop3 (id, "Id", "CLONED Object");
+
+/* Id1 and Id2 are the same. GAP object is shared by id and clone */
+edma_rprop3 (id,   "Id", Id1);
+edma_rprop3 (clon, "Id", Id2);
+==========================================================================
+ESint32 EDMAPROC edma_ingridf_get_num_parsers (void);
+- Description:
+Get the number of IDF Parsers registered in the system
+==========================================================================
+CLASSID EDMAPROC edma_ingridf_get_parser_class (ESint32 i);
+- Description:
+Get the class associated with the i-th IDF Parser registered in the system
+==========================================================================
+ESint32 EDMAPROC edma_siu_get_num_proxies (void);
+- Description:
+Gets the number of SIU Proxies registered in the system
+==========================================================================
+CLASSID EDMAPROC edma_siu_get_proxy_class (ESint32 i);
+- Description:
+Get the class identifier associated to the i-th SIU Proxy in the system
+==========================================================================
+ESint32 EDMAPROC edma_get_EMI_num_handlers (void);
+- Description:
+Get the number of EMI Handlers registered in the system
+==========================================================================
+CLASSID EDMAPROC edma_get_EMI_handler_class (ESint32 i);
+- Description:
+Get the class identifier associated to the i-th EMI Handler
+==========================================================================
+ESint32 EDMAPROC  edma_rename_superclass_ap (OBJID id, EPChar old_name, EPChar new_name);
+- Description:
+Renames the superclass anchor point 'OldName' of object 'IdObj' to 'NewName'
+
+- Parameter:
+  OBJID  id      : Identifier of the object we want to rename an anchor point
+  EPChar old_name: Name of the anchor point we want to rename
+  EPChar new_name: New name for 'old_name' anchor point
+
+- Returns:
+  -1 on error, 0 otherwise
+
+- Example:
+
+==========================================================================
+ESint32 EDMAPROC  edma_rename_subclass_ap (OBJID IdObj ,EPChar OldName ,EPChar NewName);
+- Description:
+Renames the subclass anchor point 'OldName' of object 'IdObj' to 'NewName'
+==========================================================================
+OBJID EDMAPROC edma_parse_classpath (OBJID IdObj,EPChar eclass_path);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_look4_met_ext (POBJ *pObj1,EPChar MetName);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_look4_prop_ext (POBJ *pObj1,EPChar PropName);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_show_subobjects_up (OBJID IdObj,EPChar Id, ESint32 level);
+- Description:
+Dumps to stdout the subobject up in the inheritance hierarchy from IdObj
+==========================================================================
+ESint32 EDMAPROC edma_show_subobjects_down (OBJID IdObj,EPChar Id, ESint32 level);
+- Description:
+Dumps to stdout the subobject down in the inheritance hierarchy from IdObj
+==========================================================================
+ESint32 EDMAPROC edma_look4_prop_ext (POBJ *pObj1,EPChar PropName);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_met3 (OBJID id, EPChar met_name,...);
+- Description:
+Runs method 'Id1' on object 'IdObj'
+
+- Parameters:
+OBJID   id      : Identifier of the object we want to run a method in
+EPChar  met_name: Name of the method we want to execute
+...             : Parameters for the selected method
+
+- Returns:
+Function returns the value returned by the method or an exception is thrown
+
+- Example:
+OBJID  id, the_exception;
+
+id = edma_new_obj ("HELLO_WORLD");
+
+EDMA_TRY
+  {
+    edma_met3 (id, "say");
+    edma_met3 (id, "non_existing_method");
+  }
+EDMA_CATH (the_exception)
+  {
+    edma_met3 (the_exception, "print");
+  }
+EDMA_TRY_END;
+==========================================================================
+ESint32 EDMAPROC edma_wprop3 (OBJID id, EPChar prop_name,...);
+- Description:
+Writes property 'prop_name' on object 'id'
+
+- Parameters:
+OBJID    id: Identifier of the object we want to write a property
+EPChar   prop_name: Name of the property we want to write
+
+- Returns:
+-1 on error or 0 otherwise. Throws exception
+
+- Example:
+OBJID  id;
+
+id = edma_new_obj ("HELLO_WORLD");
+
+edma_wprop3 (id, "str", "a string");
+edma_wprop3 (id, "num", 127);
+==========================================================================
+ESint32 EDMAPROC edma_rprop3 (OBJID id, EPChar prop_name,...);
+- Description:
+Reads property 'prop_name' on object 'id'
+
+- Parameters:
+OBJID    id: Identifier of the object we want to read a property
+EPChar   prop_name: Name of the property we want to read
+
+- Returns:
+-1 on error or 0 otherwise. Throws exception
+
+- Example:
+OBJID   id;
+EChar   my_string;
+ESint32 my_num;
+
+id = edma_new_obj ("HELLO_WORLD");
+...
+edma_rprop3 (id, "str", my_string);
+edma_rprop3 (id, "num", &my_number);
+==========================================================================
+EUint32 EDMAPROC EDMAEnd(void);
+- Description:
+Finish using GNU/EDMA from the main application
+- Parameters:
+  NONE
+- Returns:
+  -1 on fatal error
+==========================================================================
+EUint32 EDMAPROC EDMAInit(void);
+- Description:
+Begins using GNU/EDMA from the main application
+- Parameters:
+  NONE
+- Returns:
+  -1 on fatal error
+==========================================================================
+ESint32 EDMAPROC edma_error (jmp_buf*);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_exception_try ();
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_exception_throw (OBJID);
+- Description:
+==========================================================================
+ESint32 EDMAPROC edma_exception_clean (OBJID id);
+- Description:
+==========================================================================
+OBJID EDMAPROC edma_add_superclass (OBJID id, CLASSID cid, EPChar apoint1, EPChar apoint2);
+- Description:
+Add superclass 'cid' at anchor point 'apoint1' linked back through 'apoint2' to object 'id'
+==========================================================================
+ESint32 EDMAPROC edma_add_superobject (OBJID id, OBJID subid, EPChar apoint);
+- Description:
+Links as superobject object 'subid' to object 'id' at anchor point 'apoint'
+==========================================================================
+ESint32 EDMAPROC edma_add_subobject (OBJID id, OBJID subid, EPChar apoint);
+- Description:
+Links as subobject object 'subid' to object 'id' at anchor point 'apoint'
+==========================================================================
+OBJID EDMAPROC edma_add_subclass (OBJID id, CLASSID cid, EPChar apoint1, EPChar apoint2);
+- Description:
+Add a new subclass 'cid' to object 'id' at anchor point 'apoint1' linked back through 'apoint2'
+==========================================================================
+OBJID EDMAPROC edma_insert_superclass (OBJID id, CLASSID cid, EPChar apoint1, EPChar apoint2);
+- Description:
+Inserts superclass 'cid' in object 'id' with anchor point 'apoint1' linked back through 'apoint2'
+==========================================================================
+OBJID EDMAPROC edma_insert_superobject (OBJID id, OBJID superobj, EPChar apoint1, EPChar apoint2);
+- Description:
+Inserts superobject 'superobj' in object 'id' with anchor point 'apoint1' linked back through 'apoint2'
+==========================================================================
+OBJID EDMAPROC edma_insert_subclass (OBJID id, CLASSID cid, EPChar apoint1, EPChar apoint2);
+- Description:
+Inserts subclass 'cid' in object 'id' with anchor point 'apoint1' linked back through 'apoint2'
+==========================================================================
+OBJID EDMAPROC edma_insert_subobject (OBJID id, OBJID cid, EPChar apoint1, EPChar apoint2);
+- Description:
+Inserts subobject 'subobj' in object 'id' with anchor point 'apoint1' linked back through 'apoint2'
+==========================================================================
+ESint32 EDMAPROC edma_remove_superclass_ap (OBJID IdObj, EPChar anchor_point);
+- Description:
+Removes the superobject attached at anchor point 'anchor_point' in object 'IdObj'
+==========================================================================
+ESint32 EDMAPROC edma_remove_subclass_ap (OBJID IdObj, EPChar anchor_point);
+- Description:
+Removes the subobject attached at anchor point 'anchor_point' in object 'IdObj'
+==========================================================================
+ESint32 EDMAPROC edma_actualize_cfg ();
+- Description:
+==========================================================================

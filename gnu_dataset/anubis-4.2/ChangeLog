@@ -1,0 +1,3457 @@
+2014-05-23  Sergey Poznyakoff  <gray@gnu.org>
+
+	Version 4.2
+
+2014-05-22  Sergey Poznyakoff  <gray@gnu.org>
+
+	Minor fixes.
+	* src/rcfile.c (control_parser): Fix argument to assign_string.
+
+	* src/headers.h (anubis_db_open_t, anubis_db_open): Last
+	argument is
+	const char *.
+	* src/anubisdb.c (anubis_db_open): Last argument is const char *.
+	* src/anubisadm.c: Use const char * as a last argument to
+	anubis_db_open.
+	* src/authmode.c: Likewise.
+	* src/dbtext.c: Likewise.
+	* src/gdbm.c: Likewise.
+	* src/mysql.c: Likewise.
+	* src/pgsql.c: Likewise.
+
+2014-05-19  Sergey Poznyakoff  <gray@gnu.org>
+
+	Improve docs.
+	* doc/anubis.texi: Update.
+	* doc/mime.texi: Update.
+
+2014-05-18  Sergey Poznyakoff  <gray@gnu.org>
+
+	Support for MySQL options file.
+	* NEWS: Document the use of MySQL options file.
+	* doc/anubis.texi: Document all anubisusr options.
+	Describe the use of MySQL options file.
+	* src/mysql.c (mysql_db_open): Use MySQL options file.
+	Two new URL parameters: options-file and options-group.
+	* src/usr.opt: New option --tls-priorities.
+
+	More fixes.
+	* Makefile.am (AM_DISTCHECK_CONFIGURE_FLAGS): Enable everything.
+	* src/anubisusr.c [USE_GNUTLS] (tls_cafile): Remove.
+	[USE_GNUTLS] (secure): New global.
+	(starttls): Update start_ssl_client invocation.
+	* src/usr.opt (tls-cafile option): Set secure.cafile.
+	* src/authmode.c (asmtp_ehlo): Update call to start_ssl_server.
+	* src/getopt.m4 (version_etc_copyright): Update copyright years.
+	* src/gpg.c (gpg_proc): Remove useless preprocessor checks.
+	* src/headers.h: Likewise.
+	* src/rc-gram.y (yyerror): Argument is const char *.
+	* testsuite/mta.c: Remove the use of deprecated gnutls types and
+	functions.
+
+2014-05-16  Sergey Poznyakoff  <gray@gnu.org>
+
+	Fix tls code.
+	* doc/anubis.texi: Document ssl-priorities.
+	* src/extern.h (secure_struct) <prio>: New member.
+	* src/headers.h (start_ssl_client, start_ssl_server): Change
+	signature.
+	* src/rcfile.c (tls_parser): Handle the ssl-priorities statement.
+	* src/tls.c: Remove the use of obsolete types and functions.
+	(start_ssl_client, start_ssl_server): Remove
+	spurious parameters. Use the "secure" global instead.
+	* src/tunnel.c: Update uses of start_ssl_client, start_ssl_server.
+
+	Update copyright years.
+
+	Compatibility fixes.
+	* build/bootstrap (gnulib_extra_files): Remove 'missing'
+	* configure.ac: Add -lgpg-error when using GPGME
+	* src/tls.c (verify_certificate): Use
+	gnutls_certificate_verify_peers2.
+
+	Update for the recent automake version
+	* gint: Upgrade.
+	* lib/.gitignore: Add new files.
+	* src/Makefile.am: Use AM_CPPFLAGS instead of the obsolete
+	INCLUDES.
+	* testsuite/Makefile.am: Likewise.
+
+2013-03-08  Wojciech Polak  <polak@gnu.org>
+
+	Update THANKS file.
+
+2011-01-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement `elif' branches.
+	* src/rc-gram.y: Rewrite the cond_stmt rule to allow for `elif'
+	branches.
+	* src/rc-lex.l: New keyword ELSE.
+	* doc/anubis.texi: Document the elif statement.
+	* NEWS: Likewise.
+
+2011-01-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Delayed ESMTP authentication: initial implementation.
+	Anubis can be instructed to postpone ESMTP authentication
+	until MAIL
+	command is issued by the client.  This allows for changing
+	authentication
+	credentials in the SMTP section, depending on the envelope
+	information
+	supplied by the client.
+
+	* src/headers.h (T_ESMTP_AUTH_DELAYED): New flag.
+	(rcfile_call_section): Change signature.
+	* src/mda.c: Update calls to rcfile_call_section.
+	* src/rc-gram.y (rc_run_section): Take additional argument
+	specifying the class of the section to run.
+	(rc_call_section): Remove. All callers changed to use
+	rc_call_section
+	instead.
+	(rc_run_section_list): Remove unused function.
+	* src/rcfile.c (parse_esmtp_kv): New static.
+	(control_parser): Call parse_esmtp_kv as a part of the
+	default handling.
+	(control_kw): New keyword esmtp-auth-delayed.
+	(smtp_rule_parser,smtp_rule_section_init): New functions.
+	(rc_system_init): Call smtp_rule_section_init.
+	(rcfile_call_section): Take additional argument
+	specifying the class of the section to run.
+	* src/rcfile.h (rc_run_section): Change signature.
+	(rc_call_section): Remove.
+	* src/smtprepl.c (smtp_reply_free): Do nothing if argument is
+	NULL.
+	* src/tunnel.c (ehlo_reply): New static.
+	(handle_ehlo): Save reply in ehlo_reply.
+	Don't attempt authentication if T_ESMTP_AUTH_DELAYED is set...
+	(transfer_command): ... do it here instead.
+	* configure.ac: Version 4.1.92
+	* NEWS: Update.
+	* doc/anubis.texi: Document esmtp-auth-delayed and the
+	use of esmtp-* statements in SMTP sections.
+
+2010-08-03  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix detection of GNU TLS and the corresponding code.
+	* am/libgnutls.m4: Remove.
+	* am/gnutls.m4: New file.
+	* configure.ac: Set version number 4.1.91.
+	Remove gnutls checking, use ANUBIS_CHECK_TLS instead.
+	(TLS_COND): New condition.
+	* src/Makefile.am [TLS_COND] (TLS_C): New variable.
+	(libanubisdb_a_SOURCES): Use TLS_C.
+	(INCLUDES): Replace LIBGNUTLS_CFLAGS with LIBGNUTLS_INCLUDES.
+	* testsuite/Makefile.am (INCLUDES): Replace LIBGNUTLS_CFLAGS
+	with LIBGNUTLS_INCLUDES.
+	* testsuite/etc/Makefile.am: Add missing AM_V_GENs.
+
+	* src/anubisusr.c: Uniformly use USE_GNUTLS to protect
+	tls-specific
+	parts of code.
+	* src/anubisusr.h: Likewise.
+	* src/headers.h: Likewise.
+	* src/help.c: Likewise.
+	* src/main.c: Likewise.
+	* src/quit.c: Likewise.
+	* src/rcfile.c: Likewise.
+	* testsuite/mta.c: Likewise.
+	* src/tls.c: Likewise.
+	(print_x509_certificate_info): Use gnutls_fingerprint instead of
+	the deprecated gnutls_x509_fingerprint.
+	* src/smtprepl.c (smtp_reply_read): Fix coredump.
+
+	* NEWS: Update.
+
+2010-05-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update gint to a5774356.
+
+	Fix GINT_INIT usage.
+	* gint: Update to 4e48677eee5a
+	* configure.ac (--without-guile): Remove option. Handled by
+	GINT_INIT.
+	(GINT_INIT): Don't call it within a conditional.
+
+2010-04-19  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Use GINT for integrating with Guile.
+	* gint: New module.
+	* Makefile.am, configure.ac: Use gint.
+	* bootstrap.conf: Initialize git submodules.
+	* src/Makefile.am: Include gint.mk
+	* am/guile.m4: Remove.
+	* src/guile.c (guile_safe_exec): Use scm_c_catch instead of
+	the deprecated scm_internal_lazy_catch.
+
+2010-04-01  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Prepare for Guile 2.0: fix obsolete and deprecated calls in
+	Guile code.
+	* am/guile.m4: Import from Mailutils.
+	* configure.ac: Use AC_DEFINE_UNQUOTED to define
+	a replacement for socklen_t.
+	* src/guile.c (guile_debug): Protect calls to
+	SCM_DEVAL_P &c. by #ifdef GUILE_DEBUG_MACROS
+	(guile_process_proc_handler): Use scm_apply_3
+	to avoid unwanted evaluation of parameters.
+	(guile_load_path_append_handler)
+	(guile_to_anubis, guile_process_proc): Remove the uses of
+	deprecated Guile functions.
+	* src/logport.c [!HAVE_SCM_T_OFF](scm_t_off): New typedef.
+	(scm_tc16_anubis_error_port)
+	(scm_tc16_anubis_info_port): Change type to scm_t_bits.
+	(_make_anubis_log_port): Use scm_new_port_table_entry instead
+	of the deprecated scm_add_to_port_table.
+	(_anubis_error_port_seek): Fix signature and return type.
+
+2010-01-08  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor fix.
+	* src/message.c (create_msgid): Do not allow seq to
+	overflow.
+
+	Improve logging.
+	* src/headers.h (MSGIDLEN, MSGIDBOUND): New defines.
+	(message_id): New proto.
+	* src/message.c (message_struct): New member id.
+	(create_msgid): New function.
+	(message_new,message_reset): Initialize message id.
+	(message_id): New function.
+	* src/smtprepl.h (smtp_reply_line_ptr): New proto.
+	* src/transmode.c (session_prologue): avoid coredump
+	if session.anubis is NULL.
+	* src/tunnel.c (transfer_command, process_data): log
+	session commands and server replies.
+
+2009-12-28  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Initial implementation of SMTP command modification.
+	The special section SMTP is processed before transferring
+	each SMTP command to the remote server.  This section can
+	contain `modify command' actions which alter the command.
+
+	* src/extern.h (smtp_command_rule): New extern.
+	* src/list.c (list_head_item, list_tail_item): New functions.
+	* src/list.h (list_head_item, list_tail_item): New protos.
+	* src/main.c (smtp_command_rule): New global.
+	(main): Set smtp_command_rule.
+	* src/message.c (message_modify_command): New function.
+	* src/rc-gram.y (inst_eval): Implement command modification.
+	* src/tunnel.c (transfer_command): Remove second argument.
+	Always work on the last command stored in the assoc array.
+	Call smtp_command_rule to eventually modify the command.
+	All callers updated.
+	* src/rcfile.c: New keyword "smtp-command-rule" can be
+	used in the CONTROL section to modify the name of the
+	SMTP command section.
+	(rcfile_call_section): Issue 'No such section' warning in verbose
+	mode only.
+	* src/tunnel.c (save_command): Use case-insensitive comparison.
+	Convert command verb part to upper case.
+	(process_command): Convert buf to lowercase after saving command.
+	* NEWS, doc/anubis.texi: Update.
+
+2009-12-28  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes.
+	* configure.ac: Initialize WITH_GSASL.
+	* src/gpg.c (passphrase_cb): Fix non-ansi C code.
+
+2009-12-03  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfixes.
+	* src/net.c (swrite_n): Return immediately if nleft is 0.
+	* src/smtprepl.c (smtp_reply_replace_line): Add terminating
+	zero.
+
+2009-11-16  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Bugfix
+	* src/esmtp.c [!WITH_GSASL] (emstp_auth): Fix signature.
+
+2009-11-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix namespace, further improve mda mode.
+	* src/extern.h (struct message_struct): Remove.
+	* src/headers.h (MESSAGE): Change typedef. All uses updated.
+	(swrite_n): New proto.
+	(message_new, message_dup): New protos.
+	(assoc_list_dup, string_list_dup): New protos.
+
+	* src/map.c: In remote-mta mode, process each recipient
+	individually.
+	* src/message.c: Rewrite.
+	* src/net.c (swrite_n): New function.
+
+	* src/list.h (ANUBIS_LIST, ITERATOR): Change typedefs. All
+	uses updated.
+
+	* src/list.c: Update usage of ANUBIS_LIST, ITERATOR
+	and MESSAGE.
+	* src/anubisadm.c: Likewise.
+	* src/anubisdb.c: Likewise.
+	* src/anubisusr.c: Likewise.
+	* src/authmode.c: Likewise.
+	* src/dbtext.c: Likewise.
+	* src/esmtp.c: Likewise.
+	* src/gdbm.c: Likewise.
+	* src/gpg.c: Likewise.
+	* src/gsasl_srv.c: Likewise.
+	* src/guile.c: Likewise.
+	* src/map.c: Likewise.
+	* src/mime.c: Likewise.
+	* src/misc.c: Likewise.
+	* src/proclist.c: Likewise.
+	* src/rc-gram.y: Likewise.
+	* src/rcfile.c: Likewise.
+	* src/rcfile.h: Likewise.
+	* src/sql.c: Likewise.
+	* src/tunnel.c: Likewise.
+
+	* src/regex.c: Match functions take a const char * argument.
+
+2009-11-14  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Implement functions for reading and parsing SMTP replies.
+	* src/smtprepl.h: New file.
+	* src/smtprepl.c: New file.
+	* src/Makefile.am (libanubisdb_a_SOURCES): Add smtprepl.c
+	and smtprepl.h
+	* src/headers.h: Include smtprepl.h
+	(T_ALLOW_LOCAL_MTA): Remove.
+	(ASSERT_MTA_CONFIG): New define.
+	(swrite): Third argument is const
+	(smtp_reply_get): New proto.
+	(set_ehlo_domain): Change signature.
+	(esmtp_auth): Second argument is const.
+	(auth_method_list): Argument is const.
+	(xdatabase_capability): Change signature.
+
+	* src/mda.c: Initial implementation of mda over
+	SMTP.
+	* src/rc-lex.l (escape): Use \033 instead of non-standard
+	\e.
+	* src/rcfile.c: Remove allow-local-mta.
+	* src/net.c (swrite): Third argument is const
+	(send_eol): Fix conditional,
+	(get_response_smtp): Remove.
+	(smtp_reply_get): New function.
+	* src/transmode.c (session_prologue)
+	(anubis_proxy_mode): Call ASSERT_MTA_CONFIG.
+	* src/anubisusr.c, src/esmtp.c,
+	src/gsasl_srv.c, src/tunnel.c,
+	src/xdatabase.c: Rewrite SMTP transactions
+	using ANUBIS_SMTP_REPLY.
+	* src/authmode.c: Update calls to set_ehlo_domain
+	* src/daemon.c (stdinout): Call ASSERT_MTA_CONFIG.
+	* src/env.opt (get_options): Move mda mode checks to mda.c
+	* po/POTFILES.in: Add headers.h
+	* doc/anubis.texi: Update.
+
+2009-11-12  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Stylistic change.
+	* src/rc-gram.y: Fix indentation.
+
+2009-11-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Command line overrides configuration statements.
+	* src/rcfile.h (RC_ERROR_PRINTER): New argument `pfx'.
+	* src/headers.h (rc_disable_keyword): New proto.
+	* src/rc-gram.y (default_error_printer): New argument `pfx'.
+	(rc_disable_keyword, rc_keyword_is_disabled): New functions.
+	(parse_error, eval_error, eval_warning): Pass pfx parameter
+	to rc_error_printer.
+	(asgn_eval): Return if the keyword is disabled (set from the
+	command line).
+	* src/xdatabase.c: Reflect changes to RC_ERROR_PRINTER.
+	* src/rcfile.c (control_parser): Remove the now superfluous
+	condition.
+	* src/env.opt: Call rc_disable_keyword for options
+	overriding configuration statements.
+	* NEWS: Update.
+	* doc/anubis.texi, doc/pixie-dixie.texi: Update.
+
+2009-11-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Improve runtime diagnostics.
+	* bootstrap.conf (NLS_MARKERS): Add eval_error
+	and eval_warning.
+	* src/headers.h (EVAL_ENV): New typedef.
+	(eval_env_locus, eval_env_method)
+	(eval_env_message, eval_env_data)
+	(eval_error, eval_warning): New prototypes.
+	* src/rc-gram.y (eval_env_locus, eval_env_method)
+	(eval_env_message, eval_env_data)
+	(eval_error, eval_warning): New functions.
+	(asgn_eval): Update calls to p->parser.
+	* src/rcfile.h (RC_KW_HANDLED, RC_KW_UNKNOWN)
+	(RC_KW_ERROR): Remove.
+	(rc_kw_parser_t): Change signature.
+
+	* src/authmode.c, src/env.opt, src/gpg.c,
+	src/guile.c, src/map.c, src/rcfile.c: Reflect above changes.
+
+2009-11-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Pacify gcc
+	* bootstrap.conf (NLS_MARKERS): Add parse_error and tracefile.
+	* src/log.c (tracefile): Take into account T_LOCATION_COLUMN bit.
+	* src/logport.c: Shut gcc warning.
+	* src/misc.c (get_port_number): Port is unsigned.
+	Improve error checking.
+	* src/rc-lex.l: Initialize column to 1.
+	* src/rcfile.h (parse_error,tracefile): Mark as printflike.
+	* src/tls.c, src/xdatabase.c, testsuite/mta.c: Shut up gcc
+	warnings.
+
+	Improve diagnostics.
+	* src/Makefile.am (AM_LFLAGS): Add -dvp
+	(INCLUDES): Remove obsolete path.
+	* src/env.opt: New option location-column.
+	* src/headers.h (T_LOCATION_COLUMN): New define.
+	* src/rc-gram.y: Use Bison location support. Improve diagnostics.
+	* src/rc-lex.l: Likewise.
+	* src/rcfile.h (struct rc_loc): New member `column'.
+	(rc_yyltype): New struct.
+	(YYLTYPE,RC_LOCUS_FILE_EQ,RC_LOCUS_EQ): New defines.
+	(RC_ERROR_PRINTER): Change signature.
+	* src/xdatabase.c (_xdb_error_printer): Change signature.
+
+2009-11-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Housekeeping changes.
+	* build/ylwrap: Remove.
+	* src/rcfile.y: Remove to..
+	* src/rc-gram.y: .. this.
+	* src/rcfile.l: Remove to..
+	* src/rc-lex.l: .. this.
+	* po/POTFILES.in: Reflect the above changes.
+	* src/Makefile.am: Likewise.
+	(YLWRAP): Remove.
+	(EXTRA_DIST,BUILT_SOURCES): Remove rcfile.y rcfile.l and
+	the generated counterparts.
+	(rcfile-lex.c, rcfile-gram.c): Remove.
+	* src/getopt.m4 (print_help): Minor change.
+	* src/md5.c: Reindent.
+	(F1): Revert to the optimized version.
+
+	* .gitignore, build/.gitignore, src/.gitignore: Update.
+	* build/Makefile.am (EXTRA_DIST): Remove ylwrap.
+	* configure.ac (AM_INIT_AUTOMAKE): Add more options.
+	* doc/anubis.texi: Update.
+
+2009-11-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor changes.
+	* doc/anubis.texi: Cleanup the wording, check the spelling.
+	* src/rcfile.l (escape): Bugfix: \r was handled as \t.
+
+2009-11-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Improve docs.
+	* doc/Makefile.am (check-format, check-refs)
+	(check-fixmes, check-writeme)
+	(check-unrevised, all-check-docs)
+	(check-docs, master-menu, untabify): New rules
+	* doc/mastermenu.el: New file.
+	* doc/untabify.el: New file.
+	* doc/anubis.texi: Improve formatting. Rewrite the
+	`Mutt' chapter.
+	* doc/fdl.texi, doc/mime.texi,
+	doc/pixie-dixie.texi: Comment out the initial
+	sectioning command.
+	* doc/rendition.texi: Improved version.
+
+	* contrib/msg2smtp.pl: Remove hardcoded perl path.
+
+2009-11-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Proxy mode.
+	* src/headers.h (enum anubis_mode): New mode anubis_proxy.
+	(anubis_proxy_mode): New proto.
+	* src/rcfile.c (parse_log_facility): Bugfix.
+	(control_parser): Always handle the mode statement.
+	* src/transmode.c (anubis_proxy_mode): New function.
+	* src/daemon.c (anubis_child_main): Handle proxy mode.
+	* src/env.opt (anubis_set_mode): Likewise.
+	* doc/anubis.texi: Initial documentation of proxy mode.
+
+2009-10-16  Wojciech Polak  <polak@gnu.org>
+
+	* THANKS: Add Jorma Karvonen.
+
+	Enable silent rules.
+	* configure.ac: Require Autoconf 2.63, Automake 1.11,
+	enable silent rules.
+	* Makefile.am: Remove AUTOMAKE_OPTIONS.
+
+2009-09-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Minor changes
+	* bootstrap.conf: Read list of modules from gnulib.modules.
+	* configure.ac: Remove checks for sysexits.h, strdup, daemon
+	* src/headers.h: Remove unnecesary ifndefs
+
+2009-09-25  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Redirect Scheme error and output to syslog.
+	* configure.ac: Remove checks for syslog. Raise version number
+	to 4.1.90.
+	* src/headers.h: Remove checks for syslog.
+	Include keyword.h
+	* src/log.c: Remove checks for syslog.
+	* src/quit.c: Likewise.
+	* src/rcfile.c: Handle new keywords log-facility and log-tag.
+	* src/daemon.c (log_tag, log_facility): New variables.
+	(daemonize): Remove HAVE_SYSLOG conditional.
+	Pass log_tag and log_facility to openlog.
+	* src/errs.c (anubis_verror_log): New function.
+	(anubis_verror, anubis_error): Rewrite using anubis_verror_log.
+	* src/extern.h (log_tag, log_facility): New externs.
+	* src/guile.c (eval_catch_body): Remove.
+	(init_guile): Initialize error and info output ports.
+	(guile_ports_open): Use error and info output ports unless
+	output file is given.
+	* lib/keyword.c: New file.
+	* lib/keyword.h: New file.
+	* lib/Makefile.am: Add new files.
+	* src/logport.c: New file.
+	* src/Makefile.am (anubis_SOURCES): Add new files.
+	* src/authmode.c (asmtp_kw): Use anubis_keyword functions.
+
+	* NEWS: Update.
+	* doc/anubis.texi: Document new features.
+
+2009-09-24  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Improve Guile support.
+	* src/guile.c: Rewrite using "inline" approach.
+	(anubis_boot): Removed.
+	(guile_safe_exec): New function.
+	(init_guile): New function.
+	(guile_load_path_append, guile_load_program)
+	(guile_process_proc): Rewrite using guile_safe_exec.
+	(inner_catch_body): Call guile_ports_open before,
+	and guile_ports_close after execution of the function.
+	* src/headers.h (anubis_boot): Remove.
+	(init_guile): New proto.
+	* src/main.c (anubis_core): Remove.
+	(main) [WITH_GUILE]: Call init_guile.
+	Inline anubis() function.
+
+2009-07-01  Wojciech Polak  <polak@gnu.org>
+
+	Fix GSASL AUTH PLAIN. Thanks Thomas Zaech for the patch.
+
+2009-02-24  Wojciech Polak  <polak@gnu.org>
+
+	Update RPM spec.
+
+2008-12-20  Wojciech Polak  <polak@gnu.org>
+
+	Version 4.1.1
+
+2008-12-20  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Update docs
+
+2008-12-19  Wojciech Polak  <polak@gnu.org>
+
+	Change message text.
+
+2008-12-18  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Use new SASL callback interface.
+	* src/anubisusr.c: Use new SASL callback interface.
+	* src/esmtp.c: Likewise.
+	* src/gsasl_srv.c: Likewise.
+
+	* src/authmode.c: New keywords sasl-service, sasl-hostname,
+	sasl-realm
+	* src/extern.h (anubis_sasl_service,anubis_sasl_realm)
+	(anubis_sasl_hostname): New globals.
+
+	* usr.opt, adm.opt: Bugfix.
+
+2008-12-17  Wojciech Polak  <polak@gnu.org>
+
+	Fix typo.
+
+	Switched to Git repository.
+	* m4: Rename to am.
+	* README-alpha, README-hacking: Reflect the switch.
+	* */.cvsignore: Rename to .gitignore, update.
+	* ChangeLog: Rename to ChangeLog-CVS-old.
+
+2008-12-11  Wojciech Polak  <polak@gnu.org>
+
+	* configure.ac: Remove -Wno-deprecated-declarations.
+	* src/anubisusr.c, src/esmtp.c, src/gsasl.c, src/gsasl_srv.c,
+	src/headers.h: Update deprecated GSASL API calls.
+
+2008-12-11  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* src/Makefile.am (anubisadm_SOURCES): Add new files.
+	(anubisusr_SOURCES): Add new files.
+	* src/anubisadm.h: New file.
+	* src/adm.opt: New file.
+	* src/anubisusr.h: New file.
+	* src/usr.opt: New file.
+	* src/anubisadm.c: Remove command line option parsing. See adm.opt.
+	* src/anubisusr.c: Remove command line option parsing. See
+	usr.opt.
+	(smtp_get_reply): Use stream_getline, this fixes buffer size
+	problems.
+	* src/env.opt: Fix argument quoting.
+	* src/errs.c (hostname_error): Argument is const.
+	* src/gdbm.c, src/gpg.c, src/guile.c, src/proclist.c,
+	src/transmode.c: Minor change.
+	* src/getopt.m4: Import from Dico.
+	* src/headers.h (stream_getline): New prototype.
+	(hostname_error): Argument is const.
+	* src/main.c (copyright): Remove.
+	(xalloc_die): Call abort to pacify gcc.
+	* src/net.c (recvline): Rewrite using stream_getline. This also fixes
+	memory leak.
+	* src/stream.c (stream_readline): Do not insert \r before \n. This
+	is impossible to do correctly without a proper buffering scheme.
+	(stream_getline): New function.
+	* src/tunnel.c: Remove CRLF after a call to recvline.
+	(transfer_command): Compensate for this.
+
+2008-12-09  Wojciech Polak  <polak@gnu.org>
+
+	* configure.ac: Use default CFLAGS.
+	
+2008-10-13  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* src/tunnel.c (transfer_command): Ensure outgoing mail from and
+	rcpt to commands don't have whitespace after the colon.
+	* NEWS, configure.ac: version 4.1.1
+	* doc/anubis.texi: Minor fix.
+	* guile/entire-msg.scm: Use (ice-9 rdelim)
+
+	* testsuite/mta.c (check_address_command): New function (ported
+	from mailfromd).
+	(smtp): Improve RFC compliance.
+	* testsuite/etc/add-body-file.pat: 
+	* testsuite/etc/add-body.pat
+	* testsuite/etc/add1.pat
+	* testsuite/etc/add2.pat
+	* testsuite/etc/add3.pat
+	* testsuite/etc/cond.pat
+	* testsuite/etc/del1.pat
+	* testsuite/etc/del2.pat
+	* testsuite/etc/del3.pat
+	* testsuite/etc/del4.pat
+	* testsuite/etc/empty.pat
+	* testsuite/etc/gpgcrypt.pat
+	* testsuite/etc/gpgse.pat
+	* testsuite/etc/gpgsign.pat
+	* testsuite/etc/mime1.pat
+	* testsuite/etc/mime2.pat
+	* testsuite/etc/mod-body.pat
+	* testsuite/etc/mod-header.pat
+	* testsuite/etc/mult.pat
+	* testsuite/etc/no-backref.pat
+	* testsuite/etc/paolo.pat
+	* testsuite/etc/remail.pat
+	* testsuite/etc/rot-13.pat
+	* testsuite/etc/tlsoneway.pat
+	* testsuite/etc/trigger.pat	
+
+2008-07-03  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Fix loop-detection code, add some minor improvements.
+	
+	* README-hacking: Update.
+	* bootstrap.conf: Add sysexits.
+	* build/bootstrap: Synch with gnulib repository.
+	* build/gnulib.modules: Remove.
+	* lib/.cvsignore, m4/.cvsignore, po/.cvsignore: Update.
+	* lib/Makefile.am: Remove unnecessary initializations.
+	* src/authmode.c (anubis_authenticate_mode): Remove a block of
+	code duplicated in transmode.c and replace it with a call to
+	session_prologue.
+	* src/transmode.c (anubis_transparent_mode): Likewise.
+	(string_to_ipaddr, session_prologue): New functions.
+	* src/env.opt: Fix Emacs mode marker.
+	* src/headers.h: Include sysexits.h unconditionally.
+	(session_prologue): New prototype.
+	* src/tls.c (cipher_info): Add missing newline.
+
+2007-11-04  Wojciech Polak  <polak@gnu.org>
+
+	======================
+	 Released version 4.1
+	======================
+
+2007-11-04  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* src/guile.c: Switch to Guile 1.8.x
+	* m4/guile.m4: Require at least Guile 1.8.0
+	* NEWS: Update
+
+2007-11-03  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* src/authmode.c (anubis_authenticate_mode): Fix indentation.
+	* src/daemon.c (_stdio_read): Fix return value.
+	* src/headers.h (xdatabase_capability): Change signature.
+	* src/tunnel.c (handle_ehlo): Update call to xdatabase_capability.
+	* src/xdatabase.c (xdatabase_capability): Expand reply buffer as
+	needed. 
+
+	* configure.ac, NEWS: version 4.1.
+	* src/exec.c (exec_argv): Fix reading program's output.
+	* src/gdbm.c (gdbm_content_to_record): zero-terminate the key.
+	* src/getopt.m4 (print_help): Override bug in GNU M4.
+	* src/gpg.c (anubis_gpg_read): New function.
+	(gpg_sign, gpg_encrypt, gpg_sign_encrypt): Fix reading GPG
+	output.
+	* src/mime.c (message_append_signature_file): Remove useless
+	MAXPATHLEN limit.
+	
+2007-11-02  Wojciech Polak
+
+	* bootstrap.conf (gnulib_modules): Add xalloc.
+	* po/POTFILES.in: Remove src/mem.c.
+
+2007-11-01  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* NEWS: Update
+	* doc/anubis.texi: Update
+
+2007-10-31  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* README: Clean up formatting.
+	* README-hacking: Update.
+	* doc/Makefile.am (manual): Use texi2html to create HTML sources.
+	* doc/gendocs_template: Likewise.
+	* doc/anubis.texi: Fix sectioning commands. Use @acronym when
+	needed.
+	* lib/Makefile.am: Initialize some variables before including
+	gnulib.mk.
+	* src/mem.c, src/mem.h: Remove.
+	* src/Makefile.am (libanubisdb_a_SOURCES): Remove mem.c and mem.h.
+	* src/anubisadm.c: Do not include getline.h.
+	Define xalloc_die instead of adm_memory_error.
+	* src/anubisusr.c: Likewise.
+	* src/headers.h: Remove mem.h.
+	Include xalloc.h.
+	* src/main.c: Define xalloc_die.
+	
+	* src/list.c, src/pgsql.c, src/mysql.c, src/sql.c,
+	src/stream.c: Fix memory management .
+	* src/authmode.c, src/gpg.c, src/misc.c, src/rcfile.c,
+	src/tunnel.c: Use xstrdup instead of allocbuf.
+
+	* src/anubisdb.c, src/sql.h, src/tls.c: Minor change .
+
+	* src/rcfile.h (struct rc_expr): New member `sep'.
+	* src/rcfile.l: Return != as a token.
+	(string_add): Initialize next.
+	* src/rcfile.y: Handle optional concatentation directive in expr
+	statement. Handle != opcode.
+	Disallow placing regex modifiers before opcode (= or !=).
+	(rc_node_print): Reflect concatenation separator.
+	(re_eval_list): Take new argument: concatenation separator.
+	All uses updated.
+
+	* testsuite/lib/anubis.exp: Do not display "be patient"
+	warning. Things have become faster nowadays.
+	* testsuite/etc/mod-header.in, testsuite/etc/std.in: Remove
+	obsolete usage of regex flags before the equals sign.
+	
+2007-08-06  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	Relicense everything under GPLv3+
+	
+2007-08-06  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* Makefile.am: Place src before po, to satisfy the dependency
+	POTFILES -> env.c 
+	* configure.ac: Check for locale.h
+	* lib/argcv.c (argcv_string): Fix type mismatch in conditional
+	* src/daemon.c (anubis_child_main): Fix call to net_close_stream
+	* src/env.opt (anubis_changeowner): Argument is const
+	* src/exec.c (sig_local): Remove forward decl.
+	* src/headers.h (stream_io_t): Remove
+	(stream_read_t, stream_write_t): Introduce instead
+	All dependencies updated
+	(stream_write): Second argument is const
+	(anubis_changeowner): argument is const
+	* src/stream.c: Likewise 
+	* src/gsasl.c (_gsasl_write): Fix signature
+	* src/tls.c (_tls_write) : Fix signature
+	* src/net.c (connect_directly_to): Fix error message
+	* src/rcfile.c (_anubis_hang): Fix type
+	* src/transmode.c: (anubis_transparent_mode): Fix calls to
+	service_unavailable
+	* src/tunnel.c (handle_starttls): Fix get_response_smtp invocation
+	(handle_ehlo): Fix calls to swrite
+	* src/xdatabase.c: Fix error message
+	* testsuite/findport.c: Include string.h
+
+2007-08-06  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* bootstrap.conf: New file
+	* Makefile.am (SUBDIRS): Remove intl
+	* configure.ac: Use gnulib
+	* lib/Makefile.am: Likewise
+	* src/Makefile.am (EXTRA_DIST): Add getopt.m4 and env.opt
+	* src/env.c: Removed.
+	* src/env.opt, src/getopt.m4: New files
+	* src/headers.h (ANUBIS_PRINTFLIKE): New macro
+	(anubis_error,anubis_warning): Mark with ANUBIS_PRINTFLIKE
+	(print_version,print_usage): Removed
+	* src/help.c (print_version,print_usage): Remove functions
+
+	* lib/getline.c, lib/getline.h, lib/getopt.c, lib/getopt1.c,
+	lib/getpass.c, lib/gettext.h, lib/obstack.c, lib/obstack.h,
+	lib/setenv.c, lib/getopt.h: Remove
+
+	* m4/exitfail.m4, m4/getdelim.m4, m4/getline.m4, m4/getopt.m4,
+	m4/getpass.m4, m4/gnulib.m4, m4/inttypes_h_gl.m4,
+	m4/obstack.m4, m4/onceonly_2_57.m4, m4/uintmax_t_gl.m4,
+	m4/ulonglong_gl.m4, m4/unistd_h.m4, m4/stdbool.m4,
+	m4/stdint_h_gl.m4: Remove
+
+	* po/de.po, po/fr.po, po/ms.po, po/nb.po, po/nl.po, po/pl.po,
+	po/ro.po, po/ru.po, po/tr.po, po/uk.po, po/vi.po, po/LINGUAS,
+	po/Makevars: Remove
+
+	* build/bootstrap: Modified version from gnulib
+	* NEWS, README-alpha: Update
+	* README-hacking: New file
+	
+2007-07-29  Wojciech Polak
+
+	* */*: OpenSSL support has been dropped.
+
+2006-06-27  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* build/bootstrap: Auxiliary script to update anubis library from
+	gnulib.
+	* build/gnulib.modules: List of modules to use.
+	
+	* configure.ac: Remove explicit checks for getopt_long, obstack,
+	snprintf, getline, getpass in favor of gnulib check.
+	* lib/Makefile.am: Rewritten for automatic updates
+	
+	* lib/getline.c, lib/getline.h, lib/getopt.c, lib/getopt.h,
+	lib/getopt1.c, lib/getpass.c, lib/gettext.h, lib/obstack.c,
+	lib/obstack.h, lib/exit.h, lib/exitfail.c, lib/exitfail.h,
+	lib/getdelim.c, lib/getdelim.h, lib/getopt_.h, lib/getopt_int.h,
+	lib/getpass.h, lib/stdbool_.h: Update from gnulib
+
+	* m4/libgnutls.m4: Properly quote macro name.
+	* m4/exitfail.m4, m4/getdelim.m4, m4/getline.m4, m4/getopt.m4,
+	m4/getpass.m4, m4/gnulib.m4, m4/inttypes_h_gl.m4, m4/obstack.m4,
+	m4/onceonly_2_57.m4, m4/stdbool.m4, m4/stdint_h_gl.m4,
+	m4/uintmax_t_gl.m4, m4/ulonglong_gl.m4, m4/unistd_h.m4: Update
+	from gnulib
+	* m4/.cvsignore: Update
+
+2006-02-10  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* configure.ac (WITH_GSASL): Default to no
+
+2006-01-18  Sergey Poznyakoff  <gray@gnu.org.ua>
+
+	* README-alpha: Update cvs co information.
+
+	* src/ident.c (ident_extract_username): Fix bug introduced 2005-04-18
+
+2005-08-22  Sergey Poznyakoff 
+
+	* m4/gsasl.m4: Enable GSASL by default whenever possible.
+	* configure.ac: Display summary after configuring.
+
+2005-07-09  Wojciech Polak
+
+	* src/daemon.c (set_unprivileged_user): Copy an unprivileged
+	user name to session.clientname.
+	* src/rcfile.c (control_parser): Bugfix. Set T_USER_NOTPRIVIL
+	flag for KW_USER_NOTPRIVILEGED.
+	* src/authmode.c (anubis_authenticate_mode): Try to open user's
+	configuration file from default location if the CONFIG field
+	is null.
+	
+2005-07-09  Sergey Poznyakoff
+
+	* src/Makefile.am (anubis.cflow): Do not process header
+	files, they will be included anyway.
+	* build/cflow.rc: New file
+	* build/Makefile.am: Add cflow.rc.
+
+2005-06-06  Sergey Poznyakoff
+
+	* src/gsasl_srv.c (auth_gsasl_capa_init): Make sure the list
+	of supported mechanisms preserves ordering of
+	sasl-allowed-mech variable.
+	* src/list.c (list_intersect): Give more detail in the comment.
+	* testsuite/etc/target.in.in (sasl-allowed-mech): Only CRAM-MD5
+	for testing purposes.
+
+2005-05-25  Sergey Poznyakoff 
+
+	* TODO: Updated
+	* src/Makefile.am (flowchart,anubis.cflow): New rules
+	* src/authmode.c: Do not duplicate remote_client/remote_server as
+	parameters/autos. 
+	* src/daemon.c: Likewise.
+	* src/extern.h: Likewise.
+	* src/gsasl_srv.c: Likewise.
+	* src/headers.h: Likewise.
+	* src/transmode.c: Likewise.
+
+2005-04-20  Sergey Poznyakoff
+
+	* configure.ac: Changed version number to 4.0.90.
+	* NEWS: Updated.
+	* src/proclist.c: New file. Subprocess database for Anubis.
+	* src/Makefile.am (anubis_SOURCES): Add proclist.c
+	* src/daemon.c: Rewritten using functions from proclist.c
+	* src/exec.c: Likewise
+	* src/gsasl_srv.c (anubis_name_cmp): Move to misc.c
+	* src/misc.c (anubis_name_cmp):" Moved from gsasl_srv.c
+	* src/headers.h (proclist_register,proclist_cleanup)
+	(proclist_init,proclist_count): New functions.
+	* src/list.c (_iterator_attach,_iterator_detach): New functions.
+	(iterator_create,iterator_destroy): Rewritten using the above
+	functions.
+	(list_remove): make sure to return actual data, an application
+	may well supply data==NULL.
+	(list_iterate): Do not use memory allocation functions. The
+	function is safe to be called from signal handlers.
+	* src/transmode.c (anubis_transparent_mode): Do not close pam
+	session if it was not open.
+	
+2005-04-19  Sergey Poznyakoff 
+
+	* src/guile.c (guile_ports_open): Make sure port name always
+	reflects actual file name.
+	(guile_parser): Bugfix. guile_ports_open() was called too early,
+	which led to coredump when processing guile-output statement.
+	Besides guile_ports_close() was not called before return.
+
+2005-04-18  Sergey Poznyakoff
+
+	* src/gpg.c (fail_if_err): Rewritten to avoid evaluating the
+	argument twice.
+	(passphrase_cb): Rewritten to work with GPGME 1.0.2. Patch
+	courtesy of Brian Dessent <brian@dessent.net>.
+	* src/ident.c (ident_extract_username): Skip any whitespace
+	after ':'. Patch courtesy of Brian Dessent <brian@dessent.net>.
+	* THANKS: Updated
+	
+2005-03-02  Sergey Poznyakoff  
+
+	* src/rcfile.c (control_parser): A couple of minor stylistic
+	fixes. Implemented ALLOW-HANG keyword.
+
+2005-02-26  Sergey Poznyakoff
+
+	* src/ident.c (auth_ident): Bugfix
+	* src/rcfile.c: New CONTROL statement "HANG". Instructs
+	child process to hang for a given number of seconds
+	before processing.
+	* src/guile.c (guile_load_path_append,guile_load_program): Changed
+	prototype.
+	(inner_catch_body): New function
+	(eval_catch_body): Removed
+	(guile_parser): Largely rewritten. Wherever guile internal functions
+	are called, do so by wrapping them in a lazy catch to prevent
+	guile from aborting the child process on error.
+	* src/headers.h (guile_load_path_append,guile_load_program)
+	(guile_rewrite_line): Removed.
+	* src/transmode.c (anubis_transparent_mode): Call auth_tunnel no
+	matter was the client recognized or not. Thus, even if Anubis
+	has switched to the unprivileged level, it executest appropriate
+	parts from the main configuration file.
+	* doc/anubis.texi: Document HANG statement
+	
+2005-02-12  Sergey Poznyakoff
+
+	* TODO: Minor issue regarding session.execpath.
+	* lib/argcv.c: New file.
+	* lib/argcv.h: New file.
+	* lib/Makefile.am (libanubis_a_SOURCES): Add argcv.c and
+	argcv.h
+	* src/anubisusr.c: Use argcv_get/argcv_free
+	* src/message.c: Likewise.
+	* src/quit.c: Likewise.
+	* src/rcfile.c: Likewise.
+	* src/rcfile.y: Likewise.
+	* src/regex.c: Likewise.
+	* src/exec.c: Likewise.
+	(gen_execargs): Removed.
+	* src/env.c: Likewise.
+	(argcv_dup): Removed
+	* src/headers.h: Include argcv.h
+	* src/mem.c (free_pptr): Removed
+	
+2005-02-07  Sergey Poznyakoff
+
+	* src/esmtp.c (get_reply): Changed declaration. All callers
+	updated
+	* src/net.c (get_response_smtp): Minor correctrion;
+	* src/tunnel.c (smtp_session_transparent): Bugfix
+	(smtp_begin): Send EHLO, not HELO.
+
+2005-02-03  Sergey Poznyakoff 
+
+	Further cleanup as per TODO:5. Removed fixed-size
+	buffers related to recvline calls.
+	
+	* src/headers.h (get_response_smtp): New function
+	(readline): Changed declaration
+	(recvline_ptr): Removed
+	* src/net.c (recvline): Removed
+	(recvline_ptr): Renamed to recvline. All callers changed
+	* src/authmode.c: Use new recvline.
+	* src/gsasl_srv.c: Likewise.
+	* src/ident.c: Likewise.
+	* src/mda.c: Likewise.
+	* src/tunnel.c: Likewise.
+	* src/xdatabase.c: Likewise.
+
+2005-01-21  Sergey Poznyakoff
+
+	* configure.ac: Raised version number to 4.1
+	* src/env.c: New option --from
+	* src/help.c: Document --from option
+	* src/exec.c (make_local_connection_arg): Removed. Not needed
+	any more.
+	* src/extern.h (incoming_mail_rule,outgoing_mail_rule)
+	(from_address): New variables.
+	* src/headers.h (send_eol,mda)
+	(anubis_set_encryption_mech_list): New prototype.
+	(anubis_assoc_cmp): New function
+	(collect_headers): Changed prototype
+	(make_local_connection_arg): Removed.
+	* src/main.c (incoming_mail_rule,outgoing_mail_rule): New
+	variables.
+	* src/mda.c (deliver): Expand macro notations in local mailer
+	command line before invoking it.
+	Use rcfile_call_section to process incoming mail rules.
+	(mda): Ensure from_address is set.
+	* src/misc.c (anubis_assoc_cmp): New function
+	(assign_string, assign_string_n): Accept NULL argument.
+	* src/rcfile.c (control_parser): Handle incoming-mail-rule
+	and outgoing-mail-rule options.
+	* src/tunnel.c (collect_headers): Take second argument, specifying
+	the first header line (or NULL).
+	(process_data): Use rcfile_call_section to process outgoing mail
+	rules.
+	
+	* doc/anubis.texi: Initial documentation for MDA mode
+	* doc/Makefile.am: Rewritten to use gendocs.sh. Needs CVS
+	version of the script.
+	* doc/index.html.in: Removed.
+	* doc/gendocs_template: New file.
+	* doc/fdl.texi: Fixed sectioning.
+	* doc/mime.texi: New file
+	
+2005-01-20  Sergey Poznyakoff
+
+	Initial implementation of MDA mode, allowing Anubis to
+	process incoming mail.
+	Some cleanup according to TODO:5
+	
+	* configure.ac: Check for sysexits.h
+	* src/mda.c: New file. Mail Delivery Agent mode support
+	* src/Makefile.am: Add mda.c
+
+	* src/env.c (x_argc,x_argv): New globals
+	--mode option does not depend on WITH_GSASL anymore.
+	(get_options): Changed handling of non-optional arguments.
+	Argument to -l option must be properly quoted.
+	* src/exec.c (make_local_connection_arg): New function
+
+	* src/headers.h: Provide EX_ macros or include sysexits.h
+	when available
+	(enum anubis_mode.anubis_mda): New mode
+	* src/extern.h (session_struct): Removed fixed-size strings.
+	All referers updated.
+	* src/anubisusr.c: Likewise
+	* src/authmode.c: Likewise
+	* src/daemon.c: Likewise
+	* src/ident.c: Likewise
+	* src/main.c: Likewise
+	* src/map.c: Likewise
+	* src/misc.c: Likewise
+	* src/rcfile.c: Likewise
+	* src/regex.c: Likewise
+	* src/transmode.c: Likewise
+
+	* src/net.c (send_eol): New function.
+	* src/tunnel.c: Use send_eol() when needed.
+	(transfer_header,collect_header)
+	(transfer_body, collect_body): Changed to extern
+
+2005-01-02  Sergey Poznyakoff
+
+	* doc/anubis.texi: Documented read-entire-body and escape
+	sequences.
+	* src/rcfile.l (escape): Handle \b escape
+	* src/rcfile.y (regex production): Bail out if regex compile
+	failed.
+	* src/regex.c (anubis_regex_replace): Bugfix
+
+	* testsuite/anubis/paolo.exp: New test
+	* testsuite/etc/paolo.in: Likewise
+	* testsuite/etc/paolo.pat: Likewise
+	* testsuite/etc/Makefile.am: Updated
+
+2004-12-18  Wojciech Polak
+
+	======================
+	 Released version 4.0
+	======================
+
+	* NEWS: Updated.
+	* configure.ac: Raised version number to 4.0.
+
+2004-12-17  Wojciech Polak
+
+	* doc/anubis.texi: Updated.
+	* doc/anubis.1: Likewise.
+	* elisp/anubis-mode.el: Added new keywords.
+	* lib/obstack.c: Provide newer version.
+	* lib/obstack.h: Likewise.
+	* src/esmtp.c (do_gsasl_auth): Removed trailing \n in a verbose
+	message.
+
+2004-12-17  Sergey Poznyakoff
+
+	* README: Updated
+	* configure.ac: Use -Wno-deprecated-declarations gcc flag
+	if GSASL support is enabled.
+	* src/authmode.c (rc_parser): Use anubis_set_server_mech_list()
+	* src/esmtp.c (anubis_set_client_mech_list)
+	(anubis_set_encryption_mech_list): New function
+	(esmtp_auth): Support the list of mechanisms that can be used
+	only over an encrypted channel.
+	[!WITH_GSASL] (esmtp_auth): Provide function definition
+	* src/extern.h (struct session_struct): Removed mta_username,
+	mta_password
+	* src/gsasl_srv.c (anubis_set_mech_list): Changed declaration
+	(anubis_set_server_mech_list): New function
+	* src/headers.h: Provide new prototypes
+	* src/quit.c: Removed session_struct.mta_username, mta_password
+	* src/tunnel.c: Likewise
+	* src/rcfile.c (control_parser): Handle new statements
+	* testsuite/mta.c: Minor fix
+	* testsuite/etc/interface.in.in: Use WITH_GNUTLS instead of
+	WITH_SSL
+	* testsuite/etc/target.in.in: Likewise
+	* testsuite/lib/anubis.exp (run_in_authmode): Fix message text
+	* doc/anubis.texi: Documented new statements
+
+2004-12-16  Sergey Poznyakoff 
+
+	* TODO: updated
+	* configure.ac: set "M4_DEFS -DWITH_GSASL"
+	* src/esmtp.c: Completely rewritten using gsasl
+	* src/extern.h (anon_token,authorization_id,authentication_id)
+	(auth_password,auth_service,auth_hostname,generic_service_name)
+	(auth_passcode,auth_realm): New variables.
+	* src/gsasl_srv.c: Updated
+	* src/headers.h: Updated
+	* src/stream.c (stream_readline): Minor fix
+	* src/tunnel.c (collect_body): delete AUTH part.
+	* testsuite/mta.c: minor indentation fix
+	* testsuite/etc/Makefile.am: Change $(RCFILES) std.pat:
+	* Makefile.am: dependency to $(RCFILES) std.pat: Makefile.am
+	* testsuite/etc/target.in.in: Conditionally include -c and -k.
+	* testsuite/lib/anubis.exp (sanubis_pat): Fix TLS/GSASL usage
+
+2004-12-15  Sergey Poznyakoff
+
+	* configure.ac: Bail out if required SQL libraries are not
+	found. Strictly control arguments to --with-postgres/--with-mysql
+	* src/anubisusr.c (smtp_get_reply): Minor fix: clear trailing \r
+	in buf as well.
+	(cb_service): Fixed typo
+	* src/gsasl.c (write_chunk,_gsasl_read): Removed old usage of
+	gsasl_decode/gsasl_encode.
+	* src/help.c (config_opts): Reflect WITH_PGSQL
+	* src/net.c (recvline_ptr): Fixed buffer reallocation condition
+	(it didn't take null terminator into account).
+	* src/sql.c (sql_db_get,sql_db_delete,sql_db_put): Fixed eventual
+	sql injection.
+	* THANKS: Added Daniel S. Haischt 
+
+2004-12-09  Wojciech Polak
+
+	* src/socks.c: Fixed possible buffer overflow.
+
+2004-12-03  Sergey Poznyakoff 
+
+	* contrib/Makefile.am: Use AM_INSTALLCHECK_STD_OPTIONS_EXEMPT
+	for msg2smtp.pl
+	* src/daemon.c (loop): Block SIGCHLD while incrementing
+	nchild.
+	* src/esmtp.c (esmtp_auth): Minor fix.
+	* src/gpg.c (create_key_array): Dynamically allocate current_key.
+	* src/gsasl.c (install_gsasl_stream): Use xmalloc
+	* src/gsasl_srv.c (anubis_auth_gsasl): A bit of sugar for broken
+	printfs: print NULLs explicitely.
+	* src/net.c (get_response_smtp): Fix eventual buffer overflow
+	* src/tunnel.c: Fix typo in comment
+	* src/xdatabase.c (xdatabase): Handle NULL argument.
+	* testsuite/etc/Makefile.am: Add dependency
+	$(RCFILES) std.pat: Makefile.am
+	* testsuite/lib/anubis.exp (anubis_init): Do not pass -s option
+	to anubis.
+	
+2004-11-22  Wojciech Polak
+
+	Potential security fixes by Ulf Härnhammar:
+
+	* src/anubisadm.c (adm_memory_error): Fixed wrong format strings.
+	(op_add_or_modify): Likewise.
+	* src/main.c (anubis_memory_error): Likewise.
+	* src/authmode.c (anubis_authenticate_mode): Set the last element
+	of `session.clientname' to '\0'.
+
+2004-10-29  Sergey Poznyakoff
+
+	* src/regex.c (anubis_regex_replace): Fixed coredump
+	* testsuite/anubis/no-backref.exp: New regression test. Test for
+	'Paolo syndrome'.
+	* testsuite/anubis/DISTFILES: Add no-backref.exp
+	* testsuite/etc/no-backref.in: Data for testing 'Paolo syndrome'
+	* testsuite/etc/no-backref.pat: Likewise
+	* testsuite/etc/Makefile.am: Add no-backref.pat and no-backref.in
+
+	* THANKS: Updated
+	
+2004-10-16  Wojciech Polak
+
+	* configure.ac: Require GPGME 1.0.0.
+
+2004-09-24  Sergey Poznyakoff 
+
+	Released version 3.9.96
+	
+	* Makefile.am: Use gnits
+	* NEWS: Updated
+	* doc/Makefile.am ($(PROJECT).text): Explicitely pass info file
+	from cwd (breaks builds from a separate directory but we never use
+	them when making docs, anyway).
+
+2004-09-22  Sergey Poznyakoff
+
+	* src/anubisusr.c: Got read of secure.client and secure.server
+	globals
+	* src/extern.h: Likewise
+	* src/quit.c: Likewise
+	* src/transmode.c: Likewise
+	* src/tunnel.c: Likewise
+	
+	* src/rcfile.c: Allow use of `logfiles' and `loglevel' in main
+	configuration file, provided that the uid is not 0.
+	* src/headers.h: New macro T_DISABLE_SYSLOG
+	* src/log.c: Do not use syslog if T_DISABLE_SYSLOG is set
+	
+	* src/daemon.c (daemonize): Use info() instead of syslog().
+	(sig_cld): Improved diagnostics.
+	* src/stream.c (stream_destroy): Use xfree() for consistency
+	
+	* src/errs.c: Minor formatting fix.
+	* src/message.c: Likewise
+
+	* testsuite/etc/interface.in.in: Use logfile directive
+	* testsuite/etc/target.in.in: Likewise
+	
+2004-09-17  Sergey Poznyakoff
+
+	* testsuite/lib/anubis.exp (anubis_pat): Updated to
+	support the recent changes (2004-09-13)
+	
+	* src/errs.c (anubis_error): Rewritten
+	(anubis_warning): New function (for future use).
+	
+	* src/headers.h (T_ERROR): Removed.
+	(SOFT,HARD,SYNTAX): Removed
+	(anubis_error,anubis_warning): New declaration
+	
+	* src/anubisusr.c (anubis_error): Updated definition
+	Issue QUIT command before normal exiting.
+	
+	* src/authmode.c: Do not use T_ERROR. Updated calls to
+	anubis_error
+	Issue 221 response on QUIT command
+	
+	* src/daemon.c: Do not use T_ERROR. Updated calls to anubis_error
+	* src/env.c: Likewise
+	* src/esmtp.c: Likewise
+	* src/exec.c: Likewise
+	* src/gpg.c: Likewise
+	* src/gsasl_srv.c: Likewise
+	* src/guile.c: Likewise
+	* src/ident.c: Likewise
+	* src/main.c: Likewise
+	* src/map.c: Likewise
+	* src/mime.c: Likewise
+	* src/net.c: Likewise
+	* src/rcfile.c: Likewise
+	* src/rcfile.l: Likewise
+	* src/rcfile.y: Likewise
+	* src/regex.c: Likewise
+	* src/socks.c: Likewise
+	* src/ssl.c: Likewise
+	* src/tls.c: Likewise
+	* src/transmode.c: Likewise
+	* src/tunnel.c: Likewise
+	* src/xdatabase.c: Likewise
+	
+2004-09-13  Sergey Poznyakoff
+
+	* src/authmode.c (anubis_smtp): Force T_SSL_ONEWAY if `ssl yes'
+	is requested and SSL connection between the MUA and Anubis has been
+	successfully established. Necessary for handle_ehlo() to
+	work.
+	(asmtp_capa_init) [HAVE_TLS]: Changed to USE_SSL.
+	* src/tunnel.c (handle_ehlo): Comment updated.
+
+2004-09-03  Sergey Poznyakoff  
+
+	* src/authmode.c: Added missing pam_retval declaration.
+	* src/transmode.c: Likewise
+
+2004-09-02  Sergey Poznyakoff 
+
+	* doc/anubis.texi (Mutt): New node documenting the existing
+	methods of interfacing mutt with anubis.
+
+2004-08-17  Wojciech Polak
+
+	* doc/anubis.texi (Sample Beginning): Removed text
+	about IDENT protocol server.
+	* TODO: Updated.
+
+2004-08-14  Sergey Poznyakoff
+
+	* testsuite/anubis.authmode/abase.exp: New file
+	* testsuite/anubis.authmode/DISTFILES: Updated
+	* src/authmode.c (anubis_smtp,xdb_loop): Exit if T_ERROR
+	bit is set.
+	
+	* testsuite/lib/anubis.exp (update_config): Return -1 if
+	res is an empty list. Set anubisusr verbose mode only if
+	$verbose > 2
+	(run_in_authmode): Declare unsupported test if anubis is
+	configured without GSASL
+	(default_anubis_stop,anubis_exit): New procedures
+	(anubis_test_file): Call remote_close
+	(anubis_pat): Call default_anubis_stop
+
+2004-08-13  Sergey Poznyakoff
+
+	* src/anubisusr.c: New options --file and --netrc allow
+	to override default file names for users' .anubisrc and
+	.netrc files
+	(diff): Proceed with the update if the remote rcfile does
+	not exist.
+	(main): Bail out on unknown options
+	* src/authmode.c (asmtp_ehlo_reply): Save ehlo domain for
+	further use in tunnel.c
+	(anubis_authenticate_mode): Process rc file whenever it
+	is present in ANUBIS_USER.
+	* src/daemon.c (daemonize): Ignore SIGHUP before call to
+	daemon(). Write pid file.
+	* src/dbtext.c (dbtext_open): Minor fix
+	* src/env.c: New option --pid-file
+	(write_pid_file): New function
+	* src/headers.h: New declarations.
+	* src/tunnel.c (set_ehlo_domain): New function
+	* src/xdatabase.c (xexamine): Issue reply 300 if rc file
+	does not exist.
+
+	* testsuite/findport.c: New file
+	* testsuite/anubis.authmode: New directory
+	* testsuite/anubis.authmode/DISTFILE: New file
+	* testsuite/anubis.authmode/base.exp: New file
+	* testsuite/anubis.authmode/gpg.exp: New file
+	* testsuite/anubis.authmode/guile.exp: New file
+	* testsuite/anubis.authmode/mime.exp: New file
+	
+	* testsuite/Makefile.am: Added new files
+
+	* testsuite/anubis/abase.exp: New file. It should be
+	called before base.exp, hence its name.
+	* testsuite/anubis/base.exp: Moved std.pat to abase.exp
+	* testsuite/anubis/DISTFILES: Added new files
+
+	* testsuite/data/users: New file
+	* testsuite/data/Makefile.am: Added new files
+
+	* testsuite/etc/interface.in.in: New file
+	* testsuite/etc/target.in.in: New file
+	* testsuite/etc/net.rc: New file
+	* testsuite/etc/Makefile.am: Added new files
+
+	* testsuite/lib/anubis.exp: Added support for authmode testing.
+
+	* testsuite/.cvsignore: Updated
+	* testsuite/data/.cvsignore: Updated
+	* testsuite/etc/.cvsignore: Updated
+	
+2004-08-12  Sergey Poznyakoff
+
+	* src/dbtext.c: Changed format. Fields are separated by
+	colons.
+	* src/anubisadm.c: Use NONE to represent empty fields.
+	* doc/anubis.texi: Updated.
+
+2004-08-09  Sergey Poznyakoff
+
+	* configure.ac: Updated
+	* src/env.c (change_privs): New function.
+	(anubis_changeowner): Use change_privs to correctly switch
+	privileges.
+
+2004-08-07  Sergey Poznyakoff
+
+	* configure.ac: Raised version number to 3.9.96
+	* src/md5.c: New file.
+	* src/Makefile.am: Added md5.c
+	* src/anubisusr.c: Use MD5 sums instead of comparing file
+	contents.
+	* src/xdatabase.c: Likewise.
+	* src/authmode.c (anubis_authenticate_mode): Bugfix
+	* src/transmode.c (anubis_transparent_mode): Bugfix
+	* src/headers.h (anubis_md5_file)
+	(string_bin_to_hex,string_hex_to_bin): New declarations
+
+2004-08-06  Sergey Poznyakoff 
+
+	* configure.ac: Require gpgme 0.9.0. Check for
+	AC_SYS_LARGEFILE (needed by gpgme).
+	* src/gpg.c: Rewritten for gpgme 0.9.0
+
+2004-08-06  Sergey Poznyakoff
+
+	* src/anubisusr.c: Use XELO
+	* src/authmode.c: Implemented XELO
+	* src/tunnel.c (process_command): Minor change.
+	* src/xdatabase.c (xdatabase)" Minor change.
+	
+2004-07-31  Sergey Poznyakoff
+
+	Released version 3.9.95
+	
+	* NEWS: Updated time and version stamps.
+
+2004-07-22  Wojciech Polak
+
+	* src/authmode.c: Added initial XELO implementation (the seed).
+	(helo_count): Added new variable; in the future report possible
+	SMTP attack.
+	* src/headers.h (T_XELO): New flag.
+
+2004-07-21  Wojciech Polak
+
+	* src/authmode.c (anubis_smtp): Clear the T_SSL_FINISHED
+	flag after the for loop.
+	* src/tls.c: Print all debug messages using the same style.
+
+2004-07-18  Wojciech Polak
+
+	* src/anubisusr.c: Be more user friendly.
+	(diff): As the result print text, not numbers.
+
+2004-07-17  Wojciech Polak
+
+	* src/env.c (anubis_changeowner): Print also a user name.
+	* src/main.c (main): Likewise.
+
+2004-07-15  Sergey Poznyakoff 
+
+	* configure.ac: Accomodate for incompatibilities of gnults 1.0.16
+	(and eventually newer versions)
+	* po/POTFILES.in: Updated
+	* src/daemon.c (daemonize): Clear T_FOREGROUND flag.
+	* src/authmode.c (asmtp_ehlo): Return correct state if TLS
+	failed.
+
+2004-07-13  Wojciech Polak
+
+	* src/tunnel.c (handle_starttls): Improved diagnostics.
+	* src/authmode.c (asmtp_ehlo): Likewise.
+	* src/misc.c (make_lowercase, make_uppercase): Return NULL
+	if needed.
+
+	* src/auth.c: Renamed to ident.c.
+	(auth_tunnel): Moved to rcfile.c.
+	* src/headers.h: Updated.
+	* src/Makefile.am: Updated.
+
+2004-07-13  Sergey Poznyakoff
+
+	* src/gsasl_srv.c (anubis_set_mech_list): Convert mechanism
+	names to uppercase
+	* src/headers.h (make_uppercase): New function
+	(make_lowercase): Return char* for symmetry with make_uppercase().
+	* src/misc.c (make_lowercase): Rewritten in a more effective way.
+	(make_uppercase): New function
+	* src/rcfile.y (rc_set_debug_level): Check for valid input.
+
+	* doc/anubis.texi: Fixed rccol-rcfile confusion. The URL parameter
+	name and its default value are now "rcfile".
+	* src/mysql.c: Likewise.
+	* src/pgsql.c: Likewise.
+	* src/rcfile.c: Likewise.
+	* src/sql.c: Likewise.
+	* src/sql.h: Likewise.
+	
+2004-07-12  Sergey Poznyakoff 
+
+	* src/authmode.c (make_help_message): Fixed mess created
+	by the use of 'indent'.
+	(asmtp_ehlo): Bail out on receiving second STARTTLS. Remove
+	STARTTLS capability after successful initiation of TLS.
+	(anubis_smtp): Clear T_SSL_FINISHED flag after successful
+	authentication.
+	* src/net.c (swrite): Do not try to write out zero bytes. This
+	upsets gnutls.
+	* src/stream.c (struct net_stream.state): New member
+	(stream_set_io): Init ->state
+	(stream_close): Do nothing if state != state_open
+	* src/tunnel.c (get_ehlo_domain,save_ehlo_domain): New functions
+	(smtp_begin): Use get_ehlo_domain()
+	(handle_ehlo): Save user EHLO domain. Use get_ehlo_domain().
+	Removed FIXME indicator
+
+2004-07-11  Wojciech Polak
+
+	* src/authmode.c (anubis_authenticate_mode): Fixed the bug,
+	where a specified config file was ignored.
+	* src/tunnel.c (smtp_begin): Send the EHLO command to MTA.
+	* THANKS: Added Jim Cheetham.
+
+	* src/*.[chly]: Indent all files using the GNU coding style.
+	* src/tls.c: Improved diagnostics.
+	* src/rcfile.c: Likewise.
+	* src/esmtp.c: Likewise.
+	* src/gsasl_srv.c: Likewise.
+	* src/main.c: Likewise.
+
+2004-06-19  Sergey Poznyakoff
+
+	* lib/lbuf.c (_auth_lb_writelines): Bugfix. 
+	* src/xdatabase.c (make_temp_file): Fixed diagnostic message.
+
+2004-06-19  Wojciech Polak
+
+	* src/anubisusr.c (cb_password): Use getpass().
+	(cb_passcode): Likewise.
+	(parse_netrc): Be silent if .netrc doesn't exist.
+	* configure.ac: Bump to 3.9.95.
+
+2004-06-10  Sergey Poznyakoff
+
+	* TODO: Updated
+	* src/authmode.c: Minor fixes to the diagnostic messages
+	* src/esmtp.c: Likewise.
+	* src/help.c: Likewise.
+	* src/tunnel.c: Likewise.
+
+2004-06-01  Wojciech Polak
+
+	Released version 3.9.94.
+
+2004-06-01  Sergey Poznyakoff
+
+	* configure.ac: Install anubisusr into bindir.
+	* src/Makefile.am: Likewise.
+	
+	* m4/anubis.m4: Quote the defun name
+	* m4/gpgme.m4: Likewise.
+	* m4/gsasl.m4: Likewise.
+	* m4/guile.m4: Likewise.
+
+2004-05-31  Sergey Poznyakoff  
+
+	* NEWS: Updated
+	* doc/anubis.texi: Updated
+	* doc/pixie-dixie.texi: Synchronised with the latest version
+	of Pixie-Dixie.
+
+2004-05-29  Wojciech Polak
+
+	* doc/Makefile.am: Changed date format to '%B %d, %Y'.
+
+2004-05-29  Sergey Poznyakoff 
+
+	* doc/Makefile.am: Added rules for generating web docs
+	* doc/index.html.in: New file
+	* doc/.cvsignore: Updated
+
+2004-05-27  Wojciech Polak
+
+	* doc/anubis.texi: Updated (fixed some typos).
+	* elisp/anubis-mode.el: Added new keywords.
+
+2004-05-22  Wojciech Polak
+
+	* doc/pixie-dixie.txt: Moved to `pixie-dixie.pl.txt'.
+	* Makefile.am: Updated.
+
+2004-05-22  Sergey Poznyakoff  
+
+	* doc/anubis.texi: Updated
+	* doc/rendition.texi (macro FIXME): Rewritten
+	
+2004-05-21  Sergey Poznyakoff 
+
+	* doc/pixie-dixie.txt: New file
+	* doc/pixie-dixie.texi: New file
+	* doc/rendition.texi: New file
+	* doc/.cvsignore: Updated
+	* doc/Makefile.am: Updated
+	* doc/anubis.texi: Updated
+	
+	* src/anubisadm.c: Changed LIST to ANUBIS_LIST to resolve
+	name clash with the recent MySQL distributions
+	* src/anubisdb.c: Likewise.
+	* src/anubisusr.c: Likewise.
+	* src/authmode.c: Likewise.
+	* src/dbtext.c: Likewise.
+	* src/extern.h: Likewise.
+	* src/gdbm.c: Likewise.
+	* src/gpg.c: Likewise.
+	* src/gsasl_srv.c: Likewise.
+	* src/guile.c: Likewise.
+	* src/headers.h: Likewise.
+	* src/list.c: Likewise.
+	* src/list.h: Likewise.
+	* src/map.c: Likewise.
+	* src/misc.c: Likewise.
+	* src/rcfile.c: Likewise.
+	* src/rcfile.h: Likewise.
+	* src/rcfile.y: Likewise.
+	* src/sql.c: Likewise.
+	* src/tunnel.c: Likewise.
+	
+	* testsuite/etc/Makefile.am: Added cond.in
+
+2004-05-20  Wojciech Polak
+
+	* testsuite/etc/cond.pat: New test.
+	* testsuite/etc/cond.in: Added rules for cond.pat.
+	* testsuite/etc/Makefile.am: Updated.
+	* testsuite/anubis/base.exp: Added cond.pat.
+
+2004-05-19  Sergey Poznyakoff
+
+	* src/tunnel.c (save_command): Fixed parsing of commands
+	(process_command): remove CRLF from the command and flip
+	it to lower case before parsing.
+	(transfer_command): Reversed return code if handle_ehlo failed.
+
+2004-05-14  Sergey Poznyakoff
+
+	* src/ssl.c: Rewritten to match new API.
+
+2004-05-01  Wojciech Polak
+
+	* src/anubisadm.c (op_usage): Removed unused %s from error().
+	* configure.ac: Be more verbose.
+
+2004-04-22  Wojciech Polak
+
+	* configure.ac: Let's use GNU gettext 0.14.1.
+	* Makefile.am: Let's use GNU Automake >= 1.8.3.
+
+2004-04-22  Sergey Poznyakoff
+
+	* configure.ac: Added check for Postgres libraries.
+	* guile/entire-msg.scm: New file.
+	* guile/Makefile.am: Added guile/entire-msg.scm
+	* src/sql.c: New file. General purpose interface to SQL databases.
+	* src/sql.h: New file.		
+	* src/pgsql.c: New file. Postgres DB interface.	
+	* src/mysql.c: Rewritten using new SQL interface.		
+	* src/Makefile.am: Added new files.
+	* src/anubisadm.c (op_list): Minor improvement.
+	(main): Init postgres db, if required.
+	* src/authmode.c: Minor stylistic fix. Removed misguiding comment.
+	* src/main.c (main): Init postgres db, if required.
+
+	* src/headers.h: Added missing prototypes.
+
+	* src/anubisdb.c: Use const consistently.
+	* src/dbtext.c: Likewise
+	* src/gdbm.c: Likewise
+	
+	* src/gsasl.c: Moved include <gsasl.h> to headers.h
+	* src/gsasl_srv.c: Likewise
+	
+2004-03-15  Wojciech Polak
+
+	* src/authmode.c: Removed RSET support (where was my mind
+	when I added it, dammit?).
+
+2004-03-13  Wojciech Polak
+
+	* src/authmode.c (anubis_authenticate_mode): Don't read the
+	"translation" section in the "authentication" mode.
+	Call the set_unprivileged_user() when `usr.username' is null.
+	TO DO: search a special rc-file directory and retrieve
+	an appropriate client's run control file when `usr.username'
+	is null.
+
+2004-03-13  Wojciech Polak
+
+	* src/*: Namespace cleanup.
+	* src/rc.c: Renamed to rcfile.c.
+	* src/daemon.c (anubis_child_main): Bugfix.
+
+2004-03-13  Sergey Poznyakoff 
+
+	* src/auth.c (auth_ident): Use streams appropriately
+	* src/exec.c (make_local_connection_fd): When closing
+	pipes be careful not to destroy stdin/stdout.
+
+2004-03-12  Sergey Poznyakoff
+
+	* po/POTFILES.in: Updated
+
+2004-03-11  Sergey Poznyakoff
+
+	* src/anubisusr.c (smtp_auth): Use error() instead of info()
+	(main): Minor fix
+	(argcv_free): Correctly handle argc==0. Changed return type to
+	void.
+	(parse_netrc): Initialize p_argv.
+	* src/authmode.c: Provide special section AUTH for configuring
+	auth mode. Move sasl-password-db and sasl-allowed-mech
+	to AUTH. New keywords smtp-greeting-message and smtp-help-message
+	allow to set the corresponding SMTP messages.
+	* src/env.c (get_options): Use anubis_set_mode().
+	(anubis_set_mode): New function.
+	* src/gsasl_srv.c: Protect inclusion of gsasl.h
+	* src/headers.h: Added missing prototypes
+	* src/rc.c (process_rcfile): Load AUTH section
+	(control_parser): New keyword 'mode'. Equivalent to specifying
+	--mode in the command line.
+	* src/url.c: Removed debugging functions.
+
+2004-03-08  Sergey Poznyakoff
+
+	* src/main.c: Fixed improper #ifdef'ing
+
+2004-03-06  Sergey Poznyakoff
+
+	* src/anubisusr.c (hostcmp): Bugfix.
+
+2004-03-06  Sergey Poznyakoff
+
+	* src/anubisusr.c: Consult .netrc file for the authentication
+	credentials.
+	Removed debugging hooks.
+	* src/xdatabase.c (xexamine): Bugfix
+
+2004-03-06  Sergey Poznyakoff
+
+	* configure.ac (ANUBISADM): Use Makefile variable dereference
+	* src/Makefile.am: Added anubisusr.c Moved some tls.c and
+	gsasl.c to libanubisdb.a (the name seems to be a misnomer
+	now). Split gsasl.c to gsasl.c (library part) and gsasl_srv.c
+	(server part)
+	* src/.cvsignore: Updated
+	
+	* src/anubisusr.c: New file. Synchronize local and remote copies
+	of the user's RC file, using XDATABASE protocol.
+	* src/authmode.c: Implemented TLS
+
+	* src/stream.c: New file. General-purpose streams
+	* src/net.c: Rewritten using streams.
+	* src/daemon.c: Likewise
+	* src/esmtp.c: Likewise
+	* src/exec.c: Likewise
+	* src/extern.h: Likewise
+	* src/headers.h: Likewise
+	* src/main.c: Likewise
+	* src/quit.c: Likewise
+	* src/tls.c: Likewise
+	* src/transmode.c: Likewise
+	* src/tunnel.c: Likewise
+	
+	* src/gsasl.c: Split off server-specific functions to a separate
+	module
+	* src/gsasl_srv.c: New file
+	
+	* TODO: Updated
+
+2004-02-22  Sergey Poznyakoff
+
+	* src/log.c: Bugfixes
+	
+2004-02-21  Wojciech Polak
+
+	* configure.ac: Added new option `--with-socks-proxy'.
+	* src/files.c: Renamed to mime.c (for further MIME support).
+	* src/proxy.c: Renamed to socks.c.
+
+2004-02-19  Sergey Poznyakoff
+
+	Initial implementation of "XDATABASE" command
+	
+	* src/xdatabase.c: New file	
+	* src/Makefile.am: Added xdatabase.c
+	* src/authmode.c (anubis_smtp): On successful
+	authentication add XDATABASE to the server capabilities
+	(anubis_authenticate_mode): Save the retrieved rc file
+	name in usr.rc_file_name.
+	* src/extern.h (struct session_struct.rc_file_name): New
+	member.
+	* src/headers.h (user_rcfile_name, xdatabase)
+	(xdatabase_capability): New functions
+	* src/rc.c (user_rcfile_name): New function
+	(open_rcfile): Use user_rcfile_name().
+	* src/rcfile.h (RC_ERROR_PRINTER): New data type
+	(rc_parse_ep): New function
+	* src/rcfile.y (rc_error_printer,rc_error_printer_data): New
+	variables.
+	(parse_error): Use rc_error_printer variable
+	to actually print the diagnostics.
+	(yyerror): Call parse_error() instead of calling anubis_error()
+	directly.
+	(rc_parse_ep): New function
+	* src/tunnel.c (process_command): Handle XDATABASE command
+	
+2004-02-18  Sergey Poznyakoff
+
+	* src/auth.c (auth_ident): Do not use sscanf.
+	* src/errs.c: Fix improper format specs in syslog
+	invocations.
+	* src/ssl.c: Likewise.
+
+2004-02-14  Wojciech Polak
+
+	* src/url.c (url_get_mech): Bugfix.
+	* src/anubisadm.c (print_help): Split up the messages and use puts().
+	(op_add_or_modify): Use getpass().
+	* lib/getpass.c: New file.
+	* configure.ac (AC_REPLACE_FUNCS): Added getpass.
+
+2004-02-14  Sergey Poznyakoff 
+
+	* src/mysql.c (mysql_db_put): Fixed query template
+	* src/anubisadm.c (op_create): Initialize rec. Print input line
+	number along with the error message.
+
+2004-02-12  Sergey Poznyakoff  
+
+	* src/mysql.c: Trivial fixes.
+	* src/Makefile.am: Moved mem.[ch] to libanubisdb
+	* src/anubisadm.c: Trivial fixes. Remove xmalloc duplication and
+	provide memory error handler hook.
+	* src/headers.h (memory_error): New external variable.
+	* src/main.c: Provide memory error handler hook.
+	* src/mem.c (xmalloc, xrealloc): Rely on user-defined hook
+	to handle memory allocation errors.
+
+2004-02-11  Sergey Poznyakoff
+
+	* configure.ac: AC_REPLACE getline. Define ANUBISADM if
+	gsasl is requested.
+	* doc/Makefile.am (TEXINFO_TEX): Removed. It prevented automake
+	from copying texinfo.tex to build/
+	* lib/getline.c: New file
+	* lib/getline.h: New file
+	* lib/Makefile.am: Added getline.c, getline.h
+	* lib/lbuf.h: Removed leftover header dependency.
+	* lib/lbuf.c: Minor changes.
+	* src/anubisadm.c: New file. Interface for Anubis database
+	administration.
+	* src/Makefile.am (anubisadm, libanubisdb.a): New targets
+	* src/.cvsignore: Updated	
+	* src/anubisdb.c: Added new operation: list
+	* src/dbtext.c: Likewise.
+	* src/gdbm.c: Likewise.
+	* src/headers.h: Likewise.
+	* src/mysql.c: Likewise. Also fixed potential coredumps in
+	mysql_db_get.
+	* src/url.c (anubis_url_full_path): Fixes for a case when URL does
+	not have a host part.
+
+2004-01-06  Wojciech Polak
+
+	* m4/Makefile.am: Removed.
+	* configure.ac (AC_CONFIG_FILES): Removed m4/Makefile.
+	(AC_PREREQ): Bump to 2.59.
+	* Makefile.am: Removed m4. Require at least version 1.8.
+
+2003-12-25  Sergey Poznyakoff 
+
+        Synchronized with the backup repository on Mirddin
+
+2003-12-22  Wojciech Polak
+
+	* testsuite/mta.c: Adapt to GnuTLS >= 1.0.0.
+
+2003-12-17  Wojciech Polak
+
+	* src/tls.c: Adapt to GnuTLS >= 1.0.0.
+	* src/headers.h: Include <gnutls/x509.h>.
+
+2003-12-09  Wojciech Polak
+
+	* configure.ac: Set AM_GNU_GETTEXT_VERSION(0.13).
+	Force to use GnuTLS >= 1.0.0.
+	* m4/Makefile.am: Updated (gettext 0.13).
+
+2003-11-30  Sergey Poznyakoff 
+
+	* src/headers.h (N_): Define uncoditionally.
+	(anubis_db_open_t): Extra parameter: pointer to textual error
+	description.
+	* src/anubisdb.c (anubis_db_open): Return textual error
+	description.
+	* src/mysql.c (mysql_db_open): Likewise
+	* src/dbtext.c (dbtext_open): Likewise
+	* src/gdbm.c (gdbm_db_open): Likewise
+	(gdbm_db_strerror): Implemented.
+	* src/authmode.c (anubis_get_db_record): Updated the invocation
+	of anubis_db_open().
+	* po/POTFILES.in: Updated
+	
+2003-11-30  Wojciech Polak
+
+	* src/misc.c (change_to_lower): Renamed to make_lowercase.
+	* src/headers.h (change_to_lower): Changed prototype.
+	* src/tunnel.c: Use make_lowercase().
+	* src/help.c (config_opts): Added MYSQL.
+	* po/POTFILES.in: Updated.
+
+2003-11-30  Sergey Poznyakoff 
+
+	* TODO: Updated
+	* configure.ac: Removed useless AC_LIBOBJ. Added --with-mysql
+	option and code to detect presence of MySQL
+	* lib/Makefile.am: Added automake stuff
+	* m4/anubis.m4: New file
+	* m4/Makefile.am: Added anubis.m4
+	* src/Makefile.am: Modified to fit the new directory layout
+	* src/anubisdb.c: Protect the code by #ifdef
+	* src/authmode.c: Likewise
+	* src/dbtext.c: Likewise.
+	* src/gdbm.c: Likewise.
+	* src/gsasl.c: Likewise.
+
+	* src/url.c: New file.
+	* src/mysql.c: New file.
+	* src/headers.h (ANUBIS_URL): New data type.
+	(anubis_url_destroy,anubis_url_parse,anubis_url_full_path)
+	(anubis_url_get_arg): New functions.
+	* src/main.c (main): Call mysql_db_init
+	* src/rc.c (control_parser): sasl-password-db now takes
+	only one argument: the database URL.
+	
+2003-11-29  Wojciech Polak
+
+	* configure.ac: Added lib
+	* lib: added to the repository
+	* lib/.cvsignore: New file
+	* Makefile.am: Updated
+	* src/Makefile.am: Updated
+	* lib/Makefile.am: New file
+	* src/getopt1.c,getopt.c,getopt.h,gettext.h
+	  lbuf.c,lbuf.h,obstack.c,obstack.h,setenv.c,
+	  snprintf.c: moved to ../lib			 		 
+
+2003-11-26  Sergey Poznyakoff
+
+	* doc/anubis.texi: Fixed a couple of misspellings.
+	
+2003-11-22  Wojciech Polak
+
+	* src/net.c (_debug_printer): Invert debug arrows.
+	(connect_directly_to): Removed poor debug message.
+
+2003-11-22  Sergey Poznyakoff
+
+	* src/authmode.c (asmtp_ehlo,anubis_smtp,anubis_get_db_record)
+	(anubis_authenticate_mode): Pass ANUBIS_USER as application-
+	specific data.
+	* src/gsasl.c: Use new GSASL functions instead of obsolete
+	ones.
+	* src/headers.h (anubis_auth_gsasl): Changed prototype
+
+2003-11-22  Wojciech Polak
+
+	* src/authmode.c: Added preliminary RSET support.
+	(asmtp_kw): Check the `name' before strcasecmp().
+
+2003-11-22  Sergey Poznyakoff 
+
+	* src/gsasl.c (auth_gsasl_capa_init): Removed calls to obsolete
+	function gsasl_server_listmech. Use gsasl_server_mechlist instead.
+
+2003-11-22  Wojciech Polak
+
+	* src/help.c (config_opts): Added GSASL.
+
+2003-11-22  Sergey Poznyakoff  
+
+	* src/dbtext.c (dbtext_open): Minor fix.
+	* src/gsasl.c (anubis_set_mech_list): New function.
+	(auth_gsasl_capa_init): Allow for terminating nul in
+	gsasl_server_listmech output.
+	Build the resulting capability list as an intersection
+	between the one reported by GSASL and the list of
+	allowed mechanisms.
+	* src/headers.h (anubis_set_mech_list): New function.
+	* src/list.c (list_intersect): New function
+	* src/list.h: Likewise.
+	* src/rc.c (control_parser): Handle sasl-allowed-mech keyword.
+
+2003-11-21  Wojciech Polak
+
+	* src/env.c (get_options): Added missing "m:" to getopt_long().
+	* src/authmode.c: Removed broken #include <anubisdb.h>.
+
+2003-11-21  Sergey Poznyakoff
+
+	Initial implementation of "authentication mode".
+
+	* configure.ac: Check for libgsasl and gdbm
+	* m4/gsasl.m4: New file (imported from mailutils)
+	* m4/Makefile.am: Added gsasl.m4
+
+	* src/daemon.c (anubis_child_main): New function.
+	(loop): Call anubis_child_main().
+	* src/extern.h (anubis_domain, anubis_mode): New externals
+	* src/headers.h: New declarations.
+	* src/help.c: Reflect --mode option.
+	* src/env.c: New option --mode.
+	* src/main.c (anubis_domain, anubis_mode): New externals
+	(anubis_core): Initialize various database formats.
+	* src/misc.c (get_localname, get_localdomain): New functions.
+	* src/net.c (net_io_get,net_io_read,net_io_write,net_io_close)
+	(recvline_ptr): New functions.
+	* src/rc.c: New keywords local-domain and sasl-password-db
+	* src/tunnel.c (smtp_session_transparent): New function
+	(smtp_begin): New function
+
+	* src/authmode.c: New file
+	* src/transmode.c: New file
+	* src/gsasl.c: New file
+	* src/lbuf.c: New file
+	* src/lbuf.h: New file
+	* src/anubisdb.c: New file
+	* src/dbtext.c: New file
+	* src/gdbm.c: New file
+
+	* src/Makefile.am: Added new files
+	
+2003-11-08  Wojciech Polak
+
+	* src/tls.c (verify_certificate): Removed GNUTLS_CERT_CORRUPTED
+	(missing in GnuTLS >= 0.9.95 ?!).
+	Also GNUTLS_CERT_NOT_TRUSTED = GNUTLS_CERT_INVALID.
+	* configure.ac: Changed AM_CONFIG_HEADER to AC_CONFIG_HEADERS.
+
+2003-10-27  Wojciech Polak
+
+	* src/esmtp.c: Conform to libgcrypt >= 1.1.42 (a new API).
+	* src/help.c (show_config_options): Removed. Keep only
+	print_config_options().
+
+	* doc/anubis.1: Updated.
+	* configure.ac: Bump to 3.9.94. Requires now GnuTLS >= 0.9.93.
+	* src/main.c: Bump to 3.9.94.
+
+2003-09-16  Wojciech Polak
+
+	* src/rcfile.y (_print_stars): Print only three stars.
+	* testsuite/etc/std.in: Updated.
+	* testsuite/etc/std.pat: Likewise.
+
+2003-09-16  Sergey Poznyakoff
+
+	* src/rcfile.h (struct rc_kwdef.flags): New member
+	(struct rc_asgn.flags): New member
+	* src/rcfile.y: Take into account rc_kwdef.flags
+	when parsing and printing.
+	* src/rc.c (control_kw): Mark "esmtp-auth" with
+	KWF_HIDDEN.
+	* src/gpg.c (gpg_kw): Mark "gpg-passphrase" with
+	KWF_HIDDEN.
+	* testsuite/etc/std.pin: Modified to match the new debugging
+	output style.
+
+2003-09-09  Wojciech Polak
+
+	* src/rc.c (tls_parser): Removed T_SSL_CKCLIENT from
+	KW_SSL_CERT case.
+
+2003-09-02  Sergey Poznyakoff
+
+	* NEWS: Updated
+
+2003-08-28  Wojciech Polak
+
+	* configure.ac: Added AM_PATH_GPGME.
+	* m4/gpgme.m4: New file.
+	* m4/Makefile.am: Added gpgme.m4.
+	* src/gpg.c: Replaced puts(S) with fputs(S, stderr);.
+	(gpg_sign, gpg_sign_encrypt): Added gpgme_key_release(key).
+
+2003-08-28  Sergey Poznyakoff 
+
+	* src/rcfile.h (error_sync_begin): Changed return type.
+	* src/rcfile.l: Likewise.
+	* src/rcfile.y (seclist production): Set yychar. Clear
+	error state only if not at EOF, otherwise yylex will be
+	called again and will coredump.
+	(struct eval_env.traceable): New member. Controls whether
+	tracing should be enabled for this section.
+	(asgn_eval): Fixed printing of trigger rules.
+	
+2003-08-27  Wojciech Polak
+
+	* configure.ac: Bump to 3.9.93.
+	Removed isatty from AC_CHECK_FUNCS.
+	* src/main.c: Added SETVBUF(stderr, NULL, _IOLBF, 0);.
+
+2003-08-26  Wojciech Polak
+
+	* examples/1anubisrc: Updated.
+	* examples/2anubisrc: Likewise.
+	* doc/anubis.texi: Likewise.
+
+	* elisp/anubis-mode.el: Added tracefile, gpg-sign-encrypt,
+	and gpg-se.
+
+2003-08-26  Sergey Poznyakoff 
+
+	* src/rc.c (open_rcfile): Removed debugging hook. Thanks
+	Dominique for reporting.
+
+2003-08-25  Sergey Poznyakoff
+
+	* doc/anubis.texi: Updated
+
+2003-08-24  Wojciech Polak
+
+	* testsuite/etc/gpgse.pat: Added new test
+	(GPG signing and encryption).
+	* testsuite/etc/gpg.in: Updated.
+	* testsuite/etc/gpgcrypt.pat: Likewise.
+	* testsuite/etc/gpgsign.pat: Likewise.
+	* testsuite/etc/Makefile.am: Added gpgse.pat.
+	* testsuite/anubis/gpg.exp: Likewise.
+
+	* doc/anubis.texi: Updated. Added gpg-sign-encrypt.
+
+2003-08-24  Sergey Poznyakoff  
+
+	* configure.ac: Determine signal handler return type.
+	* src/headers.h (sig_exit,sig_timeout): Fixed protos.
+	(cleanup_children): New function.
+	(anubis_free_list_item): New function.
+	* src/daemon.c (sig_cld): Fixed return type
+	(loop,stdinout): Call cleanup_children()
+	* src/exec.c (sig_local): Changed return type. Removed code.
+	(cleanup_children): New function.
+	* src/misc.c (_mem_free): Removed
+	(anubis_free_list_item): New function.
+	(destroy_string_list): Use anubis_free_list_item().
+	* src/quit.c (sig_exit,sig_timeout): Fixed return types.
+	* src/rc.c (open_rcfile): Prevent the same file from
+	being read twice (as a system-wide and per-user config).
+	* src/rcfile.y (_free_mem): Removed
+	(rc_asgn_destroy,asgn_eval): Use anubis_free_list_item()
+
+2003-08-24  Wojciech Polak
+
+	* src/gpg.c: General fixes and improvements.
+
+2003-08-22  Wojciech Polak
+
+	New configuration file option `tracefile'.
+
+	* src/rcfile.y: Use tracefile instead of trace.
+	* src/rcfile.h (trace): Renamed to `tracefile'.
+	* src/rc.c (KW_TRACEFILE): New define.
+	* src/log.c (trace): Renamed to `tracefile'.
+	(tracefile): Added the support for `tracefile' option.
+	* src/quit.c (free_mem): Added `options.tracefile'.
+	* src/headers.h (T_TRACEFILE_SYS, T_TRACEFILE_USR): New defines.
+	* src/extern.h (options_struct): Added `tracefile'.
+
+2003-08-21  Wojciech Polak
+
+	* src/log.c (info): Removed `slogfile'.
+	* src/errs.c (anubis_error): Likewise.
+	* src/quit.c (free_mem): Likewise.
+	* src/rc.c: Moved `logfile' to client_kw.
+	* src/extern.h (options_struct): Removed `slogfile'.
+
+	* src/errs.c (anubis_error, socks_error): Changed prototype.
+	* src/headers.h: Likewise.
+
+2003-08-21  Sergey Poznyakoff 
+
+	* src/exec.c (exec_argv): Extra argument: full path
+	to the program to be executed.
+	* src/headers.h: Likewise.
+	* src/message.c: Updated calls to exec_argv
+	* THANKS: Added Dominique Bordereaux.
+	* src/env.c (get_options): Fixed definition of
+	'c' option (needed double-colon).
+
+2003-08-21  Wojciech Polak
+
+	* src/gpg.c (gpg_sign_encrypt): New function.
+	Added support for `gpg-sign-encrypt' action.
+	(gpg_encrypt_to_users): Renamed to `gpg_encrypt'.
+
+	* configure.ac: Bump to 3.9.92.
+	* src/main.c: Likewise.
+
+2003-08-17  Sergey Poznyakoff
+
+	* doc/anubis.texi: Document the proper way of escaping
+	the & character in modify statements.
+	* src/headers.h (T_SMTP_ERROR_CODES): New define.
+	* src/daemon.c (stdinout): Set T_SMTP_ERROR_CODES bit.
+	* src/errs.c (anubis_error): Honor T_SMTP_ERROR_CODES bit.
+	* src/log.c (mprintf): Output to stderr.
+	* src/main.c (anubis): Removed resetting termlevel to SILENT
+	in --stdio mode.
+	* src/message.c (expand_ampersand): Bugfix.
+	* testsuite/etc/del.in: Fixed emacs mode indicator
+	* testsuite/etc/mod-header.in: Fixed escaping the & character.
+	* testsuite/etc/mult.pat: Minor change in wording.
+	* testsuite/etc/add.in: Use new syntax (avoid using =)
+	* testsuite/etc/empty.in: Likewise.
+	* testsuite/etc/entire.in: Likewise.
+	* testsuite/etc/gpg.in: Likewise.
+	* testsuite/etc/mod-body.in: Likewise.
+	* testsuite/etc/remail.in: Likewise.
+	* testsuite/etc/simple.in: Likewise.
+	* testsuite/etc/tlsoneway.in: Likewise.
+	* testsuite/etc/trigger.in: Likewise.
+
+2003-08-15  Wojciech Polak
+
+	* src/log.c: A few minor changes.
+	* src/headers.h (mprintf, info): Changed prototypes.
+
+	* testsuite/etc/mod-header.in: Added new subtest (&).
+	* testsuite/etc/mod-header.pat: Likewise.
+
+2003-08-14  Sergey Poznyakoff 
+
+	Added tracing the execution of config file sections.
+	
+	* src/log.c (trace): New function.
+	* src/message.c (expand_ampersand): Bugfix: missed terminating
+	zero.
+	* src/rc.c (open_rcfile): Destroy the previous parse tree only
+	if we really are going to re-read the system config.
+	(rule-priority, control-priority): Moved from init_kw to
+	init_supervisor_k to allow for redefining their values.
+	* src/rcfile.h (trace): New function.
+	(struct rc_loc): New data type.
+	(struct rc_section,rc_node,rc_stmt): Added RC_LOC member
+	for execution tracing.
+	* src/rcfile.y: Support for RC_LOC.
+
+2003-08-09  Sergey Poznyakoff 
+
+	* elisp/anubis-mode.el: Compatibility fix.
+	* README: Updated
+
+	* testsuite/etc/add.in: Reformatted using anubis-mode.
+	* testsuite/etc/del.in: Likewise.
+	* testsuite/etc/empty.in: Likewise.
+	* testsuite/etc/entire.in: Likewise.
+	* testsuite/etc/gpg.in: Likewise.
+	* testsuite/etc/mod-body.in: Likewise.
+	* testsuite/etc/mod-header.in: Likewise.
+	* testsuite/etc/remail.in: Likewise.
+	* testsuite/etc/simple.in: Likewise.
+	* testsuite/etc/std.in: Likewise.
+	* testsuite/etc/tlsoneway.in: Likewise.
+	* testsuite/etc/trigger.in: Likewise.
+
+2003-08-08  Sergey Poznyakoff 
+
+	* elisp/anubis-mode.el (anubis-keyword-dict): Added font-lock
+	support.
+	(anubis-check-syntax): New command.
+	* src/rcfile.y (rc_set_debug_level): Default debugging level is 0.
+	* testsuite/etc/std.pin: Provide an explicit argument to
+	--check-config
+	* doc/anubis.texi (Invoking Anubis): Improved the description of
+	--check-config option.
+	* README: Updated
+	
+2003-08-06  Sergey Poznyakoff
+
+	* elisp/Makefile.am: Bugfix, the el file was not compiled
+	* elisp/anubis-mode.el (anubis-mode-map): Changed '?' mapping
+	to '\e?'.
+	* elisp/.cvsignore: Updated
+
+2003-08-05  Sergey Poznyakoff 
+
+	* Makefile.am (SUBDIRS): Added elisp
+	* configure.ac: Detect the emacs lisp directory.
+	* elisp: New directory
+	* elisp/Makefile.am: New file
+	* elisp/anubis-mode.el: New file
+	* README: Updated
+	* TODO: Updated
+	* NEWS: Updated
+
+2003-07-30  Sergey Poznyakoff
+
+	* doc/anubis.texi (Remailers): Document the ways of
+	GPG signing/encrypting the messages being remailed.
+
+2003-07-26  Sergey Poznyakoff  
+
+	* src/tunnel.c (get_boundary): Bugfix. Operate on the unaltered
+	boundary line.
+
+2003-07-21  Sergey Poznyakoff 
+
+	* testsuite/etc/add.in (body-append): Use TOP_SRCDIR.
+
+2003-07-21  Wojciech Polak
+
+	* testsuite/etc/add-body-file.pat: New test.
+	* testsuite/etc/add.in: Added rule for add-body-file.pat.
+	* testsuite/etc/Makefile.am: Updated.
+	* testsuite/data/append.txt: New auxiliary file.
+	* testsuite/data/Makefile.am: Updated.
+	* testsuite/anubis/base.exp: Added add-body-file.pat.
+
+2003-07-21  Wojciech Polak
+
+	* src/files.c (message_append_signature_file): Bugfix.
+	* src/headers.h (message_append_signature_file): Changed prototype.
+	* src/rc.c: Test YES-OR-NO arguments with strcasecmp().
+	* src/gpg.c: Likewise.
+
+	* configure.ac: Bump to 3.9.91.
+	* src/main.c: Likewise.
+
+2003-07-20  Wojciech Polak
+
+	* NEWS: Updated.
+	* TODO: Likewise.
+	* src/rc.c: Moved KW_DROP_UNKNOWN_USER to init_supervisor_kw.
+	(KW_ALLOW_NOTPRIVILEGED): Renamed to KW_USER_NOTPRIVILEGED.
+	* src/list.h: Clean up with prototypes.
+	* src/gpg.c: Likewise.
+
+2003-07-20  Sergey Poznyakoff
+
+	* NEWS: Updated
+	* configure.ac: Check if u_char is defined.
+	* src/env.c: Force the argument to ctype calls to be unsigned char.
+	* src/exec.c: Likewise.
+	* src/map.c: Likewise.
+	* src/misc.c: Likewise.
+	* src/proxy.c: Likewise.
+	* src/rcfile.l: Likewise.
+	* src/tunnel.c: Likewise.
+	* testsuite/mta.c: Likewise.
+
+2003-07-18  Wojciech Polak
+
+	* doc/anubis.texi: Updated.
+	* examples/2anubisrc: Likewise.
+	* examples/anubisrc.guile: Likewise.
+
+2003-07-18  Sergey Poznyakoff 
+
+	* src/message.c (message_modify_headers): Expand ampersands
+	to the old header value.
+	* src/rc.c: Added support for `control-priority' keyword.
+	* src/rcfile.l: Added `trigger' keyword.
+	
+	* TODO: Updated
+	* doc/anubis.texi: Updated
+	* examples/1anubisrc: Changed `rule' to `trigger'.
+	* examples/anubisrc.guile: Likewise.
+	* testsuite/etc/gpg.in: Likewise.
+	* testsuite/etc/remail.in: Likewise.
+	* testsuite/etc/std.in: Likewise.
+	* testsuite/etc/trigger.in: Likewise.
+
+2003-07-15  Sergey Poznyakoff
+
+	* src/rc.c (anubis_add_section): Initialize prio member.
+	(open_rcfile): For CF_INIT and CF_SUPERVISOR: initialize
+	parse_tree;
+	(control_parser): Implementes user-only and system-only keywords.
+	* src/rcfile.h (enum section_prio): New priorities.
+	(rc_section_list_destroy,rc_section_destroy): Changed proto.
+	* src/rcfile.y: Updated to new signatures of
+	rc_section_list_destroy,rc_section_destroy
+	(rc_section_link): Use new priorities.
+
+2003-07-15  Wojciech Polak
+
+	* src/main.c: Bump to 3.9.90.
+	* src/mem.c: Minor changes.
+	* src/mem.h: Likewise.
+	* doc/anubis.texi: Updated.
+
+2003-07-15  Sergey Poznyakoff 
+
+	* TODO: Updated
+	* examples/1anubisrc: Updated to new syntax
+	* examples/2anubisrc: Likewise.
+	* src/rc.c (anubis_section_set_prio): New function.
+	(open_rcfile): Do not destroy the saved tree before processing the
+	new file.
+	(control_parser): Handle new keyword rule-priority
+	(rule_section_init): Initialize prio member
+	(rcfile_process_section): Process all sections whose names match,
+	not just the first of them.
+	* src/rcfile.h (enum section_prio): New datatype
+	(struct rc_secdef.prio): New member
+	* src/rcfile.y (begin): Signal error if the section has already
+	been declared.
+	(rc_section_link): Honor section priority when linking.
+	* src/regex.c (anubis_regex_free): May be called with NULL
+	argument.
+
+2003-07-13  Sergey Poznyakoff
+
+	* src/rcfile.h (lex_clear_state,error_sync_begin): New functions
+	* src/rcfile.l (lex_clear_state,error_sync_begin): New functions
+	Complain about invalid characters.
+	* src/rcfile.y: Continue parsing after encountering errors.
+	
+	* doc/anubis.texi: Updated
+	* doc/Makefile.am: Added DISTCLEANFILES
+	
+2003-07-10  Wojciech Polak
+
+	* doc/anubis.texi: Updated
+
+2003-07-10  Sergey Poznyakoff
+
+	* doc/anubis.texi: Updated
+
+2003-07-06  Sergey Poznyakoff 
+
+	* src/headers.h (SYNTAX): New error displaying method,
+	used for syntax errors.
+	* src/errs.c (anubis_error): Do not prefix the message
+	with '>>' for SYNTAX method.
+	* src/rc.c: Renamed ssl keywords.
+	New command "body-clear".
+	* src/rcfile.y: Use SYNTAX method for error messages.
+	* testsuite/etc/tlsoneway.in: Use new ssl keywords.
+
+2003-07-01  Sergey Poznyakoff
+
+	* configure.ac: Define M4_DEFS
+	(--with-gpgme,--with-pcre,--with-pam,--with-tcp-wrappers): Bugfix:
+	correctly handle both forms (with -- without).
+	* src/Makefile.am: Add @LIBGNUTLS_LIBS@ and @LIBGNUTLS_CFLAGS@
+	* testsuite/Makefile.am: Likewise.
+	* src/headers.h: Fixed heuristics of defining HAVE_GNUTLS.
+	* src/rcfile.y (parse_error): New function. Used instead of
+	yyerror() wherever appropriate.
+	* src/tls.c: Provide typecasts for gnutls_transport_ptr data.
+	* testsuite/mta.c: Likewise.
+	* testsuite/anubis/base.exp (std.pat): Provide full path.
+	* testsuite/etc/std.pat: Removed.
+	* testsuite/etc/std.pin: New file.
+	* testsuite/etc/Makefile.am: Remove std.pat. Add std.pin
+	* testsuite/etc/.cvsignore: Add std.pat.
+	* testsuite/etc/std.in: Conditionally include parts of the
+	file depending on the compilation settings.
+	* testsuite/lib/anubis.exp (anubis_pat): Allow for full pathname
+	of the pat-file.
+	* doc/anubis.texi: Minor change
+
+2003-07-01  Sergey Poznyakoff 
+
+	* src/rc.c: Forgotten to commit
+
+2003-06-30  Sergey Poznyakoff 
+
+	* configure.ac: Use AM_PATH_LIBGNUTLS
+	* m4/libgnutls.m4: New file.
+	* m4/Makefile.am: Added libgnutls.m4
+	* src/headers.h (anubis_regex_free): Changed prototype.
+	* src/map.c (translate_section): Removed.
+	* src/rc.c (anubis_add_section): Initialize allow_prog member
+	* src/rcfile.h (struct rc_secdef.allow_prog): New
+	member. 
+	* src/rcfile.y: Improved diagnostics.
+	* src/regex.c (ASSERT_RE): New macro
+	(anubis_regex_match,anubis_regex_replace)
+	(anubis_regex_refcnt,anubis_regex_compile): Use ASSERT_RE
+	(anubis_regex_free): Changed proto
+	* testsuite/etc/std.in: Updated
+	* testsuite/etc/std.pat: Updated
+
+2003-06-29  Wojciech Polak
+
+	* src/daemon.c (loop): Added support for DROP-UNKNOWN-USER.
+	* src/rc.c (control_parser): Likewise.
+	* src/headers.h: Added T_DROP_UNKNOWN_USER.
+	* TODO: Updated.
+
+2003-06-29  Sergey Poznyakoff  
+
+	* src/rcfile.y: Force R_EXACT on r_msgpart production.
+	(rc_node_print,rc_inst_print): Use anubis_regex_print.
+	* src/headers.h: Fixed two typos.
+	(anubis_regex_print): New function.
+	* src/regex.c (anubis_regex_print): New function.
+	* testsuite/etc/std.pat: Updated
+
+2003-06-29  Sergey Poznyakoff 
+
+	* src/headers.h: Altered regexp modifiers.
+	(re_set_type,re_typeof,re_set_flag,re_clear_flag): New macros
+	(message_remove_headers,message_modify_headers): Changed
+	declarations.
+	* src/message.c (message_remove_headers)
+	(message_modify_headers): Changed declarations.
+	* src/rcfile.h (struct rc_inst.type): Changed type
+	* src/rcfile.l: New keyword "regex"
+	* src/rcfile.y: Lots of changes to allow for more
+	flexible handling of regular expressions. Improved
+	diagnostics.
+	* src/regex.c: New pattern matching type R_EXACT.
+
+	* testsuite/etc/del.in: Use new syntax.
+	* testsuite/etc/mod-body.in: Likewise.
+	* testsuite/etc/mod-header.in: Likewise.
+
+2003-06-27  Sergey Poznyakoff
+
+	* src/headers.h (message_modify_body): Added prototype.
+	* src/mem.h (xfree,xfree_pptr): Made safer.
+	* src/list.c: Standartize usage of xfree() and xfree_pptr().
+	* src/message.c: Likewise.
+	* src/rcfile.y: Likewise.
+	* src/regex.c: Likewise.
+	* src/tunnel.c: Likewise.
+
+2003-06-27  Sergey Poznyakoff
+
+	* src/daemon.c: Get rid of the unneeded locals
+	* src/headers.h (smtp_session): Changed proto.
+	* src/rcfile.l: Allow the use of '\' to escape newlines
+	* src/tunnel.c (process_command,transfer_command): Rewritten
+	(rest of functions): Get rid of the unneded locals.
+
+	* TODO: Updated
+	* doc/anubis.texi: Updated.
+	
+2003-06-22  Sergey Poznyakoff
+
+	* src/message.c (message_init): Create header and command
+	lists.
+	* src/tunnel.c: Fixed memory leaks.
+
+2003-06-21  Sergey Poznyakoff 
+
+	* src/daemon.c (_stdio_read): Minor fix.
+	(set_nonblocking): Not needed anymore.
+	(stdinout): Removed calls to set_nonbloking.
+	* src/net.c (struct io_data): Use separate buffers for client
+	and server.
+	(mread): Likewise.
+
+2003-06-20  Sergey Poznyakoff 
+
+	* src/message.c (message_modify_body): Allow the NULL value
+	(message_modify_headers): Allow regexp keys
+	* src/rcfile.y: Likewise
+	* src/regex.c (anubis_regex_replace): Replace all occurrences
+	in the string.
+	* testsuite/mta.c: Bugfix
+	* testsuite/etc/mod-body.in: Test unenclosed patterns.
+	* testsuite/etc/mod-header.in: Test new modify features.
+	* testsuite/etc/mod-header.pat: Likewise.
+	
+2003-06-19  Wojciech Polak
+
+	* testsuite/etc/mod-header.pat: New file.
+	  Testing the modify header mechanism.
+	* testsuite/etc/mod-header.in: New file.
+	* testsuite/etc/Makefile.am: Updated.
+	* testsuite/anubis/base.exp: Added mod-header.pat.
+	* TODO: Updated.
+
+2003-06-19  Sergey Poznyakoff 
+
+	* TODO: Updated
+	* configure.ac: Add AC_PROG_YACC, AM_PROG_LEX
+	* src/guile.c: use non-destructive eval
+	* src/headers.h (anubis_regex_replace): New function
+	* src/regex.c: Likewise.
+	* src/message.c (message_modify_body): New function.
+	Implements "modify body [key] text" statement.
+	* src/rcfile.y: Minor cleanup
+	(inst_eval): Call message_modify_body().
+	* testsuite/anubis/base.exp: Run mod-body test
+	* testsuite/anubis/gpg.exp: Add final newline
+	* testsuite/etc/mod-body.pat: New file
+	* testsuite/etc/mod-body.in: New file
+	* testsuite/etc/Makefile.am: Added new files
+
+2003-06-17  Wojciech Polak
+
+	* doc/anubis.texi: Updated. Reorganized a bit.
+
+2003-06-11  Wojciech Polak
+
+	* configure.ac: Bump to 3.9.90 (pretest version).
+	* NEWS: Added entry for 4.0.
+	* Makefile.am (AUTOMAKE_OPTIONS): Added readme-alpha.
+	* README-alpha: New file.
+
+2003-06-07  Wojciech Polak
+
+	* examples/pam/anubis.allow: Added default unprivileged
+	  user `nobody'.
+	* po/POTFILES.in: Updated.
+	* README: Likewise.
+
+2003-06-07  Wojciech Polak
+
+	* src/Makefile.am: Bugfix. Added missing -I$(top_srcdir)/intl.
+
+2003-06-07  Wojciech Polak
+
+	* src/gettext.h: New file.
+	* src/headers.h: Include "gettext.h" instead of <libintl.h>.
+	* src/Makefile.am (EXTRA_DIST): Added gettext.h.
+
+2003-06-06  Wojciech Polak
+
+	* src/obstack.c: Provide newer version.
+	* src/obstack.h: Likewise.
+	* src/getopt1.c: Likewise.
+	* src/getopt.c: Likewise.
+	* src/getopt.h: Likewise.
+
+2003-06-06  Wojciech Polak
+
+	* src/errs.c (anubis_error): Removed unneeded HAVE_VSNPRINTF.
+	* src/log.c (mprintf): Likewise.
+	* testsuite/mta.c: Clean up with prototypes.
+
+2003-06-02  Sergey Poznyakoff
+
+	* src/net.c (_debug_printer): Avoid splitting debug transcript
+	  lines.
+
+2003-05-30  Wojciech Polak
+
+	* configure.ac: Added new option --with-unprivileged-user.
+	  Use the AC_HELP_STRING where appropriate.
+	* src/daemon.c (set_unprivileged_user): Support the new
+	  DEFAULT_UNPRIVILEGED_USER.
+
+2003-05-29  Wojciech Polak
+
+	* configure.ac: Set AM_GNU_GETTEXT_VERSION(0.12.1).
+	* m4/Makefile.am: Added nls.m4 and po.m4.
+	* po/Makevars: Added MSGID_BUGS_ADDRESS.
+	* Makefile.am: Bumped to GNU Automake 1.7.5.
+
+2003-05-28  Sergey Poznyakoff
+
+	* src/tls.c (start_ssl_server): Bugfix
+	* testsuite/etc/tlsoneway.in: Use TOP_SRCDIR to access
+	  PEM file.
+
+2003-05-27  Sergey Poznyakoff
+
+	* TODO: Updated
+	* src/auth.c: Removed superfluous return
+	* src/log.c: Removed unneeded HAVE_VSNPRINTF
+	* src/tls.c: Provide push/pull functions to work with local
+	  mailers.
+	* src/tunnel.c (transfer_command): TLS can be used with
+	  local mailers.
+	* testsuite/mta.c: Added TLS support (only with GnuTLS).
+
+	* testsuite/etc/tlsoneway.pat: New file.
+	* testsuite/etc/tlsoneway.in: New file.
+	* testsuite/etc/Makefile.am: Added new files.
+	* testsuite/anubis/tls.exp: New file.
+	* testsuite/anubis/DISTFILES: Added new files.
+
+	* testsuite/data/anubis.pem: New file
+	* testsuite/data/Makefile.am: Added new file.
+
+2003-05-11  Wojciech Polak
+
+	* src/help.c (print_usage): Added missing command line options.
+	* scripts/redhat.init: Small fix.
+
+2003-05-10  Sergey Poznyakoff
+
+	* src/tls.c: More diagnostics.
+	* src/tunnel.c (process_command): Bugfix. Inform the client
+	  that we are willing to handle TLS.
+
+2003-05-10  Sergey Poznyakoff
+
+	Implemented iterators instead of non-reentrant
+	list_first/list_next calls.
+	
+	* src/list.h (list_first,list_next,list_remove_current)
+	  (list_append_list): Removed.
+	  (ITERATOR): New datatype.
+	  (iterator_create,iterator_destroy,iterator_current)
+	  (iterator_first,iterator_next): New functions.
+	* src/list.c: Likewise.
+	
+	* src/extern.h: Use iterator functions.
+	* src/headers.h: Likewise.
+	* src/daemon.c: Likewise.
+	* src/gpg.c: Likewise.
+	* src/guile.c: Likewise.
+
+	* src/map.c: Likewise.
+	* src/message.c: Likewise.
+	* src/misc.c: Likewise.
+	* src/quit.c: Likewise.
+	* src/rc.c: Likewise.
+	* src/rcfile.h: Likewise.
+	* src/rcfile.y: Likewise.
+	* src/tunnel.c: Likewise.
+
+	* src/tls.c: More diagnostics.
+	
+2003-05-08  Wojciech Polak
+
+	* configure.ac: Fixed OpenSSL compilation (broken with_gnutls=no).
+	* src/ssl.c (start_ssl_server): Added missing SESS *sd.
+	  (_ssl_strerror): Changed return type to static const char *.
+
+2003-05-02  Wojciech Polak
+
+	* headers.h: Clean up with prototypes. Moved some stuff
+	  to extern.h and vice versa.
+	* extern.h: Likewise.
+	* list.h: Clean up with prototypes.
+	* rcfile.h: Likewise.
+	* rcfile.l: Likewise.
+	* rcfile.y: Likewise.
+	* rc.c: Likewise.
+	* regex.c: Likewise
+	* main.c: Likewise.
+	* map.c: Likewise.
+	* net.c: Likewise.
+	* guile.c: Likewise.
+	  (list_to_args): Put parentheses around assignment.
+	* tunnel.c: (write_header_line): Put parentheses
+	  around assignment.
+	* misc.c (insert): Convert to a static function.
+	* env.c (get_options): Added missing option `c'
+	  to getopt_long().
+
+2003-04-26  Wojciech Polak
+
+	* doc/anubis.texi: Changed @dircategory to Email.
+	* TODO: Updated.
+
+2003-04-08  Wojciech Polak
+
+	* doc/anubis.texi: Clean up. Removed some old stuff.
+
+2003-04-06  Sergey Poznyakoff
+
+	* src/tunnel.c: Use new encryption wrappers.
+	* src/daemon.c: Likewise. 
+	* src/net.c: Likewise.
+	* src/errs.c (socket_error): Changed declaration.
+	* src/extern.h (secure_struct): Removed implementation-dependent
+	  members.
+	* src/headers.h (T_SSL_CLIENT,T_SSL_SERVER): Not needed anymore.
+	  (net_io_t,net_close_t,strerror_t): New data types.
+	  (socket_error): Changed proto.
+	  (net_set_io,net_close): New function.
+	* src/main.c (main): Call init_ssl_libs.
+	
+	* src/proxy.c: Reflect changes to the declaration of
+	  socket_error().
+	* src/quit.c (quit): Removed implementation-dependent calls.
+	* src/ssl.c: Rewritten to make more modular.
+	* src/tls.c: Likewise.
+
+2003-03-10  Wojciech Polak
+
+	* testsuite/etc/trigger.pat: New file. Testing
+	  the Trigger mechanism.
+	* testsuite/etc/trigger.in: New file.
+	* testsuite/etc/Makefile.am: Updated.
+	* testsuite/anubis/base.exp: Added trigger.pat.
+	* TODO: Updated.
+
+2003-03-07  Wojciech Polak
+
+	* src/quit.c (free_mem): Removed unused variables.
+	* src/main.c (struct rm_struct): Removed.
+	* src/extern.h: Likewise.
+
+	* src/esmtp.c: Fixed preprocessor directives.
+	* src/proxy.c: Likewise.
+	* src/exec.c: Likewise.
+	* src/net.c: Likewise.
+	* src/ssl.c: Likewise.
+
+2003-03-07  Sergey Poznyakoff
+
+	* po/POTFILES.in: Added missing files.
+	* src/map.c (translate_parser): Synchronized with the
+	  yesterday's changes.
+
+2003-03-07  Sergey Poznyakoff
+
+	* TODO: Updated
+	* examples/anubis.scm: Major changes.
+	* guile/rot-13.scm (rot-13): A universal function for rotating
+	  the message body, its subject, or both.
+	* src/gpg.c: Removed obsolete kewords.
+	* src/rc.c: Likewise.
+	* testsuite/anubis/guile.exp: Added rot-13 test
+	* testsuite/etc/rot-13.pat: New file.
+	* testsuite/etc/Makefile.am: Added rot-13.pat
+	* testsuite/etc/remail.in: Modified to support rot-13 test as
+	  well.
+	* testsuite/etc/remail.pat: Fixed remailer header.
+	
+2003-03-06  Sergey Poznyakoff
+
+	* guile: New subdirectory
+	* guile/Makefile.am: New file.
+	* guile/remailer.scm: New file.
+	* guile/rot-13.scm: Moved from ...
+	* examples/rot-13.scm: ... here
+	* examples/Makefile.am: Updated.
+	* Makefile.am: Added new subdir (guile)
+	* configure.ac: Likewise.
+	  Minor fix for handling --with-gnutls and --with-openssl options.
+	* examples/anubis.scm: Added extra arguments to interface
+	  functions.
+	* src/daemon.c: Use ngettext wherever appropriate.
+	* src/ssl.c: Likewise.
+	* src/tls.c: Likewise.
+	
+	* src/exec.c (exec_argv): new function.
+	* src/guile.c (guile_process_proc): Pass any number of additional
+	  parameters to the procedure.
+	  (guile_parser): Reflect changes to the prototype.
+	  
+	* src/gpg.c (gpg_parser): Reflect changes to the prototype.
+	* src/headers.h (message_external_proc): Changed proto
+	  (exec_argv): New function.
+	* src/list.c (list_iterate): Bugfix
+	  (list_item): New function.
+	* src/list.h: (list_item): New function.
+	* src/message.c (message_external_proc): Changed proto
+	* src/rc.c (control_parser,tls_parser,rule_parser): Reflect
+	  changes to the prototype.
+	* src/rcfile.h (struct rc_asgn): Changed type of 'rhs'
+	  (rc_kw_parser_t): Changed third argument type.
+	* src/rcfile.l: Lots of changes to make LIT state more
+	  intellectual.
+	* src/rcfile.y (asgn_stmt) production modified to collect
+	  whitespace-separated arguments at the right of the keyword,
+	  instead of just one line.
+	  
+	* testsuite/data/Makefile.am: Fixed creation gpg keyrings.
+	* testsuite/etc/remail.pat: New file
+	* testsuite/etc/remail.in: New file
+	* testsuite/etc/Makefile.am: Added new files
+	* testsuite/lib/anubis.exp (anubis_expect_list,anubis_test): Be
+	  more stringent in testing.
+	* testsuite/etc/gpgcrypt.pat: Modified to reflect recent changes
+	  to anubis.exp.
+	* testsuite/etc/gpgsign.pat: Likewise.
+	* testsuite/anubis/guile.exp: New file
+	* testsuite/anubis/DISTFILES: Updated
+	
+2003-03-03  Wojciech Polak
+
+	* examples/1anubisrc: Updated to the new syntax.
+	* testsuite/etc/std.in: Updated.
+	* testsuite/etc/std.pat: Likewise.
+
+2003-03-03  Sergey Poznyakoff
+
+	* TODO: Updated
+	* src/headers.h (rcfile_call_section): New function
+	* src/rc.c: Likewise.
+	* src/rcfile.h (inst_stop, inst_call): New instruction types.
+	  (rc_call_section): New function.
+	* src/rcfile.y: Allow regexp options to appear on both sides of
+	  the equal sign.
+	  Implemented "call" and "stop" statements.
+	* testsuite/etc/std.in: Test for regexp option on the left from
+	  the '='.
+
+2003-03-03  Wojciech Polak
+
+	* src/gpg.c (gpg_free): New function. Free unused memory.
+	* src/headers.h (gpg_free): Added prototype.
+	* src/quit.c (free_mem): Call gpg_free().
+
+2003-02-28  Wojciech Polak
+
+	* configure.ac: Bumped to 3.9.0 (unreleased, internal version).
+	* src/main.h: Moved all the stuff to main.c. Removed main.h.
+	* src/files.c (message_append_signature_file): Fixed prefix.
+	* src/main.c: Removed unused ropt variable.
+	* src/extern.h: Likewise.
+	* src/list.h: Added missing copyright.
+	* src/errs.c: Fixed preprocessor directives.
+	* src/log.c: Likewise.
+	* src/headers.h (message_append_text_file): Added prototype.
+	  (message_append_signature_file): Likewise.
+	* src/Makefile.am: Removed main.h.
+
+2003-02-28  Sergey Poznyakoff
+
+	User-visible changes:
+	  New syntactical entities:
+
+		add header[KEY] VALUE
+		add body VALUE
+		remove header[KEY]
+		modify header[KEY] [NEW-KEY] VALUE
+
+	("header" may be omitted). KEY is (currently) the header name. It
+	may be a regular expression matching a set of header names
+	for "remove". [NEW-KEY] in "modify" statement is optional.
+
+	  Added support for "here document" (see testsuite/etc/add.in
+	for a sample).
+
+	  Allow to select signer id with gpg-sign.
+	
+	* configure.ac: Use -ggdb instead of -g if gcc is being used.
+	* src/message.c: New file.
+	* src/Makefile.am: Added message.c
+	* src/extern.h (message): Removed.
+	* src/main.h: Likewise.
+	* src/headers.h (T_BOUNDARY): Removed macro.
+	  (message_modify_headers): Changed declaration
+	  (message_add_body,message_init,message_free): New functions.
+	* src/gpg.c (struct gpg_struct): New member "inited".
+	  (gpg_sign): Allow to select the signers IDs
+	  (gpg_parser): Call gpgme_init whenever necessary.
+	* src/misc.c: (header_assoc): Remove any leading whitespace from
+	  the header field value.
+	* src/quit.c (free_mem): Removed references to message.
+	* src/rc.c (rule_parser et al.): Removed "add", "remove" and
+	  "modify". These are reserved keywords and are handled by the
+	  main parser code.
+	* src/rcfile.h (RC_INST,enum rc_inst_opcode): New datatypes.
+	  (struct rc_stmt): New member v.inst.
+	* src/rcfile.l: Added new keywords: BODY, ADD, REMOVE, MODIFY,
+	  STOP, CALL. The latter two are reserved for future use.
+	  Removed support for unquoted regular expressions.
+	  Do not try to interpret backslashes in front of numbers
+	  (regexp backreferences).
+	  Added shell-like "here document" construction.
+	* src/rcfile.y: Support for ADD, REMOVE, and MODIFY instructions.
+	  Removed support for unquoted regular expressions.
+	* src/tunnel.c: Removed global variable "message".
+	  Moved all message-specific functions to message.c
+	* testsuite/anubis/base.exp: Added new test (append to the body).
+	* testsuite/anubis/gpg.exp: Added new test (GPG signing)
+	* testsuite/etc/add-body.pat: New file.
+	* testsuite/etc/gpgsign.pat: New file.
+ 	* testsuite/etc/add.in: New file.
+	* testsuite/etc/Makefile.am: Added add-body.pat, gpgsign.pat and
+	  add.in.
+	* testsuite/etc/del.in: Use the new syntax.
+	* testsuite/etc/simple.in: Likewise
+	* testsuite/etc/std.in: Likewise.
+	* testsuite/etc/std.pat: Likewise.
+	* testsuite/etc/gpg.in: Likewise. Added new rule
+	* testsuite/lib/anubis.exp (anubis_pat): Allow use of -re and
+	  -- prefixes within the :PATTERN block
+	  
+	* TODO: Updated
+	
+2003-02-26  Sergey Poznyakoff
+
+	Changed the message processing algorithm to process a
+	message as a whole. The rcfile grammar is changed
+	accordingly. The previous sources (with linie-by-line
+	message processing) are tagged 'ver-3-with-per-line-proc'.
+	TODO: remailer support.
+	
+	* src/list.c: New files.
+	* src/list.h: New files.
+	* src/Makefile.am: Added new files
+	* src/extern.h (struct line, struct message_struct)
+	  (struct gpg_struct): Removed.
+	  (struct session_struct): Removed unused members.
+	  (gpg, mopt): Removed
+	* src/headers.h (BODY,X_ANUBIS_RULE_HEADER): New define.
+	  Removed M_.* defines
+	  (ASSOC, MESSAGE): New aggregate types.
+	  (new_element,destroy_list): Removed.
+	  (rcfile_process_cond): Removed.
+	  (destroy_assoc_list, destroy_string_list): New functions.
+	  (rcfile_process_section): Changed declaration.
+	* src/main.h (gpg, mopt): Removed.
+	* src/map.c (parse_transmap): Updated call to
+	  rcfile_process_section.
+	  (translate_parser): Changed declaration
+	* src/files.c (check_all_files): Removed.
+	  (message_append_text_file)
+	  (message_append_signature_file): New functions.
+	* src/gpg.c (gpg_encrypt_to_remailer, check_gpg): Removed.
+	  (gpg_proc): New function.
+	  (gpg_parser): Rewritten.
+	* src/guile.c (guile_rewrite_line): Temporarly removed.
+	  (guile_to_anubis,anubis_to_guile): Rewritten.
+	  (guile_process_proc): Rewritten.
+	  (guile_process_list,guile_postprocess_list)
+	  (guile_postprocess_list,guile_proclist_empty): Removed.
+	  (guile_parser): Rewritten.
+	* src/misc.c (new_element): Removed.
+	  (destroy_string_list, destroy_assoc_list): New functions.
+	  (header_assoc, assoc_to_header): New functions.
+	* src/quit.c (free_mem): Updated.
+	* src/rc.c (control_parser,tls_parser,rule_parser): Rewritten.
+	  (all_parser): Removed.
+	  (rule_section_init,rc_system_init): Removed ALL section.
+	  (rcfile_process_cond): Removed.
+	  (rcfile_process_section): Changed declaration.
+	* src/rcfile.h (RC_EXPR): New data type.
+	  (enum rc_node_type): Replaced rc_node_re with rc_node_expr.
+	  (struct rc_node): Likewise.
+	  (struct rc_expr): New data type.
+	  (struct rc_cond): Removed method member.
+	  (rc_kw_parser_t): Changed declaration.
+	  (rc_run_section): Likewise.
+	* src/rcfile.l: Added "NOT" token.
+	* src/rcfile.y: Grammar rewritten. The support for old compatibility
+	  syntax (if header =^Subject) has been removed. The new syntax
+	  is
+		if header[Subject] "regexp"
+	  Multiple conditions are allowed:
+
+		if header[Subject] "Re: .*" and body ".*found.*"
+	* src/tunnel.c: Rewritten.
+
+	* testsuite/etc/gpg.in: Updated to new syntax.
+	* testsuite/etc/std.in: Likewise.
+	* testsuite/etc/simple.in: Likewise.
+	* testsuite/etc/std.pat: Likewise.
+	
+2003-02-20  Wojciech Polak
+
+	* configure.ac: Removed unused variables.
+
+2003-02-20  Sergey Poznyakoff
+
+	* testsuite/Makefile.am: Removed erroneous distclean-local
+	* testsuite/data/Makefile.am: Fixed rules for generating
+	  *.gpg files.
+	* testsuite/data/pubring.asc: Updated
+	* testsuite/data/secring.asc: New file
+
+2003-02-20  Sergey Poznyakoff
+
+	* configure.ac: Define ANUBIS_GPGFILES if GPG is enabled.
+	* contrib/Makefile.am: Added msg2smtp.pl to EXTRA_DIST.
+	* src/gpg.c: Moved configuration handler from rc.c. Added
+	  new configuration keyword gpg-home for setting the GPG
+	  home directory.
+	* src/headers.h (gpg_section_init): New function.
+	* src/rc.c: Moved gpg-specific functions to gpg.c
+	* testsuite/data: New directory.
+	* testsuite/data/Makefile.am:
+	* testsuite/data/.cvsignore:
+	* testsuite/data/pubring.asc:
+	* testsuite/anubis/gpg.exp: New file. Tests GPG encryption
+	* testsuite/anubis/DISTFILES: Added gpg.exp
+	* testsuite/Makefile.am: Added data to SUBDIRS
+	* testsuite/etc/gpgcrypt.pat: New file
+	* testsuite/etc/gpg.in: New file.
+	* testsuite/etc/Makefile.am: Added new files
+	* testsuite/lib/anubis.exp (anubis_version): Renamed to
+	  default_anubis_version to avoid name clashes.
+	  (anubis_exec,anubis_expect_list,anubis_test): Improved handling
+	  of pattern modifiers  (-re and --).
+	  (anubis_check_capability): New function.
+	  (anubis_test_file): New option -catprog.
+	  (anubis_pat): Improved handling of :OPTIONS keyword,
+	  Added new mode "CAT" for testing GPG encryption.
+	  
+2003-02-19  Wojciech Polak
+
+	* src/main.h: Removed no longer used variable `submatch'.
+	* src/extern.h: Likewise.
+	* src/quit.c (free_mem): Likewise.
+	* src/help.c (print_version): Minor change.
+
+	* testsuite/mta.c (smtp_reply): Added prototype.
+
+2003-02-19  Wojciech Polak
+
+	* src/env.c (argv_dup): New static function.
+	* src/headers.h (T_RCEXECARGS): Removed flag.
+	* src/rc.c: Likewise.
+	* src/quit.c: Likewise.
+
+2003-02-18  Sergey Poznyakoff
+
+	* src/net.c: Fixed debugging diagnostics.
+
+2003-02-17  Sergey Poznyakoff
+
+	* src/extern.h (struct message_struct): New member mime_hdr.
+	* src/headers.h (T_ENTIRE_BODY): New flag.
+	  (regex_match): Removed.
+	* src/mem.c (free_pptr): Correctly handle null pointer.
+	* src/rc.c (control_parser): New boolean flag `read-entire-body'.
+	  When set to true causes the entire mime-encoded body to
+	  be read in core. Otherwise, only the first mime part is
+	  read, all the rest is passed to the server verbatim (default).
+	* src/regex.c (regex_match,posixre_match): Removed
+	* src/tunnel.c: Implemented new scheme of message processing.
+
+	Added new tests:
+	* testsuite/lib/anubis.exp (anubis_pat): Handle :DEL keyword.
+	* testsuite/anubis/base.exp: Test removal of headers.
+	* testsuite/anubis/mime.exp: New file.
+	* testsuite/anubis/DISTFILES: Added mime.exp
+	* testsuite/etc/del1.pat: New file.
+	* testsuite/etc/del2.pat: New file.
+	* testsuite/etc/del3.pat: New file.
+	* testsuite/etc/del4.pat: New file.
+	* testsuite/etc/del.in: New file.
+	* testsuite/etc/entire.in: New file.
+	* testsuite/etc/mime1.pat: New file.
+	* testsuite/etc/mime2.pat: New file.
+	* testsuite/etc/Makefile.am: Added new files.
+	* testsuite/etc/add1.pat: Minor change.
+	* testsuite/etc/add2.pat: Likewise.
+	* testsuite/etc/add3.pat: Likewise.
+	
+2003-02-15  Wojciech Polak
+
+	* configure.ac: Check apple-darwin by config.guess, not uname.
+	  Added message info if disabling Guile support.
+
+2003-02-11  Sergey Poznyakoff
+
+	* testsuite/mta.c: Prevent race condition on closing the diagnostic
+	  file.
+
+2003-02-11  Wojciech Polak
+
+	Removed ROT-13 support from main engine.
+
+	* src/misc.c (check_rot13): Removed function.
+	* src/tunnel.c (transfer_header): Removed rot13 subject encoding.
+	  (transform_body): Removed check_rot13() call.
+	* src/headers.h: Removed check_rot13 prototype.
+
+	* examples/anubisrc.guile: Updated.
+
+2003-02-11  Sergey Poznyakoff
+
+	* Makefile.am: Added testsuite
+	* configure.ac: Check for obstack, provide replacement
+	  if necessary.
+	  Check for reversed arguments to setvbuf.
+	  Generate Makefiles under testsuite/
+
+	* examples/anubis.scm: Split msg-process into two procedures:
+	  one for rotating the subject header and another for rotating
+	  the message body.
+	* examples/anubisrc.guile: Updated.
+
+	* src/obstack.c: New file. Obstack replacement for systems
+	  without it.
+	* src/obstack.h: Likewise.
+	* src/Makefile.am: Added obstack
+	* src/env.c: New options: --show-config-options displays
+	  configuration options for anubis, --relax-perm-check
+	  relaxes permission check on user rc file. Both are useful
+	  for testsuite.
+	* src/guile.c (guile_process_proc): Removed call to remcrlf.
+	  (guile_postprocess_list): New function.
+
+	* src/headers.h (T_RELAX_PERM_CHECK): New define. This bit
+	  is set in topts when --relax-perm-check is given in the
+	  command line.
+	  (print_config_options): New function.
+	  
+	* src/help.c (show_config_options, print_config_options): New
+	  functions.
+	  (print_version): Use show_config_options.
+	* src/rc.c (open_rcfile): Open only altrc if both --norc
+	  and --altrc are given.
+	* src/tunnel.c: Started implementing new approach for collecting
+	  message header and body. Both are collected, processed and
+	  only then fed to the MTA.
+	  TODO: split off attachments to diminish memory consumption.
+
+	* testsuite/: New directory
+	* testsuite/Makefile.am: New file
+	* testsuite/mta.c: New file
+	* testsuite/.cvsignore: New file
+	* testsuite/lib/: New directory
+	* testsuite/lib/anubis.exp: New file
+	* testsuite/lib/DISTFILES: New file
+	* testsuite/anubis/: New directory
+	* testsuite/anubis/base.exp: New file
+	* testsuite/anubis/DISTFILES: New file
+	* testsuite/etc/: New directory
+	* testsuite/etc/Makefile.am: New file
+	* testsuite/etc/.cvsignore: New file 
+	* testsuite/etc/add1.pat: New file
+	* testsuite/etc/add2.pat: New file
+	* testsuite/etc/add3.pat: New file
+	* testsuite/etc/empty.in: New file
+	* testsuite/etc/empty.pat: New file
+	* testsuite/etc/mult.pat: New file
+	* testsuite/etc/simple.in: New file
+	* testsuite/etc/std.in: New file
+	* testsuite/etc/std.pat: New file
+	  
+2003-02-08  Sergey Poznyakoff
+
+	* src/regex.c: Rewritten using "control table" approach.
+
+2003-02-08  Wojciech Polak
+
+	* src/rc.c (gpg_parser): Fixed KW_GPG_SIGN case.
+
+	* configure.ac: Clean up.
+	* README: Updated.
+
+2003-02-08  Sergey Poznyakoff
+
+	* src/regex.c (_perl_match): Fixed allocation of ovector.
+
+2003-02-07  Sergey Poznyakoff
+
+	* src/env.c (check_filename): Take an additional
+	  argument: a pointer to the file modification time.
+	* src/headers.h: Likewise.
+	* src/exec.c: Updated calls to check_filename().
+	* src/tunnel.c: Likewise.
+	* src/net.c: Restored checking the modification time
+	  of the global rcfile.
+	* src/rc.c: Likewise.
+	* src/rcfile.y: Improved readability of the diagnostic
+	  output.
+
+	* src/map.c: Minor changes.
+	  
+2003-02-07  Wojciech Polak
+
+	* src/map.c (translate_parser): Fixed a bug in `user name after into'
+	  parser.
+
+2003-02-07  Sergey Poznyakoff
+
+	* src/map.c: Fixed section name.
+	* src/rcfile.y (rc_stmt_print): Display IFFALSE branch
+	  only if it is non-null.
+	  (rc_run_section): Check for sec==NULL.
+
+2003-02-07  Sergey Poznyakoff
+
+	* src/guile.c (guile_parser): Removed kludge.
+	* src/headers.h (anubis_regex_refcnt): New function.
+	* src/regex.c: Likewise.
+	* src/rcfile.l: A couple of bugfixes/improvements in
+	  RX/RXM states.
+	* src/rcfile.y (rc_parse): Fixed return value.
+	  (node_eval): Check the number of backreferences in
+	  regexp.
+	  
+2003-02-06  Sergey Poznyakoff
+
+	* configure.ac: Provide a replacement for snprintf
+	* examples/anubis.scm: Renamed postprocess to msg-process.
+	* examples/anubisrc.guile: Likewise.
+	* src/snprintf.c: New file. A replacement for snprintf function.
+	* src/Makefile.am: Added snprintf.c
+	* src/auth.c: Remove HAVE_SNPRINTF conditional
+	* src/esmtp.c: Likewise.
+	* src/exec.c: Likewise.
+	* src/files.c: Likewise.
+	* src/misc.c: Likewise.
+	* src/ssl.c: Likewise.
+	* src/tunnel.c: Likewise.
+	* src/daemon.c: Likewise.
+	  (stdinout): Removed call to process_rcfile().
+
+	* src/extern.h (struct options_struct): Removed guile_postprocess
+	  member.
+	* src/guile.c: Provide a placeholder for guile-postprocess
+	  functions.
+
+	* src/headers.h: Removed inclusion of <regex.h> and <pcre.h>
+	  (anubis_regex_match,anubis_regex_free,anubis_regex_source):
+	  Added new prototypes.
+	* src/rcfile.h (struct rc_regex,RC_REGEX): Removed. It is defined
+	  elsewhere.
+	  (struct rc_node): Changed type of 'v.re' member.
+
+	* src/rcfile.l: Fixed support for traditional syntax.
+	* src/rcfile.y: Fixed support for traditional syntax.
+	  Changed regular expression handling.
+
+	* src/regex.c: Modularized regular expressions. All implementation
+	  dependent parts (regex,pcre) live in this file. The rest of
+	  sources uses anubis_regex_.* interface.
+
+2003-02-05  Sergey Poznyakoff
+
+	Rewritten RC file support using yacc and lex.
+	
+	* configure.ac: Turn on guile support unless --without-guile
+	  has been given.
+
+	* build/ylwrap: New file. A customized wrapper for yacc/lex
+	  invocations.  
+	* build/Makefile.am: Added ylwrap
+	* m4/guile.m4: Raised Guile version requirement to 1.6
+
+	* src/rcfile.l: New file. Lexical analizer for configuration
+	  files.
+	* src/rcfile.y: New file. Syntax analizer for configuration
+	  files.
+	* src/rcfile.h: New file.
+	* src/Makefile.am: Added rcfile.[ylh]
+	* src/map.c: Rewritten.
+	* src/rc.c: Rewritten.
+	* src/regex.c (anubis_regexp_match): New function.
+	
+	* src/auth.c: Use new rc_ calls.
+	* src/daemon.c: Likewise.
+	* src/guile.c: Likewise.
+	* src/main.c: Likewise.
+	* src/quit.c: Likewise.
+	* src/tunnel.c: Likewise.
+	
+	* src/env.c: New option --check-config (-c).
+	* src/extern.h: Removed obsolete declarations.
+	* src/headers.h: Likewise.
+	* src/main.h: Likewise.
+
+	* TODO: Updated.
+	
+2003-02-02  Wojciech Polak
+
+	* README: Updated.
+	* TODO: Likewise.
+
+	* src/headers.h: Added conditional WITH_GUILE.
+	* src/tunnel.c: Likewise.
+	  (memory_reader): Removed compiler warning about `i'.
+	* src/rc.c (match_action_guile): Added missing returns.
+	* src/guile.c: Fixed copyright comment at top of the file.
+
+2003-02-01  Sergey Poznyakoff
+
+	* examples/anubis.scm (postprocess): Escape quotes inside the 
+	  comment string
+
+2003-02-01  Wojciech Polak
+
+	* AUTHORS: Added Sergey Poznyakoff.
+
+	* configure.ac: Don't use `uname' for SunOS.
+	  Check -lsocket and -lnsl directly with AC_CHECK_LIB.
+
+	* src/headers.h: Fixed `guile_load_path_append' prototype.
+	* src/help.c (print_version): Added info about GUILE.
+	* src/tunnel.c (process_command): Removed file permissions
+	  check for SSL certificate.
+	* src/rc.c: Commented extra tokens at end of #endif directive.
+
+2003-02-01  Sergey Poznyakoff
+
+	Added support for Guile
+	
+	* configure.ac: Added --with-guile switch.
+	  Determine if socklen_t is defined, define it if it is not.
+	* m4/guile.m4: New file	
+	* m4/Makefile.am: Added guile.m4
+	* build/guile-1.6: New directory.
+	* build/guile-1.6/guile-doc-snarf: New file
+	* build/guile-1.6/guile-doc-snarf.awk: New file
+	* build/guile-1.6/Makefile.am: New file.
+	* build/Makefile.am: Added subdirs.
+	* src/daemon.c (loop): Removed `#ifdef __socklen_t_defined'
+	  conditional'.
+	
+	* src/guile.c: New file
+	* src/Makefile.am: Added guile.c
+	* src/auth.c [WITH_GUILE](auth_tunnel): Call read_rcfile_guile().
+	* src/extern.h [WITH_GUILE](struct options_struct): New members
+	  guile_logfile, guile_postprocess.
+	  (guile_position): New global.
+	* src/headers.h [WITH_GUILE]: Include libguile.h
+	  [WITH_GUILE] (read_rcfile_guile): New function.
+	  (read_action_block): Take an argument.
+	  (BEGIN_GUILE): New define
+	  (anubis,anubis_boot,guile_load_path,guile_load_program)
+	  (guile_rewrite_line): New functions.
+	* src/main.c [WITH_GUILE] (anubis_core): New
+	  function. Bootstrapper for guile support.
+	  (anubis_core): New define
+	  (anubis): New function. Runs main anubis loop.
+	  (main): Call anubis_core()
+	* src/main.h (guile_position): New global
+	* src/rc.c (read_action_block,match_action): Take additional
+	  argument: the source line (command or header) that triggered
+	  its invocation.
+	  [WITH_GUILE] (match_action): Handle guile-rewrite-line keyword
+	  [WITH_GUILE] (match_action_guile,read_rcfile_guile): New functions
+	* src/tunnel.c: Updated invocations of read_action_block()
+
+	* examples/anubisrc.guile: New file
+	* examples/anubis.scm: New file
+	* examples/rot-13.scm: 
+	* examples/Makefile.am: Added new files.
+
+2003-01-30  Wojciech Polak
+
+	* m4/Makefile.am: Added gettext m4 macros to EXTRA_DIST.
+	* src/Makefile.am: Removed DEFAULT_INCLUDES.
+
+2003-01-30  Wojciech Polak
+
+	* Initial CVS import, starting GNU Anubis 3.6.3.
+
+
+Local Variables:
+mode: change-log
+version-control: never
+buffer-read-only: t
+End:

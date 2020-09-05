@@ -1,0 +1,982 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- sig.sa: Routine and iter type signatures in the Sather compiler.
+-------------------------------------------------------------------
+-- SIG: The type signature of a routine or iter.
+-- SIG_TBL: Table of routine and iter signatures retrievable by name.
+-------------------------------------------------------------------
+class SIG < $STR, $HASH is
+    -- The type signature of a routine or iter.
+    include COMPARABLE;
+   
+    readonly attr tp:$TP;	    -- The type to which the signature belongs.
+    readonly attr name:IDENT;	    -- The name of the routine or iter.
+    readonly attr args:ARRAY{ARG};  -- Arguments, void if none.
+    readonly attr hot:ARRAY{BOOL};  -- True for "!" iter args, void if none.
+    readonly attr ret:$TP;	    -- Return type, void if none.
+    readonly attr str:STR;	    -- String representation
+    readonly attr returns_same:BOOL;-- True for abstract class routines
+    -- returning SAME. *H*
+   
+    attr src_tparams: ARRAY{$TP};   -- Typeparameters in the original
+                                    -- declaration of the routine. Needed
+                                    -- in the backend.
+    -- this should go away
+    attr srcsig:SAME;		    -- The signature of this routine or iter
+                                    -- in the class it originally came from.
+				    -- Only set after the function has been
+				    -- optimized.
+
+    -- Table of unique SIGs (registration occurs on creation.)
+    readonly shared sigs:FMAP{STR,SIG};
+
+    is_builtin:BOOL is      -- true for builtin iters and funcs.
+       if ~void(builtin_info) then return true; end;
+       return (~void(srcsig) and srcsig/=self and srcsig.is_builtin);
+    end;
+
+    attr builtin_info:CONFIG_ROUT; -- configuration info for builtin
+    private attr got_builtin_info:BOOL; -- see rout_sig for infos about
+    					-- this field
+
+    is_forked:BOOL is 
+       return is_par_routine or is_fork_routine or is_attach_routine;
+    end;
+    attr is_par_routine:BOOL;	 -- Used by pSather for functions created
+				 -- to execute the body of a par
+    attr is_fork_routine:BOOL;	 -- true for functions that execute the
+				 -- fork body
+    attr is_attach_routine:BOOL; -- true for functions that execute the
+				 -- rhs of an attach  :- 
+				 -- not for the standard :-
+    attr opt_fork:BOOL;		 -- use optimized forking
+    attr needs_import:BOOL;      -- Used by pSather
+    attr needs_export:BOOL;      -- used by pSather
+
+				 -- holds information used to optimise
+				 -- calls in pSather
+    attr opt_info:OPT_LOCAL_CALL;
+
+    -- returns the number of attribute accesses done in this function for
+    -- each of the arguments;
+    attr_access:ARRAY{INT} is
+       if is_builtin then return builtin_info.attr_access; end;
+       if void(opt_info) then return void; end;
+       return opt_info.attr_access;
+    end;
+    attr_access(a:ARRAY{INT}) pre ~void(opt_info) is opt_info.attr_access:=a; end;
+
+    -- true if the result is always near
+    is_near:BOOL is return (is_builtin and builtin_info.is_near) 
+			   or ret.is_immutable 
+			   or (~void(opt_info) and opt_info.is_near); end;
+    is_near(a:BOOL) pre ~void(opt_info) is opt_info.is_near:=a; end;
+
+    -- returns an array which indicates which arguments have to be
+    -- near to make the result near. If it returns void is_near:BOOL
+    -- has to be consulted. 0 is self
+    near_depends_on_args:ARRAY{INT} is
+       if is_builtin then return builtin_info.near_depends_on; end;
+       if void(opt_info) then return void; end;
+       return opt_info.near_depends_on_args;
+    end;
+    near_depends_on_args(a:ARRAY{INT}) 
+    pre ~void(opt_info) is opt_info.near_depends_on_args:=a; end;
+
+    attr am_created:BOOL;	 -- Whether AM form output has occured yet.
+
+-------------------------------------------------------------------
+-- side effect processing:
+   private attr se_context:SE_CONTEXT; -- the side effects of this signature
+
+   get_se_context(prog:PROG):SE_CONTEXT is
+      if tp.is_abstract then
+	 -- construct a signature union for this abstract signature
+	 return SE_CONTEXT::get_abstract_union(prog,self);
+      else
+	 -- return what is here
+	 return se_context;
+      end;
+   end;
+
+   set_se_context(sec:SE_CONTEXT) is
+      assert sec.rsig = self;
+      assert ~tp.is_abstract;
+      se_context := sec;
+   end;
+
+-------------------------------------------------------------------
+
+    prog:PROG is
+	-- The program this signature belongs to.
+	return tp.prog end;
+
+    create(ntp:$TP,tparr:ARRAY{$TP},nname:IDENT,nargs:ARRAY{ARG},
+        nret:$TP,nsame:BOOL)
+        :SAME    
+    is
+	r::=new;
+	r.tp:=ntp;
+        r.src_tparams := tparr;
+	r.name:=nname;
+	r.args:=nargs;
+	r.ret:=nret;
+        r.returns_same:=nsame;
+	return r.make_unique;
+    end;
+
+    -- This will need to change when 1.1 once args are done (Boris)
+    create(ntp:$TP,tparr:ARRAY{$TP},nname:IDENT,nargs:ARRAY{ARG},
+        hot:ARRAY{BOOL},nret:$TP,nsame:BOOL):SAME
+    is
+	r::=new;
+	r.tp:=ntp;
+        r.src_tparams := tparr;
+	r.name:=nname;
+	r.args:=nargs;
+	r.ret:=nret;
+	r.hot:=hot;
+        r.returns_same:=nsame;
+	return r.make_unique;
+    end;
+
+   private make_unique:SAME is
+      if void(str) then compute_str; end;
+	u::=sigs.get(str);
+	if void(u) then
+	    sigs:=sigs.insert(str,self);
+	    return self;
+	else
+	   -- WARNING: the following lines have two different purposes:
+	   -- 1. Sometimes we build a signature BEFORE we know that
+	   --    it is a builtin. If this happens, it is NOT created
+	   --    through rout_sig, but via a standard create call.
+	   --    If this happens, got_builtin_info will still be false.
+	   --    In this case, we will copy an eventuall builtin_info from
+	   --    the new signature.
+	   -- 2. If we include a builtin function and overwrite it
+	   --    with another builtin function, we have to keep THE
+	   --    FIRST ONE! This is true because in such a case the
+	   --    explicit signature is generated BEFORE the signature
+	   --    of the included function. We know that we have such a case
+	   --    if got_builtin_info is true for the first signature
+	   -- IMPORTANT: this works only if the signatures are generated in
+	   -- the correct order!!
+	   if is_builtin and ~u.got_builtin_info then
+               -- we may find out after we created a signature
+	       -- that it is builtin
+	       u.builtin_info:=builtin_info;
+	       u.got_builtin_info:=true;
+	   end;
+	end;
+	return u;
+    end;
+
+    -- will change when 1.1 once args are done (Boris)
+    private compute_str is
+	-- Compute the string representation of self. Uses no whitespace,
+	-- eg. "FOO::foo!(A!,outB{C}):D".
+	-- Equality of the string representation must occur if and only
+	-- if two SIGs are really the same object (including arg modes).
+
+	s::=#FSTR(64) + tp.str + "::" + name.str;
+	if ~void(args) then
+	    s:=s + '(';
+	    loop
+		arg ::= args.elt!;
+		argtpname: STR;
+		if ~void(arg) then
+		    -- We don't append once yet (will do a bit later)
+		    if arg.mode = MODES::once_mode then
+			argtpname := arg.tp.str;
+		    else
+			argtpname := arg.str;
+		    end;
+		end;
+		s := s + ",".separate!(argtpname);
+		if ~void(hot) and hot.elt! then s:=s+'!' end end;
+	    s:=s + ')' end;
+	if ~void(ret) then
+            if returns_same then s := s + ":SAME"
+            else s:=s + ':' + ret.str end;
+        end;
+	self.str:=s.str;
+    end;
+
+    num_args:INT is
+	-- The number of arguments in this signature.
+	return args.size end;
+
+    has_ret:BOOL is		
+	-- True if there is a return value.
+	return ~void(ret) end;
+
+    is_iter:BOOL is
+	-- True if self is an iter.
+	return name.is_iter end;
+
+    is_routine:BOOL is return ~is_iter end;
+
+    is_builtin_iter:BOOL is
+	-- True if self is an iter.
+	return is_builtin and is_iter end;
+
+    is_builtin_routine:BOOL is
+	-- True if self is an iter.
+	return is_builtin and is_routine end;
+
+    is_attr_writer_sig:BOOL is
+	-- True if self could be a writer signature for an object attribute.
+	-- For ref it has a single in argument and no return value, for val
+	-- it has a single in arg and a return value.
+	if tp.kind=TP_KIND::val_tp then
+	   if args.size=1 and tp=ret then
+	      return args[0].mode = MODES::in_mode;
+	   end;
+	elsif args.size=1 and void(ret) then
+	   return args[0].mode = MODES::in_mode;
+	end;
+        return false;
+    end;
+
+    is_shared_writer_sig:BOOL is
+	-- True if self could be a writer signature for a shared attribute.
+	-- It has a in single in argument and no return value.
+      if args.size=1 and void(ret) then
+	 return args[0].mode = MODES::in_mode;
+      else
+	 return false;
+      end;
+    end;
+
+    is_reader_sig:BOOL is
+	-- True if self has a return value but no arguments.
+	return void(args) and ~void(ret)
+    end;
+
+    is_invariant:BOOL is
+	-- True if self is the signature "invariant:BOOL".
+	return void(args) and ~void(ret) and TP_BUILTIN::bool=ret and
+	     name=IDENT_BUILTIN::invariant_ident
+    end;
+
+    conforms_to(s:SAME):BOOL
+    -- True if self conforms to `s' so as to satisfy the inheritance
+    -- rule. This means they:
+    -- 1) Have the same name,
+    -- 2) Have the same the number of args,
+    -- 3) If iters, then the same args are declared `once',
+    -- 4) Both have or do not have a return value,
+    -- 5) The mode of each argument is the same
+    -- 6) for any in or once arguments, the type in `s' is the subtype
+    --	  in of the type in self;
+    --    for any `inout' arguments, the type in self is the same as in `s';
+    --    for any `out' arguments,the type in self is a subtype of the type in
+    --    s if it has one, the return type of self is a subtype of the return
+    --    type of `s'
+    -- 7) For the resulttype, the type in self is a subtype of the type in
+    --    s if it has one. The resulttype has to be SAME if it is SAME in
+    --    s.
+    -- Ignores `tp'.
+
+    -- Some of the following will need to be modified when 1.1
+    -- once args are implemented (Boris)
+      pre ~void(self) and ~void(s)
+    is
+	if name/=s.name or args.size/=s.args.size or
+		  hot.size/=s.hot.size or has_ret/=s.has_ret
+	then
+	    return false
+	end;
+	loop if hot.elt!/=s.hot.elt! then
+		return false
+	end end;
+	loop if args.elt!.mode /=s.args.elt!.mode then
+	    return false; 
+	end end;
+        if has_ret then
+            if s.returns_same and ~returns_same then
+                return false
+            elsif ~ret.is_subtype(s.ret) then
+                return false
+            end
+        end;
+
+	loop
+	    self_arg ::= args.elt!;
+	    s_arg ::= s.args.elt!;
+	    self_arg_mode ::= self_arg.mode ; s_arg_mode ::= s_arg.mode;
+	    case self_arg_mode
+	    when MODES::in_mode then
+		if ~s_arg.tp.is_subtype(self_arg.tp) then
+		    return false;
+		end;
+	    when MODES::out_mode then
+		if s_arg.issame and ~self_arg.issame then
+		    return false;
+		end;
+		if ~self_arg.tp.is_subtype(s_arg.tp) then
+		    return false;
+		end;
+	    when MODES::inout_mode then
+		if self_arg.tp /= s_arg.tp then
+		    return false;
+		end;
+	    when MODES::once_mode then
+		if ~s_arg.tp.is_subtype(self_arg.tp) then
+		    return false;
+		end;
+	    end;
+	end;
+	return true;
+    end;
+
+    conflicts_with(s:SAME):BOOL
+    -- True if self conflicts with `s'. This is a symmetric
+    -- relationship. It means that they:
+    -- 1) Have the same name,
+    -- 2) Have the same the number of args,
+    -- 3) There is no argument that they declare as having different
+    --    types and neither type declaration is abstract, bound.
+    -- 4) Both have or do not have a return value.
+    -- Ignores `tp'.
+    -- Conflicts are independent of argument modes
+	pre ~void(self) and ~void(s) is
+	if name/=s.name or args.size/=s.args.size or
+		 has_ret/=s.has_ret 
+	then return false end;
+	
+	arg, s_arg:ARG;
+	t,st:$TP;
+	conflict:BOOL := false;
+	abs:BOOL := false;
+	same_args:BOOL := true;  -- sigs have the same args
+	
+	loop
+	   arg := args.elt!; s_arg := s.args.elt!;
+	   t:=arg.tp; st:=s_arg.tp;
+
+	   if t/=st then same_args := false; end;
+	   
+	   if t/=st and ~t.is_abstract and ~t.is_bound and
+		    ~st.is_abstract and ~st.is_bound
+	   then
+	   -- this takes care of concrete types
+	      return false;
+	   else
+	      if ((t.is_abstract and st.is_abstract) or 
+		  (t.is_bound and st.is_bound)) then
+		 abs := true; 
+		 if ~(t.is_subtype(st) or st.is_subtype(t)) then
+		    conflict := true;
+		 end;
+	      else
+		 if t /= st then
+		    return false; -- at least one arg has a concrete type
+		 end;
+	      end;
+	   end;
+	end;
+	
+	return (abs and conflict) or ~abs or same_args;
+    end;
+
+    -- this will be fixed to conform to 1.1 once arg (Boris)
+    is_eq_but_tp(s:SAME):BOOL is
+	-- True if self is equal to `s' except for the `tp' field.
+	-- This is a symmetric relationship.
+	-- It means that they:
+	-- 1) Have the same name,
+	-- 2) Have the same the number of args,
+	-- 3) Each argument type of `s' *is equal* to the corresponding
+	--    argument in self,
+	-- 4) If iters, then the same args are declared `hot', (fix Boris)
+	-- 5) Modes of args are the same
+	-- 6) Both have or do not have a return value.
+	-- 7) The return types must be equal, if present.
+	if void(self) then return void(s)
+	elsif void(s) then return false end;
+	if SYS::ob_eq(self,s) then return true end; -- Do easy check first!
+	if name/=s.name or args.size/=s.args.size or
+	    hot.size/=s.hot.size or has_ret/=s.has_ret then
+		 return false end;
+	loop
+	    arg ::= args.elt!; s_arg ::= s.args.elt!;
+	    if (arg.tp /= s_arg.tp) or (arg.mode /= s_arg.mode)
+	    then return false
+	    end;
+	end;
+	loop if hot.elt!/=s.hot.elt! then return false end end;
+	if has_ret and ret/=s.ret and
+		 ( ~returns_same or ~s.returns_same )
+	then return false end;
+	return true end;
+
+   hash:INT is
+      -- this can be done because of unique sig's
+      return SYS::id(self).hash;
+   end;
+
+   is_eq(s: $OB): BOOL is 
+      -- Equality change
+      typecase s
+      when SAME then return is_eq(s)
+      else return false end;
+   end;
+   
+    is_eq(s:SAME):BOOL is
+	-- See below.  This should be faster.
+	return SYS::ob_eq(self,s);
+    end;
+
+    -- This is what is_eq used to be.  Object equality can be used now
+    -- because it is much faster.  String equality can be used before
+    -- registration.
+    old_is_eq(s:SAME):BOOL is
+	-- True if self is equal to `s'. This is a symmetric relationship.
+	-- It means that they:
+	-- 1) Have the same name,
+	-- 2) Have the same the number of args,
+	-- 3) Each argument type of `s' *is equal* to the corresponding
+	--    argument in self,
+	-- 4) If iters, then the same args are declared `hot',
+	-- 5) Both have or do not have a return value.
+	-- 6) The return types must be equal, if present.
+	-- 7) Has an equal `tp'.
+	if void(self) then return void(s)
+	elsif void(s) then return false;
+	elsif SYS::ob_eq(self,s) then return true;
+	elsif name/=s.name then return false;
+	elsif tp/=s.tp or args.size/=s.args.size or
+	    hot.size/=s.hot.size or has_ret/=s.has_ret then
+		 return false;
+	end;
+	loop
+	    arg ::= args.elt!; s_arg ::= s.args.elt!;
+	    if (arg.tp /= s_arg.tp) or (arg.mode /= s_arg.mode)
+	    then return false
+	    end
+	end;
+	loop if hot.elt!/=s.hot.elt! then return false end end;
+	if has_ret and ret/=s.ret then return false end;
+	return true
+    end;
+
+    is_writer_for(s:SAME):BOOL
+    -- True if self is the writer signature corresponding to the
+    -- reader signature `s'. This means that:
+    -- 1) self and `s' have the same name.
+    -- 2) self has 1 (in) arg, `s' has none.
+    -- 3) For value types self has a return value of type self,
+    --    otherwise it has no return value, `s' has 1 .
+    -- 4) The type of self's arg is equal to `s's return type.
+	pre ~void(self) and ~void(s) is
+	if name/=s.name or ~void(s.args) or void(s.ret) or
+	  args.size/=1 or args[0].tp /=s.ret
+	then
+	   return false end;
+        if args[0].mode /= MODES::in_mode then
+	   return false;
+        end;
+	if tp.kind=TP_KIND::val_tp then
+	    if s.ret/=s.tp then return false end
+	elsif ~void(s.ret) then return false end;
+	return true end;
+
+    rout_sig(as:AS_ROUT_DEF, nm:IDENT, srcparams: ARRAY{$TP}, con:TP_CONTEXT)
+        :SAME
+    -- The signature of the routine or iter in the type `con.same'
+    -- defined by `as' with the name `nm' and types resolved according
+    -- to `con'.
+	pre ~void(as) and ~void(nm) and ~void(con)
+    is
+	r::=new;
+        r.tp:=con.same; r.src_tparams := srcparams;
+        r.name:=nm; na::=as.args_dec.size;
+	if as.is_builtin then
+           r.builtin_info:=r.prog.config.get_rout(as.builtin_name.str);
+	   if void(r.builtin_info) then
+              r.prog.err("builtin "+as.builtin_name.str+" not found in CONFIG\n");
+	   end;
+	end;
+	if na/=0 then
+	    r.args:=#(na);
+	    ad::=as.args_dec;
+	    is_samearg: BOOL;
+	    loop until!(void(ad));
+                --*H*
+		is_samearg := ad.tp.kind = AS_TYPE_SPEC::same;
+                if con.same.is_abstract and is_samearg
+			  and MODE::create_from_as(ad.mode)/=MODES::out_mode
+		then
+		    r.prog.err_loc( ad );
+		    r.prog.err( "In abstract types SAME may only occur as `out' argument or as result." );
+		end;
+		r.args.set!(#ARG(con.tp_of(ad.tp),
+				 MODE::create_from_as(ad.mode),
+				 is_samearg)
+			    );
+		ad:=ad.next
+	    end
+	end;
+	-- This will be changed when 1.1 once args are working (Boris)
+	dohot:BOOL;
+	tae::=as.args_dec;
+	loop 
+	    until!(void(tae));
+	    if tae.is_hot then dohot:=true end;
+	    tae:=tae.next
+	end;
+	if dohot then r.hot:=#(na);
+	    ad::=as.args_dec;
+	    loop
+		until!(void(ad));
+		r.hot.set!(ad.is_hot);
+		ad:=ad.next
+	    end
+	end;	
+	r.ret:=con.tp_of(as.ret_dec);
+        r.returns_same := ~void(as.ret_dec)
+	      and as.ret_dec.kind = AS_TYPE_SPEC::same; -- *H*
+	r.got_builtin_info:=true;
+	return r.make_unique;
+    end;
+
+    const_reader_sig(as:AS_CONST_DEF, nm:IDENT, srcparams: ARRAY{$TP},
+        con:TP_CONTEXT):SAME
+    -- The signature of the reader routine in the type `con.same' for
+    -- the constant defined by `as' with the name specified by `nm' and
+    -- types resolved according to `con'.
+	pre ~void(as) and ~void(nm) and ~void(con)
+    is
+	r::=new; r.tp:=con.same; r.name:=nm; r.src_tparams := srcparams;
+	if ~void(as.tp) then	-- Explicit type specified.
+	    r.ret:=con.tp_of(as.tp);
+	else			-- No explicit type, so INT.
+	    r.ret:=TP_BUILTIN::int end;
+	return r.make_unique
+    end;
+
+    shared_reader_sig(as:AS_SHARED_DEF, nm:IDENT, srcparams: ARRAY{$TP},
+        con:TP_CONTEXT):SAME
+        -- The signature of the reader routine in the type `con.same' for
+        -- the shared defined by `as' with the name specified by `nm' and
+        -- types resolved according to `con'.
+	pre ~void(as) and ~void(nm) and ~void(con)
+    is
+	r::=new; r.tp:=con.same; r.name:=nm; r.src_tparams := srcparams;
+	r.ret:=con.tp_of(as.tp);
+	return r.make_unique
+    end;
+
+    shared_writer_sig(as:AS_SHARED_DEF, nm:IDENT, srcparams: ARRAY{$TP},
+        con:TP_CONTEXT):SAME
+        -- The signature of the writer routine in the type `con.same' for
+        -- the shared defined by `as' with the name specified by `nm' and
+        -- types resolved according to `con'.
+	pre ~void(as) and ~void(nm) and ~void(con)
+    is
+	r::=new; r.tp:=con.same; r.name:=nm; r.src_tparams := srcparams;
+	r.args:=ARRAY{ARG}::create(1);
+	r.args[0] := #ARG(con.tp_of(as.tp));  --in argument mode
+	return r.make_unique
+    end;
+
+    attr_reader_sig(as:AS_ATTR_DEF, nm:IDENT, srcparams: ARRAY{$TP},
+        con:TP_CONTEXT):SAME
+        -- The signature of the reader routine in the type `con.same' for
+        -- the object attribute defined by `as' with the name specified
+        -- by `nm' and types resolved according to `con'.
+	pre ~void(as) and ~void(nm) and ~void(con)
+    is
+	r::=new; r.tp:=con.same; r.name:=nm; r.src_tparams := srcparams;
+	r.ret:=con.tp_of(as.tp);
+	return r.make_unique
+    end;
+
+    attr_writer_sig(as:AS_ATTR_DEF, nm:IDENT, srcparams: ARRAY{$TP},
+        con:TP_CONTEXT):SAME
+        -- The signature of the writer routine in the type `con.same' for
+        -- the object attribute defined by `as' with the name specified
+        -- by `nm' and types resolved according to `con'.
+	pre ~void(as) and ~void(nm) and ~void(con)
+    is
+	r::=new; r.tp:=con.same; r.name:=nm; r.src_tparams := srcparams;
+	r.args:=ARRAY{ARG}::create(1);
+        r.args[0] := #ARG(con.tp_of(as.tp));    -- arument mode: in
+	if r.tp.kind=TP_KIND::val_tp then r.ret:=r.tp end;
+	return r.make_unique
+    end;
+
+    bound_routine_call(tp:TP_ROUT):SAME
+    -- The signature of the "call" routine for the bound routine
+    -- type `tp'.
+	pre ~void(tp) is
+	r::=new; r.tp:=tp; r.name:=IDENT_BUILTIN::call_ident;
+	r.args:=tp.args; r.ret:=tp.ret;
+	return r.make_unique
+    end;
+
+   -- this will change when 1.1 once are ok (Boris), 
+
+    bound_iter_call(tp:TP_ITER):SAME
+    -- The signature of the "call!" routine for the bound iter
+    -- type `tp'.
+	pre ~void(tp) is
+	r::=new; r.tp:=tp; r.name:=IDENT_BUILTIN::call_bang_ident;
+	r.args:=tp.args; r.hot:=tp.hot; r.ret:=tp.ret;
+	return r.make_unique
+    end;
+
+    with_new_type(t:$TP):SAME
+    -- A new signature, the same as self, but with the new type `t'.
+	pre ~void(self) and ~void(t) is
+	r::=new;
+        r.tp:=t; r.name:=name; r.args:=args; r.hot:=hot;
+	loop
+	    r.args.set!(args.elt!.create_for(t))
+	end;
+        if returns_same then
+          r.returns_same := true;
+          r.ret := t;
+        else
+          r.ret := ret
+        end;
+	return r.make_unique
+    end;
+
+    is_base_type(tp:$TP):BOOL is
+	-- True if `tp' is BOOL, CHAR, INT, FLT, FLTD, FLTX, FLTDX, or
+	-- EXT_OB.
+        -- Or one of external but recognized types
+	-- Note that some of these types may be void if the type was not
+	-- encountered during parsing
+	case tp
+	when TP_BUILTIN::bool then return true
+	when TP_BUILTIN::char then return true
+	when TP_BUILTIN::int then return true
+	when TP_BUILTIN::flt then return true
+	when TP_BUILTIN::fltd then return true
+	when TP_BUILTIN::fltx then return true
+	when TP_BUILTIN::fltdx then return true
+	when TP_BUILTIN::ext_ob then return true
+
+	-- FORTRAN stuff
+	when TP_BUILTIN::f_integer then return true
+	when TP_BUILTIN::f_real then return true	
+        when TP_BUILTIN::f_character then return true
+	when TP_BUILTIN::f_string then return true;
+	when TP_BUILTIN::f_logical then return true
+	when TP_BUILTIN::f_double then return true
+	when TP_BUILTIN::f_complex then return true	   
+	when TP_BUILTIN::f_double_complex then return true	   	   
+	when TP_BUILTIN::f_handler then return true
+	else
+	   -- check various fortran arrays
+	   loop
+	      if tp = TP_BUILTIN::f_array.elt! or 
+		       tp = TP_BUILTIN::f_array2.elt! or
+		       tp = TP_BUILTIN::f_array3.elt! then
+		 return true;
+	      end;
+	   end;
+	   -- could still be an F_ROUT
+	   typecase tp
+	   when TP_ROUT then
+	      if tp.is_fortran then return true; end;
+	   else
+	   end;
+	   -- not a base type
+	   return false;
+	end 
+     end;
+
+    is_base_aref_type(tp:$TP):BOOL is
+	-- True if `tp' has an include path to AREF{CHAR}, AREF{INT},
+	-- AREF{FLT}, AREF{FLTD}, AREF{FLTX}, AREF{FLTDX}, or AREF{EXT_OB}.
+        -- or AREF{one of external but recognized types}
+
+	typecase tp when TP_CLASS then
+	    im:IMPL:=tp.impl;
+	    if void(im) then return false end;
+	    ar:TP_CLASS:=im.arr; if void(ar) then return false end;
+	    if ar.name/=IDENT_BUILTIN::AREF_ident then return false end;
+	    if void(ar.params) then
+		#OUT + "Compiler error, SIG::is_base_aref_type params=void.";
+		return false end;
+	    if ar.params.size/=1 then
+		#OUT + "Compiler error, SIG::is_base_aref_type params.size/=1.";
+		return false end;
+	    case ar.params[0]
+	    when TP_BUILTIN::char then return true
+	    when TP_BUILTIN::int then return true
+	    when TP_BUILTIN::flt then return true
+	    when TP_BUILTIN::fltd then return true
+	    when TP_BUILTIN::fltx then return true
+	    when TP_BUILTIN::fltdx then return true
+	    when TP_BUILTIN::ext_ob then return true
+	
+	    when TP_BUILTIN::f_integer then return true
+	    when TP_BUILTIN::f_real then return true   	
+	    when TP_BUILTIN::f_character then return true
+	    when TP_BUILTIN::f_string then return true  -- why not!
+	    when TP_BUILTIN::f_logical then return true   		       
+	    when TP_BUILTIN::f_double then return true   		       
+	    when TP_BUILTIN::f_complex then return true   		      
+	    when TP_BUILTIN::f_double_complex then return true
+	    when TP_BUILTIN::f_handler then return true	       
+	    else return false end
+	else return false end end;
+
+    is_legal_ext_abs:BOOL
+    -- True if this signature is legal for an abstract routine
+    -- in an external class.
+	pre ~void(self) is
+	if name.is_iter then
+	    prog.err("The iter signature " + str +
+		 " isn't allowed in an external class.");
+	   return false end;
+
+	if tp.kind = TP_KIND::ext_c_tp then
+	   -- external C sig
+	   loop a::=args.elt!.tp;
+	      -- checks for base of baseref types are only necessary for
+	      -- compatibility with the old pre 1.1 C interface
+	      if a.is_abstract or (~a.is_c and ~is_base_type(a) and ~is_base_aref_type(a)) then
+		 prog.err("The signature " + str +
+			  " is not legal for a routine without body in an external C "
+			  "class. The argument type " + a.str +
+			  " is not of the right type."); return false end end;
+	   if ~void(ret) and 
+		    (~ret.is_c and ~is_base_type(ret) and ~is_base_aref_type(ret))
+	   then
+	      prog.err("The signature " + str +
+		       " is not legal for a routine without body in an external "
+		       "C class. The return type " + ret.str +
+		       " is not of the right type."); 
+	      return false 
+	   end;
+	elsif tp.kind = TP_KIND::ext_fortran_tp then
+	   -- external FORTRAN sig
+	   loop a::=args.elt!.tp;
+	      if a.is_abstract or ~a.is_fortran then
+		 prog.err("The signature " + str +
+			  " is not legal for a routine without body in an external "
+			  "FORTRAN class. The argument type " + a.str +
+			  " is not of the right type."); return false end end;
+	   if ~void(ret) and ~ret.is_fortran then
+	      prog.err("The signature " + str +
+		       " is not legal for a routine without body in an external "
+		       "FORTRAN class. The return type " + ret.str +
+		       " is not of the right type."); 
+	      return false 
+	   end;
+	end;	
+	return true end;
+
+    is_legal_ext_bod:BOOL
+    -- True if this signature is legal for a routine with a body
+    -- in an external class.
+	pre ~void(self) is
+	if name.is_iter then
+	    prog.err("The iter signature " + str +
+		 " isn't allowed in an external class.");
+	    return false end;
+	loop a::=args.elt!.tp;
+	    if is_base_type(a) or a.is_c then
+	    else
+		prog.err("The signature " + str +
+		     " is not legal for a routine with body in an external "
+		     "class. The argument type " + a.str +
+		     " is not of the right type."); return false end end;
+	if ~void(ret) and ~is_base_type(ret) and ~ret.is_c then
+	    prog.err("The signature " + str +
+		 " is not legal for a routine with body in an external "
+		 "class. The return type " + ret.str +
+		 " is not of the right type."); return false end;
+	return true 
+     end;
+
+   is_ext_fortran_sig:BOOL is
+      -- a sig for a "FORTRAN" routine - the one that supports
+      -- a fortran parameter passing convention
+      if tp.kind /= TP_KIND::ext_fortran_tp then
+	 return false;
+      end;
+      
+      if args.size = 0 and void(ret) then
+	 return false;
+      end;
+      
+      loop
+	 tp::=args.elt!.tp;
+	 if ~tp.is_fortran then
+	    return false;
+	 end;
+      end;
+	 
+      if ~void(ret) then
+	 if ~ret.is_fortran then
+	    return false;
+	 end;
+      end;
+      return true;
+   end;
+   
+   is_ext_c_sig:BOOL is
+      -- a sig for a "C" routine - the one that supports
+      -- a fortran parameter passing convention
+      if tp.kind /= TP_KIND::ext_c_tp then
+	 return false;
+      end;
+      
+      if args.size = 0 and void(ret) then
+	 return false;
+      end;
+      
+      loop
+	 tp::=args.elt!.tp;
+	 if ~tp.is_c then
+	    return false;
+	 end;
+      end;
+	 
+      if ~void(ret) then
+	 if ~ret.is_c then
+	    return false;
+	 end;
+      end;
+      return true;
+   end;   
+
+end; -- class SIG
+------------------------------------------------------------------
+
+class ARG is
+    -- signature arguments
+    attr tp: $TP;              -- argument type
+    attr mode: $MODE;          -- argument mode
+    attr issame: BOOL;         -- true if generated from literal 'SAME'.
+
+    is_eq(a: $OB):BOOL is 
+      typecase a when ARG then return is_eq(a) else return false;  end;
+    end;
+
+    is_eq(a: ARG):BOOL is
+      return tp = a.tp  and mode = a.mode;
+    end;
+
+    str:STR is
+	if issame and mode=MODES::out_mode then return mode.str+"SAME" end;
+	return mode.str+tp.str;
+    end;
+	
+    create(t:$TP): SAME is
+	-- The ``default'' constructor: mode is set to IN_MODE
+	return new.init(t,#IN_MODE,false);
+    end;
+
+    create(t:$TP, m:$MODE): SAME is
+	return new.init(t,m,false);
+    end;
+    
+    create(t:$TP, m:$MODE, same: BOOL): SAME
+    is
+	return new.init(t,m,same);
+    end;
+
+    create_for(t:$TP): SAME
+    -- Create a copy of self belonging to type `t'.
+    -- If the arg came from SAME, the type may change,
+    -- otherwise nothing changes.
+    is
+	if issame then
+	    return new.init(t,mode,true)
+	else
+	    return self
+	end
+    end;
+    
+    private init(t:$TP,m:$MODE,same:BOOL): SAME
+    is
+	tp := t;
+	mode := m;
+	issame := same;
+	return self
+    end;
+    
+end;
+
+-------------------------------------------------------------------
+class SIG_TBL < $STR is
+    -- Table of routine and iter signatures retrievable by name.
+    --
+    -- `get_query!(i:IDENT):SIG' yields each sig with the name `i'.
+    -- `test(SIG):BOOL' tests for the given sig.
+    -- `insert(SIG):SAME' inserts a sig.
+    -- `delete(SIG):SAME' deletes a sig.
+    -- `elt!:ELT' yields each sig.
+    include FQSET{IDENT,SIG};
+
+    query_test(name:IDENT, s:SIG):BOOL is
+	-- True if `s' is a signature with the name `name'.
+	if void(s) then return false end;
+	return s.name=name end;
+
+    query_hash(i:IDENT):INT is
+	-- A hash value computed from the name `i'.
+	return i.hash end;
+
+    elt_hash(s:SIG):INT is
+	-- A hash value computed from the name of an element.
+	return s.name.hash end;
+
+    sig_eq_to(s:SIG):SIG
+    -- Returns an element of self equal to `s' if one exists,
+    -- otherwise returns void.  New implementation by MBK.  Much faster.
+	pre ~void(s) is
+	return get(s);
+    end;
+
+    sig_conflicting_with(s:SIG):SIG
+    -- Returns an element of self that conflicts with `s' if one
+    -- exists, otherwise returns void.
+	pre ~void(s) is
+	loop r::=get_query!(s.name);
+	    if r.conflicts_with(s) then return r end end;
+	return void end;
+
+    str:STR is
+       a:ARRAY{STR}:=#(size);
+
+       loop
+          a.set!(elt!.str);
+       end;
+       a.sort;
+       s:STR:="";
+       i::=0;
+       loop
+	  while!(i<a.asize);
+	  if i/=0 then s:=s+";"; end;
+          s:=s+a[i];
+	  i:=i+1;
+       end;
+       return s;
+    end;
+
+end; -- class SIG_TBL
+
+-------------------------------------------------------------------
+-- vim:sw=3:nosmartindent
+

@@ -1,0 +1,365 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- socket.sa
+-- Author: David Bailey <dbailey@icsi.berkeley.edu>
+
+-- January 1993  Sather 0.2 version
+-- April 1995    Sather 1.0 version
+-- December 1995 Sather 1.0.9 pSather version
+-- June 1996     Sather 1.1 version unifying serial and parallel using "PP"
+--               and introducing exceptions.
+
+--------------------------------------------------------------------
+-- Bidirectional communication of strings between processes (intra- 
+-- or inter-machine) using Unix sockets.  Blocking reads, potentially
+-- blocking writes.
+--
+-- Classes: SOCKET, SOCKET_EXCEPTION, C_SOCKET
+-- Required file: socket_support.c
+--
+-- Tested on (p)Sather 1.1 under SunOS 4 and 5.  No guarantees beyond that.
+-- NO INTERNAL ERROR MESSAGES SHOULD APPEAR IN USE; 
+-- PLEASE REPORT ANY OCCURRENCES.
+--
+-- Bug: In rare circumstances, killing a process that is initiating a
+-- Unix socket may leave behind a file which will have to be manually
+-- removed before another socket can be initiated with the same name.
+-- Such files reside in the directory indicated in `unix_socket_directory'.
+--
+-- Idea: Add error codes to the interface.
+-- Idea: Non-blocking socket creation as suggested by Cliff Draper.
+--
+----------------------------------------------------------------------   
+
+class SOCKET is
+   -- Bidirectional communication of strings between processes (intra- 
+   -- or inter-machine) using sockets.  Blocking reads, potentially
+   -- blocking writes.
+
+   -- Four versions of create, distinguishing: (1) Unix-domain (intra-machine)
+   -- vs. Internet-domain (inter-machine); and (2) initiating vs. connecting.
+   -- "Dead" sockets may be returned if the passed name or port is
+   -- already in use (initiating side), or if no matching initiator was
+   -- found within `num_connect_attempts' seconds (connecting side), if
+   -- an invalid `hostname' is given (connecting side), or in anomalous
+   -- circumstances (in which case a message appears on stderr).
+   
+   create_initiating_unix(name:STR):SAME pre void(self) is
+      -- Initate a SOCKET named `name', then block until another
+      -- process does a 'create_connecting_unix' with the same name, 
+      -- on the same machine.  `name' must be a legal Unix filename.
+      -- Upon error, return a dead socket.
+      lock when shared_mutex then
+	 res::=new;
+	 res.mutex:=#MUTEX; --S:
+	 if ~reasonable_filename(name) then 
+	    res.is_dead_var:=true; return res 
+	 end;
+	 res.id:=C_SOCKET::
+	       make_initiating_socket_unix(unix_socket_directory+name);
+	 if res.id<0 then res.is_dead_var:=true end;
+	 C_SOCKET::ignore_broken_pipe_signals;
+	 return res
+      end -- lock
+   end;
+   
+   create_connecting_unix(name:STR):SAME pre void(self) is
+      -- Connect to an existing Unix-domain SOCKET named `name'.
+      -- Will try once per second up to 10 seconds.
+      -- `name' must be a legal Unix filename.  Upon error, return a
+      -- dead socket.
+      res::=new;
+      res.mutex:=#MUTEX; --S:
+      if ~reasonable_filename(name) then 
+	 res.is_dead_var:=true; return res 
+      end;
+      res.id:=
+	    C_SOCKET::make_connecting_socket_unix(unix_socket_directory+name);
+      if res.id<0 then res.is_dead_var:=true end;
+      C_SOCKET::ignore_broken_pipe_signals;
+      return res
+   end;
+   
+   create_initiating_inet(port:INT):SAME pre void(self) is
+      -- Initate an Internet SOCKET on port `port', then block until
+      -- another process does a 'create_connecting_inet' to this port.
+      -- `port' must be >= `min_port_num'.  Upon error, return a dead socket.
+      res::=new;
+      res.mutex:=#MUTEX; --S:
+      if port<min_port_num then res.is_dead_var:=true; return res end;
+      res.id:=C_SOCKET::make_initiating_socket_inet(port);
+      if res.id<0 then res.is_dead_var:=true end;
+      C_SOCKET::ignore_broken_pipe_signals;   -- need even in inet case
+      return res
+   end;
+   
+   create_connecting_inet(host:STR,port:INT):SAME pre void(self) is
+      -- Connect to an existing Internet SOCKET on port `port' of
+      --  machine `host'.  Will try once per second up to 10 seconds.
+      -- `port' must be >= `min_port_num'.  Upon error, return a dead socket.
+      res::=new;
+      res.mutex:=#MUTEX; --S:
+      if port<min_port_num then res.is_dead_var:=true; return res end;
+      res.id:=C_SOCKET::make_connecting_socket_inet(host,port);
+      if res.id<0 then res.is_dead_var:=true end;
+      C_SOCKET::ignore_broken_pipe_signals;   -- need even in inet case
+      return res
+   end;
+   
+   close is
+      -- Close the socket and mark it dead.  Hopefully, by using this,
+      -- programs using Internet sockets can avoid the "lingering
+      -- socket" phenomenon...
+      lock when mutex then
+	 C_SOCKET::close_socket(id);
+	 is_dead_var:=true
+      end -- lock
+   end;
+   
+   use_exceptions(b:BOOL) is
+      -- Turn on or off the raising of a SOCKET_EXCEPTION when either
+      -- (1) the socket dies due to external factors (usually
+      -- termination of the peer socket's process) in the course of
+      -- any operation other than an explicit `is_dead' check; or 
+      -- (2) a caller attempts to read or write using an already closed
+      -- or dead socket.  Note that in any case, `is_dead' will be set
+      -- when a socket dies or is closed.  If exceptions are turned on
+      -- when the socket is already dead, an exception is raised.
+      lock when mutex then
+	 use_exceptions_var:=b;
+	 if use_exceptions_var and is_dead_var then
+	    raise #SOCKET_EXCEPTION("Socket dead upon turning on exceptions")
+	 end
+      end -- lock
+   end;
+   
+   is_using_exceptions:BOOL is
+      -- Report whether this socket uses exceptions as described above.
+      lock when mutex then
+	 return use_exceptions_var 
+      end -- lock
+   end;
+   
+   is_dead:BOOL is 
+      -- Indicates whether the socket is alive and capable of
+      -- performing a `get_str' or `plus'.
+      lock when mutex then 
+	 -- NOTE: Not sure if is_healthy=0 catches all cases where the
+	 -- socket is effectively dead but has not yet failed.
+	 if ~is_dead_var and (C_SOCKET::is_healthy(id)=0) then close end;
+	 return is_dead_var 
+      end -- lock
+   end;
+
+   get_str:STR pre ~void(self) is
+      -- Return the next string from the peer SOCKET.
+      -- An empty-string result means the sender sent EITHER the empty 
+      -- string or a void string.
+      -- May block, if no strings are available, until one is sent.
+      -- If an error occurs, the socket dies, and return void.
+      -- If socket is already dead: raise an exception if using exceptions,
+      -- else simply return void.
+      lock when mutex then
+	 if is_dead_var then
+	    if use_exceptions_var then 
+	       raise #SOCKET_EXCEPTION("Tried to read from a dead socket")
+	    end;
+	    return void
+	 end;
+	 res:STR;
+	 len::=C_SOCKET::receive_len(id);
+	 if len>0 then 
+	    res:="X".repeat(len);
+	    status::=C_SOCKET::receive_str(id,res,len);
+	    if status=0 then 
+	       die("Socket died receiving body of string"); 
+	       res:=void 
+	    end
+	 elsif len=0 then res:=#STR
+	 else die("Socket died receiving length of string")
+	 end;
+	 return res
+      end -- lock
+   end;
+   
+   plus(s:$STR) pre ~void(self) is
+      -- Send string version of `s' to the peer SOCKET.
+      -- If 's' is void, the receiver will get the empty string.
+      -- May block, if buffers are full, until receiver does a `get_str'.
+      -- If an error occurs, the socket dies.
+      -- If socket is already dead: raise an exception if using exceptions,
+      -- else simply return.
+      lock when mutex then
+	 if is_dead_var then
+	    if use_exceptions_var then 
+	       raise #SOCKET_EXCEPTION("Tried to write on a dead socket")
+	    end;
+	    return
+	 end;
+	 str_to_send:STR;
+	 if void(s) then str_to_send:="" else str_to_send:=s.str end;
+	 if (C_SOCKET::is_healthy(id)=0) then
+	    die("Socket found dead when preparing to send string");
+	    return
+	 end;
+	 status::=C_SOCKET::send_str(id,str_to_send,str_to_send.length);
+	 if status=0 then die("Socket died while sending string") end
+      end -- lock
+   end;
+   
+   plus(s:$STR):SAME is plus(s); return self end;
+      -- Same as above except return self, allowing chaining, eg, skt+x+y+z.
+
+   can_read_without_block:BOOL pre ~void(self) is 
+      -- Return true if socket is alive and data is available
+      -- so that `get_str' would not block.
+      lock when mutex then
+	 return ~is_dead_var and C_SOCKET::able_to_read(id)/=0
+      end -- lock
+   end;
+
+   can_write_without_block:BOOL pre ~void(self) is
+      -- Return true if socket is alive and 'plus' would accept a
+      -- string without blocking due to full buffers.
+      lock when mutex then
+	 return ~is_dead_var and C_SOCKET::able_to_write(id)/=0
+      end -- lock
+   end;
+   
+   block_until_can_read pre ~void(self) is
+      -- Blocks in a non-busy wait until socket can read.
+      -- If socket is already dead: raise an exception if using exceptions,
+      -- else return immediately.
+      lock when mutex then
+	 if is_dead_var then
+	    if use_exceptions_var then 
+	       raise #SOCKET_EXCEPTION("Tried to block_until_can_read on a "
+				       "dead socket")
+	    end;
+	    return
+	 end;
+	 C_SOCKET::block_until_can_read(id)
+      end -- lock
+   end;
+
+   block_until_can_write pre ~void(self) is
+      -- Blocks in a non-busy wait until socket can write without blocking.
+      -- If socket is already dead: raise an exception if using exceptions,
+      -- else return immediately.
+      lock when mutex then
+	 if is_dead_var then
+	    if use_exceptions_var then 
+	       raise #SOCKET_EXCEPTION("Tried to block_until_can_write on a "
+				       "dead socket")
+	    end;
+	    return
+	 end;
+	 C_SOCKET::block_until_can_write(id)
+      end -- lock
+   end;
+
+   reasonable_filename(s:STR):BOOL is
+      -- Return whether `s' is a reasonable Unix filename and hence
+      -- suitable for a Unix-domain socket name.  Overly cautious, but
+      -- this ought to be implemented elsewhere anyway.
+      loop 
+	 c::=s.elt!;
+	 if ~c.is_alphanum and c/='-' and c/='_' and c/='.' then 
+	    return false
+	 end
+      end;
+      return true
+   end;
+
+   min_port_num:INT is return C_SOCKET::min_port_num end;
+   -- Internet socket port numbers must exceed this value.
+   
+   private die(s:STR) is
+      -- Close the socket (thereby marking it dead), and raise an
+      -- exception if use_exceptions_var is set.
+      close;
+      if use_exceptions_var then raise #SOCKET_EXCEPTION(s) end
+   end;
+   
+   private attr id:INT;     
+   -- Unix descriptor for the socket.
+   
+   private attr is_dead_var:BOOL;
+   -- Indicates whether socket is operational for `get_str' or `plus'.
+   
+   private attr use_exceptions_var:BOOL;
+   -- Flag whether to raise an exception under the conditions described
+   -- in the routine `use_exceptions'.
+
+   private attr mutex:MUTEX;                                           --S:
+   -- Used to ensure each SOCKET is handling only 1 routine at a time. --S:
+
+--
+   
+   shared num_connect_attempts:INT:=10;
+   -- Connecting sockets will look once per second for a matching
+   -- initator, this many times, before failing.
+
+   shared unix_socket_directory:STR:="/tmp/";
+   -- Where Unix-domain server sockets will live.
+   -- Probably should leave this alone; but if you must change it at
+   -- runtime, be sure to change it in both communicating processes!
+   
+   private shared shared_mutex:MUTEX:=MUTEX::create;                   --S:
+   -- Used to ensure that, globally, only one create_initiating_unix   --S:
+   -- runs at a time.  (Needed because of the way that routine handles --S:
+   -- signals.)                                                        --S:
+   
+end;
+   
+----------------------------------------------------------------------   
+
+class SOCKET_EXCEPTION < $STR is
+
+   create(s:STR):SAME is res::=new;  res.s:=s; return res end;
+   
+   str:STR is return "SOCKET_EXCEPTION: "+s end;
+
+   private attr s:STR;
+
+end;
+
+----------------------------------------------------------------------   
+----------------------------------------------------------------------   
+
+external class C_SOCKET is
+   
+   make_initiating_socket_unix(name:STR):INT;
+   make_connecting_socket_unix(name:STR):INT;
+   make_initiating_socket_inet(port:INT):INT; 
+   make_connecting_socket_inet(srvname:STR,srvport:INT):INT;
+   close_socket(fd:INT);
+
+   receive_len(id:INT):INT;
+   receive_str(id:INT,s:STR,len:INT):INT;  -- modifies s
+   send_str(id:INT,s:STR,len:INT):INT;
+   
+   able_to_read(fd:INT):INT;
+   able_to_write(fd:INT):INT;
+   is_healthy(fd:INT):INT;
+
+   block_until_can_read(fd:INT);
+   block_until_can_write(fd:INT);
+
+   min_port_num:INT;
+   ignore_broken_pipe_signals;
+
+   nconnatt:INT is return SOCKET::num_connect_attempts end;
+
+end;

@@ -1,0 +1,385 @@
+# This is the "Makefile.in" that is used when vfs is built as part of
+# mc.  Any changes here must also be made in Makefile.am.
+# x
+
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+rootdir = $(srcdir)/..
+@MCFG@@MCF@
+
+CFLAGS   = $(XCFLAGS) -D_LARGEFILE64_SOURCE
+CPPFLAGS = $(XCPPFLAGS) -I$(builddir)/vfs -I$(srcdir)/samba/ubiqx -I$(srcdir)/samba/smbwrapper
+LDFLAGS  = $(XLDFLAGS)
+DEFS     = $(XDEFS)
+LIBS     = @LINTL@ @SHADOWLIB@ $(XLIBS) @TERMNET@ @PAMLIBS@ @LCRYPT@ $(XLIB)
+INSTALL  = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@ -m 755
+INSTALL_DATA = @INSTALL_DATA@
+AR = @AR@
+
+#
+# VFS code
+#
+NETFILES   = tcputil.o fish.o ftpfs.o @smbfs@ mcfs.o utilvfs.o
+
+SAMBAFILES=         \
+    samba/param/loadparm.o  \
+    samba/lib/time.o    \
+    samba/lib/slprintf.o    \
+    samba/lib/util.o    \
+    samba/lib/debug.o   \
+    samba/lib/system.o  \
+    samba/lib/util_str.o    \
+    samba/lib/kanji.o   \
+    samba/lib/charcnv.o     \
+    samba/lib/charset.o     \
+    samba/lib/username.o    \
+    samba/lib/util_file.o   \
+    samba/lib/signal.o  \
+    samba/lib/util_sock.o   \
+    samba/lib/genrand.o     \
+    samba/lib/md4.o     \
+    samba/lib/doscalls.o    \
+    samba/param/params.o    \
+    samba/libsmb/clientgen.o    \
+    samba/libsmb/pwd_cache.o    \
+    samba/libsmb/smbencrypt.o   \
+    samba/libsmb/smbdes.o   \
+    samba/lib/util_unistr.o     \
+    samba/lib/getsmbpass.o  \
+    samba/libsmb/nmblib.o   \
+    samba/libsmb/namequery.o\
+    samba/lib/interface.o   \
+    samba/lib/netmask.o     \
+    samba/libsmb/nterr.o    \
+    samba/libsmb/smberr.o
+
+SAMBA_DIST_TOPLEVEL =		\
+	Makefile.in		\
+	acconfig.h		\
+	aclocal.m4		\
+	architecture.doc	\
+	configure.in		\
+	configure		\
+	internals.doc		\
+	parsing.doc		\
+	samba-files		\
+	smbadduser
+
+SAMBA_DIST_INCLUDE =		\
+	byteorder.h		\
+	charset.h		\
+	client.h		\
+	config.h		\
+	config.h.in		\
+	dlinklist.h		\
+	includes.h		\
+	kanji.h			\
+	local.h			\
+	nameserv.h		\
+	ntdomain.h		\
+	nterr.h			\
+	proto.h			\
+	rpc_dce.h		\
+	rpc_lsa.h		\
+	rpc_misc.h		\
+	rpc_netlogon.h		\
+	rpc_reg.h		\
+	rpc_samr.h		\
+	rpc_secdes.h		\
+	rpc_srvsvc.h		\
+	rpc_wkssvc.h		\
+	rpcclient.h		\
+	smb.h			\
+	stamp-h			\
+	trans2.h		\
+	version.h
+
+SAMBA_DIST_LIB =		\
+	charcnv.c		\
+	charset.c		\
+	debug.c			\
+	doscalls.c		\
+	genrand.c		\
+	getsmbpass.c		\
+	interface.c		\
+	kanji.c			\
+	md4.c			\
+	netmask.c		\
+	signal.c		\
+	slprintf.c		\
+	system.c		\
+	time.c			\
+	username.c		\
+	util.c			\
+	util_file.c		\
+	util_sock.c		\
+	util_str.c		\
+	util_unistr.c
+
+SAMBA_DIST_LIBSMB =		\
+	clientgen.c		\
+	namequery.c		\
+	nmblib.c		\
+	nterr.c			\
+	pwd_cache.c		\
+	smbdes.c		\
+	smbencrypt.c		\
+	smberr.c
+
+SAMBA_DIST_PARAM =		\
+	loadparm.c		\
+	params.c
+
+SAMBA_DIST_SMBWRAPPER =		\
+	smbw.h
+
+SAMBA_DIST_TESTS =		\
+	README			\
+	crypttest.c		\
+	fcntl_lock.c		\
+	ftruncate.c		\
+	ftruncroot.c		\
+	getgroups.c		\
+	shared_mmap.c		\
+	summary.c		\
+	sysv_ipc.c		\
+	trapdoor.c		\
+	trivial.c
+
+SAMBA_DIST_UBIQX =		\
+	COPYING.LIB		\
+	README.UBI		\
+	debugparse.h		\
+	sys_include.h		\
+	ubi_BinTree.h		\
+	ubi_Cache.h		\
+	ubi_SplayTree.h		\
+	ubi_dLinkList.h		\
+	ubi_sLinkList.h
+
+NONETFILES = 			\
+	container.o		\
+	direntry.o		\
+	extfs.o 		\
+	local.o 		\
+	names.o			\
+	tar.o			\
+	sfs.o			\
+	vfs.o @undelfs_o@
+
+VFSSRCS = \
+	container.c 		\
+	direntry.c		\
+	extfs.c 		\
+	ftpfs.c 		\
+	fish.c 			\
+	direntry.c		\
+	local.c 		\
+	local.h			\
+	mcfs.c			\
+	names.c 		\
+	mcserv.c 		\
+	sfs.c 			\
+	shared_tar_ext.c 	\
+	shared_ftp_fish.c	\
+	smbfs.c			\
+	tar.c 			\
+	tcputil.c		\
+	undelfs.c 		\
+	utilvfs.c		\
+	util-alone.c		\
+	vfs.c
+
+VFSHDRS = 			\
+	container.h 		\
+	extfs.h 		\
+	fish.h			\
+	ftpfs.h 		\
+	mcfs.h 			\
+	names.h 		\
+	smbfs.h			\
+	tar.h 			\
+	tcputil.h 		\
+	utilvfs.h		\
+	vfs.h			\
+	util-alone.h		\
+	xdirentry.h
+
+VFSOBJS = $(NONETFILES) @NETFILES@
+
+EXTFS_MISC  = README extfs.ini unarj.diff
+EXTFS_CONST = a rpm hp48 mailfs patchfs sfs.ini trpm rpms uarj
+
+EXTFS_IN    = 			\
+	deb.in 			\
+	lslR.in 		\
+	ucpio.in 		\
+	urar.in 		\
+	uzoo.in 		\
+	ftplist.in 		\
+	uar.in 			\
+	ulha.in 		\
+	uha.in			\
+	uzip.in
+
+EXTFS_OUT = 			\
+	deb 			\
+	lslR 			\
+	ucpio 			\
+	urar 			\
+	uzoo 			\
+	ftplist 		\
+	uar 			\
+	ulha 			\
+	uha			\
+	uzip
+
+EXTFSSTUFF = $(EXTFS_MISC) $(EXTFS_CONST) $(EXTFS_IN)
+
+#
+# Commands to build standalone version (.so)
+#
+
+VFSSOOBJS = tcputil.so fish.so ftpfs.so mcfs.so utilvfs.so local.so vfs.so \
+	tar.so sfs.so names.so container.so extfs.so util-alone.so \
+	util.sor utilunix.sor direntry.so
+
+%.sor:	../src/%.c
+	$(CC) -fpic -Wall -c $(CPPFLAGS) $(DEFS) $(CFLAGS) -DVFS_STANDALONE $< -o $@
+
+%.so:	%.c
+	$(CC) -fpic -Wall -c $(CPPFLAGS) $(DEFS) $(CFLAGS) -DVFS_STANDALONE $< -o $@
+
+libvfs.so: $(VFSSOOBJS)
+	gcc $(VFSSOOBJS) -shared -o libvfs.so
+
+libvfs.a: $(VFSSOOBJS)
+	$(RMF) $@
+	$(AR) cr $@ $(VFSSOOBJS)
+	-$(RANLIB) $@
+
+Makefile: $(srcdir)/Make-mc.in $(builddir)/config.status
+	cd $(builddir) && CONFIG_FILES=$@ CONFIG_HEADERS= $(SHELL) ./config.status
+
+
+#
+# Distribution variables
+#
+
+DISTVFS = 	Make-mc.in ChangeLog $(VFSSRCS) $(VFSHDRS) callback.h README README.fish
+
+all: @LIBVFS@ @mcserv@
+
+.c.o:
+	$(CC) -c $(CPPFLAGS) $(DEFS) $(CFLAGS) $<
+
+check:
+	@echo no tests are supplied.
+
+checklinks:
+	@if test -f $(vfsdir)/mad.c; then echo ok; \
+	else $(MAKE) sourcelinks; fi
+
+sourcelinks:
+	-cd $(vfsdir); $(LN_S) ../src/mad.c ../src/mad.h . >/dev/null 2>&1; true
+
+mcserv: checklinks
+	$(MAKE) mcservx
+
+mcservx: mcserv.o tcputil.o mad.o
+	$(CC) $(LDFLAGS) -o mcserv mcserv.o tcputil.o mad.o $(LIBS)
+	touch mcservx
+
+$(SAMBAFILES):
+	cd samba && $(MAKE)
+
+libvfs-mc.a: $(VFSOBJS) @SAMBAFILES@
+	$(RMF) $@
+	$(AR) cr $@ $(VFSOBJS) @SAMBAFILES@
+	-$(RANLIB) $@
+
+showlibdep:
+	@echo 'OBJS="$(VFSOBJS)"'
+
+cross:
+	$(MAKE) CC=gcc-linux CPP="gcc-linux -E" \
+	CPPFLAGS="$(CPPFLAGS) -I/usr/local/lib/gcc-lib/i386-linux-linux/include/ncurses "
+
+TAGS: $(VFSSRCS)
+	etags $(VFSSRCS)
+
+clean:
+	$(RMF) mcserv *.o core a.out *.a mcservx *.so *.sor
+
+realclean: clean
+	$(RMF) .depend
+	$(RMF) TAGS
+	$(RMF) *~
+
+distclean:
+	-$(RMF) $(srcdir)/*~ $(srcdir)/mcserv $(srcdir)/*.o $(srcdir)/a.out
+	-$(RMF) $(srcdir)/core $(srcdir)/libvfs-mc.a $(srcdir)/libvfs.so
+	-$(RMF) $(srcdir)/mad.c $(srcdir)/mad.h
+	-if test $(srcdir) = .; then $(MAKE) realclean; fi
+	-$(RMF) $(srcdir)/Makefile
+
+install: @mcserv@ install.extfs
+	-(if test x@mcserv@ != x; then \
+	    $(INSTALL_PROGRAM) mcserv $(DESTDIR)$(bindir)/$(binprefix)mcserv; \
+	fi)
+
+install.extfs:
+	for I in $(EXTFS_MISC); do \
+	    $(INSTALL_DATA) $(srcdir)/extfs/$$I \
+	          $(DESTDIR)$(extfsdir)/$$I; \
+	done
+	for I in $(EXTFS_CONST) ; do \
+	    $(INSTALL_PROGRAM) $(srcdir)/extfs/$$I \
+	             $(DESTDIR)$(extfsdir)/$$I; \
+	done
+	for I in $(EXTFS_OUT) ; do \
+	    $(INSTALL_PROGRAM) $(builddir)/vfs/extfs/$$I \
+	             $(DESTDIR)$(extfsdir)/$$I; \
+	done
+
+uninstall:
+	for I in $(EXTFS_MISC); do \
+	    $(RMF) $(DESTDIR)$(extfsdir)/$$I; \
+	done
+	for I in $(EXTFS_CONST) $(EXTFS_OUT); do \
+	    $(RMF) $(DESTDIR)$(extfsdir)/$$I; \
+	done
+	-rmdir $(DESTDIR)$(extfsdir)
+	-$(RMF) $(DESTDIR)$(bindir)/$(binprefix)mcserv
+
+distcopy:
+	for I in $(DISTVFS); do $(CP) $(top_srcdir)/vfs/$$I $(top_srcdir)/mc-$(VERSION)/vfs; done
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/extfs
+	for I in $(EXTFSSTUFF); do $(CP) $(top_srcdir)/vfs/extfs/$$I $(top_srcdir)/mc-$(VERSION)/vfs/extfs; done
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba/include
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba/lib
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba/libsmb
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba/param
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba/smbwrapper
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba/tests
+	mkdir $(top_srcdir)/mc-$(VERSION)/vfs/samba/ubiqx
+
+	for I in $(SAMBA_DIST_TOPLEVEL); do $(CP) $(top_srcdir)/vfs/samba/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba; done
+	for I in $(SAMBA_DIST_INCLUDE); do $(CP) $(top_srcdir)/vfs/samba/include/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba/include; done
+	for I in $(SAMBA_DIST_LIB); do $(CP) $(top_srcdir)/vfs/samba/lib/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba/lib; done
+	for I in $(SAMBA_DIST_LIBSMB); do $(CP) $(top_srcdir)/vfs/samba/libsmb/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba/libsmb; done
+	for I in $(SAMBA_DIST_PARAM); do $(CP) $(top_srcdir)/vfs/samba/param/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba/param; done
+	for I in $(SAMBA_DIST_SMBWRAPPER); do $(CP) $(top_srcdir)/vfs/samba/smbwrapper/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba/smbwrapper; done
+	for I in $(SAMBA_DIST_TESTS); do $(CP) $(top_srcdir)/vfs/samba/tests/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba/tests; done
+	for I in $(SAMBA_DIST_UBIQX); do $(CP) $(top_srcdir)/vfs/samba/ubiqx/$$I $(top_srcdir)/mc-$(VERSION)/vfs/samba/ubiqx; done
+	
+depend dep: mcdep
+
+fastdeploc:
+
+# ***Dependencies***Do not edit***
+@DOTDEPEND@
+# ***End of dependencies***

@@ -1,0 +1,100 @@
+* pre-R13: finish remaining entities and the blocks.
+* PROXY subentities, PROXY_ENTITY
+* CELLSTYLEMAP TABLE_Cell struct
+* DIMSTYLE_CONTROL: one R2000+ RC missing
+* r2010+ some AEC (Autodesk Architectural Desktop) object invalid EED's.
+* Enabled, but un(der)tested:
+  GEODATA HELIX LONG_TRANSACTION PROXY_OBJECT DIMASSOC MULTILEADER
+  LIGHT DYNAMICBLOCKPURGEPREVENTER
+  DBCOLOR ASSOCDEPENDENCY ASSOCPLANESURFACEACTIONBODY
+  TABLESTYLE (r2010+ unhandled)
+* Unhandled (fields spec'ed but broken/untested): GEOPOSITIONMARKER
+  PLANESURFACE EXTRUDEDSURFACE
+  LOFTEDSURFACE REVOLVEDSURFACE SWEPTSURFACE TABLE
+  TABLECONTENT TABLEGEOMETRY CELLSTYLEMAP MATERIAL PLOTSETTINGS SUN
+  SUNSTUDY VBA_PROJECT ASSOCACTION ASSOCNETWORK
+  ASSOCALIGNEDDIMACTIONBODY ASSOCOSNAPPOINTREFACTIONPARAM
+  ASSOCPERSSUBENTMANAGER ASSOC2DCONSTRAINTGROUP EVALUATION_GRAPH
+  ACSH_SWEEP_CLASS ACDBNAVISWORKSMODELDEF 
+* Unhandled (i.e. passed through, no DXF and fields):
+  ACSH_HISTORY_CLASS ARCALIGNEDTEXT ARC_DIMENSION
+  ASSOCGEOMDEPENDENCY ASSOCOSNAPPOINTREFACTIONPARAM
+  ASSOCVERTEXACTIONPARAM DATATABLE
+  DETAILVIEWSTYLE DOCUMENTOPTIONS GEODATA LAYER_FILTER
+  LAYOUTPRINTCONFIG LEADEROBJECTCONTEXTDATA LIGHTLIST NPOCOLLECTION
+  POINTCLOUD RTEXT SECTIONVIEWSTYLE XREFPANELOBJECT
+* add test coverage - i.e. an extended example_2018.dwg with all types,
+  for the following missing entities:
+  BODY CAMERA DIMENSION_ANG3PT DIMENSION_DIAMETER
+  DIMENSION_RADIUS DUMMY DGNUNDERLAY DWFUNDERLAY
+  GEOPOSITIONMARKER IMAGE LEADER LONG_TRANSACTION MINSERT
+  OLE2FRAME OLEFRAME POLYLINE_2D POLYLINE_MESH
+  PROXY_ENTITY PROXY_LWPOLYLINE SHAPE
+  TOLERANCE VERTEX_2D VERTEX_MESH
+* likewise for the following missing objects:
+  ARCALIGNEDTEXT  DOCUMENTOPTIONS  DETAILVIEWSTYLE
+  DWFDEFINITION DGNDEFINITION
+  XREFPANELOBJECT GEODATA IDBUFFER IMAGEDEF
+  IMAGEDEF_REACTOR LAYER_INDEX LIGHTLIST
+  NPOCOLLECTION OBJECT_PTR PLOTSETTINGS PROXY_OBJECT
+  RASTERVARIABLES SPATIAL_INDEX UCS VBA_PROJECT VIEW VPORT_ENTITY_CONTROL
+  VPORT_ENTITY_HEADER
+* check-dxf/outdxf: DXFIN coverage for all generated dxfs. some objects even crash acad:
+  VERTEX_3D, MLINE.
+* DXFIN errors:
+  Drawing_2007-18: XRECORD starting at line 5318: Could not set the Color dictionary:
+  *2010: Updating handle seed. Invalid or incomplete DXF input
+  *2007: XRECORD read error
+  example_2000: REGION starting at line 2506: Xdata wasn't read
+  Drawing_2000_min: crash at AcDbLine
+* indxf (dxf2dwg):
+  REGION: encr_sat_data
+  INSERT.block_header missing
+  WIPEOUT.uvec wrong
+  WIPEOUT.imagedefreactor 360: code 5 => 3
+  VPORT: 41, 71 wrong
+
+* convert XRECORD xdata linked-list ResBuf to array of eed[],
+  same structure as common EED.
+* link VBA_PROJECT object to its section, and vice versa
+* merge decode_r2007 with the 2004 decoder. It is almost the same, just
+  the sections have multiple pages. Only for this version. 2010+ uses
+  the 2004 format.
+* encode for 2004+: move the local structs to the dwg, as union?
+* finish binary DXF (easy). cross-check via: filedia 0, dxfout => Binary
+* add DXF reading (medium)
+* finish GeoJSON http://geojson.org/geojson-spec.html
+* maybe dwgfilter, as from the osmctools, with keep and drop rules.
+* check osm tools https://gitlab.com/osm-c-tools/osmctools how
+  they could import GIS data easier.
+  Check OpenStreetMap XML and PBF formats.
+* add one of the easy OGR formats: gml, gpx. See the xmlsuite which does it also.
+  See https://wiki.openstreetmap.org/wiki/Dxf2gpx
+  https://grass.osgeo.org/grass74/manuals/v.in.dxf.html and dwg (teigha and opencad)
+* add geomutils to tessellate curves (e.g. GeoJSON),
+  and to transform OCS/UCS objects when being displayed (e.g. svg, ps).
+  add API funcs to find table elements (layer, ltype).
+* ACIS: Maybe convert binary SAB to ASCII SAT version 2 (ASM ShapeManager,
+  forked from ACIS 7.0)
+* map DWG constraints to FreeCAD and SolveSpace constraints
+  https://www.freecadweb.org/wiki/Sketcher_Workbench#Sketcher_Constraints
+* check valabind vapi files to generate more and better bindings
+  (e.g. radare2-bindings). c++, c#, rust, go, node, java, perl, ruby, php,
+  autolisp (via ARX).
+  Did so, I dislike it. Too much work, valabind crashes and requires glib and gobject.
+  See the work/vapi branch.
+* add some UI to inspect the DWG internal structs (dwgiview), and maybe a viewer (dwgview).
+  Started with perl-tk
+* add unit-testing dwg coverage for the following entities:
+  body, minsert, shape, solid
+
+* fix the remaining leaks: unit-testing
+* finish documentation of the API functions, refman.
+* add the basic DWG layout and API to the docs.
+* publish manual and link to doxygen refman API
+* add more defaults when encoding from older to newer versions.
+* add fuzzing and solver-based test generation (bits)
+* check testsuite errors when cross-compiled under wine.
+* check for a waiver/copyright assignment from
+  Alex Papazoglou <papazoga> for his reed-solomon code (yet unused).
+  Otherwise use rscode-1.3 by Henry Minsky <hqm@alum.mit.edu> which is GPLv3.

@@ -1,0 +1,85 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1996 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- test-overload.sa: test Sather 1.1 overloading rules
+-- Author: Boris Vaysman <borisv@crape.ICSI.Berkeley.EDU>
+
+class TEST_OVERLOAD is
+   include TEST;
+   
+   create:SAME is return new; end;
+   
+   main is
+      class_name("OVERLOAD");
+      
+      blas:BLAS{INT}:=#;
+      
+      m:$M{INT};
+      s:$S{INT};
+      dm:D{INT};
+      sm:S{INT};
+      dl:DL{INT};
+      du:DU{INT};
+      
+      test("Overloading 1", blas.times(m,m),"times($M{T}, $M{T}):$STR") ;
+      test("Overloading 2", blas.times(m,s),"times($M{T}, $S{T}):$STR") ;
+      test("Overloading 3", blas.times(s,m),"times($S{T}, $M{T}):$STR") ;
+      test("Overloading 4", blas.times(s,s),"times($S{T}, $S{T}):$STR") ;      
+      
+      test("Overloading 5", blas.times(dm,dm),"times($M{T}, $M{T}):$STR") ;
+      test("Overloading 6", blas.times(sm,sm),"times($S{T}, $S{T}):$STR") ;
+      test("Overloading 7", blas.times(sm,dm),"times($S{T}, $M{T}):$STR") ;   
+      test("Overloading 8", blas.times(dm,sm),"times($M{T}, $S{T}):$STR") ;   
+      
+      test("Overloading 9", blas.times(du,dl),"times(DU{T}, DL{T}):$STR") ;
+      test("Overloading 10", blas.times(dl,du),"times($M{T}, $M{T}):$STR") ; 
+      
+      test("Overloading 11", blas.times(dl,dl),"times($M{T}, DL{T}):$STR") ; 
+      
+   end;
+
+end; -- class TEST_OVERLOAD
+-------------------------------------------------------------------
+
+abstract class $M{T} is end;            -- matrix
+abstract class $S{T} < $M{T} is end;    -- sparse
+
+abstract class $U{T} < $M{T} is end;    -- upper triangular
+abstract class $L{T} < $M{T} is end;    -- lower triangular
+
+class D{T} < $M{T}  is end; 
+class DU{T} < $M{T}, $U{T} is end; 
+class DL{T} < $M{T}, $L{T} is end; 
+
+class SL{T} < $S{T}, $L{T} is end; 
+class SU{T} < $S{T}, $U{T} is end; 
+class S{T} < $S{T} is end; 
+
+class BLAS{T} is
+   create:SAME is return new; end;
+   
+   times(m1:$M{T}, m2:$M{T}):$STR is return "times($M{T}, $M{T}):$STR" end;
+   times(m1:$M{T}, m2:$S{T}):$STR is return "times($M{T}, $S{T}):$STR" end;   
+   
+   times(m1:$S{T}, m2:$M{T}):$STR is return "times($S{T}, $M{T}):$STR" end;   
+   times(m1:$S{T}, m2:$S{T}):$STR is return "times($S{T}, $S{T}):$STR" end;   
+   
+   times(m1:DU{T}, m2:DL{T}):$STR is return "times(DU{T}, DL{T}):$STR" end;   
+   times(m1:$M{T}, m2:DL{T}):$STR is return "times($M{T}, DL{T}):$STR" end;      
+   
+   
+end;
+
+
+	 
+

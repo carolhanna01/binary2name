@@ -1,0 +1,227 @@
+
+'''
+''' Part of the ht://Dig package   <http://www.htdig.org/>
+''' Copyright (c) 1999, 2000, 2001 The ht://Dig Group
+''' For copyright details, see the file COPYING in your distribution
+''' or the GNU General Public License version 2 or later
+''' <http://www.gnu.org/copyleft/gpl.html>
+''' 
+''' 
+.TH Configuration 3 local
+.SH NAME
+Configuration \-
+
+reads the configuration file and manages it in memory.
+
+
+.SH SYNOPSIS
+.nf
+.ft CW
+
+#include <Configuration.h>
+
+Configuration config;
+
+ConfigDefault config_defaults = {
+  { "verbose", "true" },
+  { 0, 0 }
+};
+
+config.Defaults(config_defaults);
+
+config.Read("/spare2/myconfig") ;
+
+config.Add("sync", "false");
+
+if(config["sync"]) ...
+if(config.Value("rate") < 50) ...
+if(config.Boolean("sync")) ...
+.ft R
+.fi
+
+.SH DESCRIPTION
+
+The primary purpose of the
+.B Configuration
+class is to parse
+a configuration file and allow the application to modify the internal
+data structure produced. All values are strings and are converted by the 
+appropriate accessors. For instance the
+.B Boolean
+method will 
+return numerical true (not zero) if the string either contains 
+a number that is different from zero or the string
+.I true
+.
+
+The
+.I ConfigDefaults
+type is a structure of two char pointers:
+the name of the configuration attribute and it's value. The end of
+the array is the first entry that contains a null pointer instead of
+the attribute name. Numerical
+values must be in strings. For instance:
+.nf
+.ft CW
+ConfigDefault* config_defaults = {
+  { "wordlist_compress", "true" },
+  { "wordlist_page_size", "8192" },
+  { 0, 0 }
+};
+.ft R
+.fi
+The additional
+fields of the
+.B ConfigDefault
+are purely informative. 
+
+
+.SH FILE FORMAT
+
+The configuration file is a plain ASCII text file. Each line in
+the file is either a comment or an attribute.
+Comment lines are blank lines or lines that start with a '#'.
+Attributes consist of a variable name and an associated
+value:
+.nf
+.ft CW
+<name>:<whitespace><value><newline>
+.ft R
+.fi
+
+The <name> contains any alphanumeric character or
+underline (_) The <value> can include any character
+except newline. It also cannot start with spaces or tabs since
+those are considered part of the whitespace after the colon. It
+is important to keep in mind that any trailing spaces or tabs
+will be included.
+
+It is possible to split the <value> across several
+lines of the configuration file by ending each line with a
+backslash (\). The effect on the value is that a space is
+added where the line split occurs.
+
+A configuration file can include another file, by using the special
+<name>, <tt>include</tt>. The <value> is taken as
+the file name of another configuration file to be read in at
+this point. If the given file name is not fully qualified, it is
+taken relative to the directory in which the current configuration
+file is found. Variable expansion is permitted in the file name.
+Multiple include statements, and nested includes are also permitted.
+.nf
+.ft CW
+include: common.conf
+.ft R
+.fi
+
+
+
+.SH METHODS
+.TP
+.B   Configuration()
+Constructor
+.TP
+.B   ~Configuration() 
+Destructor
+.TP
+.B   void Add(const String& str)
+Add configuration item
+.B str
+to the configuration. The value
+associated with it is undefined.
+.TP
+.B   void Add(const String& name, const String& value)
+Add configuration item
+.B name
+to the configuration and associate
+it with
+.B value
+.
+.TP
+.B   int Remove(const String& name)
+Remove the
+.B name
+from the configuration.
+.TP
+.B   void NameValueSeparators(const String& s)
+Let the Configuration know how to parse name value pairs.
+Each character of string
+.B s
+is a valid separator between
+the
+.I name
+and the
+.I value.
+.TP
+.B   virtual int Read(const String& filename)
+Read name/value configuration pairs from the file
+.B filename
+.
+.TP
+.B   const String Find(const String& name) const
+Return the value of configuration attribute
+.B name
+as a
+.I String
+.
+.TP
+.B   const String operator[](const String& name) const
+Alias to the
+.B Find
+method.
+.TP
+.B   int Value(const String& name, int default_value = 0) const
+Return the value associated with the configuration attribute
+.B name
+, converted to integer using the atoi(3) function.
+If the attribute is not found in the configuration and 
+a
+.B default_value
+is provided, return it.
+.TP
+.B   double Double(const String& name, double default_value = 0) const
+Return the value associated with the configuration attribute
+.B name
+, converted to double using the atof(3) function.
+If the attribute is not found in the configuration and 
+a
+.B default_value
+is provided, return it.
+.TP
+.B   int Boolean(const String& name, int default_value = 0) const
+Return 1 if the value associated to
+.B name
+is 
+either
+.B 1, yes
+or
+.B true
+.
+Return 0 if the value associated to
+.B name
+is 
+either
+.B 0, no
+or
+.B false
+.
+.TP
+.B   void Defaults(const ConfigDefaults *array)
+Load configuration attributes from the
+.I name
+and
+.I value
+members of the
+.B array
+argument.
+.PP
+
+.SH AUTHORS
+Loic Dachary loic@gnu.org
+
+The Ht://Dig group http://dev.htdig.org/
+
+
+.SH SEE ALSO
+htdb_dump(1), htdb_stat(1), htdb_load(1), mifluzdump(1), mifluzload(1), mifluzsearch(1), mifluzdict(1), WordContext(3), WordList(3), WordDict(3), WordListOne(3), WordKey(3), WordKeyInfo(3), WordType(3), WordDBInfo(3), WordRecordInfo(3), WordRecord(3), WordReference(3), WordCursor(3), WordCursorOne(3), WordMonitor(3), mifluz(3)
+

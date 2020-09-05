@@ -1,0 +1,300 @@
+#!/bin/sh
+#
+# Gnats installation script -- written by Brian White <bcwhite@pobox.com>
+# (This was my very first attempt at learning perl... please forgive me!)
+#
+# Forgiving -- rewritten to bash :-) by Milan Zamazal <pdm@debian.org>.
+# ...and streamlined with SED by Chad Walstrom <chewie@debian.org>
+
+set -e
+
+###############################################################################
+#
+# Utility functions
+#
+
+# Call arguments and never return error
+protect () { "$@" || true; }
+
+###############################################################################
+#
+# Common initialization for install scripts
+#
+
+. /usr/share/debconf/confmodule
+
+protect db_get gnats/site
+SITE=${RET:-@DEFSITE@}
+GNATSSITE="@GNATSDBDIR@/$SITE"
+GNATSDBDIR="@GNATSDBDIR@"
+PASSWDFILE="@PASSWDFILE@"
+
+###############################################################################
+#
+# Check the 'gnats' userid in the password file
+#
+
+if [ "$1" = configure ]; then
+
+  if [ $(protect grep -c "^@GNATSGROUP@:" @GROUPFILE@) -eq 0 ]; then
+    adduser --group --gid @GNATSGID@ @GNATSGROUP@
+  fi
+  
+  PWFOUND=$(protect grep -c "^@GNATSUSER@:" @PASSWDFILE@)
+
+  if [ $PWFOUND -gt 1 ]; then
+    db_subst gnats/user_multiple PASSWDFILE "@PASSWDFILE@"
+    db_input high gnats/user_multiple || true
+    db_go
+  fi
+
+  if [ $PWFOUND -gt 0 ]; then
+    if [ $(protect grep -c "^@GNATSUSER@:.*:@GNATSOLDHOME@:" @PASSWDFILE@) -gt 0 ]
+    then
+      if [ -e @GNATSOLDHOME@/.profile ]; then
+  mv @GNATSOLDHOME@/.profile @GNATSHOME@/
+      fi
+      usermod -d @GNATSHOME@ @GNATSUSER@
+    fi
+    if [ $(protect grep -c "^@GNATSUSER@:[^:]*:@GNATSID@:@GNATSGID@:" \
+           @PASSWDFILE@) \
+   -eq 0 ]
+    then
+      usermod -u @GNATSID@ -G @GNATSGID@ @GNATSUSER@
+    fi
+  else
+    adduser --quiet --system --home @GNATSHOME@ --no-create-home \
+            --gid @GNATSGID@ --shell /bin/sh --disabled-login \
+      --gecos 'GNU GNATS Bug-Reporting System' @GNATSUSER@
+  fi
+
+fi
+
+###############################################################################
+#
+# Add the 'gnats' system into the mail aliases
+#
+
+if [ "$1" = configure ]; then
+  
+  #
+  # Special mailers
+  #
+
+  EXIM=$(dpkg -l exim | protect grep -c '^.i')
+  for F in /etc/exim/exim.conf /etc/exim.conf; do
+    if [ -f $F ]; then
+      EXIMCONF=$F
+      break
+    fi
+  done
+
+  if [ $EXIM -gt 0 ] && [ -n "$EXIMCONF" ]; then
+    if [ $(grep -c '^[ \t]*user[ \t]*=' $EXIMCONF) -eq 0 ]; then
+      LINES="$(grep '^[ \t]*#[ \t]*user[ \t]*=' $EXIMCONF)"
+      if [ -n "$LINES" ]; then
+        db_subst gnats/exim_user_uncomment LINES "$LINES"
+  db_subst gnats/exim_user_uncomment EXIMCONF "$EXIMCONF"
+  db_input high gnats/exim_user_uncomment || true
+  db_go
+      else
+  db_subst gnats/exim_user_uncomment EXIMCONF "$EXIMCONF"
+  db_input high gnats/exim_user_add || true
+  db_go 
+      fi
+    fi
+  fi
+
+  QMAIL=$(dpkg -l qmail | protect grep -c '^.i')
+
+  if [ $QMAIL -gt 0 ]; then
+
+    # Generate dot files
+#    echo "qmail found, installing qmail dot files..."
+    for I in "qmail root" \
+             "qmail-bugs | @GNATSDIR@/queue-pr -q" \
+             "qmail-query | @GNATSDIR@/mail-query"; do
+      KEY=${I%% *}
+      FILE="@GNATSHOME@/.$KEY"
+      if [ ! -f $FILE ]; then
+  TEMPFILE=$(tempfile)
+  echo "${I#$KEY }" >$TEMPFILE
+  chmod 0644 $TEMPFILE
+  chown @GNATSUSER@:@GNATSGROUP@ $TEMPFILE
+  mv $TEMPFILE $FILE
+      fi      
+    done
+#    echo "Done."
+
+    # Generate aliases
+    ASSIGN='/var/qmail/users/assign'
+    if [ ! -f $ASSIGN ] || \
+       [ $(protect grep -c '^.gnats-admin' $ASSIGN) -eq 0 ]; then
+      db_subst gnats/qmail SITE "${SITE}"
+      db_input high gnats/qmail || true
+      db_go
+    fi
+
+  elif [ ! -f @MAILFILE@ ]; then
+
+    db_subst gnats/unknown_mailer SITE "${SITE}"
+    db_input high gnats/unknown_mailer || true
+    db_go
+
+  else
+  
+    #
+    # Common mailers
+    #
+
+    if [ $(protect \
+           egrep -c "^[ \t]*(gnats-admin|bugs|query-pr|$SITE-gnats)\>" \
+     @MAILFILE@) -lt 4 ]; then
+
+      TEMPFILE=$(tempfile)
+      sed "s/^#\([ \t]*\(gnats-admin\|bugs\|query-pr\|$SITE-gnats\)\>.*$\)/\1/" \
+        @MAILFILE@ >$TEMPFILE
+      
+      if [ $(protect \
+             egrep -c "^[ \t]*(gnats-admin|bugs|query-pr|$SITE-gnats)\>" \
+       $TEMPFILE) -lt 4 ]; then
+        egrep -v "^[ \t]*(gnats-admin|bugs|query-pr|$SITE-gnats)\>" \
+          @MAILFILE@ >$TEMPFILE
+        cat - >>$TEMPFILE <<EOF
+
+# begin gnats aliases
+gnats:          root
+gnats-admin:    gnats
+bugs:           "| @GNATSDIR@/queue-pr -q"
+query-pr:       "| @GNATSDIR@/mail-query"
+$SITE-gnats:    bugs
+# end gnats aliases
+EOF
+      fi
+
+      cp @MAILFILE@ @MAILFILE@.dpkg-old
+      chmod 644 $TEMPFILE
+      mv $TEMPFILE @MAILFILE@
+      
+      NEWALIASES=$(which newaliases)
+      if [ -n "$NEWALIASES" ]; then
+        "$NEWALIASES"
+      fi      
+    fi
+    
+  fi
+
+fi
+
+###############################################################################
+#
+# Initialize GNATS configuration files
+#
+
+if [ "$1" = configure ]; then
+  #
+  # Add symlink to the standard database
+  #
+  if [ ! -e @DB_CONFIG_DEFAULT_DIR@ ]; then
+    ln -sf @GNATSADMDIR@ @DB_CONFIG_DEFAULT_DIR@
+  fi
+
+  #
+  # Add symlink for gnatsd.user_access
+  #
+  if [ ! -e @CONFIGDIR@/gnatsd.user_access ]; then
+    ln -sf @GNATSADMDIR@/gnatsd.user_access @CONFIGDIR@/gnatsd.user_access
+  fi
+
+  #
+  # Create new database if necessary
+  #
+  if [ $(grep -c '^default:' @CONFIGDIR@/databases) -gt 0 ]; then
+    if [ -d "@GNATSADMDIR@" ]; then
+      # gnats-queue was present directly in older versions of the package, so
+      # it can be deleted during the upgrade
+      QUEUEDIR="@GNATSDBDIR@/gnats-queue"
+      if [ ! -d "$QUEUEDIR" ]; then
+        mkdir "$QUEUEDIR"
+        chown @GNATSUSER@:@GNATSGROUP@ "$QUEUEDIR"
+      fi
+    else
+      if [ -d "@GNATSDBDIR@" ]; then
+        mv @GNATSDBDIR@ @GNATSDBDIR@.old
+      fi
+      @GNATSDIR@/mkdb default
+      chown -R @GNATSUSER@:@GNATSGROUP@ @GNATSDBDIR@
+    fi
+  fi
+fi
+
+###############################################################################
+#
+# Register `gnats' HTML documentation
+#
+
+if [ "${1}" = configure ] ; then
+  DHELP=/usr/sbin/dhelp_parse
+  HTMLDIR=@DOCDIR@/gnats/gnats
+
+  if [ -f $DHELP ]; then
+    $DHELP -a $HTMLDIR
+  fi
+fi
+
+###############################################################################
+#
+# Perform actions needed for upgrade from GNATS 3 to GNATS 4
+#
+
+if [ "$1" = configure ]; then
+  if dpkg --compare-versions "$2" lt 3.999 \
+     && [ -e @DB_CONFIG_DIR@/default ]; then
+    if [ ! -e @DB_CONFIG_DEFAULT_DIR@ ]; then
+      ln -sf default @DB_CONFIG_DEFAULT_DIR@
+    fi
+  else
+    if [ ! -e @DB_CONFIG_DEFAULT_DIR@ ]; then
+      ln -sf @GNATSADMDIR@ @DB_CONFIG_DEFAULT_DIR@
+    fi
+  fi
+  
+  if dpkg --compare-versions "$2" lt 3.999; then
+    db_input medium gnats/upgrade_3_4 || true
+  fi
+fi
+
+###############################################################################
+#
+# Configure info files
+#
+if [ "${1}" = configure ] ; then
+  install-info --description='GNU GNATS.  Problem Report Management System' \
+    --menuentry='GNU GNATS' --section Devel Development \
+    --quiet @INFODIR@/gnats.info.gz
+  install-info --description='GNU GNATS.  Frequently Asked Questions' \
+    --menuentry='GNU GNATS FAQ' --section Devel Development \
+    --quiet @INFODIR@/gnats-faq.info.gz
+fi
+
+###############################################################################
+#
+# Add an inetd entry for client/server operations
+#
+
+if [ "$1" = configure ] ; then
+  # If upgrading from 3.x, replace gnats entry with support
+  if [ -n "$2" ] && dpkg --compare-versions "$2" lt 3.111-1; then
+    update-inetd --remove "^#?gnats.*/gnatsd"
+  fi
+
+  # Add support entry
+  update-inetd --add "#support    stream  tcp nowait  @GNATSUSER@ /usr/sbin/tcpd  @GNATSDIR@/gnatsd"
+fi
+
+###############################################################################
+#
+# Automatically added debhelper stuff
+#
+#DEBHELPER#
+

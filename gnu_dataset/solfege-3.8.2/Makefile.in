@@ -1,0 +1,252 @@
+#
+# GNU Solfege - ear training for GNOME
+# Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2007 Tom Cato Amundsen
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin ST, Fifth Floor, Boston, MA  02110-1301  USA
+
+@SET_MAKE@
+
+export prefix:=@prefix@
+export exec_prefix:=@exec_prefix@
+export bindir:=@bindir@
+export datadir:=@datadir@
+export sysconfdir:=@sysconfdir@
+export libdir:=@libdir@
+export mandir:=@mandir@
+export CC:=@CC@
+export CFLAGS:=@CFLAGS@
+export RSVG:=@RSVG@
+export SWIG:=@SWIG@
+export SWIG_VERSION:=@SWIG_VERSION@
+export LILYPOND:=@LILYPOND@
+export GS:=@GS@
+export XGETTEXT:=@XGETTEXT@
+export MAKEINFO:=@MAKEINFO@
+export MSGFMT:=@MSGFMT@
+export MSGMERGE:=@MSGMERGE@
+export XML2PO:=@XML2PO@
+export XSLTPROC:=@XSLTPROC@
+export STYLESHEET:=@STYLESHEET@
+export HAVE_STYLESHEET:=@HAVE_STYLESHEET@
+export PYTHON:=@PYTHON@
+export PYTHON_VERSION:=@PYTHON_VERSION@
+export PYTHON_PREFIX:=@PYTHON_PREFIX@
+export PYTHON_INCLUDES:=@PYTHON_INCLUDES@
+export PACKAGE:=@PACKAGE@
+export MAJOR_VERSION:=@MAJOR_VERSION@
+export MINOR_VERSION:=@MINOR_VERSION@
+export PATCH_LEVEL:=@PATCH_LEVEL@
+export VERSION:=@VERSION@
+
+export INSTALL:=@INSTALL@
+export INSTALL_PROGRAM := ${INSTALL}
+export INSTALL_DATA := ${INSTALL} -m 644
+export ENABLE_OSS_SOUND := @ENABLE_OSS_SOUND@
+export ENABLE_WINMIDI := @ENABLE_WINMIDI@
+export ENABLE_TUNER := @ENABLE_TUNER@
+export HAVE_LINUX_AWE_VOICE_H := @HAVE_LINUX_AWE_VOICE_H@
+export HAVE_FFTW := @HAVE_FFTW@
+export LIBS:=@LIBS@
+export DISTNAME:=$(PACKAGE)-$(VERSION)
+export DISTDIR:=$(PWD)/$(PACKAGE)-$(VERSION)
+
+TARGETS += AUTHORS INSTALL README FAQ INSTALL.win32
+installfiles += ui.xml help-menu.xml helpbrowser.xml learningtree.txt
+installfiles += debugtree.txt
+
+.PHONY: all update-manual
+all: update-manual
+
+SUBDIRS := po feta example-lesson-files lesson-files mpd soundcard src test tools topdocs graphics themes/svg help
+
+FAQ INSTALL.win32 README INSTALL : topdocs/defs.texi
+
+%: topdocs/%.texi
+	LC_ALL=C makeinfo -I topdocs --no-split --no-headers --output $(notdir $(basename $<)) $<
+
+dist_files = AUTHORS COPYING INSTALL FAQ INSTALL.win32 \
+	Makefile.in config.h.in \
+	README changelog ChangeLog configure configure.ac \
+	default.config system.rc finn \
+	install-sh py-compile run-solfege.py.in \
+	solfege.1 solfege.1.txt \
+	lessonfile_editor.1 lessonfile_editor.1.txt solfege.bat  \
+	solfege.desktop solfege.gtkrc solfege.py \
+	windowsinstaller.iss.in windowsinstaller.iss \
+	solfege.redhat9.spec.in solfege.redhat9.spec \
+	solfege.suse9.spec.in solfege.suse9.spec \
+	acinclude.m4 aclocal.m4 \
+	runsrcdir.bat runpy2exe.bat setup.py \
+	lessonfile_editor.py.in \
+	ui.xml \
+	help-menu.xml \
+	helpbrowser.xml \
+	learningtree.txt \
+	debugtree.txt \
+	autopackage/default.apspec.in \
+	winbuild.sh
+
+include $(patsubst %,%/Makefile,$(SUBDIRS))
+-include debian-dir/Makefile
+-include debian/Makefile
+
+%.1: %.1.txt
+	txt2man -t Solfege -s 1 $< > $@
+solfege.1: solfege.1.txt
+	cat $< | sed -e "s/XXOPTIONS/LANGUAGE=C .\/solfege.py --help|sed -n '5,999p'/e" | txt2man -t Solfege -s 1 > $@
+
+rsync-manual: $(foreach lang,$(USER_MANUAL_LANGUAGES),help/$(lang)/one-big-page.html)
+	rm -rf tmp-build
+	make prefix=`pwd`/tmp-build
+	make prefix=`pwd`/tmp-build install
+	cd tmp-build/share/solfege/help && rsync --delete --rsh=ssh -r . tomcato@solfege.org:/home/tomcato/www/docs/$(MAJOR_VERSION).$(MINOR_VERSION)
+	rm -rf tmp-build
+
+maintainer-clean: clean
+clean:
+	rm -f $(TARGETS)
+	rm -f $(clean-files)
+	rm -f AUTHORS.txt COPYING.txt FAQ.txt README.txt INSTALL.txt INSTALL.win32.txt
+
+install: all mkinstalldirs install-po install-soundcard install-graphics
+	$(INSTALL_PROGRAM) run-solfege.py $(DESTDIR)/$(bindir)/solfege
+	$(INSTALL_PROGRAM) run-solfege.py $(DESTDIR)/$(bindir)/solfege
+	$(INSTALL_PROGRAM) lessonfile_editor.py $(DESTDIR)/$(bindir)/lessonfile_editor
+	$(INSTALL_DATA) solfege.gtkrc $(DESTDIR)/$(datadir)/$(PACKAGE)
+	$(INSTALL_DATA) default.config $(DESTDIR)/$(datadir)/$(PACKAGE)
+	$(INSTALL_DATA) solfege.1 $(DESTDIR)/$(mandir)/man1
+	$(INSTALL_DATA) lessonfile_editor.1 $(DESTDIR)/$(mandir)/man1
+	
+	$(INSTALL_DATA) system.rc $(DESTDIR)/$(sysconfdir)/$(PACKAGE)
+	$(INSTALL_DATA) solfege.desktop $(DESTDIR)/$(datadir)/applications/
+	$(PYTHON) tools/pcopy.py $(installfiles) $(DESTDIR)/$(datadir)/$(PACKAGE)/
+
+# FIXME add to install target when we know how to get the path to compileall.py
+compileall:
+ifneq ($(nopycompile),YES)
+	$(PYTHON) /usr/lib/python2.3/compileall.py $(datadir)/$(PACKAGE)/src
+	$(PYTHON) -O /usr/lib/python2.3/compileall.py $(datadir)/$(PACKAGE)/src
+	echo AAAA $(PYTHON_PREFIX) $(pythondir)
+endif
+
+mkinstalldirs:
+	mkdir -p $(DESTDIR)/$(mandir)/man1
+	mkdir -p $(DESTDIR)/$(bindir)
+	mkdir -p $(DESTDIR)/$(datadir)/$(PACKAGE)
+	mkdir -p $(DESTDIR)/$(sysconfdir)
+	mkdir -p $(DESTDIR)/$(datadir)/applications/
+
+uninstall: uninstall-po uninstall-soundcard uninstall-graphics
+	rm $(addprefix $(datadir)/$(PACKAGE)/,$(installfiles))
+	# delete .pyc files
+	rm -f $(patsubst %,$(datadir)/$(PACKAGE)/%c,$(filter %.py,$(installfiles)))
+	# delete .pyo files
+	rm -f $(patsubst %,$(datadir)/$(PACKAGE)/%o,$(filter %.py,$(installfiles)))
+	rm $(bindir)/$(PACKAGE)
+	rm $(bindir)/lessonfile_editor
+	rmdir $(bindir) || true
+	rm $(mandir)/man1/solfege.1
+	rm $(mandir)/man1/lessonfile_editor.1
+	rmdir $(mandir)/man1 || true
+	rmdir $(mandir) || true
+	rm -f $(datadir)/$(PACKAGE)/solfege.gtkrc
+	rm -f $(datadir)/$(PACKAGE)/default.config
+	rm -f $(sysconfdir)/$(PACKAGE)
+	rm -f $(datadir)/applications/solfege.desktop
+	rmdir $(datadir)/$(PACKAGE)/feta
+	rmdir $(datadir)/$(PACKAGE)/example-lesson-files
+	rmdir $(datadir)/$(PACKAGE)/lesson-files/bin
+	rmdir $(datadir)/$(PACKAGE)/lesson-files/share
+	rmdir $(datadir)/$(PACKAGE)/lesson-files
+	rmdir $(datadir)/$(PACKAGE)/mpd
+	rmdir $(datadir)/$(PACKAGE)/soundcard
+	rmdir $(datadir)/$(PACKAGE)/src
+	rmdir $(datadir)/$(PACKAGE)/graphics
+	rmdir $(datadir)/$(PACKAGE)/themes/svg
+	rmdir $(datadir)/$(PACKAGE)/themes
+	rmdir $(datadir)/$(PACKAGE)
+	rmdir $(datadir)/applications || true
+	rmdir $(datadir)/pixmaps || true
+	rmdir $(datadir) || true
+	rmdir $(sysconfdir) || true
+	rmdir $(libdir) || true
+	rmdir $(prefix) || true
+
+.PHONY: test
+test:
+	rm -rf $(PACKAGE)-$(VERSION)
+	xmllint --postvalid --dtdvalid http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd --xinclude --noout  help/C/solfege.xml
+	$(PYTHON) tools/po-file-checks.py
+	$(MAKE) dist
+	$(PYTHON) src/htmlwidget.py
+	tar zxf ../$(PACKAGE)-$(VERSION).tar.gz
+	(cd $(PACKAGE)-$(VERSION) && ./configure && $(MAKE) 2>&1| tee buildlog.txt)
+	@if grep "parser error :" $(PACKAGE)-$(VERSION)/buildlog.txt; then exit -1; else echo "Docbook ok"; fi
+	rm -rf $(PACKAGE)-$(VERSION)
+	$(PYTHON) tools/missing-screenshots.py
+
+dist: update-language-po dist_workhorse
+	tar --gzip --create --file=../$(DISTNAME).tar.gz $(DISTNAME)
+	rm -rf $(DISTNAME)
+	@echo
+	@echo "Remember to run 'make po-update' and 'make test' before"
+	@echo "making a release."
+	@echo
+
+dist_workhorse: all AUTHORS INSTALL README FAQ INSTALL.win32
+	rm -rf $(DISTNAME)
+	bzr log -r -1..1  > ChangeLog
+	mkdir $(DISTNAME)
+	$(PYTHON) tools/pcopy.py $(dist_files) $(DISTNAME)
+
+distclean-files += config.status config.cache config.log \
+	install-stamp build-stamp \
+	Makefile \
+	config.h debian-solfege.py run-solfege.py \
+	installer.nsi debian-solfege.py.in \
+	lessonfile_editor.py
+
+
+distclean: clean
+	rm -f $(distclean-files)
+
+count_c_lines:
+	wc --lines $(wildcard soundcard/*.c)
+
+count_lines:
+	wc --lines $(wildcard mpd/*.py soundcard/*.py src/*.py)
+	@echo "Counted python files"
+
+winbuild:
+	$(PYTHON) -c "file('AUTHORS.txt', 'w').write(file('AUTHORS', 'rU').read())"
+	$(PYTHON) -c "file('COPYING.txt', 'w').write(file('COPYING', 'rU').read())"
+	$(PYTHON) -c "file('FAQ.txt', 'w').write(file('FAQ', 'rU').read())"
+	$(PYTHON) -c "file('README.txt', 'w').write(file('README', 'rU').read())"
+	$(PYTHON) -c "file('INSTALL.txt', 'w').write(file('INSTALL', 'rU').read())"
+	$(PYTHON) -c "file('INSTALL.win32.txt', 'w').write(file('INSTALL.win32', 'rU').read())"
+
+src/languages.py: $(wildcard po/*.po) tools/buildutil.py
+	$(PYTHON) -c "import tools.buildutil; tools.buildutil.create_languages_py()"
+
+TARGETS += src/languages.py
+
+all: $(TARGETS) solfege.1 lessonfile_editor.1
+	chmod +x lessonfile_editor.py
+
+.PHONY: help
+help:
+	@echo "make help                 Display this message."
+	@echo "help/C/one-big-page.html  Make documentation in on big html file."
+	@echo "make update-language-po   Update the help/lang/lang.po files."

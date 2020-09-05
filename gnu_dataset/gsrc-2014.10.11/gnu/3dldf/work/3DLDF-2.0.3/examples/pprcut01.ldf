@@ -1,0 +1,543 @@
+%%%% pprcut01.ldf
+%%%% Created by Laurence D. Finston (LDF) Sat Jan  1 20:32:27 CET 2011
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+
+
+%%%% Created:       January 1, 2011
+%%%% Last updated:  January 5, 2011
+
+%% * (1) Beginning of 3DLDF code.
+
+%% * (1) Declarations
+
+point p[];
+path q[];
+
+transform t[];
+
+circle c[];
+
+picture crosshair_picture;
+picture help_picture;
+picture main_picture;
+
+path frame;
+
+numeric frame_wd;
+numeric frame_ht;
+
+%% * (1) Frame path
+
+frame_wd := 20cm;
+frame_ht := 26cm;
+
+frame := origin -- (frame_wd, 0) -- (frame_wd, 0, frame_ht) -- (0, 0, frame_ht) -- cycle;
+
+transform frame_transform;
+
+frame_transform := identity shifted (-.5frame_wd, 0, -.5frame_ht);
+
+frame *= frame_transform;
+
+%% * (1)
+
+pickup pencircle scaled (.5mm, .5mm, .5mm);
+
+%% * (1) Assigments
+
+%% Outer circle
+
+set c0 with_diameter 19 with_point_count 64;
+
+%% * (1) Figure 0 --- Crosshairs
+
+beginfig(0); 
+
+p0 := (1cm, 0, 1cm);
+
+q0 := p0 shifted (-.5, 0) -- p0 shifted (.5, 0);
+
+p1 := p0 shifted (0, 1);
+
+q1 := q0 rotated_around (p0, p1) 90;
+
+draw q0 transformed frame_transform on_picture crosshair_picture; 
+draw q1 transformed frame_transform on_picture crosshair_picture; 
+
+
+draw q0 rotated_around ((0, 0, .5frame_ht), (frame_wd, 0, .5frame_ht)) 
+     transformed frame_transform on_picture crosshair_picture; 
+
+draw q1 rotated_around ((0, 0, .5frame_ht), (frame_wd, 0, .5frame_ht)) 
+     transformed frame_transform on_picture crosshair_picture; 
+
+
+draw q0 rotated_around ((.5frame_wd, 0, 0), (.5frame_wd, 0, .5frame_ht)) 
+     transformed frame_transform on_picture crosshair_picture; 
+
+draw q1 rotated_around ((.5frame_wd, 0, 0), (.5frame_wd, 0, .5frame_ht)) 
+     transformed frame_transform on_picture crosshair_picture; 
+
+draw q0 rotated_around ((.5frame_wd, 0, 0), (.5frame_wd, 0, .5frame_ht))
+     rotated_around ((0, 0, .5frame_ht), (frame_wd, 0, .5frame_ht))
+     transformed frame_transform  on_picture crosshair_picture; 
+
+draw q1 rotated_around ((.5frame_wd, 0, 0), (.5frame_wd, 0, .5frame_ht))
+     rotated_around ((0, 0, .5frame_ht), (frame_wd, 0, .5frame_ht))
+     transformed frame_transform  on_picture crosshair_picture; 
+
+draw q0 shifted by ((.5frame_wd, 0, 1cm) - p0) transformed frame_transform  
+on_picture crosshair_picture; 
+
+draw q1 shifted by ((.5frame_wd, 0, 1cm) - p0) transformed frame_transform  
+on_picture crosshair_picture; 
+
+draw (q0 shifted by ((.5frame_wd, 0, 1cm) - p0)) 
+     rotated_around ((0, 0, .5frame_ht), (frame_wd, 0, .5frame_ht))
+     transformed frame_transform  
+     on_picture crosshair_picture; 
+
+draw (q1 shifted by ((.5frame_wd, 0, 1cm) - p0)) 
+     rotated_around ((0, 0, .5frame_ht), (frame_wd, 0, .5frame_ht))
+     transformed frame_transform  
+     on_picture crosshair_picture; 
+
+
+endfig; 
+
+%% * (1) macro polygon_section
+
+def polygon_section (PICT) {circle C, 
+                           numeric polygon_sides} =
+
+clear PICT;
+
+point p[];
+path q[];
+numeric rad;
+
+numeric a;
+numeric b;
+
+rad := get_radius C;
+
+p0 := origin;
+
+a := 180 / polygon_sides;
+
+% message "a:"; 
+% show a;
+
+p1 := (0, 0, -rad);
+
+p3 := p1;
+
+rotate p1 (0, -a);
+
+q0 += p1;
+q0 += ..;
+
+b := 2a;
+b /= 64;
+
+for i := 1 upto 64:
+   p2 := p1 rotated (0, i * b);
+   q0 += p2;
+endfor;
+
+% dotlabel.top("$p_{0}$", p0) PICT;
+% dotlabel.top("$p_{1}$", p1) PICT;
+% dotlabel.top("$p_{2}$", p2) PICT;
+% dotlabel.bot("$p_{3}$", p3) PICT;
+
+draw p1 -- p0 -- p2 with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+draw q0 on_picture PICT;
+
+% message "angle (p1, p2):"; 
+% show p1 angle p2;
+
+%pause;
+
+p4 := p0 shifted (0, 0, 1);
+
+p5 := p3 shifted (0, 0, -1);
+
+draw p4 -- p5 with_color dark_grey dashed evenly 
+   with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+p6 := (unit_vector(p0 - p2) * 1) shifted p0;
+draw p0 -- p6 with_color dark_grey dashed evenly 
+   with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+p7 := (unit_vector(p2 - p0) * 1) shifted p2;
+draw p2 -- p7 with_color dark_grey dashed evenly 
+   with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+p8 := (unit_vector(p0 - p1) * 1) shifted p0;
+draw p0 -- p8 with_color dark_grey dashed evenly 
+   with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+p9 := (unit_vector(p1 - p0) * 1) shifted p1;
+draw p1 -- p9 with_color dark_grey dashed evenly 
+   with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+p10 := (unit_vector(p1 - p2) * 1) shifted p1;
+
+p11 := (unit_vector(p2 - p1) * 1) shifted p2;
+
+draw p10 -- p11 with_color dark_grey dashed evenly 
+   with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+draw p1 -- p3 -- p2 with_color dark_grey dashed evenly 
+   with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+% dotlabel.top("$p_{4}$", p4) PICT;
+% dotlabel.top("$p_{5}$", p5) PICT;
+% dotlabel.top("$p_{6}$", p6) PICT;
+% dotlabel.top("$p_{7}$", p7) PICT;
+% dotlabel.top("$p_{8}$", p8) PICT;
+% dotlabel.top("$p_{9}$", p9) PICT;
+% dotlabel.top("$p_{10}$", p10) PICT;
+% dotlabel.top("$p_{11}$", p11) PICT;
+
+draw p4 -- p6 -- p10
+ -- p9 -- p5 -- p7 -- p11 -- p8 -- cycle 
+ dashed evenly with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture PICT;
+
+
+%dotlabel.top(0, q0) PICT;
+
+enddef;
+
+
+%% * (1) macro polygon_circle
+
+macro polygon_circle;
+
+def polygon_circle {circle main_circle, 
+                    numeric polygon_sides, 
+                    transform label_transform, 
+                    string label_string} =
+
+%% ** (2)
+
+%message "Entering polygon_circle";
+
+circle outer_circle;  %% Not drawn!  Used for extended help lines.
+
+numeric a, b;
+
+point p[];
+
+transform t[];
+
+reg_polygon r[];
+
+numeric main_circ_diam;
+
+main_circ_diam := get_diameter main_circle;
+
+clear help_picture;
+clear main_picture;
+
+set r0 with_sides polygon_sides with_diameter main_circ_diam;
+
+set r1 with_sides (2 * polygon_sides) with_diameter main_circ_diam;
+
+set outer_circle with_diameter main_circ_diam + 3 with_point_count 64;
+
+a := 360;
+a /= 4polygon_sides;
+
+rotate r1 (0, a);
+
+%% Crosshair at origin
+
+draw (-.25, 0) -- (.25, 0) on_picture help_picture;
+draw (0, 0, -.25) -- (0, 0, .25) on_picture help_picture;
+
+set c1 with_diameter 1.5 with_point_count 64;
+
+draw c1 with_color dark_grey dashed evenly on_picture help_picture;
+
+set c2 with_diameter .75 with_point_count 64;
+
+p2 := get_point 48 c2;
+p3 := get_point 48 main_circle;
+p4 := get_point 48 outer_circle;
+
+a := 360;
+
+a /= 2 * polygon_sides;
+
+t0 := identity rotated (0, a);
+
+b := 2 * polygon_sides - 1;
+
+for i = 0 upto b:
+   if is_even i:
+      draw p2 -- p3 on_picture main_picture;
+      draw p3 -- p4 with_color dark_grey dashed evenly on_picture help_picture;
+   else:
+      draw p2 -- p4 with_color dark_grey dashed evenly on_picture help_picture;
+   fi;
+   p2 *= p3 *= p4 *= t0;
+endfor;
+
+draw main_circle on_picture main_picture;
+
+draw r0 with_color dark_grey dashed evenly on_picture help_picture;
+
+
+for i := 0 upto polygon_sides - 1:
+
+   a := i + 1;
+
+   if a == polygon_sides:
+      a := 0;
+   fi;
+
+   p6 := unit_vector(get_point (i) r0 - get_point (a) r0) * 1.5
+      shifted by get_point (i) r0;
+
+
+   p7 := unit_vector(get_point (a) r0 - get_point (i) r0) * 1.5
+      shifted by get_point (a) r0;
+
+   draw get_point (i) r0 -- p6 with_color dark_grey dashed evenly on_picture help_picture;
+
+   draw get_point (a) r0 -- p7 with_color dark_grey dashed evenly on_picture help_picture;
+
+endfor;
+
+%% These help lines will probably not be needed.
+%% LDF 2011.01.01.
+
+if false:
+for i := 0 upto 2 * polygon_sides - 1:
+
+   a := i + 1;
+
+   if a == 2 * polygon_sides:
+      a := 0;
+   fi;
+
+   p6 := unit_vector(get_point (i) r1 - get_point (a) r1) * 1.5
+      shifted by get_point (i) r1;
+
+
+   p7 := unit_vector(get_point (a) r1 - get_point (i) r1) * 1.5
+      shifted by get_point (a) r1;
+
+   draw get_point (i) r1 -- p6 with_color dark_grey dashed evenly on_picture help_picture;
+
+   draw get_point (a) r1 -- p7 with_color dark_grey dashed evenly on_picture help_picture;
+
+endfor;
+fi;
+
+draw r1 with_color dark_grey dashed evenly on_picture help_picture;
+
+%% ** (2)
+
+p5 := (.5, 0, 3) transformed label_transform;
+
+label.rt(label_string, p5);
+
+%% ** (2)
+
+enddef;
+
+%% * (1)
+
+string s;
+
+numeric a;
+
+picture section_picture;
+
+string radius_str;
+radius_str := decimal get_radius c0;
+
+picture v[];
+
+for i = 3 upto 22:
+   beginfig(i); 
+
+   a := i * 2;
+
+   s :=  "\vbox{\hbox{" & decimal i & "-gon/" & decimal a
+         & "-gon}\vskip1pt\hbox{Radius $= "
+         & radius_str & "\rm{cm}$}}";
+
+   polygon_circle {c0, i, frame_transform, s};
+
+   draw frame with_color dark_grey dashed evenly on_picture help_picture;
+
+   current_picture += help_picture;
+   current_picture += crosshair_picture;
+   current_picture += main_picture;
+
+   endfig with_projection parallel_x_z;    
+
+   polygon_section (section_picture) {c0, i};
+   v[i] := section_picture;
+
+endfor;
+
+%% * (1) 3-gon sections
+
+%% !! START HERE:  I need to add more sections and arrange them on the page.
+%% See corresponding "START HERE" comment in pprcuts.txt.
+%%
+%% LDF 2011.01.02.
+
+beginfig(103); 
+current_picture += v3;
+endfig with_projection parallel_x_z; 
+
+%% * (1) 4-gon sections
+
+beginfig(104); 
+rotate v4 (0, 90);
+current_picture += v4;
+% v104 := v4;
+% rotate v104 (0, 0, 180);
+% shift v104 (16, 0, 7.5);
+% current_picture += v104;
+% shift v4 (0, 0, 14);
+% current_picture += v4;
+endfig with_projection parallel_x_z; 
+
+%% * (1) 5-gon sections
+
+beginfig(105); 
+v105 := v5;
+rotate v105 (180, 0);
+shift v105 (4, 0, 1);
+current_picture += v5;
+current_picture += v105;
+endfig with_projection parallel_x_z; 
+
+
+%% * (1) 7-gon sections
+
+beginfig(107); 
+v107 := v7;
+rotate v107 (180, 0);
+shift v107 (5, 0, -4);
+current_picture += v7;
+current_picture += v107;
+v107 := v7;
+rotate v107 (0, 90);
+shift v107 (0, 0, -13.5);
+current_picture += v107;
+endfig with_projection parallel_x_z; 
+
+%% * (1) 9-gon sections
+
+beginfig(109); 
+v109 := v9;
+rotate v109 (180, 0);
+shift v109 (4, 0, -4);
+current_picture += v9;
+current_picture += v109;
+v109 := v9;
+shift v109 (9.5, 0);
+current_picture += v109;
+v109 := v9;
+rotate v109 (0, -90);
+shift v109 (7, 0, -15);
+current_picture += v109;
+endfig with_projection parallel_x_z; 
+
+
+%% * (1) !! START HERE: Temporary code.  The sections need to be placed by hand on the pages.
+%%   This code just puts one in the figure.
+%%   LDF 2011.01.02.
+
+for i = 6 upto 22:
+   message "i:"; 
+   show i;
+   if ((i <> 7) && (i <> 9)):
+   beginfig(100 + i); 
+   current_picture += v[i];
+   endfig with_projection parallel_x_z; 
+   fi;
+endfor;
+
+%% * (1)
+
+verbatim_metapost "end";
+
+end;
+ 
+%% * (1) End of 3DLDF code
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%       GNU Emacs editor.  The local variable list is not evaluated when an 
+%%       indirect buffer is visited, so it's necessary to evaluate the       
+%%       following s-expression in order to use the facilities normally      
+%%       accessed via the local variables list.                              
+%%       \initials{LDF 2004.02.12}.                                          
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% abbrev-mode:t
+%% eval:(read-abbrev-file "~/.abbrev_defs")
+%% outline-regexp:"%% [*\f]+"
+%% End:
+
+
+

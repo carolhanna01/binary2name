@@ -1,0 +1,466 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class GET_OPTIONS < $GET_OPTIONS is
+   -- This is the standard options module for the Sather compiler.
+   -- It is meant to be included in classes which specialize for a
+   -- particular configuration; for example, there is a special
+   -- version for the C back-end that handles any options it needs.
+
+   include CS_COMPONENT;
+
+   attr module_inclusion:FMAP{STR,STR};
+
+   private attr paths:FSET{STR};    
+   -- Resolved Sather source paths (to allow redundancy in on command line)
+   create(p:PROG):SAME is 
+      r::=new;
+      r.prog:=p;
+      p.main_class:="MAIN";
+      r.module_inclusion:=#;
+      return r;
+   end;
+
+   private mention(name,s1,s2:STR):STR is
+      if s2/="" then return s1+'\n'+name+": "+s2;
+      else return s1;
+      end;
+   end;
+
+   str:STR is
+      -- diagnostic for printing the state of a command line parse
+      r,s:STR;
+      r:=""; loop r:=r+' '+prog.sather_files.elt!; end;
+      s:=mention("Sather files","",r);
+
+      s:=mention("Main class",s,prog.main_class);
+        
+      s:=s+"\nHome directory: "+prog.home;
+
+      if prog.prolix then s:=s+"\nProlix."; end;
+      if prog.verbose then s:=s+"\nVerbose."; end;
+      return s;
+   end;
+
+   private attr args:ARRAY{STR};
+   private attr arg_locations:ARRAY{STR};
+   private attr next:INT;
+
+   private attr classes:FSET{STR};
+   private attr all:BOOL;
+
+   private attr got_libs:BOOL;
+
+   interpret(a:ARRAY{STR}) is
+      -- interpret command lines.
+
+      args:=a;
+      arg_locations := #(a.size);
+      loop arg_locations.set!("command line"); end;
+      next:=1;
+
+      get_files;
+      loop while!(more_args);
+	 s::=next_arg;
+	 if prog.prolix then 
+	    #OUT+"Processing option:"+s+"\n";
+	 end;   
+	 case s
+	 when "-main" then prog.main_class:=next_arg;
+	 when "-home" then
+	    barf("\"-home\" is not used any more; use SATHER_HOME instead.");
+	 when "-verbose" then prog.verbose:=true;
+	 when "-prolix" then
+	    prog.verbose:=true;
+	    prog.prolix:=true;
+	 when "-prolix_show_types" then
+	    prog.show_types :=true;
+	    prog.prolix := true;
+	 when "-O_debug" then prog.opt_debug:=true;prog.opt_verbose:=true;
+	 when "-O_debug_func" then prog.opt_debug_func:=prog.opt_debug_func.push(next_arg);prog.opt_verbose:=true;
+	 when "-O_verbose" then prog.opt_verbose:=true;
+	 when "-end" then	-- do nothing
+	 else
+	    handle_other_options(s);
+	 end;
+      end;
+      if void(prog.home) then
+	 barf("No home directory specified.  Make sure SATHER_HOME is set correctly.");
+      end;
+      --#	if ~got_libs then
+      --#	   got_libs:=true;
+      --#	   interpret(library_file);
+      --#	end;
+   end;
+
+   private handle_files(s:STR) is
+      if is_filename(s) then rewind; get_files;
+      else rewind; usage; return;
+      end;
+   end;
+
+   private handle_other_options(s:STR) is
+      -- This is meant to be overridden in classes which include
+      -- GET_OPTIONS, for other command lines options.
+      handle_files(s);
+   end;
+
+   private home_expand(s:STR):STR is
+      -- Expand any occurances of '%' with the Sather home directory.
+
+      res::="";
+      loop c::=s.elt!;
+	 if c/='%' then res:=res+c;
+	 elsif prog.home=".." then -- for the bootstrap
+	    res:=res+"../..";
+	 else
+	    res:=res+prog.home;
+	 end;
+      end;	
+      return res;
+   end;
+
+   private barf(msg:STR) is
+      #ERR + msg + '\n';
+      UNIX::exit(1);
+   end;
+
+   private more_args:BOOL is return next<args.size end;
+
+   private next_arg:STR is
+      if more_args then 
+	 res::=args[next]; next:=next+1; 
+	 if prog.prolix then #OUT+"Arg:"+res+"\n"; end;
+	 return res;
+      else usage; return "";
+      end;
+   end;
+
+   rewind is next:=next-1; end;
+
+   private get_classes is
+      -- get a list of classes from the argument list
+      classes:=#;
+      loop while!(more_args);
+	 arg::=next_arg;
+	 all:=arg="all";
+	 if all then return;
+	 elsif is_class_name(arg) then 
+	    classes:=classes.insert(arg);
+	 else rewind; return;
+	 end;
+      end;
+   end;
+
+   private is_class_name(nm:STR):BOOL is
+      -- is this string a viable class name?
+      if nm[0]/='$' and ~nm[0].is_upper then return false; end;
+      loop c::=nm.elt!(1);
+	 case c
+	 when 'A','B','C','D','E','F','G','H','I','J',
+		  'K','L','M','N','O','P','Q','R','S','T',
+		  'U','V','W','X','Y','Z','0','1','2','3',
+		  '4','5','6','7','8','9','_' then
+	 else return false;
+	 end;
+      end;
+      return true;
+   end;
+
+   private files:FSET{STR} is
+      -- get a list of files from the command line
+      r::=#FSET{STR};
+      loop while!(more_args);
+	 arg::=next_arg;
+	 -- These guys might have come from the literal string,
+	 -- so need to process accordingly
+	 if ~void(arg) then
+	    loop
+	       piece ::= arg.split!(' ');
+	       -- pass -l and -L to the linker as is
+	       if piece[0] = '-' and (piece[1] = 'l' or piece[1] = 'L') then
+		  r:=r.insert(piece);
+	       else
+		  if is_filename(piece) then r:=r.insert(piece);
+		  else rewind; return r;
+		  end;
+	       end;
+	    end;
+	 end;
+      end;
+      return r;
+   end;
+
+   
+   private get_files is
+      -- get list of files from the command line and put in appropriate set
+      loop 
+	 while!(more_args);
+
+	 arg::=next_arg;
+	    
+	 if ~is_filename(arg) then rewind; break!; end;
+
+	 suf::=suffix(arg);
+	 if suf=".sa" then
+	    -- make sure isn't found by a different name already
+	    path::=BFILE::resolve_path(arg);
+	    if ~paths.test(path) then
+	       prog.sather_files:=prog.sather_files.insert(arg);
+	       paths:=paths.insert(path);
+	    end;
+	 elsif suf=".module" then insert_here(args_from_file(arg),arg);
+	 else handle_other_file_suffix(arg,suf); return;
+	 end;
+      end;
+   end;
+
+   private handle_other_file_suffix(arg,suf:STR) is
+      -- Meant to be overridden
+      case suf
+      when ".c", ".o", ".a", ".obj", ".lib" then return;
+      else
+	 #ERR + "Didn't understand apparent file name: " + arg + '\n';
+	 usage;
+	 -- rewind;
+      end;
+   end;
+
+   private usage is
+      #ERR + "Command line error near: " + args[next.min(args.size-1)] ;
+      #ERR + " in "+arg_locations[next.min(args.size-1)]+'\n';
+      #ERR + "(See man page.)\n";
+      UNIX::exit(1);
+   end;
+
+   private suffix(a:STR):STR is
+      pos:INT;
+      loop pos:=(a.length-1).downto!(0); until!(a[pos]='.'); end;
+      return a.tail(a.length-pos);
+   end;
+
+   private is_filename(fn:STR):BOOL is
+      if fn[0]='-' then return false; end;
+      if fn[0]='/' then return true; end;
+      return fn.search('.')/= -1;
+      --case suffix(fn)
+      --    when ".c", ".sa", ".o", ".a", ".lib", ".obj" then return true;
+      --    else return false;
+      --end;
+   end;
+
+   private insert_here(cl:FLIST{STR},filename: STR) is
+      -- insert a list of args so it will be read next
+      tail,tail_names:ARRAY{STR};
+      if more_args then 
+	 tail:=args.subarr(next,args.size-next);
+	 tail_names := #(args.size-next);
+      else 
+	 tail:=#(0);
+	 tail_names := #(0);
+      end;
+      args:=cl.array.append(tail);
+      arg_locations := #ARRAY{STR}(cl.size);
+      loop arg_locations.set!(filename) end;
+      arg_locations := arg_locations.append(tail_names);
+      next:=0;
+   end;
+
+   private args_from_file(name:STR):FLIST{STR} is
+      -- #OUT+"reading module "+name+"\n";
+      wd::=directory(name);
+      cl::=#FLIST{STR};
+      f::=BFILE::open_for_read(name);
+      if f.error then #ERR + "Couldn't open file: " + name + '\n'; usage; end;
+      fs::=f.fstr+' ';
+      f.close;
+      tok::="";
+      pos::=0;
+      loop
+	 until!(pos>=fs.size);
+	 c::=fs[pos];
+	 if c='-' then
+	    if fs[pos+1]='-' then
+	       loop
+		  pos:=pos+1;
+		  until!(pos>=fs.size or fs[pos]='\n' or fs[pos]='\r');
+	       end;
+	    else tok:=tok+'-';
+	    end;
+	 elsif c = '(' then
+	    if fs[pos+1]='*' then
+	       loop
+		  pos:=pos+1;
+		  if pos>=fs.size-1 then
+		     #ERR + "Unterminated comment in " + name + '\n';
+		     break!;
+		  end;
+		  until!(fs[pos]='*' and fs[pos+1]=')');
+	       end;
+	       pos:=pos+1;
+	    else tok:=tok+'(';
+	    end;
+	 elsif c = '"' then
+		  start::=pos;      
+	    loop
+	       pos:=pos+1;
+	       if pos>=fs.size-1 then
+		  #ERR + "Unterminated string in " + name + '\n';
+		  break!;
+	       end;
+	       until!(fs[pos]='"');
+	    end;
+	    tok := fs.substring(start, pos-start+1).str;
+	    tok := tok.as_literal;
+	    tok := expand_str(name, tok);
+	    cl := cl.push(tok);
+	    tok := "";
+	    pos:=pos+1;
+	 elsif c = '$' then;	-- environment substitution
+	    if fs[pos+1] = '(' or fs[pos+1] = '{' then
+	       tok := tok + expand_variable(name, fs, inout pos);
+	       if ~void(tok) then
+		  loop while! (~fs[pos].is_space and pos < fs.size);
+		     tok := tok + fs[pos];
+		     pos := pos + 1
+		  end; -- loop
+		  cl := cl.push(tok);
+	       end; -- if - "void(tok)"
+	       
+	       tok := "";
+	    else
+	       tok := tok + '$'
+	    end; -- if c = '$'
+	 elsif ~c.is_space then tok:=tok+c;
+	 elsif tok/="" then
+	    if is_filename(tok) and tok[0]/='/' then
+	       -- This will fail for files with all upper names
+	       tok:=wd+'/'+tok;
+	    end;
+	    if is_filename(tok) then
+	       module_inclusion:=module_inclusion.insert(tok,name);
+	    end;
+	    cl:=cl.push(tok);
+	    tok:="";
+	 end;
+	 pos:=pos+1;
+      end;
+      return cl;
+   end;
+   
+   expand_str(fname:STR, arg_str:$STR):STR is
+      -- expand all env vars in arg_str
+      s:STR := arg_str.str;
+      i:INT := 0;
+      res:STR;
+      loop
+	 while!(i<s.size);
+	 if s[i] = '$' then
+	    res := res + expand_variable(fname, s, inout i);
+	 else
+	    res := res + s[i];
+	    i := i + 1;
+	 end;
+      end;
+      return res;
+   end;
+   
+   private expand_variable(fname:STR, arg_str:$STR, inout pos:INT):STR is
+      -- convert variable starting in position pos in arg_str, coming from
+      -- file fname.
+      -- value is first read from environment, if void, configuration is tried.
+
+      s:STR := arg_str.str;
+      e:STR;
+      op ::= s[pos + 1];
+      if op = '{' or op = '(' then;
+	 skip ::= false;
+	 cp ::= '}';
+	 if op = '(' then cp := ')'; end;
+	 tenv ::= "";
+	 pos := pos + 2;
+	 loop while! (pos < s.size and s[pos] /= cp);
+	    if s[pos] = ')' or s[pos] = '}' or
+		     s[pos]='\n' or s[pos]='\r' then;
+	       #ERR +
+		     "Unterminated environment variable spec. near \n" +
+		     "   "+tenv+" in "+fname+", assume \'" + cp + "\'\n" +
+		     "   skip this token.\n";
+	       --			#ERR + "op = " + op + "fp[pos] = " + fs[pos] + '\n';
+	       skip := true;
+	       break!
+	    end; -- if
+	    tenv := tenv + s[pos];
+	    pos := pos + 1;
+	 end; -- loop
+	 if ~skip then;
+	    if pos < s.size then pos := pos + 1; end;
+	    e := UNIX::get_env(tenv);
+	    if void(e) then
+	       e := "$" + op + tenv + cp;
+	    end;
+	    -- if ~void(e) then  tok := tok + e; end;
+	    --		     #ERR + "tenv = " + tenv + ", getenv = " + tok + '\n';
+	 end; -- if ~skip
+	 --tok := "";      
+      end;
+      
+      return e;
+   end;
+
+   private directory(nm:STR):STR is
+      -- The directory in which nm resides
+      pos:INT;
+      loop pos:=(nm.size-1).downto!(0); if nm[pos]='/' then break!; end; end;
+      r::=nm.head(pos);
+      if r="" then r:="."; end;
+      return r;
+   end;
+
+   read_env is
+      sc::=UNIX::get_env("SATHER_COMMANDS");
+      if ~void(sc) then
+	 barf("The SATHER_COMMANDS variable has been replaced by SATHER_HOME;\nsee man page for details.");
+      end;
+	
+      sh::=UNIX::sather_home;
+
+      prog.home:=sh;
+   end;
+
+   --#    private library_file:ARRAY{STR} is
+   --#	cl::=#FLIST{STR};
+   --#	sl:STR;
+   --#	if prog.psather then
+   --#	   sl:=UNIX::get_env("PSATHER_LIBRARY");
+   --#	   if void(sl) then sl:=prog.home+"/pLibrary/Library.module"; end;
+   --#	else
+   --#	   sl:=UNIX::get_env("SATHER_LIBRARY");
+   --#	   if void(sl) then sl:=prog.home+"/Library/Library.module"; end;
+   --#	end;
+   --#	if void(sl) then barf("I cannot find the Library\n"); end;
+   --#
+   --#	tok::="";
+   --#	loop c::=sl.elt!;
+   --#	   if ~c.is_space then tok:=tok+c;
+   --#	   elsif tok/="" then cl:=cl.push(tok); tok:="";
+   --#	   end;
+   --#	end;
+   --#	if tok/="" then cl:=cl.push(tok); end;
+   --#	-- the first element of the array is ignored
+   --#	a::=#ARRAY{STR}(cl.size+1);
+   --#	loop a[1.up!]:=(cl.elt!); end;
+   --#	return a;
+   --#    end;
+end;
+

@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<?xml-stylesheet href="chrome://priv/skin/overlay.css" type="text/css"?>
+<!DOCTYPE overlay SYSTEM "chrome://priv/locale/overlay.dtd">
+
+<overlay id="priv-overlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <script src="buildinfo.js" />        
+  <script src="overlay.js"/>
+  <script src="priv.js" />
+
+	<stringbundleset id="stringbundleset">
+	<stringbundle id="strings" src="strings.properties"/>
+	</stringbundleset>
+
+  <statusbar id="status-bar" >
+
+	  <menupopup id="clipmenu" sizetopopup="none" onpopupshowing="Priv.onPopUpShowing(event);">
+	  	<menuitem id="disable" label="Disable Priv3" type="checkbox" autocheck="false" checked="false" onmouseup="Priv.onMenuItemCommand(event, 'toggle');"/>
+	  	<menuitem id="msgstatus" label="Disable status panel" type="checkbox" autocheck="false" checked="false" onmouseup="Priv.onMenuItemCommand(event, 'status');"/>
+		<menuseparator id="enable_disable" />
+
+		<menuitem id="bug" label="Send bug report" onmouseup="Priv.onMenuItemCommand(event, 'bugreport');"/>
+		<menuitem id="about" label="About Priv3" onmouseup="Priv.onMenuItemCommand(event, 'about');"/>
+		<menuseparator id="abt" />
+
+		<menuseparator id="ver" />
+		<menuitem id="version" label="Build : "/>
+	  </menupopup>
+
+  	<statusbarpanel id="my-icon" class="statusbarpanel-iconic" src="chrome://priv/content/icons/on.png" popup="clipmenu" context="clipmenu" onclick="Priv.onIconClick(event);"/>
+  	
+  	
+  	<menupopup id="intercept" sizetopopup="none" onpopupshowing="Priv.onMenuItemCommand(event, 'intercept');">
+  	</menupopup>
+  	
+  	<statusbarpanel id="intercept-status" label="" popup="intercept"/>
+  	
+  	<statusbarpanel id="last" hidden="true"/>
+  	
+  </statusbar>
+
+  <script>
+  	function setInterceptStatus() {
+  		if(!gBrowser || !gBrowser.contentDocument || !listener)
+			return;
+  		var url = gBrowser.contentDocument.location;
+		var b = listener.getBrowserFromURL(url);
+		if(!b || !b.blockedItems) {
+			return;
+		}
+  		var item = document.getElementById("intercept-status");
+  		if(item) {
+	  		if(b.blockedItems.length > 0) {
+	  			item.setAttribute("label", "Filtered : " + b.blockedItems.length);
+	  			item.style.color = "#333333";
+	  			item.setAttribute("hidden", false);
+	  		} else {
+	  			item.setAttribute("label", "");
+	  			item.setAttribute("hidden", true);
+	  		}
+  		}
+  	}
+  	var setIntervalID = window.setInterval(setInterceptStatus, 20);
+  </script>
+  
+</overlay>

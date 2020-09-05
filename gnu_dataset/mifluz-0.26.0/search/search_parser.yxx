@@ -1,0 +1,230 @@
+%{
+//
+// Part of the ht://Dig package   <http://www.htdig.org/>
+// Copyright (c) 1999, 2000, 2001 The ht://Dig Group
+// For copyright details, see the file COPYING in your distribution
+// or the GNU General Public License version 2 or later
+// <http://www.gnu.org/copyleft/gpl.html>
+//
+// $Id: search_parser.yxx,v 1.10 2008/06/08 08:29:35 sebdiaz Exp $
+//
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
+
+#ifdef HAVE_STDLIB_H
+#include <unistd.h>
+#endif /* HAVE_STDLIB_H */
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif /* HAVE_UNISTD_H */
+#ifdef HAVE_MALLOC_H
+#include <malloc.h>
+#endif /* HAVE_MALLOC_H */
+
+#include <stdio.h>
+
+#include <unac.h>
+#include <WordTree.h>
+#include <mifluzsearch.h>
+
+#define YYPARSE_PARAM parm
+#define YYLEX_PARAM parm
+
+
+class WordTreeList {
+ public:
+  WordTreeList(WordTree* node) {
+    values = (WordTree**)malloc(sizeof(WordTree*));
+    values[0] = node;
+    values_length = 1;
+  }
+
+  void Push(WordTree* node) {
+    values = (WordTree**)realloc(values, sizeof(WordTree*) * (values_length + 1));
+    values[values_length] = node;
+    values_length++;
+  }
+  
+  WordTree** values;
+  int values_length;
+};
+
+%}
+
+%no_lines
+%pure_parser
+
+%union {
+  WordTree* node;
+  WordTreeList* list;
+}
+
+%token <node> T_WORD
+%type <node> input expr literal sentence
+%type <list> words
+
+%{
+static int yylex(YYSTYPE *lvalp, void* inputp);
+static int yyerror(char* message);
+%}
+
+%%
+input:	/* empty */
+	{
+	  MifluzSearchInput* input = (MifluzSearchInput*)parm;
+	  $$ = 0;
+	  input->query = 0;
+	}
+	| input expr
+	{
+	  MifluzSearchInput* input = (MifluzSearchInput*)parm;
+	  if($$ == 0) {
+	    /*
+	     * Single node is kept as is
+	     */
+	    $$ = $2;
+	  } else if($$->IsA() == WORD_TREE_OR ||
+		    $$->IsA() == WORD_TREE_OPTIONAL) {
+	    /*
+	     * Additional nodes are pushed in OR or OPTIONAL because it exists.
+	     */
+	    WordTreeOperand* op_or = (WordTreeOperand*)$$;
+	    op_or->cursors = (WordTree**)realloc(op_or->cursors, sizeof(WordTree*) * (op_or->cursors_length + 1));
+	    op_or->cursors[op_or->cursors_length] = $2;
+	    op_or->cursors_length++;
+	    $$ = op_or;
+	  } else {
+	    /*
+	     * Additional node implies we build an OR or OPTIONAL node to hold
+	     * the node collection.
+	     */
+	    WordTreeOperand* op_or;
+	    if(input->or_method == WORD_SEARCH_OR)
+	      op_or = new WordTreeOr(input->words, "");
+	    else
+	      op_or = new WordTreeOptional(input->words, "");
+	    op_or->cursors = (WordTree**)malloc(sizeof(WordTree*) * 2);
+	    op_or->cursors_length = 2;
+	    op_or->cursors[0] = $$; /* The existing node */
+	    op_or->cursors[1] = $2; /* The new node */
+	    $$ = op_or;
+	  }
+	  input->query = $$;
+	}
+
+expr:	sentence
+	| '+' sentence
+	{
+	  MifluzSearchInput* input = (MifluzSearchInput*)parm;
+	  WordTreeMandatory* mandatory = new WordTreeMandatory(input->words, "");
+	  mandatory->cursors = (WordTree**)malloc(sizeof(WordTree*));
+	  mandatory->cursors_length = 1;
+	  mandatory->cursors[0] = $2;
+	  $$ = mandatory;
+	}
+	| '-' sentence
+	{
+	  MifluzSearchInput* input = (MifluzSearchInput*)parm;
+	  WordTreeNot* op_not = new WordTreeNot(input->words, "");
+	  op_not->cursors = (WordTree**)malloc(sizeof(WordTree*));
+	  op_not->cursors_length = 1;
+	  op_not->cursors[0] = $2;
+	  $$ = op_not;
+	}
+
+sentence: literal
+        | T_WORD
+
+literal: '"' words '"'
+	{
+	  MifluzSearchInput* input = (MifluzSearchInput*)parm;
+	  if($2->values_length == 1)
+	    $$ = $2->values[0];
+	  else {
+	    WordTreeNear* near = new WordTreeNear(input->words, "");
+	    near->cursors = $2->values;
+	    near->cursors_length = $2->values_length;
+	    near->proximity = 1;
+	    $$ = near;
+	  }
+	}
+
+words:	T_WORD
+	{
+	  $$ = new WordTreeList($1);
+	}
+	| words T_WORD
+	{
+	  $1->Push($2);
+	  $$ = $1;
+	}
+
+
+%%
+
+#include <ctype.h>
+
+static int search_lex(YYSTYPE *lvalp, void* inputp)
+{
+  MifluzSearchInput* input = (MifluzSearchInput*)inputp;
+  char* word = 0;
+  int word_length = 0;
+  int& pointer = input->pointer;
+  char*& buffer = input->buffer;
+  int& buffer_length = input->buffer_length;
+  WordTree*& literal = lvalp->node;
+  literal = 0;
+
+  while(pointer < buffer_length) {
+    switch(buffer[pointer]) {
+    case '"':
+    case '+':
+    case '-':
+      return buffer[pointer++];
+      break;
+    default:
+      if(isalnum(buffer[pointer])) {
+	word = buffer + pointer;
+	while(pointer < buffer_length && isalnum(buffer[pointer]) && word_length < input->maximum_word_length) {
+	  buffer[pointer] = tolower(buffer[pointer]);
+	  word_length++;
+	  pointer++;
+	}
+	/*
+	 * Truncate words whose length is greater than maximum_word_length.
+	 */
+	while(pointer < buffer_length && isalnum(buffer[pointer]))
+	  pointer++;
+	printf("LL=%s\n",word);
+	input->words_verbatim.Add(new String(word, word_length));
+	char* word_unaccent = 0;
+	size_t word_unaccent_length = 0;
+	if(unac_string(input->charset, word, word_length, &word_unaccent, &word_unaccent_length) == -1) {
+	  fprintf(stderr, "search_lex: unaccent failed");
+	  perror("");
+	  return EOF;
+	}
+	input->words_unaccent.Add(new String(word_unaccent, word_unaccent_length));
+	literal = new WordTreeLiteral(input->words, word_unaccent, word_unaccent_length, "");
+	free(word_unaccent);
+	return T_WORD;
+      } else
+	pointer++;
+    }
+  }
+
+  return 0;
+}
+
+static int search_error(char* message)
+{
+  fprintf(stderr, "search_parser: %s\n", message);
+  return 0;
+}
+
+/*
+ Local Variables: ***
+ mode: C ***
+ End: ***
+*/

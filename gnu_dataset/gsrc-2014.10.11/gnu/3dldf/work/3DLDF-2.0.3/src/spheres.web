@@ -1,0 +1,2443 @@
+@q spheres.web @>
+
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation  @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA @>
+
+@q GNU 3DLDF is a GNU package.  @> 
+@q It is part of the GNU Project of the @>
+@q Free Software Foundation @> 
+@q and is published under the GNU General Public License. @> 
+@q See the website http://www.gnu.org @> 
+@q for more information.  @> 
+@q GNU 3DLDF is available for downloading from @> 
+@q http://www.gnu.org/software/3dldf/LDF.html. @> 
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @> 
+@q The mailing list help-3dldf@@gnu.org is available for people to @> 
+@q ask other users for help. @> 
+@q The mailing list info-3dldf@@gnu.org is for sending @> 
+@q announcements to users. To subscribe to these mailing lists, send an @> 
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston @> 
+@q c/o Free Software Foundation, Inc.  @> 
+@q 51
+Franklin St, Fifth Floor @> 
+@q Boston, MA 02110-1301 @> 
+@q USA @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@> 
+
+
+@q * (0) Spheres.@> 
+@** Spheres\quad ({\tt spheres\PERIOD web}).\hfil
+
+\LOG 
+\initials{LDF 2005.05.26.} 
+Created this file.  It contains ``skeleton''
+code.  
+\ENDLOG
+
+\immediate\write\functexifile{File: spheres.web^^J}
+
+@q * (1) Include files.@> @ Include files.
+
+@<Include files@>=
+
+#include "loader.h++" 
+#include "pspglb.h++" 
+#include "io.h++" 
+#include "creatnew.h++"
+#include "pntrvctr.h++" 
+#include "primes.h++" 
+#include "complex.h++" 
+#include "matrices.h++" 
+#include "colors.h++" 
+#include "transfor.h++" 
+#include "pens.h++" 
+#include "dashptrn.h++" 
+#include "shapes.h++" 
+#include "pictures.h++" 
+#include "points.h++"
+#include "lines.h++" 
+#include "planes.h++" 
+#include "nurbs.h++" 
+#include "paths.h++"
+#include "curves.h++" 
+#include "polygons.h++" 
+#include "triangle.h++" 
+#include "rectangs.h++" 
+#include "conicsct.h++" 
+#include "ellipses.h++" 
+#include "circles.h++"
+#include "ellpsslc.h++" 
+#include "crclslc.h++" 
+#include "parabola.h++" 
+#include "hyprbola.h++" 
+#include "cncsctlt.h++" 
+#include "arc.h++" 
+#include "helices.h++" 
+#include "origami.h++" 
+#include "solids.h++" 
+#include "solfaced.h++" 
+#include "polyhed.h++"
+#include "ddchdrn.h++" 
+#include "rhtchdrn.h++" 
+#include "plyhdslc.h++" 
+#include "cones.h++" 
+#include "cylinder.h++" 
+#include "ellpsoid.h++"
+ 
+
+@q * (1) Sphere class definition.@> @* {\bf Sphere} class definition.
+\initials{LDF 2005.05.26.}
+
+\LOG 
+\initials{LDF 2005.05.26.}  
+Added this |class| definition.
+
+\initials{LDF 2005.10.19.}  
+Added the |unsigned ints| |divisions_vertical| and
+|unsigned int divisions_horizontal| and |static const unsigned int
+DEFAULT_DIVISIONS|.
+
+\initials{LDF 2005.10.20.}  
+Added |static const real DEFAULT_DIAMETER| and
+|real diameter|.
+
+\initials{LDF 2005.10.20.}
+Added |static const unsigned int DEFAULT_CIRCLE_POINT_COUNT| and
+|unsigned int circle_point_count|.
+
+\initials{LDF 2005.10.25.}
+Removed |Point* center|.  Now using |Point Solid::center| instead.
+
+\initials{LDF 2005.10.25.}
+Added |unsigned short sphere_type| and the |static const unsigned shorts| 
+|SPHERE_NULL_TYPE|, |GLOBE_TYPE|, and |PANEL_TYPE|.
+
+\initials{LDF 2005.10.28.}
+Changed |diameter| to |radius| and 
+|static const real DEFAULT_DIAMETER| to |DEFAULT_RADIUS|.
+Changed accordingly everywhere else without comment.
+
+\initials{LDF 2005.10.31.}
+Now deriving |class Sphere| from |class Ellipsoid| 
+instead of |class Solid|.
+\ENDLOG
+
+@<Define |class Sphere|@>=
+
+class Sphere : public Ellipsoid
+{
+
+   protected:
+
+      unsigned short sphere_type;
+      real radius;
+      unsigned int divisions_vertical;
+      unsigned int divisions_horizontal;
+      unsigned int circle_point_count;
+
+   public:
+
+   static const unsigned int DEFAULT_DIVISIONS;
+   static const real         DEFAULT_RADIUS;
+   static const unsigned int DEFAULT_CIRCLE_POINT_COUNT;
+
+   static const unsigned short SPHERE_NULL_TYPE;
+   static const unsigned short GLOBE_TYPE;
+   static const unsigned short PANEL_TYPE;
+  
+   @<Declare |Sphere| functions@>@;
+};
+
+
+@q ** (2) Static member variable definitions.@>
+@*1 Static member variable definitions.
+\initials{LDF 2005.10.19.}
+
+\LOG
+\initials{LDF 2005.10.19.}
+Added this section.  Setting |const unsigned int Sphere::DEFAULT_DIVISIONS = 16|.
+
+\initials{LDF 2005.10.20.}
+Now setting |const real Sphere::DEFAULT_DIAMETER = 1|.
+
+\initials{LDF 2005.10.20.}
+Now setting |const unsigned int DEFAULT_CIRCLE_POINT_COUNT = 32|.
+
+\initials{LDF 2005.10.25.}
+Now setting 
+|const unsigned short Sphere::SPHERE_NULL_TYPE = 0|, 
+|const unsigned short Sphere::GLOBE_TYPE = 1|, and 
+|const unsigned short Sphere::PANEL_TYPE = 2|.
+
+\initials{LDF 2005.10.29.}
+Now setting |const unsigned int DEFAULT_CIRCLE_POINT_COUNT = 64|.
+\ENDLOG
+
+@<Define |static| |class Sphere| data members@>=
+
+   const unsigned int Sphere::DEFAULT_DIVISIONS          = 16;
+   const real         Sphere::DEFAULT_RADIUS             =  1;  
+   const unsigned int Sphere::DEFAULT_CIRCLE_POINT_COUNT = 64;
+
+   
+   const unsigned short Sphere::SPHERE_NULL_TYPE = 0;
+   const unsigned short Sphere::GLOBE_TYPE       = 1;
+   const unsigned short Sphere::PANEL_TYPE       = 2;  
+
+@q ** (2) Constructors and setting functions.@>
+@*1 Constructors and setting functions.@>
+\initials{LDF 2005.05.26.}
+
+@q *** (3) Default constructor.  No arguments.@>
+@*2 Default constructor. No arguments.
+@^\cfunc{Sphere}{Sphere}@>
+\cfunctexi{Sphere}{Sphere}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.19.}
+Now setting |divisions_vertical| and |divisions_horizontal| to 0.
+
+\initials{LDF 2005.10.20.}
+Now setting |real diameter = 0|.
+
+\initials{LDF 2005.10.20.}
+Now setting |unsigned int circle_point_count = 0|.
+
+\initials{LDF 2005.10.25.}
+Now calling |center.set(0, 0, 0)|.  Now using |Point Solid::center| rather than 
+|Point* Sphere::center|, which I've removed.
+
+\initials{LDF 2005.10.25.}
+Now setting |unsigned short sphere_type = SPHERE_NULL_TYPE|.
+\ENDLOG
+
+
+@q **** (4) Declaration.  @>
+
+@<Declare |Sphere| functions@>=
+Sphere(void);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Sphere| functions@>= 
+Sphere::Sphere(void)
+{
+
+   shape_type = SPHERE_TYPE;
+
+   sphere_type = SPHERE_NULL_TYPE;
+
+   center.set(0, 0, 0);
+   radius = 0;
+   circle_point_count = 0;
+
+   divisions_vertical   = 0;
+   divisions_horizontal = 0;
+
+   return;
+
+}
+
+
+@q *** (3) Setting function.@>
+@*2 Setting function.
+@^\cfunc{Sphere}{set}@>
+\cfunctexi{Sphere}{set}
+\initials{LDF 2005.10.19.}
+
+\LOG
+\initials{LDF 2005.10.19.}
+Added this function.
+
+\initials{LDF 2005.10.20.}
+Working on this function.
+
+\initials{LDF 2005.10.25.}
+Now calling |Solid::clear()|.
+
+\initials{LDF 2005.10.25.}
+Now setting |sphere_type = options->sphere_type|.
+
+\initials{LDF 2005.10.25.}
+Finished this function.
+
+\initials{LDF 2005.10.28.}
+@:BUG FIX@> BUG FIX:  Now shifting the |Circles| by |center| individually.
+Previously, I called |shift(center)|, which caused |center| to be shifted by
+itself, too!
+\ENDLOG
+
+
+@q **** (4) Declaration.  @>
+
+@<Declare |Sphere| functions@>=
+int
+set(Sphere_Set_Option_Struct* options, Scanner_Node scanner_node);
+
+@q **** (4) Definition.  @>
+
+@
+@<Define |Sphere| functions@>= 
+int
+Sphere::set(Sphere_Set_Option_Struct* options, Scanner_Node scanner_node)
+{
+  
+@q ***** (5) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q ****** (6).@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+          cerr_strm << thread_name << "Entering `Sphere::set'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6).@> 
+
+   clear();
+
+   sphere_type = options->sphere_type;
+   
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+
+
+@q ******* (7).@>
+
+          if (options == static_cast<Sphere_Set_Option_Struct*>(0))
+              {
+                  cerr_strm << thread_name << "In `Sphere::set':"
+                            << endl << "`options' == 0";
+                     
+                  log_message(cerr_strm);
+                  cerr_message(cerr_strm);
+                  cerr_strm.str("");
+
+
+              }  /* |if (options == 0)|  */
+
+@q ******* (7).@>
+
+
+          else /* (|options != 0|)  */
+              {
+                  cerr_mutex.lock(); 
+
+                  cerr << thread_name << "In `Sphere::set':"
+                            << endl << "`options' != 0" << endl;
+                     
+                  options->show("options:");
+  
+                  cerr_mutex.unlock(); 
+
+              }  /* |else| (|options != 0|)  */
+
+
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+@q ****** (6). |center|@> 
+@ |center|.
+\initials{LDF 2005.10.19.}
+
+\LOG
+\initials{LDF 2005.10.19.}
+Added this section.
+
+\initials{LDF 2005.10.25.}
+Changed the way |center| is set to account for the fact that I'm now using 
+|Point Solid::center| rather than |Point* Sphere::center|, which I've removed.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+   
+   if (options &&  options->center)
+      {
+         center = *(options->center);
+         delete options->center;
+         options->center = 0;
+      }
+
+@q ****** (6). |divisions_vertical|@> 
+@ |divisions_vertical|.
+\initials{LDF 2005.10.19.}
+
+\LOG
+\initials{LDF 2005.10.19.}
+Added this section.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+
+   if (options == static_cast<Sphere_Set_Option_Struct*>(0))
+      {
+          cerr << "options == 0" << endl;
+          divisions_vertical = DEFAULT_DIVISIONS;
+
+      }  /* |if (options == 0)|  */
+
+   else 
+      divisions_vertical = options->divisions_vertical;                
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {          
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "divisions_vertical == " 
+                           << divisions_vertical;
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6). |divisions_horizontal|@> 
+@ |divisions_horizontal|.
+\initials{LDF 2005.10.19.}
+
+\LOG
+\initials{LDF 2005.10.19.}
+Added this section.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+
+   if (options == static_cast<Sphere_Set_Option_Struct*>(0))
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                          << endl
+                          << "options == 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+               
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+          divisions_horizontal = DEFAULT_DIVISIONS;
+
+      }  /* |if (options == 0)|  */
+
+
+   else 
+      divisions_horizontal = options->divisions_horizontal;                
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {          
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "divisions_horizontal == " 
+                           << divisions_horizontal;
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6). |radius|@> 
+@ |radius|.
+\initials{LDF 2005.10.20.}
+
+\LOG
+\initials{LDF 2005.10.20.}
+Added this section.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+
+   if (options == static_cast<Sphere_Set_Option_Struct*>(0))
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                          << endl
+                          << "options == 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+               
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          radius = DEFAULT_RADIUS;
+
+      }  /* |if (options == 0)|  */
+
+
+   else if (options->radius == ZERO_REAL)
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "options != 0" 
+                           << endl 
+                           << "options->radius == 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          radius = DEFAULT_RADIUS;
+
+      }  /* |else if (options->radius == 0)|  */
+
+
+   else /* |options != 0 && options->radius != 0|  */ 
+      { 
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {          
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "options->radius != 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+         radius = options->radius;                
+
+      }   /* |else| (|options != 0 && options->radius != 0|)  */ 
+
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {          
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "radius == " 
+                           << radius;
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6). |circle_point_count|@> 
+@ |circle_point_count|.
+\initials{LDF 2005.10.20.}
+
+\LOG
+\initials{LDF 2005.10.20.}
+Added this section.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+
+   if (options == static_cast<Sphere_Set_Option_Struct*>(0))
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                          << endl
+                          << "options == 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+               
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          circle_point_count = DEFAULT_CIRCLE_POINT_COUNT;
+
+      }  /* |if (options == 0)|  */
+
+
+   else if (options->circle_point_count == 0)
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "options != 0" 
+                           << endl 
+                           << "options->circle_point_count == 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          circle_point_count = DEFAULT_CIRCLE_POINT_COUNT;
+
+      }  /* |else if (options->circle_point_count == 0)|  */
+
+
+   else /* |options != 0 && options->circle_point_count != 0|  */ 
+      { 
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {          
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "options->circle_point_count != 0";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+         circle_point_count = options->circle_point_count;                
+
+      }   /* |else| (|options != 0 && options->circle_point_count != 0|)  */ 
+
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {          
+                 cerr_strm << thread_name << "In `Sphere::set':"
+                           << endl
+                           << "circle_point_count == " 
+                           << circle_point_count;
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str("");
+
+             }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ****** (6) Warning:  Invalid |sphere_type|.@> 
+@ Warning:  Invalid |sphere_type|.
+\initials{LDF 2005.10.25.}
+
+\LOG
+\initials{LDF 2005.10.25.}
+Added this section.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+
+   if (!(   sphere_type == GLOBE_TYPE 
+         || sphere_type == PANEL_TYPE))
+      {
+          cerr_strm << thread_name << "WARNING!  In `Sphere:set':"
+                    << endl 
+                    << "Invalid `sphere_type':  " << sphere_type
+                    << endl 
+                    << "Setting `sphere_type' to `Sphere::GLOBE_TYPE' "
+                    << "and continuing.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm, warning_stop_value);
+          cerr_strm.str("");   
+
+      }  /* |if (!(   sphere_type == GLOBE_TYPE 
+                   || sphere_type == PANEL_TYPE))|  */
+
+
+@q ****** (6) Create the circles.@>
+@ Create the circles.
+\initials{LDF 2005.10.25.}
+
+
+
+@<Define |Sphere| functions@>= 
+
+   Point origin(0, 0, 0);
+   Circle* c;
+
+   real temp_radius;
+   real angle;
+   int i;
+
+@q ******* (7) Horizontal circles.@> 
+@ Horizontal circles.
+\initials{LDF 2005.10.25.}
+
+\LOG
+\initials{LDF 2005.10.25.}
+Added this section.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+
+
+   if (divisions_horizontal % 2)
+      {
+         cerr_strm << thread_name << "WARNING!  In `Sphere::set':"
+                   << endl << "`divisions_horizontal' is odd:  "
+                   << divisions_horizontal
+                   << endl 
+                   << "Setting it to " << divisions_horizontal + 1;
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm, warning_stop_value);
+         cerr_strm.str("");
+
+         divisions_horizontal += 1;
+
+      }  /* |if (divisions_horizontal % 2)|  */
+
+   if (divisions_horizontal >= 2)
+      {   
+
+          for (i = 1; i < divisions_horizontal / 2;  ++i)
+             {
+
+                angle = i * 180.0 / divisions_horizontal;
+                angle *= PI / 180;
+                temp_radius = radius * cos(angle);
+
+                c = create_new<Circle>(0);
+                c->set(origin, 2 * temp_radius, 0, 0, 0, circle_point_count);
+   
+                c->shift(0, -radius * sin(angle));
+                c->shift(center);
+                circles.push_back(c);
+
+             }  /* |for|  */  
+
+
+          c = create_new<Circle>(0);
+          c->set(origin, 2 * radius, 0, 0, 0, circle_point_count);
+          c->shift(center);
+          circles.push_back(c);
+
+          for (i = (divisions_horizontal / 2) - 1; i > 0; --i)
+             {
+
+                angle = i * 180.0 / divisions_horizontal;
+                angle *= PI / 180;
+                temp_radius = radius * cos(angle);
+
+                c = create_new<Circle>(0);
+                c->set(origin, 2 * temp_radius, 0, 0, 0, circle_point_count);
+                c->shift(0, radius * sin(angle));
+                c->shift(center);
+                circles.push_back(c);
+             }  /* |for|  */  
+
+@q ********* (9).@>  
+
+     }  /* |if (divisions_horizontal >= 2)|  */
+
+
+
+   
+@q ******* (7) Vertical circles.@> 
+@ Vertical circles.
+\initials{LDF 2005.10.25.}
+
+\LOG
+\initials{LDF 2005.10.25.}
+Added this section.
+\ENDLOG
+
+@<Define |Sphere| functions@>= 
+
+@q ******** (8).@> 
+
+   if (divisions_vertical % 2)
+      {
+         cerr_strm << thread_name << "WARNING!  In `Sphere::set':"
+                   << endl << "`divisions_vertical' is odd:  "
+                   << divisions_vertical
+                   << endl 
+                   << "Setting it to " << divisions_vertical + 1;
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm, warning_stop_value);
+         cerr_strm.str("");
+
+         divisions_vertical += 1;
+
+      }  /* |if (divisions_vertical % 2)|  */
+
+@q ******** (8).@> 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+          cerr_strm << thread_name 
+                    << "In `Sphere::set':"
+                    << endl
+                    << "divisions_vertical == " << divisions_vertical;
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q ******** (8).@> 
+
+   if (divisions_vertical >= 2)
+      {   
+
+@q ********* (9) |GLOBE_TYPE|.@> 
+@ |GLOBE_TYPE|.
+
+@<Define |Sphere| functions@>= 
+
+   if (sphere_type == GLOBE_TYPE)
+     {
+
+          for (int i = 0; i < divisions_vertical / 2; ++i)
+             {
+                c = create_new<Circle>(0);
+                c->set(origin, 2 * radius, 90, i * 360.0 / divisions_vertical, 
+                       0, circle_point_count);
+                c->shift(center);
+                circles.push_back(c);
+             }  /* |for|  */  
+
+      } /* |if (sphere_type == GLOBE_TYPE)|  */ 
+
+@q ********* (9) |PANEL_TYPE|.@> 
+@ |PANEL_TYPE|.
+
+@<Define |Sphere| functions@>= 
+
+   if (sphere_type == PANEL_TYPE)
+     {
+
+@q ********** (10).@>
+
+          c = create_new<Circle>(0);
+          c->set(origin, 2 * radius, 90, 0, 0, circle_point_count);
+          c->shift(center);
+          circles.push_back(c);
+
+          for (i = 1; i < divisions_vertical / 2;  ++i)
+             {
+
+                angle = i * 180.0 / divisions_vertical;
+                angle *= PI / 180;
+                temp_radius = radius * sin(angle);
+
+                c = create_new<Circle>(0);
+                c->set(origin, 2 * temp_radius, 90, 90, 0, circle_point_count);
+   
+                c->shift(-radius * cos(angle));
+                c->shift(center);
+                circles.push_back(c);
+             }  /* |for|  */  
+
+
+          c = create_new<Circle>(0);
+          c->set(origin, 2 * radius, 90, 90, 0, circle_point_count);
+          c->shift(center);
+          circles.push_back(c);
+
+          for (i = (divisions_vertical / 2) - 1; i > 0; --i)
+             {
+
+                angle = i * 180.0 / divisions_vertical;
+                angle *= PI / 180;
+                temp_radius = radius * sin(angle);
+
+                c = create_new<Circle>(0);
+                c->set(origin, 2 * temp_radius, 90, 90, 0, circle_point_count);
+                c->shift(radius * cos(angle));
+                c->shift(center);
+                circles.push_back(c);
+             }  /* |for|  */  
+
+
+@q ********** (10).@>
+
+      } /* |if (sphere_type == PANEL_TYPE)|  */ 
+
+@q ********* (9).@>  
+
+     }  /* |if (divisions_vertical >= 2)|  */
+
+
+@q ******** (8)@>
+
+@q ******* (7)@>
+
+@q ****** (6)@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+          cerr_strm << thread_name 
+                    << "Exiting `Sphere::set' successfully with "
+                    << "return value 0."; 
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+  
+   return 0;
+
+@q ****** (6).@> 
+
+} /* End of |Sphere::set| definition.  */
+
+@q * (1) Pseudo-constructor for dynamic allocation.@>
+@* Pseudo-constructor for dynamic allocation.
+
+@q ** (2) Pointer argument.@>
+@*1 Pointer argument.
+@^\cfunc{Sphere}{create\_new\_sphere}@>
+\cfunctexi{Sphere}{create\_new\_sphere}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Sphere|@>=
+Sphere* 
+create_new(const Sphere* c, Scanner_Node scanner_node);
+
+@q ** (2) Reference argument.@>
+@*1 Reference argument.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Sphere|@>=
+Sphere* 
+create_new(const Sphere& c, Scanner_Node scanner_node);
+
+
+@q * (1) Assignment.@> 
+@* Assignment.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+
+@q ** (2) Assignment from a |Sphere|.@> 
+@*1 Assignment from a |Sphere|.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.20.}
+Now copying |s.center|, |s.divisions_vertical|, 
+|s.divisions_horizontal|, and |s.circles|.
+
+\initials{LDF 2005.10.20.}
+Now copying |s.diameter|.
+
+\initials{LDF 2005.10.20.}
+Now copying |s.circle_point_count|.
+
+\initials{LDF 2005.10.25.}
+Now assigning to |center| from |s.center|. 
+Now using |Point Solid::center| rather than 
+|Point* Sphere::center|, which I've removed.
+
+\initials{LDF 2005.10.25.}
+Now setting |sphere_type = s.sphere_type|.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+virtual
+Sphere&
+operator=(const Sphere& c);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Sphere| functions@>=
+
+Sphere&
+Sphere::operator=(const Sphere& s)
+{
+    if (this == &s) /* Make sure it's not self-assignment. */
+       return *this;
+
+    sphere_type          = s.sphere_type;
+    center               = s.center;
+    radius               = s.radius;
+    divisions_vertical   = s.divisions_vertical; 
+    divisions_horizontal = s.divisions_horizontal; 
+    circle_point_count   = s.circle_point_count;
+
+    for (vector<Circle*>::const_iterator iter = s.circles.begin();
+         iter != s.circles.end(); ++iter)
+    {
+      circles.push_back(create_new<Circle>(0));
+      *(circles.back()) = **iter;
+    }
+
+    return *this;
+
+}  /* End of |Sphere::operator=(const Sphere& h)| definition.  */
+
+@q * (1) Returning elements and information.@>
+@* Returning elements and information.
+
+@q ** (2) Get |Shape| type.@> 
+@*1 Get {\bf Shape} type.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+virtual 
+inline
+unsigned short 
+get_shape_type(void) const
+{
+   return SPHERE_TYPE;
+}
+
+@q ** (2) Size.@> 
+@*1 Size.
+
+\LOG
+\initials{LDF 2009.09.09.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+virtual 
+unsigned int
+size(void);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Sphere| functions@>=
+unsigned int
+Sphere::size(void)
+{
+
+   return circles.size();
+}
+
+@q * (1) Predicates.@> 
+@* Predicates.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q ** (2) |Point| is on |Sphere|.@> 
+@*1 {\bf Point} is on {\bf Sphere}.
+\initials{LDF 2005.10.26.}
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@>   
+
+@<Declare |Sphere| functions@>=
+bool 
+is_on_sphere(Point* p, 
+             Scanner_Node scanner_node = 0,
+             real tolerance = Shape::DEFAULT_TOLERANCE);
+
+@q *** (3) Definition.@>   
+
+@
+@<Define |Sphere| functions@>=
+bool 
+Sphere::is_on_sphere(Point* p, 
+                     Scanner_Node scanner_node,
+                     real tolerance)
+{
+
+   if (center == INVALID_POINT)
+      return false;
+ 
+   if (tolerance < 0)
+      tolerance = Shape::DEFAULT_TOLERANCE;
+
+   Point q = *p - center;
+   real mag = q.magnitude();
+
+   return (fabs(mag - radius) <= tolerance) ? true : false;
+
+}
+
+@q * (1) Functions for checking integrity of form.@> 
+@* Functions for checking integrity of form.
+\initials{LDF 2005.03.31.}
+
+\LOG
+\initials{LDF 2005.03.31.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Is whatever.@>
+@*1 Is whatever. 
+@^\cfunc{Sphere}{is\_whatever}@>
+\cfunctexi{Sphere}{is\_whatever}
+\initials{LDF 2005.10.26.}
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+virtual
+bool
+is_whatever(Scanner_Node scanner_node = 0,
+            real tolerance = Shape::DEFAULT_TOLERANCE) const;
+
+@
+@<Define |Sphere| functions@>=
+bool
+Sphere::is_whatever(Scanner_Node scanner_node,
+                    real tolerance) const
+{
+
+    return is_spherical(scanner_node, tolerance);
+}
+
+@q ** (2) Is spherical.@>
+@*1 Is spherical.
+
+@q *** (3) |Solid| version.@> 
+@*2 {\bf Solid} version.
+@^\cfunc{Solid}{is\_spherical}@>
+\cfunctexi{Solid}{is\_spherical}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.  It is declared in \filename{solids.web}.
+It currently has a dummy definition and returns |false|.
+\ENDLOG
+
+@q **** (4) Definition.@> 
+  
+@
+@<Define |Solid| functions@>=
+bool
+Solid::is_spherical(Scanner_Node scanner_node,
+                    real tolerance) const
+{
+
+   return false;
+
+} /* End of |Solid::is_spherical()| definition.  */
+
+
+@q *** (3) |Sphere| version.@> 
+@*2 {\bf Sphere} version.
+@^\cfunc{Sphere}{is\_spherical}@>
+\cfunctexi{Sphere}{is\_spherical}
+\initials{LDF 2005.10.26.}
+
+\LOG
+\initials{LDF 2005.10.26.}
+Added this function.  
+It currently has a dummy definition and returns |true|.
+\ENDLOG
+
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+bool
+is_spherical(Scanner_Node scanner_node = 0,
+             real tolerance = Shape::DEFAULT_TOLERANCE) const;
+
+@q **** (4) Definition.@> 
+  
+@
+@<Define |Sphere| functions@>=
+bool
+Sphere::is_spherical(Scanner_Node scanner_node,
+                    real tolerance) const
+{
+
+   return true;
+
+} /* End of |Sphere::is_spherical()| definition.  */
+
+
+@q * (1) Transformations.@>
+@* Transformations. 
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) Multiplication by a |Transform| with assignment.@>
+@*2 Multiplication by a |Transform| with assignment.
+@^\cofunc{Sphere}{*=}@>
+\cofunctexi{Sphere}{*=}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.25.}
+Now multiplying |center| rather than |*center|.
+Now using |Point Solid::center| rather than |Point* Sphere::center|, 
+which I've removed.
+
+\initials{LDF 2005.10.25.}
+@:BUG FIX@> BUG FIX:  No longer calling |center *= t|.  This is done
+in |Solid::operator*=(const Transform& t)|.
+\ENDLOG 
+
+@<Declare |Sphere| functions@>=
+virtual
+Transform
+operator*=(const Transform& t);
+
+@
+@<Define |Sphere| functions@>=
+Transform
+Sphere::operator*=(const Transform& t)
+{
+
+
+   return Solid::operator*=(t);
+}
+
+
+@q ** (2) Rotatation around the main axes.@>
+@*1 Rotation  around the main axes. 
+@^\cfunc{Sphere}{rotate}@>
+\cfunctexi{Sphere}{rotate}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+virtual
+Transform 
+rotate(const real x, const real y = 0, const real z = 0);
+
+@
+@<Define |Sphere| functions@>=
+Transform 
+Sphere::rotate(const real x, const real y, const real z)
+{
+  Transform t;
+  t.rotate(x, y, z);
+  return operator*=(t);
+}
+
+@q ** (2) Scale. @>
+@*1 Scale. 
+@^\cfunc{Sphere}{scale}@>
+\cfunctexi{Sphere}{scale}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+virtual
+Transform 
+scale(real x, real y = 1, real z = 1);
+
+@
+@<Define |Sphere| functions@>=
+Transform 
+Sphere::scale(real x, real y, real z)
+{
+   Transform t;
+   t.scale(x, y, z);
+   return operator*=(t);
+}
+
+@q ** (2) Shear.@>
+@*1 Shear. 
+@^\cfunc{Sphere}{shear}@>
+\cfunctexi{Sphere}{shear}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+
+@<Declare |Sphere| functions@>=
+
+virtual
+Transform 
+shear(real xy, real xz = 0, real yx = 0, real yz = 0, 
+      real zx = 0, real zy = 0);
+
+@
+@<Define |Sphere| functions@>=
+Transform 
+Sphere::shear(real xy, real xz, real yx, real yz, 
+      real zx, real zy)
+{
+  Transform t;
+  t.shear(xy, xz, yx, yz, zx, zy);
+  return operator*=(t);
+
+}
+
+@q ** (2) Shift.@>
+@*1 Shift. 
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) |real| arguments.@>
+@*2 {\bf real} arguments. 
+@^\cfunc{Sphere}{shift}@>
+\cfunctexi{Sphere}{shift}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+virtual
+Transform 
+shift(real xx, real yy = 0, real zz = 0);
+
+@
+@<Define |Sphere| functions@>=
+Transform
+Sphere::shift(real xx, real yy, real zz)
+{
+  Transform t;
+  t.shift(xx, yy, zz);
+  return operator*=(t);
+}
+
+
+@q *** (3) Point argument.@>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Sphere}{shift}@>
+\cfunctexi{Sphere}{shift}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+virtual
+Transform 
+shift(const Point& p);
+
+@
+@<Define |Sphere| functions@>=
+Transform 
+Sphere::shift(const Point& p)
+{
+  return shift(p.get_x(), p.get_y(), p.get_z());
+}
+
+
+@q ** (2) Shift times. @>
+@*1 Shift times. 
+\initials{LDF 2005.05.26.}
+
+@q *** (3) real arguments. @>
+
+@*2 {\bf real} arguments. 
+@^\cfunc{Sphere}{shift\_times}@>
+\cfunctexi{Sphere}{shift\_times}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.  It's commented-out, because 
+|Solid::shift_times()| currently doesn't exist.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+
+#if 0 
+
+virtual
+void 
+shift_times(real x, real y = 1, real z = 1);
+
+#endif 
+
+@
+@<Define |Sphere| functions@>=
+
+#if 0 
+void 
+Sphere::shift_times(real x, real y, real z)
+{
+
+    if (center != static_cast<Point*>(0))
+       center->shift_times(x, y, z);
+
+
+    Solid::shift_times(x, y, z);
+  
+    return;
+}
+#endif 
+
+@q *** (3) Point argument. @>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Sphere}{shift\_times}@>
+\cfunctexi{Sphere}{shift\_times}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+It's commented-out, because 
+|Solid::shift_times()| currently doesn't exist.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+#if 0 
+virtual
+void
+shift_times(const Point& p);
+#endif 
+
+@
+@<Define |Sphere| functions@>=
+#if 0 
+void
+Sphere::shift_times(const Point& p)
+{
+  return shift_times(p.get_x(), p.get_y(), p.get_z());
+}
+#endif 
+
+@q ** (2) Rotatation around an arbitrary axis.@>
+@*1 Rotatation around an arbitrary axis. 
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Point arguments.@>
+
+@*2 {\bf Point} arguments.
+@^\cfunc{Sphere}{rotate}@>
+\cfunctexi{Sphere}{rotate}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+
+virtual
+Transform 
+rotate(const Point& p0, const Point& p1, const real angle = 180);
+
+@
+@<Define |Sphere| functions@>=
+Transform 
+Sphere::rotate(const Point& p0, const Point& p1, const real angle)
+{
+  Transform t;
+  t.rotate(p0, p1, angle);
+  return operator*=(t);
+}
+
+@q *** (3) Path argument.@>
+
+@*2 {\bf Path} arguments.
+@^\cfunc{Sphere}{rotate}@>
+\cfunctexi{Sphere}{rotate}
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@<Declare |Sphere| functions@>=
+
+virtual
+Transform 
+rotate(const Path& p, const real angle = 180);
+
+@
+@<Define |Sphere| functions@>=
+
+Transform 
+Sphere::rotate(const Path& p, const real angle)
+{
+   if (!p.is_linear())
+     {
+        return INVALID_TRANSFORM;
+     }
+
+   return rotate(p.get_point(0),
+                 p.get_last_point(), angle);  
+}   
+
+
+
+
+@q *** (3) Show.@> 
+@*2 Show.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.19.}
+Now showing |divisions_vertical|, and |divisions_horizontal|.
+
+\initials{LDF 2005.10.20.}
+No longer calling |Solid::show()|.  Now using a loop to
+call |Circle::show()| on the |Circles| in |circles|.
+
+\initials{LDF 2005.10.20.}
+Now showing |real diameter|.
+@:BUG FIX@> BUG FIX:  Now passing all of the arguments except |text| to 
+|Point::show()| when calling |center->show()|.
+
+\initials{LDF 2005.10.20.}
+Now showing |unsigned int circle_point_count|.
+
+\initials{LDF 2005.10.25.}
+Now using |Point Solid::center| rather than |Point* Sphere::center|, 
+which I've removed.
+
+\initials{LDF 2005.10.25.}
+Now showing |unsigned short sphere_type|.
+\ENDLOG
+
+@q **** (4) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+
+virtual 
+void 
+show(string text = "", 
+     char coords = 'w',
+     const bool do_persp = true, 
+     const bool do_apply = true,
+     Focus* f = 0, 
+     const unsigned short proj = 0,
+     const real factor = 1) const;
+
+
+@q **** (4) Definition.@> 
+
+@
+@<Define |Sphere| functions@>=
+void 
+Sphere::show(string text, char coords,
+            const bool do_persp, const bool do_apply,
+            Focus* f, const unsigned short proj,
+            const real factor) const
+
+{
+   if (text == "")
+      text = "Sphere:";
+
+   cerr << text << endl;
+
+@q ***** (5) |sphere_type|.@> 
+
+   cerr << "sphere_type == ";
+
+   if (sphere_type == SPHERE_NULL_TYPE)
+      cerr << "SPHERE_NULL_TYPE";
+   else if (sphere_type == GLOBE_TYPE)
+      cerr << "GLOBE_TYPE";
+   else if (sphere_type == PANEL_TYPE)
+      cerr << "PANEL_TYPE";
+   else
+      cerr << "?? (Invalid type)";
+   
+   cerr << endl;
+
+
+@q ***** (5).@>
+
+   center.show("center:", coords, do_persp, do_apply, f, proj, factor);
+
+   cerr << "radius == " << radius
+        << endl 
+        << "circle_point_count == " << circle_point_count
+        << endl 
+        << "divisions_vertical == " << divisions_vertical 
+        << endl
+        << "divisions_horizontal == " << divisions_horizontal
+        << endl; 
+
+   for (vector<Circle*>::const_iterator iter = circles.begin();
+        iter != circles.end();
+        ++iter)
+      {
+          (*iter)->show("Circle", coords, do_persp, do_apply,
+                        f, proj, factor);
+      }
+
+   return;
+
+} /* End of |Sphere::show()| definition.  */
+
+
+@q *** (3) Intersections.@>
+@*1 Intersections.
+\initials{LDF 2005.10.28.}
+
+\LOG
+\initials{LDF 2005.10.28.}
+Added this section.
+\ENDLOG
+
+@q **** (4) |Line| reference argument.@> 
+@*3 {\bf Line} reference argument.
+\initials{LDF 2005.10.30.}
+
+\LOG
+\initials{LDF 2005.10.30.}
+Added this function.
+
+\initials{LDF 2005.10.30.}
+Now returning |INVALID_POINT_PAIR| if |center == INVALID_POINT|.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+Point_Pair
+intersection_points(const Line& l, Scanner_Node scanner_node = 0) const;
+
+@q ***** (5) Definition.@> 
+
+@
+@<Define |Sphere| functions@>=
+
+Point_Pair
+Sphere::intersection_points(const Line& l, Scanner_Node scanner_node) const 
+{
+
+#if 0 
+   cerr << "Entering `Sphere::intersection_points'." << endl;
+#endif 
+
+
+    if (center == INVALID_POINT)
+       {
+          return INVALID_POINT_PAIR;
+       }
+
+   Point a = l.position;
+   Point v = l.direction;
+
+   v.unit_vector(true);
+
+   Point m = center;
+   m.apply_transform();
+
+   Point a_minus_m = a - m;
+
+   real p = a_minus_m.dot_product(v);
+
+   real a_minus_m_mag = a_minus_m.magnitude();
+
+   real q = (a_minus_m_mag * a_minus_m_mag) - (radius * radius);
+
+   real root_value = sqrt((p * p) - q);
+
+   Point_Pair point_pair;
+
+   if (root_value < 0)
+     {
+        point_pair.first  = INVALID_POINT;
+        point_pair.second = INVALID_POINT;
+        return point_pair;
+     }
+
+   real lambda1 = -p + root_value;
+   point_pair.first  = a + (lambda1 * v);
+
+   if (root_value == ZERO_REAL)
+      {
+         point_pair.second = INVALID_POINT;
+         return point_pair;          
+      }
+
+   real lambda2 = -p - root_value;
+   point_pair.second = a + (lambda2 * v);
+
+#if 0 
+   cerr << "Exiting `Sphere::intersection_points'." << endl;
+#endif 
+
+   return point_pair;
+
+}  /* End of |Sphere::intersection_points(const Line&, [etc.])| definition.  */
+
+
+@q **** (4) |Path| reference argument.@> 
+@*3 {\bf Path} reference argument.
+\initials{LDF 2005.10.30.}
+
+\LOG
+\initials{LDF 2005.10.30.}
+Added this function.
+
+\initials{LDF 2005.10.30.}
+Now returning |INVALID_BOOL_POINT_PAIR| if |center == 0| or 
+|p.is_linear() == false|.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+Bool_Point_Pair
+intersection_points(const Path& p, Scanner_Node scanner_node = 0) const;
+
+@q ***** (5) Definition.@> 
+
+@
+@<Define |Sphere| functions@>=
+
+Bool_Point_Pair
+Sphere::intersection_points(const Path& p, Scanner_Node scanner_node) const 
+{
+
+#if 0 
+   cerr << "Entering `Sphere::intersection_points(const Path& [etc.])'." << endl;
+#endif 
+
+    if (center == INVALID_POINT || !p.is_linear())
+       {
+          return INVALID_BOOL_POINT_PAIR;
+       }
+
+    Line l = p.get_line();
+
+    Point_Pair pp = intersection_points(l, scanner_node);
+
+    Bool_Point_Pair bpp;
+
+    bpp.first.pt  = pp.first;
+    bpp.second.pt = pp.second;
+
+    if (bpp.first.pt == INVALID_POINT)
+       bpp.first.b = false;
+    else 
+       bpp.first.b  = bpp.first.pt.is_on_segment(p).first;
+
+    if (bpp.second.pt == INVALID_POINT)
+       bpp.second.b = false;
+    else 
+       bpp.second.b = bpp.second.pt.is_on_segment(p).first;
+
+#if 0 
+   cerr << "Exiting `Sphere::intersection_points(const Path& [etc.])'." << endl;
+#endif 
+
+    return bpp;
+
+
+}  /* End of |Sphere::intersection_points(const Path& p, [etc.])| definition.  */
+
+
+@q **** (4) |Plane| reference argument.@> 
+@*3 {\bf Plane} reference argument.
+\initials{LDF 2005.10.28.}
+
+\LOG
+\initials{LDF 2005.10.28.}
+Added this function.
+
+\initials{LDF 2005.10.30.}
+Changed |Path*| argument to |const Plane&|.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+Circle* 
+intersection(const Plane& p, Scanner_Node scanner_node = 0) const;
+
+@q ***** (5) Definition.@> 
+
+@
+@<Define |Sphere| functions@>=
+
+Circle* 
+Sphere::intersection(const Plane& p, Scanner_Node scanner_node) const 
+{
+
+    if (center == INVALID_POINT || p == INVALID_PLANE)
+       return 0;
+
+    Point q0 = p.point;
+    Point q1 = p.normal;
+    q1.shift(q0);
+    
+    Transform t;
+ 
+    t.align_with_axis(q0, q1, 'y');
+  
+    Point temp_center = center;
+    temp_center.apply_transform();
+
+    temp_center *= t;
+
+    real y = temp_center.get_y();
+    real y_mag = fabs(y);
+
+    if (y_mag >= radius)
+       return 0;
+
+    real temp_radius = radius * cos(asin(y_mag / radius));
+
+    Circle* circle = create_new<Circle>(0);
+  
+    temp_center.shift(0, -y);
+
+    circle->set(temp_center, 2 * temp_radius, 0, 0, 0, circle_point_count);
+  
+    *circle *= t.inverse();
+
+    return circle;
+
+}  /* End of |Sphere::intersection(const Plane&, [etc.])| definition.  */
+
+
+@q **** (4) |Path| reference argument.@> 
+@*3 {\bf Path} reference argument.
+\initials{LDF 2005.10.28.}
+
+\LOG
+\initials{LDF 2005.10.30.}
+Added this function.
+\ENDLOG
+
+@q ***** (5) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+Circle* 
+intersection(const Path& p, Scanner_Node scanner_node = 0) const;
+
+@q ***** (5) Definition.@> 
+
+@
+@<Define |Sphere| functions@>=
+
+Circle* 
+Sphere::intersection(const Path& p, Scanner_Node scanner_node) const 
+{
+
+    if (center == INVALID_POINT || !p.is_planar())
+       return 0;
+
+    Plane m = p.get_plane();
+
+    return intersection(m, scanner_node);
+
+}
+
+@q * (1) Functions for Sphere Developments.  @>
+@* Functions for Sphere Developments.
+\initials{LDF 2009.11.03.}
+
+\LOG
+\initials{LDF 2009.11.03.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Develop.  @>
+@*1 Develop.
+\initials{LDF 2009.11.03.}
+
+\LOG
+\initials{LDF 2009.11.03.}
+Added this function.
+
+\initials{LDF 2009.11.04.}
+Removed code for creating a |Sphere|.  This isn't necessary.
+Added |real increment| argument.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Sphere| functions@>=
+static
+void*
+develop(real rad = 1, 
+        unsigned int segments = 8, 
+        real increment = 5.0,
+        Transform* t = 0,
+        Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.@> 
+@
+@<Define |Sphere| functions@>=
+void*
+Sphere::develop(real rad, 
+                unsigned int segments, 
+                real increment,
+                Transform* t,
+                Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+   {
+       cerr_strm << thread_name << "Entering `Sphere::develop'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str("");
+
+   }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) @>
+
+   Point* origin = 0;
+
+   try 
+   {
+       origin = create_new<Point>(0);
+   }
+
+   catch (bad_alloc)
+   {
+   
+       cerr_strm << thread_name << "ERROR! In `Sphere::develop':" 
+                 << endl 
+                 << "`create_new<Point>' failed. "
+                 << "Rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       throw;
+
+   } /* |catch (bad_alloc)|  */
+
+
+@q **** (4) @>
+@
+@<Define |Sphere| functions@>=
+
+   Pointer_Vector<Path>* pv = 0;
+
+   try 
+   {
+
+       pv = new Pointer_Vector<Path>;
+
+   }
+
+   catch (bad_alloc)
+   {
+   
+       cerr_strm << thread_name << "ERROR! In `Sphere::develop':" 
+                 << endl 
+                 << "`new Pointer_Vector<Path>' failed. "
+                 << "Rethrowing `bad_alloc'.";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm, error_stop_value);
+       cerr_strm.str("");
+
+       throw;
+
+   } /* |catch (bad_alloc)|  */
+
+
+@q **** (4) @>
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+          cerr_strm << thread_name << "Exiting `Sphere::develop' successfully with return value "
+                    << "`(void*) Pointer_Vector<Path>*'.";
+
+          log_message(cerr_strm);
+          cerr_message(cerr_strm);
+          cerr_strm.str("");
+
+      }  /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4).@>
+
+   return static_cast<void*>(pv);
+
+
+}  /* End of |Sphere::develop| definition  */
+
+@q * (1) Sphere_Set_Option_Struct.@> 
+@* {\bf Sphere\_Set\_Option\_Struct}.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Struct definition.@> 
+@*1 Struct definition.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this |struct| definition.
+
+\initials{LDF 2005.10.19.}
+Added the |unsigned ints| |divisions|, 
+|divisions_horizontal|, and |divisions_vertical|.
+
+\initials{LDF 2005.10.20.}
+Added |real diameter| and |Transform* transform|.
+
+\initials{LDF 2005.10.20.}
+Added |unsigned int circle_point_count|.
+
+\initials{LDF 2005.10.25.}
+Changed |unsigned short type| to |sphere_type|.
+
+\initials{LDF 2005.10.25.}
+Removed |unsigned int divisions|.
+
+\initials{LDF 2005.10.28.}
+Changed |diameter| to |radius|  
+Changed accordingly everywhere else without comment.
+\ENDLOG
+
+@<Define |struct Sphere_Set_Option_Struct|@>=
+  
+struct
+Sphere_Set_Option_Struct
+{
+   Point* center;
+   unsigned short sphere_type;
+   unsigned int divisions_horizontal;
+   unsigned int divisions_vertical;
+   real radius;
+   unsigned int circle_point_count;
+   Transform* transform;
+
+   @<Declare |Sphere_Set_Option_Struct| functions@>@;
+
+};
+
+@q ** (2) |Sphere_Set_Option_Struct| functions.@> 
+@*1 {\bf Sphere\_Set\_Option\_Struct} functions.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) Constructors.  @>
+@*2 Constructors.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Default constructor.@>   
+@*3 Default constructor.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.19.}
+Now setting |divisions|, |divisions_vertical|, and 
+|divisions_horizontal| to 0.
+
+\initials{LDF 2005.10.25.}
+Changed |unsigned short type| to |sphere_type|.
+Now setting |sphere_type = Sphere::GLOBE_TYPE|.
+
+\initials{LDF 2005.10.25.}
+Now setting |divisions|, |divisions_vertical|, and
+|divisions_horizontal| to |Sphere::DEFAULT_DIVISIONS|.
+
+\initials{LDF 2005.10.25.}
+Removed |unsigned int divisions|.
+\ENDLOG
+
+@q ***** (5) Declaration.@>  
+
+@<Declare |Sphere_Set_Option_Struct| functions@>=
+
+Sphere_Set_Option_Struct(void);
+
+@q ***** (5) Definition.@>  
+
+@
+@<Define |Sphere_Set_Option_Struct| functions@>=
+
+Sphere_Set_Option_Struct::Sphere_Set_Option_Struct(void) 
+{
+    center               = 0;
+    sphere_type          = Sphere::GLOBE_TYPE;
+    divisions_vertical   = Sphere::DEFAULT_DIVISIONS;
+    divisions_horizontal = Sphere::DEFAULT_DIVISIONS;
+}
+
+@q *** (3) Destructor.@> 
+@*2 Destructor.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Sphere_Set_Option_Struct| functions@>=
+
+~Sphere_Set_Option_Struct(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Sphere_Set_Option_Struct| functions@>=
+
+Sphere_Set_Option_Struct::~Sphere_Set_Option_Struct(void) 
+{
+    delete center;
+
+    return;
+}
+
+@q *** (3) Clear.@> 
+@*2 Clear.
+\initials{LDF 2005.05.26.}
+
+\LOG
+\initials{LDF 2005.05.26.}
+Added this function.
+
+\initials{LDF 2005.10.25.}
+Changed |unsigned short type| to |sphere_type|.
+Now setting |sphere_type = SPHERE_NULL_TYPE|.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Sphere_Set_Option_Struct| functions@>=
+
+int 
+clear(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Sphere_Set_Option_Struct| functions@>=
+
+int
+Sphere_Set_Option_Struct::clear(void) 
+{
+    delete center;
+    center = 0;
+
+    sphere_type = Sphere::SPHERE_NULL_TYPE;
+
+    return 0;
+
+}  /* End of |Sphere_Set_Option_Struct::clear()| definition.  */
+
+
+@q *** (3) Show.@> 
+@*2 Show.
+\initials{LDF 2005.10.19.}
+
+\LOG
+\initials{LDF 2005.10.19.}
+Added this function.
+
+\initials{LDF 2005.10.19.}
+Now showing the |unsigned ints| |divisions|, |divisions_vertical|, and 
+|divisions_horizontal|.
+
+\initials{LDF 2005.10.20.}
+Now showing |real diameter|.
+
+\initials{LDF 2005.10.20.}
+Now showing |unsigned int circle_point_count|.
+
+\initials{LDF 2005.10.25.}
+Now showing |unsigned short sphere_type|.
+
+\initials{LDF 2005.10.25.}
+Removed |unsigned int divisions|.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Sphere_Set_Option_Struct| functions@>=
+
+int 
+show(string text = ""); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Sphere_Set_Option_Struct| functions@>=
+
+int
+Sphere_Set_Option_Struct::show(string text) 
+{
+    
+   if (text == "")
+      text = "Sphere_Set_Option_Struct";
+
+   cerr << text << ":" << endl;
+
+@q ***** (5) |sphere_type|.@> 
+
+   cerr << "sphere_type == ";
+
+   if (sphere_type == Sphere::SPHERE_NULL_TYPE)
+      cerr << "Sphere::SPHERE_NULL_TYPE";
+   else if (sphere_type == Sphere::GLOBE_TYPE)
+      cerr << "Sphere::GLOBE_TYPE";
+   else if (sphere_type == Sphere::PANEL_TYPE)
+      cerr << "Sphere::PANEL_TYPE";
+   else
+      cerr << "?? (Invalid type)";
+   
+   cerr << endl;
+
+
+@q ***** (5).@> 
+
+   if (center == static_cast<Point*>(0))
+      cerr << "center == 0" << endl;
+   else
+      center->show("center");
+
+   cerr << "radius == " << radius 
+        << endl
+        << "circle_point_count == " << circle_point_count
+        << endl 
+        << "divisions_vertical == " << divisions_vertical << endl;
+
+    return 0;
+
+}  /* End of |Sphere_Set_Option_Struct::show()| definition.  */
+
+@q * (1) Putting Sphere together. @>
+@* Putting {\bf Sphere} together.
+
+\immediate\write\functexifile{^^JEnd of file:  spheres.web^^J}
+
+This is what's compiled.
+@c
+@<Include files@>@;
+@<Define |class Sphere|@>@;@/
+@<Define |static| |class Sphere| data members@>@;@/
+@<Define |struct Sphere_Set_Option_Struct|@>@;@/
+@<Define |Sphere| functions@>@;@/
+@<Define |Sphere_Set_Option_Struct| functions@>@;@/
+@<Declare non-member template functions for |Sphere|@>@;@/
+@<Define |Solid| functions@>@;
+
+
+@ This is what's written to \filename{spheres.h}.
+@(spheres.h@>=
+@<Define |class Sphere|@>@;
+@<Define |struct Sphere_Set_Option_Struct|@>@;@/
+@<Declare non-member template functions for |Sphere|@>@;
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 80))    @>
+
+
+
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

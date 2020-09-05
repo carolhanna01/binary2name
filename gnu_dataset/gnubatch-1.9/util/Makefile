@@ -1,0 +1,91 @@
+#
+#  Makefile for utils
+#
+#   Copyright 2009 Free Software Foundation, Inc.
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+SHELL		=	/bin/sh
+
+prefix		=	/usr/local
+exec_prefix	=	${prefix}
+BASE		=	..
+HDRS		=	$(BASE)/src/hdrs
+CC		=	gcc
+CCFLAGS		=	-O -g -Wall -fno-stack-protector 
+CFLAGS		=	$(CCFLAGS) -I$(BASE) -I$(HDRS)
+LDFLAGS		=
+GTKINCL		=	`pkg-config --cflags gtk+-2.0`
+GTKLIBS		=	`pkg-config --libs gtk+-2.0`
+LIBNET		=	
+LIBCURSES	=	-lcurses
+YACC		=	yacc
+YFLAGS		=	-d
+LEX		=	:
+LEXLIB		=	
+RM		=	rm -f
+PROGS		=	gbch-pmenu gbch-hostedit gbch-passwd
+XPROGS		=	gbch-xhostedit
+BUILDPROGS	=	helpparse
+BINDIR		=	$(DESTDIR)${exec_prefix}/bin
+SBINDIR		=	$(DESTDIR)${exec_prefix}/sbin
+INSTALL		=	/usr/bin/install -c
+INSTALL_DATA	=	${INSTALL} -m 644
+
+all:	$(BUILDPROGS) $(PROGS) shmdump
+
+helpparse: helpparse.o msgparse.o msglex.o alloc.o
+	$(CC) $(LDFLAGS) -o $@ helpparse.o msgparse.o msglex.o alloc.o $(LEXLIB)
+
+helpparse.o msgparse.o msglex.o alloc.o: hdefs.h
+
+shmdump:	shmdump.o
+	$(CC) $(LDFLAGS) -o $@ shmdump.o
+
+gbch-passwd:	gbpasswd.o
+	$(CC) $(LDFLAGS) -o $@ gbpasswd.o -lcrypt
+	
+gbch-pmenu:	pmenu.o
+	$(CC) $(LDFLAGS) -o $@ pmenu.o $(LIBCURSES)
+
+gbch-hostedit:	hostedit.o parsehtab.o cursproc.o
+	$(CC) $(LDFLAGS) -o $@ hostedit.o parsehtab.o cursproc.o $(LIBCURSES) $(LIBNET)
+
+gbch-xhostedit:	xhostedit.o parsehtab.o
+	-$(CC) $(LDFLAGS) -o $@ xhostedit.o parsehtab.o $(GTKLIBS) $(LIBNET)
+
+xhostedit.o:	xhostedit.c
+	-$(CC) -c -o $@ $(CFLAGS) $(GTKINCL) xhostedit.c
+
+install:	all
+	$(INSTALL) -d $(SBINDIR)
+	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) $(PROGS) $(SBINDIR)
+	-$(INSTALL) $(XPROGS) $(SBINDIR)
+#	$(INSTALL) shmdump $(BINDIR)
+
+install-strip:	all
+	$(INSTALL) -d $(SBINDIR)
+	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) -s $(PROGS) $(SBINDIR)
+	-$(INSTALL) -s $(XPROGS) $(SBINDIR)
+#	$(INSTALL) -s shmdump $(BINDIR)
+
+clean:
+	$(RM) *.o helpparse $(BUILDPROGS) $(PROGS) $(XPROGS) shmdump
+
+distclean:	clean
+	$(RM) Makefile
+

@@ -1,0 +1,1079 @@
+%%%% elpdmd01.ldf
+%%%% Created by Laurence D. Finston (LDF) Fri Aug 27 14:50:45 CEST 2010
+
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2010, 2011, 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Created:       August 27, 2010
+%% Last updated:  November 26, 2010
+
+%% Run like this:
+
+%% 3dldf elpdmd01.ldf 
+%% mpost elpdmd01.mp 
+%% tex elpdmd01.txt 
+%% dvips -o elpdmd01.ps elpdmd01.dvi
+%% ps2pdf elpdmd01.ps
+
+%% All on one line:
+if false:
+3dldf elpdmd01.ldf && mpost elpdmd01.mp && tex elpdmd01.txt && \
+dvips -o elpdmd01.ps elpdmd01.dvi \
+&& ps2pdf elpdmd01.ps
+fi;
+
+%% View the PostScript file using Ghostview like this:
+%% gv elpdmd01.ps &
+%% or with GNU Ghostview like this:
+%% ggv elpdmd01.ps &
+
+%% View the PDF file with Acrobat Reader like this:
+%% acroread elpdmd01.pdf &
+
+%% * (1) Beginning of 3DLDF code.
+
+%% ** (2) Plans for a paper or cardboard model of an ellipsoid (Ellipsoid Model 1)
+
+input "elpdmd01.lmc";  %% input macro file
+
+verbatim_metapost "verbatimtex \font\large=cmr17 etex;";
+verbatim_metapost "verbatimtex \font\small=cmr7 etex;";
+
+verbatim_metapost "prologues := 3;";
+
+% verbatim_metapost "verbatimtex \font\large=cmr12 scaled \magstep2 etex;";
+% verbatim_metapost "verbatimtex \font\Large=cmr17 scaled \magstep2 etex;";
+
+
+%% ** (2) Declarations
+
+picture v[];
+
+focus f[];
+
+set f0 with_position (0, 30, -50) 
+       with_direction (0, 30, 10) with_distance 40; 
+
+ellipsoid E;
+
+ellipse e[];
+
+point p[];
+
+transform t[];
+
+triangle w[];
+
+pickup pencircle scaled (.5mm, .5mm, .5mm);
+
+color_vector cv;
+
+cv += red;      %  0
+cv += black;    %  1
+cv += blue;     %  2
+cv += black;    %  3
+cv += black;    %  4
+cv += black;    %  5
+cv += black;    %  6
+cv += black;    %  7
+cv += yellow;   %  8
+cv += black;    %  9
+cv += black;    % 10
+cv += cyan;     % 11
+cv += magenta;  % 12
+cv += green;    % 13
+
+bool_point_vector bpv;
+
+%% ** (2) Figure 1
+
+beginfig(1); 
+
+%% *** (3) Ellipsoid E
+
+Ew := 20;
+Eh := 16;
+Ed := 8;
+
+set E with_center origin with_axis_x Ew with_axis_y Eh with_axis_z Ed
+       with_divisions_x 8 with_divisions_y 8 with_divisions_z 2
+       with_point_count 64;
+
+draw E;
+
+%% *** (3) Get the individual ellipses from E
+
+for i = 0 upto 13:
+   e[i] := get_ellipse (i) E;
+endfor;
+
+% draw e2  with_color  orange;
+% draw e8  with_color  red;
+% draw e11 with_color blue;
+% draw e13 with_color green;
+
+%% *** (3) Trapezoid 0
+
+bpv := e0 intersection_points e2;
+
+p0 := bpv1;
+
+% message "bpv:"; 
+% show bpv;
+
+dotlabel.urt("$p_{0}$", p0);
+
+bpv := e2 intersection_points e13;
+
+p1 := bpv1;
+
+% message "bpv:"; 
+% show bpv;
+
+dotlabel.urt("$p_{1}$", p1);
+
+bpv := e13 intersection_points e8;
+
+% message "bpv:"; 
+% show bpv;
+
+p2 := bpv[1];
+
+dotlabel.urt("$p_{2}$", p2);
+
+bpv := e0 intersection_points e8;
+
+p3 := bpv[1];
+
+dotlabel.ulft("$p_{3}$", p3);
+
+p4 := mediate(p0, p2);
+p5 := mediate(p1, p3);
+
+p6 := mediate(p4, p5);
+
+bpv := (origin -- p6) intersection_points E;
+
+% message "bpv:"; 
+% show bpv;
+
+p7 := bpv0;
+
+dotlabel.top("$p_{7}$", p7);
+
+%% **** (4) Triangle 0
+
+set w0 with_points (p0, p1, p7);
+
+draw w0 with_color gray;
+
+p8 := get_center w0;
+%dotlabel.top("$p_{8}$", p8);
+
+p9 := (get_normal w0) shifted p8;
+
+%dotlabel.top("$p_{9}$", p9);
+
+%% **** (4)  Triangle 1
+
+set w1 with_points (p1, p7, p2);
+
+draw w1 with_color gray;
+
+p10 := get_center w1;
+%dotlabel.top("$p_{10}$", p10);
+
+p11 := (-1 * (get_normal w1)) shifted p10;
+
+%dotlabel.top("$p_{11}$", p11);
+
+
+%% **** (4)  Triangle 2
+
+set w2 with_points (p0, p7, p3);
+
+draw w2;  %  with_color gray;
+
+p12 := mediate(mediate(p0, p7), p3);
+p13 := get_normal (p0 -- p7 -- p3 -- cycle);
+
+%dotlabel.top("$p_{12}$", p12);
+
+shift p13 by p12;
+%dotlabel.top("$p_{13}$", p13);
+
+% message "(p13 - p12):"; 
+% show (p13 - p12);
+
+% message "get_normal (p0 -- p7 -- p3 -- cycle):"; 
+% show get_normal (p0 -- p7 -- p3 -- cycle);
+
+
+%% w1 and w2 are nearly similar, but not quite.
+
+% message "w1:"; 
+% show w1;
+
+% message "w2:"; 
+% show w2;
+
+% message "w1 == w2:"; 
+% show w1 == w2;
+% pause;
+
+%% **** (4)  Triangle 3
+
+set w3 with_points (p3, p7, p2);
+
+p14 := mediate(mediate(p2, p3), p7);
+
+p15 := (get_normal w3) shifted p14;
+
+%dotlabel.top("$p_{14}$", p14);
+%dotlabel.top("$p_{15}$", p15);
+
+%% *** (3) Trapezoid 1
+
+draw e2  with_color  orange;
+draw e8  with_color  red;
+draw e11 with_color blue;
+draw e13 with_color green;
+
+bpv := e2 intersection_points e11;
+p16 := bpv1;
+
+dotlabel.top("$p_{16}$", p16);
+bpv := e2 intersection_points e11;
+
+bpv := e8 intersection_points e11;
+p17 := bpv1;
+
+dotlabel.top("$p_{17}$", p17);
+
+p18 := mediate(p1, p17); 
+p19 := mediate(p2, p16); 
+
+p20 := mediate(p18, p19);
+
+bpv := (origin -- p20) intersection_points E;
+
+% message "bpv:"; 
+% show bpv;
+
+p21 := bpv0;
+
+dotlabel.top("$p_{21}$", p21);
+
+%% **** (4) Triangle 4
+
+set w4 with_points (p1, p21, p2);
+
+label("$w_{1}$", get_center w1);
+label("$w_{4}$", get_center w4);
+
+draw w4;
+
+p22 := get_center w4;
+
+dotlabel.top("$p_{22}$", p22);
+
+p23 := (get_normal w4) shifted by p22;
+
+dotlabel.top("$p_{23}$", p23);
+
+%% **** (4) Triangle 5
+
+set w5 with_points (p2, p21, p17);
+
+draw w5;
+
+p24 := get_center w5;
+
+dotlabel.top("$p_{24}$", p24);
+
+p25 := (get_normal w5) shifted by p24;
+
+% message "p25:"; 
+% show p25;
+
+%pause;
+
+dotlabel.top("$p_{25}$", p25);
+
+%% **** (4) Triangle 6
+
+set w6 with_points (p1, p16, p21);
+
+draw w6;
+
+p26 := get_center w6;
+
+dotlabel.top("$p_{26}$", p26);
+
+p27 := (get_normal w6) shifted by p26;
+
+% message "p27:"; 
+% show p27;
+
+dotlabel.top("$p_{27}$", p27);
+
+%% **** (4) Triangle 7
+
+%% !! START HERE:  LDF 2010.11.29.
+
+%% *** (3)
+
+v0 := current_picture;
+
+%% *** (3) End of Figure 1
+
+endfig with_projection parallel_x_y no_sort;
+
+%% ** (2) Figure 2
+
+beginfig(2); 
+current_picture := v0;
+endfig with_projection parallel_x_z no_sort;
+
+%% ** (2) Figure 3
+
+beginfig(3); 
+current_picture := v0;
+endfig with_projection parallel_z_y no_sort;
+
+%% ** (2) Figure 4
+
+beginfig(4); 
+current_picture := v0;
+endfig with_focus f0 no_sort;
+
+%% ** (2) Figure 5
+
+%% Notes:
+
+%% The p[] points aren't transformed.  In this figure, r[] and u[] points
+%%  are used instead.
+%% The w[] triangles are transformed, _not_ copied!
+%% transform t0 -- t2 can be reused.
+%%
+%% LDF 2010.08.27.
+
+point r[];
+point s[];
+point u[];
+
+point h[];  %% For scratch use.
+
+picture dtp[]; %% Double-tab picture array
+
+numeric dtp_ctr;
+
+dtp_ctr := 0;
+
+beginfig(5); 
+
+%% *** (3) Trapezoid 0
+
+%% **** (4) Triangle 0
+
+t0 := align (p8 -- p9) with_axis y_axis;
+
+r0 := p0 * t0;
+r1 := p1 * t0;
+r7 := p7 * t0;
+
+w0 *= t0;
+
+t1 := identity shifted by (-1 * r0);
+
+w0 *= r0 *= r1 *= r7 *= t1;
+
+ang_0 := r1 angle (1, 0);
+
+% message "ang_0:"; 
+% show ang_0;
+
+t2 := (identity rotated (0, -ang_0)) rotated (0, 90);
+
+w0 *= r0 *= r1 *= r7 *= t2;
+
+% message "r0:"; 
+% show r0;
+
+dotlabel.rt("$r_{0}$", r0);
+dotlabel.rt("$r_{1}$", r1);
+dotlabel.lft("$r_{7}$", r7);
+
+label("$w_{0}$", get_center w0);
+
+%draw w0 with_color dark_gray;
+
+draw r0 -- r1 dashed evenly;
+draw r1 -- r7 dashed evenly;
+draw r7 -- r0;
+
+% message "w0:"; 
+% show w0;
+
+% pause;
+
+%% **** (4) Triangle 1
+
+s1 := p1;
+s2 := p2;
+s7 := p7;
+
+t0 := ((align (p10 -- p11) with_axis y_axis) rotated (0, -90));
+s1 *= s2 *= s7 *= w1 *= t0;
+
+t1 := identity  shifted by (r1 - s1);
+
+s1 *= s2 *= s7 *= w1 *= t1;
+
+s8 := s1 shifted (0, 1);
+
+ang_0 := (s1 - s7) angle (s1 - r7);
+
+t2 := identity rotated_around (s1, s8) -ang_0;
+
+s1 *= s2 *= s7 *= w1 *= t2;
+
+% message "(s1 - s7) angle (s1 - r7):"; 
+% show (s1 - s7) angle (s1 - r7);
+
+% message "w1:"; 
+% show w1;
+
+% pause;
+
+% message "r7:"; 
+% show r7;
+
+% message "s7:"; 
+% show s7;
+
+% message "s1 == r1:"; 
+% show s1 == r1;
+
+r2 := s2;
+dotlabel.llft("$s_{2}$", s2);
+
+label("$w_{1}$", get_center w1);
+
+draw r1 -- r2 dashed evenly;
+draw r2 -- r7;
+
+
+%% **** (4) Triangle 2 (w2)
+
+s0 := p0;
+s3 := p3;
+s7 := p7;
+
+s12 := p12;
+s13 := p13;
+
+t0 := align (s7 -- s3) with_axis x_axis;
+
+s0 *= s3 *= s7 *= s12 *= s13 *= w2 *= t0;
+
+t0 := align (s12 -- s13) with_axis y_axis;
+
+shift t0 (-3, 0, .25);
+
+s0 *= s3 *= s7 *= s12 *= s13 *= w2 *= t0;
+
+h0 := s3 shifted (0, 1);
+
+a := (s0 - s3) angle (1, 0);
+
+t0 := identity rotated_around (s3, h0) -a;
+
+s0 *= s7 *= s12 *= s13 *= w2 *= t0;
+
+% message "s7:"; 
+% show s7;
+
+% message "s3:"; 
+% show s3;
+
+% message "s0:"; 
+% show s0;
+
+% message "s12:"; 
+% show s12;
+
+% message "s13:"; 
+% show s13;
+
+% message "w2:"; 
+% show w2;
+
+% pause;
+
+
+%% !! START HERE:  move w2 to a better position with respect to w0.
+%% LDF 2010.11.29.
+
+h1 := mediate(s0, s7);
+h2 := mediate(r0, r7);
+
+h3 := h1 shifted (0, 1);
+
+h4 := s0 rotated_around (h1, h3) 90;
+
+%dotlabel.top("$h_{4}$", h4);
+
+%% !! START HERE:  This is okay.  Use a parameter instead of .75.  
+%% One other place, below.  LDF 2010.11.29.
+
+h5 := (unit_vector(h4 - h1) * .75) shifted by h1;
+
+t2 := identity shifted by (h2 - h5);
+
+s0 *= s3 *= s7 *= s12 *= s13 *= w2 *= h1 *= h2 *= h3 *= h4 *= h5 *= t2;
+
+draw s0 -- s3 dashed evenly;
+draw s0 -- s7;
+%draw s3 -- s7 dashed evenly;
+
+dotlabel.urt("$h_{1}$", h1);
+dotlabel.llft("$h_{2}$", h2);
+dotlabel.top("$h_{5}$", h5);
+dotlabel.bot("$s_{0}$", s0);
+%dotlabel.top("$s_{3}$", s3);
+%dotlabel.top("$s_{7}$", s7);
+
+label("$w_2$", get_center w2);
+
+
+
+
+%% **** (4) Triangle 3
+
+u2 := p2;
+u3 := p3;
+u7 := p7;
+
+t0 := (align (p14 -- p15) with_axis y_axis);
+
+rotate t0 (0, 270);
+
+shift t0 (2, 0);
+
+u2 *= u3 *= u7 *= w3 *= t0;
+
+a := (u7 - u3) angle (1, 0, 0);
+
+h0 := u3 shifted (0, 1);
+
+t1 := identity rotated_around (u3, h0) -a;
+
+u2 *= u7 *= w3 *= t1;
+
+a := (s7 - s3) angle (1, 0, 0);
+
+% message "a:"; 
+% show a;
+
+t2 := identity rotated_around (u3, h0) a;
+
+u2 *= u7 *= w3 *= t2;
+
+t3 := identity shifted by (s7 - u7);
+
+u2 *= u3 *= u7 *= w3 *= t3;
+
+% message "u2:"; 
+% show u2;
+
+% message "u7:"; 
+% show u7;
+
+% message "u3:"; 
+% show u3;
+
+% pause;
+
+% message "w3:"; 
+% show w3;
+
+% message "(u7 - u3):"; 
+% show (u7 - u3);
+
+% message "(s7 - s3):"; 
+% show (s7 - s3);
+
+% pause;
+
+draw u2 -- u7;
+draw u3 -- u7 dashed evenly;
+draw u2 -- u3 dashed evenly;
+
+dotlabel.ulft("$u_{2}$", u2);
+dotlabel.lft("$u_{3}$", u3);
+dotlabel.urt("$u_{7}$", u7);
+
+
+% message "w0:"; 
+% show w0;
+
+% message "w3:"; 
+% show w3;
+
+% message "w1:"; 
+% show w1;
+
+% message "w2:"; 
+% show w2;
+
+label("$w_3$", get_center w3);
+
+%% **** (4) Tabs for triangles w0 -- w2
+
+dtp_ctr := 0;
+
+tab (dtp, dtp_ctr) {w0, 0, 2, .8, .7, .25, w2, 0, 1, 5};  % dtp0
+dtp_ctr += 1;
+
+%% **** (4) Tabs for triangles w1 -- w3
+
+% dotlabel.bot(0, get_point 0 w1) with_text_color red;
+% dotlabel.bot(1, get_point 1 w1) with_text_color red;
+% dotlabel.bot(2, get_point 2 w1) with_text_color red;
+
+% dotlabel.bot(0, get_point 0 w3) with_text_color blue;
+% dotlabel.bot(1, get_point 1 w3) with_text_color blue;
+% dotlabel.bot(2, get_point 2 w3) with_text_color blue;
+
+tab (dtp, dtp_ctr) {w1, 1, 2, .8, .7, .25, w3, 1, 2, 5};  % dtp1
+dtp_ctr += 1;
+
+%% *** (3) Trapezoid 1
+
+%% **** (4) Triangle 4 (w4)
+
+point P[];
+
+P1 := p1;
+P2 := p2;
+P21 := p21;
+P22 := p22; % center of w4
+P23 := p23; % normal of w4 (shifted to center)
+
+t0 := align (P22 -- P23) with_axis y_axis;
+
+shift t0 (1, 0, 1);
+
+P1 *= P2 *= P21 *= P22 *= P23 *= w4 *= t0;
+
+h0 := P2 shifted (0, 1);
+
+a := (r1 - s2) angle (P1 - P2);
+
+%message "a:"; 
+%show a;
+
+t1 := identity rotated_around (P2, h0) -a;
+
+P1 *= P21 *= P22 *= P23 *= w4 *= t1;
+
+b := (r1 - s2) angle (P1 - P2);
+
+% message "b:"; 
+% show b;
+
+% message "(P1 - P2):"; 
+% show (P1 - P2);
+
+% message "(r1 - s2):"; 
+% show (r1 - s2);
+
+
+t2 := identity shifted by (r1 - P1);
+
+P1 *= P2 *= P21 *= P22 *= P23 *= w4 *= t2;
+
+%draw w4 with_color red;
+
+draw P1 -- P21;
+draw P2 -- P21 dashed evenly;
+
+label("$w_{4}$", P22);
+
+%dotlabel.urt("$P_{1}$", P1);
+%dotlabel.urt("$P_{2}$", P2);
+dotlabel.urt("$P_{21}$", P21);
+
+%% **** (4) Triangle 5 (w5)
+
+point R[];
+
+R2  := p2;
+R17 := p17;
+R21 := p21;
+
+R24 := p24;
+R25 := p25;
+
+t0 := ((align (R24 -- R25) with_axis y_axis) rotated (0, -90)) shifted (3, 0); 
+
+R2  *= R17 *= R21 *= R24 *= R25 *= w5 *= t0;
+
+% message "w5:"; 
+% show w5;
+
+a := (R21 - R2) angle (P21 - s2);
+
+t1 := identity rotated_around (R24, R25) -a;
+
+R2  *= R17 *= R21 *= w5 *= t1;
+
+% message "a:"; 
+% show a;
+
+b := (R21 - R2) angle (P21 - s2);
+
+% message "b:"; 
+% show b;
+
+t2 := identity shifted by (P21 - R21);
+
+R2  *= R17 *= R21 *= R24 *= R25 *= w5 *= t2;
+
+%draw w5;
+
+%dotlabel.urt("$R_{2}$", R2);
+dotlabel.urt("$R_{17}$", R17);
+%dotlabel.urt("$R_{21}$", R21);
+
+% message "(R21 - R2):"; 
+% show (R21 - R2);
+
+% message "(P21 - s2):"; 
+% show (P21 - s2);
+
+draw R21 -- R17;
+draw R2 -- R17 dashed evenly;
+
+% message "R24:"; 
+% show R24;
+
+label("$w_{5}$", R24);
+
+%% !! START HERE:  Working on tabs.  LDF 2010.11.26.
+
+%% **** (4) Triangle 6 (w6)
+
+point S[];
+
+S1  := p1;
+S16 := p16;
+S21 := p21;
+
+S26 := p26;
+S27 := p27;
+
+t0 := ((align (S26 -- S27) with_axis y_axis) rotated (0, -90)) shifted (3, 0); 
+
+S1 *= S16 *= S21 *= S26 *= S27 *= w6 *= t0;
+
+a := (S21 - S1) angle (P21 - r1);
+
+% message "a:"; 
+% show a;
+
+t1 := identity rotated_around (S26, S27) a;
+
+S1 *= S16 *= S21 *= w6 *= t1;
+
+b := (S21 - S1) angle (P21 - r1);
+
+% message "b:"; 
+% show b;
+
+% message "w6:"; 
+% show w6;
+
+% message "(S21 - S1):";  
+% show (S21 - S1);
+
+% message "(P21 - r1):"; 
+% show (P21 - r1);
+
+
+h0 := mediate(r1, P21);
+h1 := mediate(S1, S21);
+
+h2 := h0 shifted (0, 1);
+h3 := r1 rotated_around (h0, h2) 90;
+
+%dotlabel.top("$h_{0}$", h0);
+%dotlabel.top("$h_{1}$", h1);
+%dotlabel.top("$h_{3}$", h3);
+
+h4 := (unit_vector(h3 - h0) * .75) shifted h0;
+
+%dotlabel.top("$h_{4}$", h4);
+
+t2 := identity shifted by (h4 - h1);
+
+S1 *= S16 *= S21 *= S26 *= S27 *= w6 *= h1 *= t2;
+
+%pause;
+
+%draw w6;
+
+draw S1 -- S16 dashed evenly;
+draw S1 -- S21;
+draw S21 -- S16 dashed evenly;
+
+dotlabel.rt("$S_{1}$", S1);
+dotlabel.rt("$S_{16}$", S16);
+dotlabel.lft("$S_{21}$", S21);
+
+% message "S26:"; 
+% show S26;
+
+label("$w_{6}$", S26);
+
+%% **** (4) 
+
+%% *** (3) End of Figure 5
+
+endfig with_projection parallel_x_z no_sort;
+
+%% ** (2) Separate double tabs
+
+beginfig(6); 
+
+%% *** (3) Trapezoid 0
+
+%% **** (4) Triangles w0 -- w2
+
+%% dtp0:  w0 -- w2
+
+shift dtp0 (-1, 0);;
+
+current_picture += dtp0;
+
+label("$w_{0}$ -- $w_{2}$", (-.5, 0, -.5));
+
+%% **** (4) Triangles w1 -- w3
+
+%% dtp1:  w1 -- w3
+
+shift dtp1 (.5, 0);;
+
+current_picture += dtp1;
+
+label("$w_{1}$ -- $w_{3}$", (1, 0, -.5));
+
+%% **** (4) Triangles w4 -- w6
+
+%% *** (3) End of figure 6
+
+endfig with_projection parallel_x_z no_sort;
+
+%% ** (2)
+
+%% ** (2) Figure 7
+
+point p[];
+transform t[];
+
+transform temp_trf;
+
+temp_trf := identity shifted (0, 0, -5);
+
+numeric offset;
+
+offset := .675cm;
+
+%% *** (3)
+
+beginfig(7); 
+
+%% **** (4) w0
+
+rotate w0 (180, 90);
+
+w0 *= temp_trf;
+
+draw w0;
+
+label("$w_{0}$", get_center w0);
+
+cutout (offset) {w0};
+
+for i := 0 upto 2:
+   label.top(i, get_point (i) w0);
+endfor;
+
+%% **** (4) w1
+
+shift w1 by (-1 * get_point 0 w1);
+
+rotate w1 (180, 180);
+
+p0 := get_point 0 w1;
+p1 := get_point 1 w1;
+p2 := get_point 2 w1;
+
+a := (p2 - p0) angle (1, 0);
+
+% message "a:"; 
+% % show a;
+
+t0 := identity rotated (0, a);
+
+p0 *= p1 *= p2 *= w1 *= t0;
+
+% message "p0:"; 
+% show p0;
+
+% message "w1:"; 
+% show w1;
+
+% dotlabel.top("$p_{0}$", p0);
+% dotlabel.top("$p_{1}$", p1);
+% dotlabel.top("$p_{2}$", p2);
+
+a := xpart (get_point 1 w0) + (1.5 * offset);
+
+shift w1 (a, 0);
+
+w1 *= temp_trf;
+
+draw w1;
+
+label("$w_{1}$", get_center w1);
+
+cutout (offset) {w1};
+
+draw w1;
+
+if true: % false
+   for i = 0 upto 2:
+      dotlabel.top(i, get_point (i) w1);
+   endfor;
+fi;
+
+%% **** (4) w2
+
+
+shift w2 by -1 * get_point 2 w2;
+
+rotate w2 (180, 0);
+
+a := xpart (get_point 2 w1) + (1.5 * offset);
+
+shift w2 (a, 0);
+
+w2 *= temp_trf;
+
+p0 := get_point 0 w2;
+p1 := get_point 1 w2;
+p2 := get_point 2 w2;
+
+dotlabel.top("$p_{0}$", p0);
+dotlabel.top("$p_{1}$", p1);
+dotlabel.top("$p_{2}$", p2);
+
+%% !! START HERE:  Get the triangles to be exactly aligned on the x-axis.
+%% LDF 2010.12.04.
+
+message "p2:"; 
+show p2;
+
+message "get_point 2 w1:"; 
+show get_point 2 w1;
+
+%pause;
+
+draw w2;
+
+label("$w_{2}$", get_center w2);
+
+cutout (offset) {w2};
+
+%% **** (4)
+
+endfig with_projection parallel_x_z no_sort;
+
+%% *** (3) End of figure 7
+
+%% *** (3) End of 3DLDF code
+
+verbatim_metapost "end;";
+
+end;
+
+
+
+%% ** (2) 
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%       GNU Emacs editor.  The local variable list is not evaluated when an 
+%%       indirect buffer is visited, so it's necessary to evaluate the       
+%%       following s-expression in order to use the facilities normally      
+%%       accessed via the local variables list.                              
+%%       LDF 2004.02.12.
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% End:
+

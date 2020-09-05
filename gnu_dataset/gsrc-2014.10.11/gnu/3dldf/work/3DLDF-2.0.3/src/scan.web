@@ -1,0 +1,3100 @@
+@q scan.web @>
+      
+@q * (1) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing.  @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,             @>
+@q 2011, 2012, 2013 The Free Software Foundation                                         @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version.  @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details.  @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA@>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html.@>
+
+@q ("@@" stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de@>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single "at" sign.)@>
+
+
+@q * (0) Scanner.@>
+@** Scanner\quad ({\tt scanner\PERIOD web}).\hfil
+This file cannot be called \filename{scanner.web}, as I'd like it to
+be, because doing so causes the following error:
+``{\tt make: *** No rule to make target `scanner.c++', 
+needed by `scanner.o'.  Stop.}''  I believe the problem lies with
+Automake.  I don't understand why changing the name would cause this
+to happen, but I've tested it as best I can.  I've also checked to see
+if there were any references to the old \filename{scanner.w} file that
+I formerly used to create a Flex input file, but there don't seem to
+be any.
+\initials{LDF 2004.04.08.} 
+
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.09.19.}
+Rewrite |yylex| and |sub_yylex| so that input is buffered.
+``3dldf < sample0.ldf'' fails, but other ways of reading from standard input work.  
+See \filename{3DLDF-1.2.0/00README} for more information.
+Note also that debugging output in this file causes a 
+``Memory fault'' error when reading from standard input in this way.  
+I'm not sure whether it does under other circumstances.
+\ENDTODO 
+
+@q * (1) Include files.@>
+@ Include files.
+
+\LOG
+\initials{LDF 2004.04.16.}  
+No longer including the library header
+file \filename{map} here.  It's now included in
+\filename{loader.web}.
+
+\initials{LDF 2004.05.21.}  
+Now including \filename{pens.web}.
+\ENDLOG 
+
+@<Include files@>=
+#include "loader.h++"
+#include <string.h>
+
+#include "pspglb.h++"
+#include "io.h++"
+#include "gsltmplt.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++" 
+#include "pictures.h++"
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++"
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+#include "arc.h++"
+#include "helices.h++"
+#include "origami.h++"
+
+#if 0 
+   #include "patterns.h++"
+#endif 
+
+#include "solids.h++"
+#include "solfaced.h++"
+#include "cuboid.h++"
+#include "polyhed.h++"
+#include "ddchdrn.h++"
+#include "rhtchdrn.h++"
+#include "plyhdslc.h++"
+#include "cones.h++"
+#include "cylinder.h++" 
+#include "ellpsoid.h++"
+#include "spheres.h++"
+#include "sphrdevl.h++"
+#include "parabold.h++"
+#include "paraellp.h++"
+#include "parahypr.h++" 
+#include "glyphs.h++"
+#include "pctfncs0.h++"
+#include "utility.h++"
+#include "pntrvcf0.h++"
+#include "predctes.h++"
+#include "scanprse.h++"   
+#include "figures.h++"   
+#include "parser.h++"   
+#include "parser_1.h++"   
+
+@q * (1) yylex(). @>
+@* {\bf yylex()} definition.
+|yylex| is declared in \filename{parser.w}, and the declaration is written to
+\filename{parser.h++}, which this file includes, so there's no need to
+repeat it here.
+\initials{LDF 2004.04.08.} 
+
+\LOG
+\initials{LDF 2004.04.08.}  
+Moved |yylex| from \filename{parser.w}
+to this file (\filename{scan.web}).
+
+\initials{LDF 2004.05.03.}  
+Now using |scanner_node->rescan_stack| for
+passing information back from |yyparse| to this function.  It's
+currently used in the rules for |variable| in order to make it possible for
+|yyparse| to distinguish |variables| that refer to different types of 
+objects. 
+
+\initials{LDF 2004.09.09.}
+Now handling ``NEWLINE'' characters correctly when reading from
+standard input.  If the program is waiting for input, and the user
+types ``RETURN'' (actually ``NEWLINE''), the message 
+``(Please type a command or say `end')'' is printed to standard error.  
+
+
+\initials{LDF 2004.09.20.}
+Added the label |yylex_start| for use with |goto|.  It's used when 
+|sub_yylex| has reached the end of the input file and 
+|scanner_node->in->up| is non-null.
+
+\initials{LDF 2004.09.30.}
+Added code for making debugging and error output thread-safe.
+Added error handling for the case that |Scanner_Node scanner_node| 
+is null.  Now declaring |const Run_State* run_state| and initializing it to 
+|scanner_node->get_run_state|.
+
+\initials{LDF 2004.11.29.}
+Made debugging and error output thread-safe.  Formatting changes.
+\ENDLOG 
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.09.20.}
+Get thread info for error and debugging output.
+\ENDTODO 
+
+
+@q ** (2) Definition.  @>
+
+@<Define scanning functions@>=
+
+int
+yylex(YYSTYPE* value,
+      void* parameter)
+{
+
+
+@q *** (3) Preliminaries.@>
+@ Preliminaries.
+
+\LOG
+\initials{LDF 2004.09.30.}
+Added this section.
+
+\initials{LDF 2004.11.28.}
+Now declaring and initializing 
+|bool error_stop_value| and |bool warning_stop_value| here.  
+Previously, they were declared below.
+Pointers to these variables, and to |string thread_name|, are passed to 
+|Scanner_Type::get_thread_name_and_stop_values| below, if 
+|Scanner_Node scanner_node| is non-null.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+#if DEBUG_COMPILE
+  bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+  Scanner_Node scanner_node = static_cast<Scanner_Node>(parameter);
+   
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+@q **** (4) Error handling:  |scanner_node == 0|.@> 
+
+@ Error handling:  |scanner_node == 0|.  Signal an error and return 
+|TERMINATE|. 
+\initials{LDF 2004.09.30.}
+
+\LOG
+\initials{LDF 2004.09.30.}
+Added this section.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+  if (scanner_node == static_cast<Scanner_Node>(0))
+    {
+
+      cerr_strm << "ERROR! In `yylex()':"
+                << "`scanner_node' == 0." 
+                << endl << "Can't continue. Exiting function "
+                << "with return value `TERMINATE'.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");      
+
+      return TERMINATE;
+
+    } /* |if (scanner_node == 0)|  */
+
+
+@q **** (4) |scanner_node != 0|.@> 
+@ |scanner_node != 0|.
+
+\LOG
+\initials{LDF 2004.09.30.}
+Added this section.
+
+\initials{LDF 2004.11.28.}
+Now calling |scanner_node->get_thread_name_and_stop_values|.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+#if DEBUG_COMPILE
+  else if (DEBUG)  /* |scanner_node != 0|  */
+    {
+      cerr_strm << "In `yylex()':"
+                << "`scanner_node' != 0.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+    }  /* |else if (DEBUG)| (|scanner_node != 0|)  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+  scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                &error_stop_value,
+                                                &warning_stop_value);
+
+  const Run_State* run_state = scanner_node->get_run_state();
+
+@q *** (3)@> 
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+      cerr_strm << thread_name << "Entering `yylex()'.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+    }
+#endif
+
+ 
+@q *** (3).@> 
+@
+@<Define scanning functions@>=
+
+  int curr_catcode = INVALID_CATCODE;
+  int prev_catcode;
+  int next_catcode;
+
+  int rescan_catcode;
+  void* rescan_value;
+  bool rescan_retest;
+
+  int status;
+
+
+ yylex_start:
+
+
+@q *** (3) Rescan stack not empty.@>
+
+@ Rescan stack not empty.
+\initials{LDF 2004.09.09.}
+
+@<Define scanning functions@>=
+   if (scanner_node->rescan_stack.size() > 0)
+     {
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+      {
+         cerr_strm << thread_name  
+                   << "In `yylex()': "
+                   << "`scanner_node->rescan_stack.size()' > 0.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str();
+      }
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+       rescan_catcode = scanner_node->rescan_stack.top().i; 
+       rescan_value   = scanner_node->rescan_stack.top().v; 
+       rescan_retest   = scanner_node->rescan_stack.top().b; 
+       scanner_node->rescan_stack.pop();
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << thread_name << "In `yylex()':" 
+                 << endl << "`rescan_catcode' == `" 
+                 << name_map[rescan_catcode] << "'." 
+                 << endl;
+      
+       if (rescan_value == static_cast<void*>(0))
+         cerr_strm << "`rescan_value' == 0" << endl;
+       else
+         {
+           cerr_strm << "`rescan_value' != 0" << endl;
+         }
+
+       
+       cerr_strm << "`rescan_retest' == " 
+                 << rescan_retest << ".";
+
+       log_message(cerr_strm);
+       cerr_message(cerr_strm);
+       cerr_strm.str();
+
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) |rescan_value != 0 || !rescan_retest|.@> 
+
+@ |rescan_value != 0 || !rescan_retest|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+       if (rescan_value != static_cast<void*>(0) || !rescan_retest)
+         {
+
+            value->pointer_value = static_cast<YYSTYPE*>(rescan_value);
+     
+#if DEBUG_COMPILE
+            if (DEBUG)
+               {
+                   cerr_strm << "In `yylex()':  Returning `" 
+                            << name_map[rescan_catcode]
+                            << "' immediately."; 
+
+                   log_message(cerr_strm);
+                   cerr_message(cerr_strm);
+                   cerr_strm.str();
+               }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+            scanner_node->set_first_call_yylex(false);
+
+            return rescan_catcode;
+
+         }  /* |if (rescan_value != 0 || !rescan_retest)|  */@;
+
+@q **** (4) |rescan_value == 0 && rescan_retest|.@> 
+
+@ |rescan_value == 0 && rescan_retest|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+       else /* |rescan_value == 0 && rescan_retest|  */@; 
+         {
+#if DEBUG_COMPILE
+           if (DEBUG)
+             {
+
+               cerr_strm << "In `yylex()': `rescan_value' == 0 and "
+                         << "`rescan_retest' == " << rescan_retest 
+                         << "." << endl << "Will retest.";
+
+               log_message(cerr_strm); 
+               cerr_message(cerr_strm); 
+               cerr_strm.str("");
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+           curr_catcode = rescan_catcode;
+
+         }    /* |else| (|rescan_value == 0 && rescan_retest|)  */@;
+
+@q **** (4) .@> 
+
+     }    /* |if (scanner_node->rescan_stack.size() > 0)|  */@;
+
+
+@q *** (3) Rescan stack is empty.  Scan new token.@>
+
+@ Rescan stack is empty.  Scan new token.
+\initials{LDF 2004.09.09.}
+
+@<Define scanning functions@>=
+
+   else /* |scanner_node->rescan_stack.size() <= 0|  */@;
+      {
+
+#if DEBUG_COMPILE
+         if (DEBUG)
+            {
+                cerr_strm << thread_name << "In `yylex()':  "  
+                          << "`scanner_node->rescan_stack.size()' <= 0."
+                          << endl 
+                          << "Calling `sub_yylex()' to get new token.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str();
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+       unsigned int null_ctr = 0;
+
+@q **** (4) |scanner_node->get_in_type() == Io_Struct::STDIN_TYPE|.@> 
+@q **** (4) Reading from standard input.  ``RETURNS''              @>
+@q **** (4) (actually ``NEWLINES'') must be handled specially.     @>
+
+@ |scanner_node->get_in_type() == Io_Struct::STDIN_TYPE|.
+Reading from standard input.  ``RETURNS'' 
+(actually ``NEWLINES'') must be handled specially.
+\initials{LDF 2004.09.09.}
+
+\LOG
+\initials{LDF 2004.09.09.}
+Added this section.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+       if (scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)
+         
+         {
+
+           prev_catcode = curr_catcode;
+
+           if (scanner_node->get_first_call_yylex())
+             {
+               cerr_mutex.lock(); 
+               cerr << "* ";
+               cerr_mutex.unlock(); 
+             }
+
+
+           curr_catcode = sub_yylex(value,
+                                    scanner_node);
+
+@q ***** (5).@>
+               
+
+           if (   prev_catcode == INVALID_CATCODE
+               && curr_catcode == NULL_VALUE)
+
+             {
+               null_ctr++;
+
+               cerr_mutex.lock(); 
+
+               if (   (scanner_node->get_first_call_yylex() && null_ctr >=  1)
+                   || (!scanner_node->get_first_call_yylex() && null_ctr > 1))
+                 cerr << "(Please type a command or say `end')" << endl;
+               
+               cerr << "* ";
+               cerr_mutex.unlock(); 
+               prev_catcode = curr_catcode;
+               curr_catcode = sub_yylex(value,
+                                        scanner_node);
+
+@q ****** (6).@> 
+
+               while (prev_catcode == NULL_VALUE && curr_catcode == NULL_VALUE)
+                 {
+           
+                   null_ctr++;
+                   cerr_mutex.lock(); 
+                   cerr << "(Please type a command or say `end')" << endl;
+                   cerr << "* ";
+                   cerr_mutex.unlock();
+               
+                   prev_catcode = curr_catcode;
+                   curr_catcode = sub_yylex(value,
+                                            scanner_node);
+                   
+
+                 } /* |while|  */
+
+
+@q ****** (6).@> 
+
+             } /* |if|  */
+
+@q ***** (5) .@> 
+
+         } /* |if (scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)|  */
+
+
+@q **** (4) |!(scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)|.@>
+@q **** (4) Not reading from standard input.@> 
+
+@ |!(scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)|.
+Not reading from standard input.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=  
+
+  else  /* |!(scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)|  */
+    {
+      prev_catcode = curr_catcode;
+      curr_catcode = sub_yylex(value,
+                               scanner_node);
+
+
+    }  /* |else| (|!(scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)|)  */
+
+
+@q **** (4)@>
+
+     }      /* |else| (|scanner_node->rescan_stack.size() <= 0|)  */@;
+   
+
+
+@q *** (3) TERMINATE.  @>
+@*2 \.{TERMINATE}.
+
+\LOG
+\initials{LDF 2004.09.20.}
+Added code to this section for popping |scanner_node->in| if
+|scanner_node->in->up != 0|.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+   if (curr_catcode == TERMINATE)
+     {
+#if DEBUG_COMPILE
+       if (DEBUG) 
+         {
+           cerr_strm << "In `yylex()': `sub_yylex()' returned TERMINATE."; 
+           
+           log_message(cerr_strm); 
+           cerr_message(cerr_strm); 
+           cerr_strm.str(""); 
+         }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+       scanner_node->set_first_call_yylex(false);
+
+       status = scanner_node->pop_in();
+
+@q **** (4) |status == 0|.@> 
+
+@ |status == 0|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+ 
+      if (status == 0)
+          {
+
+#if DEBUG_COMPILE
+            if (DEBUG) 
+              {
+                cerr_strm << thread_name << "In `yylex()':"
+                          << endl 
+                          << "`scanner_node->pop_in()' succeeded.";
+          
+                log_message(cerr_strm); 
+                cerr_message(cerr_strm); 
+                cerr_strm.str(""); 
+              }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+@q **** (4) Single-threaded input and inclusion.  Return |SEMI_COLON| @>   
+@q **** (4) and continue reading from standard input when             @>   
+@q **** (4) this function is called again.                            @>   
+
+@ Single-threaded input and inclusion.  Return |SEMI_COLON| and
+continue reading from standard input when this function is called
+again. 
+\initials{LDF 2004.09.30.}
+
+\LOG
+\initials{LDF 2004.09.30.}
+Added this section.
+\ENDLOG
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:@>  
+\initials{LDF 2004.09.30.} 
+Add |endinput|.  
+\ENDTODO 
+
+@:??@> ?? \initials{LDF 2004.11.28.}  I've added |endinput|.  
+Do I need to change anything here?
+
+@<Define scanning functions@>=
+
+  if (   scanner_node->get_in_type() == Io_Struct::STDIN_TYPE 
+      && !(   run_state->multithread_input 
+           || run_state->multithread_include))
+
+    {
+      scanner_node->set_first_call_yylex(true);
+      return SEMI_COLON;
+    }  
+    
+
+
+            goto yylex_start;
+
+@q **** (4) @>   
+
+          } /* |if (status == 0)|  */
+ 
+@q *** (3).@> 
+@
+@<Define scanning functions@>=
+
+
+       else  /* |status != 0|  */
+         {
+           
+#if DEBUG_COMPILE
+           if (DEBUG) 
+             {
+               cerr_strm << thread_name << "In `yylex()':"
+                         << endl 
+                         << "`scanner_node->pop_in()' failed.";
+                       
+               log_message(cerr_strm); 
+               cerr_message(cerr_strm); 
+               cerr_strm.str(""); 
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+@q **** (4) |   run_state->multithread_input    @> 
+@q **** (4)  || run_state->multithread_include|.@> 
+@q **** (4) Issue a warning and return |END|.   @> 
+
+@ |run_state->multithread_input || run_state->multithread_include|.
+Issue a warning and return |END|.
+\initials{LDF 2004.09.30.}
+
+\LOG
+\initials{LDF 2004.09.30.}
+Added this section.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+  if (   run_state->multithread_input 
+      || run_state->multithread_include)
+
+    
+    {
+      
+      cerr_strm << thread_name << "WARNING! In `yylex()':"
+                << endl 
+                << "End-of-file found and multithreaded input and/or "
+                << "multithreaded inclusion is enabled."
+                << endl << "In these cases, input files should contain "
+                << "an `end' or `endinput' command."
+                << endl << "I'll pretend this one does and continue.";
+                
+      
+      log_message(cerr_strm); 
+      cerr_message(cerr_strm); 
+      cerr_strm.str(""); 
+      
+      return END;
+
+      
+    } /* |if (   run_state->multithread_input 
+              || run_state->multithread_include)|  */
+
+
+
+@q **** (4) Error handling:  |!(   run_state->multithread_input     @> 
+@q **** (4)                     || run_state->multithread_include)|.@> 
+@q **** (4) Signal an error and return |END|.                       @> 
+
+@ |!(run_state->multithread_input || run_state->multithread_include)|.
+Signal an error and return |END|.  It may be possible to continue.
+\initials{LDF 2004.09.30.}
+
+\LOG
+\initials{LDF 2004.09.30.}
+Added this section.
+
+\initials{LDF 2004.09.30.}
+Now returning |END| rather than |TERMINATE|.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+  else  /* |!(   run_state->multithread_input 
+              || run_state->multithread_include)|  */
+  
+    {
+
+      cerr_strm << thread_name << "ERROR! In `yylex()':"
+                << endl 
+                << "End-of-file found when using single-threaded input "
+                << "and single-threaded inclusion and "
+                << "`scanner_node->pop_in()' failed."
+                << endl << "This should never happen. "
+                << endl << "Exiting function with return value `END' "
+                << "and will try to continue.";
+
+      log_message(cerr_strm); 
+      cerr_message(cerr_strm); 
+      cerr_strm.str(""); 
+      
+      return END;
+
+    }   /* |else| (|!(   run_state->multithread_input 
+              || run_state->multithread_include)|)  */
+
+@q **** (4).@> 
+           
+         }   /* |else| (|status != 0|)  */
+
+@q *** (3).@> 
+
+     }  /* |if (curr_catcode == TERMINATE)|  */
+
+
+@q ** (2) Handle special assignments.@>
+@*1 Handle special assignments.
+\initials{LDF 2004.08.26.}
+
+\LOG
+\initials{LDF 2004.08.26.}
+Added this section.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+  else if (   curr_catcode == PLUS_ASSIGN
+           || curr_catcode == MINUS_ASSIGN
+           || curr_catcode == TIMES_ASSIGN
+           || curr_catcode == DIVIDE_ASSIGN) /* Special assignment.  */
+    {
+#if DEBUG_COMPILE
+      if (DEBUG)
+        {
+          cerr_strm << "In `yylex()': Special assignment."
+                    << endl << "Returning `curr_catcode' == "
+                    << name_map[curr_catcode] << ".";
+
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str(""); 
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+      scanner_node->set_first_call_yylex(false);
+
+      return curr_catcode;
+
+    } /* |else if| (Special assignment).  */
+
+@q ** (2) Handle sparks.  @>
+@ Handle sparks. 
+
+@<Define scanning functions@>=
+    else if (curr_catcode >= SYMBOL_0 && curr_catcode <= SYMBOL_7)
+      { 
+#if DEBUG_COMPILE
+        if (DEBUG)
+          {  
+            cerr_strm << "In `yylex()': `curr_catcode' == `" 
+                      << name_map[curr_catcode] << "'" << endl 
+                      << "`value->string_value' == \"" 
+                      << value->string_value << "\".";
+
+            log_message(cerr_strm); 
+            cerr_message(cerr_strm); 
+            cerr_strm.str(""); 
+          }
+#endif
+
+
+@q *** (3) Call |scanner_node->lookup|.@>
+
+@ Call |scanner_node->lookup|.
+\initials{LDF 2004.08.25.}
+
+@<Define scanning functions@>=
+
+        Id_Map_Entry_Node entry = scanner_node->lookup(value->string_value);
+
+ 
+@q *** (3) |lookup| failed.@>
+
+@ |lookup| failed.
+\initials{LDF 2004.04.22.}
+
+@<Define scanning functions@>=
+
+   if (entry == static_cast<Id_Map_Entry_Node>(0))
+     {
+#if DEBUG_COMPILE
+       if (DEBUG) 
+         {
+           cerr_strm << thread_name 
+                     << "In `yylex()': \"" 
+                     << value->string_value << "\" is not in `id_map'.";
+           
+           log_message(cerr_strm);
+           cerr_message(cerr_strm);
+           cerr_strm.str();
+         }
+#endif
+
+     }  /* |if (entry == 0)|  */
+
+@q *** (3) |lookup| succeeded.  @>
+@ |lookup| succeeded.
+\initials{LDF 2004.04.22.}
+
+\LOG
+\initials{LDF 2004.11.12.}
+Now checking for |!entry->is_true_internal|.
+\ENDLOG 
+
+@<Define scanning functions@>=
+   else  /* |entry != 0|  */
+     {
+      
+#if DEBUG_COMPILE
+       if (DEBUG)
+         {
+           cerr_strm << thread_name 
+                     << "In `yylex()': `lookup(" << value->string_value
+                << ")' succeeded." << endl 
+                << "`type' == `" << name_map[entry->get_type()] << "'.";
+           
+
+           if (entry->is_spark())
+             {
+               cerr << value->string_value << " is a spark. Will return " 
+                    << name_map[entry->get_type()]
+                    << endl;
+             }
+
+           else if (entry->is_internal())
+             {
+               cerr << value->string_value << " is an internal quantity. "
+                    << "Will return " 
+                    << name_map[curr_catcode]
+                    << endl;
+             }
+
+           else if (entry->is_regular())
+             {
+               cerr << value->string_value << " is regular symbolic token. "
+                    << "Will return " << name_map[curr_catcode]
+                    << endl;
+             }
+
+           log_message(cerr_strm);
+           cerr_message(cerr_strm);
+           cerr_strm.str();
+
+         } /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+           if (   !entry->is_spark() && !entry->is_internal()
+               && !entry->is_true_internal()
+               && !entry->is_regular())
+             {
+                 cerr_strm << thread_name << "ERROR! In `yylex()':"
+                           << endl                         
+                           << value->string_value << " has an invalid category."
+                           << "This shouldn't be possible. "
+                           << "Will return " << name_map[curr_catcode]
+                           << " and try to continue."
+                           << endl;
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str(); 
+
+             } /* Invalid category.  */
+
+       if (entry->is_spark())
+         {
+#if DEBUG_COMPILE
+           if (DEBUG)
+             {  
+                 cerr_strm << thread_name << "Spark `"
+                           << value->string_value
+                           << "'." << "Returning `"
+                           << name_map[entry->get_type()]
+                           << "'.";
+
+                  log_message(cerr_strm);
+                  cerr_message(cerr_strm);
+                  cerr_strm.str();  
+          }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+           scanner_node->set_first_call_yylex(false);
+
+           return entry->get_type();
+
+         }  /* spark  */
+       
+     }  /* |else|  (|entry != 0|)  */
+
+@q *** (3) End of spark and existing variable handling.@>
+
+@ End of spark and existing variable handling. 
+
+@<Define scanning functions@>=
+
+    }  /* |else if (curr_catcode >= SYMBOL_0 && curr_catcode <= SYMBOL_7)|  */
+
+@q ** (2) Return.  @>
+@ Return.
+
+@<Define scanning functions@>=
+
+#if DEBUG_COMPILE
+  if (DEBUG)
+    {
+        cerr_strm << thread_name 
+                  << "Exiting `yylex()' with return value `" 
+             << name_map[curr_catcode] << "'.";
+
+        log_message(cerr_strm);
+        cerr_message(cerr_strm);
+        cerr_strm.str();
+    }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+   scanner_node->set_first_call_yylex(false);
+
+   return curr_catcode;
+
+}  /* End of |yylex| definition.  */
+
+@q * (1) sub_yylex() @>
+@* {\bf sub\_yylex()}.
+\initials{LDF Undated.} 
+
+\LOG
+\initials{LDF 2004.09.12.}
+Changed |string curr_token| to |string curr_token_string|.  Now
+setting |scanner_node->token_string| to |curr_token_string| before
+returning. 
+
+\initials{LDF 2004.10.28.}
+@:BUG FIX@> BUG FIX:  Added code for setting
+|scanner_node->token_string|.  This is used in the parser rules
+\§for-loop> $\longrightarrow$ 
+\.{FOR} \§symbolic token> \§equate or assign> \§numeric expression>
+\.{STEP} \§numeric expression> \.{UNTIL} \§numeric expression> \.{COLON}.
+%
+and 
+%
+\§for-loop> $\longrightarrow$ 
+\.{FOREVER} \.{COLON}
+%
+in \filename{ploops.w}.
+\ENDLOG 
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:  @>
+\initials{LDF 2004.04.03.}
+Must debug locations.  Look up `seek' function and type that it 
+returns.  Use it in addition to line and column numbers.
+
+\initials{LDF 2004.09.13.}
+``\<RETURN>'' characters typed in by the user in response to debugging
+output can cause input characters to be overwritten.  Work on a
+solution to this problem, perhaps by reading the input characters into
+a buffer.
+
+\initials{LDF 2004.11.29.}
+Made debugging and error output thread-safe.
+Formatting changes.
+\ENDTODO 
+
+@q ** (2) Declaration.  @>
+
+@<Declare scanning functions@>=
+int
+sub_yylex(YYSTYPE *value,
+          Scanner_Node scanner_node);
+
+@q ** (2) Definition.  @>
+
+@
+@<Define scanning functions@>=
+
+int
+sub_yylex(YYSTYPE *value,
+          Scanner_Node scanner_node)
+{
+
+
+@q *** (3) Preliminaries.@>
+@ Preliminaries.
+
+\LOG
+\initials{LDF 2004.11.28.}
+Added this section.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */@;
+   if (DEBUG)
+      {
+         cerr_strm << "Entering `sub_yylex()'.";
+
+         log_message(cerr_strm); 
+         cerr_message(cerr_strm); 
+         cerr_strm.str("");
+      } /* |if (DEBUG)|  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+@q **** (4) Error handling:  |scanner_node == 0|.@> 
+
+@ Error handling:  |scanner_node == 0|.  Signal an error and return 
+|TERMINATE|. 
+\initials{LDF 2004.11.28.}
+
+\LOG
+\initials{LDF 2004.11.28.}
+Added this section.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+  if (scanner_node == static_cast<Scanner_Node>(0))
+    {
+
+      cerr_strm << "ERROR! In `sub_yylex()':"
+                << "`scanner_node' == 0." 
+                << endl << "Can't continue. Exiting function "
+                << "with return value `TERMINATE'.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");      
+
+      return TERMINATE;
+
+    } /* |if (scanner_node == 0)|  */
+
+
+@q **** (4) |scanner_node != 0|.@> 
+@ |scanner_node != 0|.
+
+\LOG
+\initials{LDF 2004.11.28.}
+Added this section.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+#if DEBUG_COMPILE
+  else if (DEBUG)  /* |scanner_node != 0|  */
+    {
+      cerr_strm << "In `sub_yylex()':"
+                << "`scanner_node' != 0.";
+
+      log_message(cerr_strm);
+      cerr_message(cerr_strm);
+      cerr_strm.str("");
+
+    }  /* |else if (DEBUG)| (|scanner_node != 0|)  */
+
+#endif /* |DEBUG_COMPILE|  */@; 
+
+  scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                &error_stop_value,
+                                                &warning_stop_value);
+@q *** (3) Check that input stream is open.@>   
+@ Check that input stream is open.
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+  if (!scanner_node->is_open_in())
+    {
+
+      cerr_strm << "ERROR! in `sub_yylex()': \""  
+                << scanner_node->get_in_filename()
+                << "\" isn't open. "
+                << "Returning `TERMINATE'.";
+
+      log_message(cerr_strm); 
+      cerr_message(cerr_strm); 
+      cerr_strm.str("");
+
+      return TERMINATE;
+
+    } /* |if (!scanner_node->is_open_in())|  */
+
+
+@q **** (4).@>   
+@ 
+@<Define scanning functions@>=
+
+  unsigned int curr_position;
+  unsigned int start_line;
+  unsigned int curr_line;
+  unsigned int start_column;
+  unsigned int curr_column;
+
+  char prev_char;  
+  char curr_char = EOF;
+  char next_char = EOF;
+
+  string curr_token_string = "";
+  unsigned int curr_catcode;
+  unsigned int temp_catcode;
+
+  scanner_node->set_token_string("");
+
+@q *** (3) Start loop.@>   
+
+@ Start loop.
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+ loop_start:
+
+#if 0 
+  curr_position = location->position;
+  start_line = location->last_line;
+  curr_line = start_line;
+  start_column = location->last_column;
+  curr_column = start_column; 
+#else
+  curr_position = 0;
+  start_line = 0;
+  curr_line = start_line;
+  start_column = 0;
+  curr_column = start_column; 
+#endif 
+
+  for (bool first_time = true;;)
+    {
+      prev_char = curr_char;
+      curr_char = scanner_node->peek();
+
+#if DEBUG_COMPILE
+      if (DEBUG)
+        {
+          cerr_strm << "In `sub_yylex()':" << endl
+                    << "`curr_char' == `" << curr_char << "'.";
+            
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str("");
+
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+
+@q ***** (5) Handle ``RETURNS'' (actually ``NEWLINES'') when reading @>   
+@q ***** (5) from standard input.                                    @>   
+
+@ Handle ``RETURNS'' (actually ``NEWLINES'') 
+when reading from standard input.
+\initials{LDF 2004.09.09.}
+
+\LOG
+\initials{LDF 2004.09.09.}
+Added this section.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+      if (   scanner_node->get_in_type() == Io_Struct::STDIN_TYPE
+          && prev_char == EOF && curr_char == '\n')
+        {
+
+          scanner_node->ignore();
+          ++curr_position;
+          curr_column = 0;
+          scanner_node->set_token_string(curr_token_string);
+          return NULL_VALUE;
+        }
+
+
+
+@q ***** (5) |curr_char == EOF|.@>   
+@ |curr_char == EOF|.
+@<Define scanning functions@>=
+
+
+      if (curr_char == EOF)
+        {
+@q ****** (6) |first_time == true|.@> 
+
+@ |first_time == true|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+          if (first_time)
+            {
+#if DEBUG_COMPILE
+              if (DEBUG)
+                {
+                  cerr_strm << "In `sub_yylex()': End of file. "
+                   << "Returning "
+                   << name_map[TERMINATE] << ".";
+                  
+                  log_message(cerr_strm); 
+                  cerr_message(cerr_strm); 
+                  cerr_strm.str("");
+                }
+#endif /* |DEBUG_COMPILE|  */@; 
+  
+              scanner_node->set_token_string(curr_token_string);
+              return TERMINATE;
+
+            } /* |if (first_time)|  */
+
+@q ****** (6) |first_time == false|.@> 
+
+@ |first_time == false|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+          else /* (|!first_time|)  */
+            {
+
+#if DEBUG_COMPILE
+              if (DEBUG)
+                {
+                  cerr_strm << "In `sub_yylex()': Going to `finish'.";
+
+                  log_message(cerr_strm); 
+                  cerr_message(cerr_strm); 
+                  cerr_strm.str("");
+                }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+              goto finish;
+
+            } /* |else| (|!first_time|)  */ 
+
+@q ****** (6).@> 
+
+        } /* |if (curr_char == EOF)|  */
+      
+@q ***** (5) Get |catcode|.@>   
+
+@ Get |catcode|.
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+#if DEBUG_COMPILE
+      if (DEBUG)
+        {
+          cerr_strm << "In `sub_yylex()': `curr_char' == `" 
+                    << curr_char << "'.";
+          
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str(""); 
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+      temp_catcode = get_catcode(curr_char);
+      
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << "In `sub_yylex()': `temp_catcode' == `"
+                 << name_map[temp_catcode] << "'.";
+       
+       log_message(cerr_strm); 
+       cerr_message(cerr_strm); 
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+@q ***** (5) |temp_catcode == INVALID_CATCODE|.@> 
+
+@ |temp_catcode == INVALID_CATCODE|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+      if (temp_catcode == INVALID_CATCODE)
+        {
+          cerr_strm << "ERROR! In sub_yylex():"
+                    << endl 
+                    << curr_char << " has invalid catcode."
+                    << endl << "Returning `" << name_map[INVALID_CATCODE]
+                    << "'.";
+
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str(""); 
+
+          ++curr_position;
+
+          if (curr_char == '\n')
+            {
+               ++curr_line;
+               curr_column = 0;
+            } 
+           else
+               ++curr_column;
+         
+#if 0 
+          location->first_line   = start_line;
+          location->first_column = start_column;
+          location->last_line    = curr_line;
+          location->last_column  = curr_column;
+          location->position     = curr_position;
+#endif 
+
+
+          strcpy(value->string_value, "INVALID");
+
+          scanner_node->set_token_string(curr_token_string);
+
+          return INVALID_CATCODE;
+
+        } // |if (temp_catcode == INVALID_CATCODE)|
+
+@q ***** (5) First character in token string.@>   
+
+@ First character in token string.
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+      if (first_time) 
+        {
+
+          first_time = false;
+
+
+@q ****** (6) Handle possible special assignments      @>
+@q ****** (6) and Pythagorean addition and subtraction.@>
+
+@ Handle possible special assignments,      
+and Pythagorean addition and subtraction.
+\initials{LDF 2004.08.26.}
+
+\LOG
+\initials{LDF 2004.08.26.}
+Added this section.  It seems to work.
+
+\initials{LDF 2004.08.29.}
+Added code for handling Pythagorean addition and subtraction. 
+\ENDLOG 
+
+
+@<Define scanning functions@>=
+  
+  if (   curr_char == '+'
+      || curr_char == '-'
+      || curr_char == '*'
+      || curr_char == '/') 
+      
+    {
+
+#if DEBUG_COMPILE
+      if (DEBUG)
+        {
+          cerr_strm << thread_name 
+                    << "In `sub_yylex()':  Possible special assignment "
+                    << "or Pythagorean addition or subtraction "
+                    << "(first char).";
+
+          log_message(cerr_strm); 
+          cerr_message(cerr_strm); 
+          cerr_strm.str(""); 
+        }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      scanner_node->ignore();
+      ++curr_position;
+      ++curr_column;
+      
+      next_char = scanner_node->peek();
+      
+@q ******* (7) Pythagorean addition.@> 
+@ Pythagorean addition.
+
+\LOG
+\initials{LDF 2004.08.29.}
+Added this section.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+      if (curr_char == '+' && next_char == '+')
+        {
+          
+          scanner_node->ignore();
+          ++curr_position;
+          ++curr_column;
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_strm << "In `sub_yylex()': Returning " 
+                        << name_map[PYTHAGOREAN_PLUS] << ".";
+
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str("");
+ 
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          scanner_node->set_token_string(curr_token_string);
+          return PYTHAGOREAN_PLUS;
+
+        } /* |if (curr_char == '+' && next_char == '+')|  */
+
+@q ******* (7) Pythagorean subtraction.@> 
+@ Pythagorean subtraction.
+
+\LOG
+\initials{LDF 2004.08.29.}
+Added this section.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+  if (curr_char == '+' && next_char == '-')
+    {
+          
+      scanner_node->ignore();
+      ++curr_position;
+      ++curr_column;
+
+      next_char = scanner_node->peek();
+
+@q ******** (8).@>      
+
+      if (next_char == '+')
+        {
+              
+          scanner_node->ignore();
+          ++curr_position;
+          ++curr_column;
+      
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_strm << "In `sub_yylex()': Returning " 
+                        << name_map[PYTHAGOREAN_MINUS] << ".";
+
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str("");
+              
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          scanner_node->set_token_string(curr_token_string);
+          return PYTHAGOREAN_MINUS;
+
+        } /* |if (next_char == '+')|  */
+
+@q ******** (8).@> 
+
+      else /* (|next_char != '+'|)  */
+        {
+
+          cerr_strm << "ERROR! In `sub_yylex()': Invalid input: `+-"
+                    << next_char << "'." << endl 
+                    << "Will try to continue.";
+
+
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str("");
+
+        }  /* |else| (|next_char != '+'|)  */
+
+@q ******** (8).@>
+   
+    } /* |if (curr_char == '+' && next_char == '-')|  */
+
+
+
+@q ******* (7) Hyphen pair or hyphen triple (path joins).@> 
+@ Hyphen pair or hyphen triple (path joins).
+\initials{LDF 2004.09.06.}
+
+\LOG
+\initials{LDF 2004.09.06.}
+Added this section.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+  if (curr_char == '-' && next_char == '-')
+    {
+          
+      scanner_node->ignore();
+      ++curr_position;
+      ++curr_column;
+
+      next_char = scanner_node->peek();
+
+@q ******** (8).@> 
+
+      if (next_char == '-')
+        {
+              
+          scanner_node->ignore();
+          ++curr_position;
+          ++curr_column;
+      
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_strm << "In `sub_yylex()': Returning " 
+                        << name_map[HYPHEN_TRIPLE] << ".";
+
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str("");
+              
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          scanner_node->set_token_string("---");
+          return HYPHEN_TRIPLE;
+
+        } /* |if (next_char == '-')|  */
+
+@q ******** (8).@> 
+
+      else /* (|next_char != '-'|)  */
+        {
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_strm << "In `sub_yylex()': Returning "
+                        << name_map[HYPHEN_PAIR] << "'.";
+
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str("");
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+          scanner_node->set_token_string("--");
+
+
+@q ********* (9).@> 
+
+@
+
+\LOG
+\initials{LDF 2004.10.26.}
+Commented this out.  It caused an error.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+#if 0 
+  /* !! START HERE.  LDF 2004.10.26.  Connectors must be preceded 
+        and/or followed by whitespace or an error occurs.  The exact 
+        behavior differs according to what connector is being used.  */@; 
+
+              if (scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)
+                scanner_node->putback(next_char);
+#endif 
+
+@q ********* (9).@> 
+
+@
+@<Define scanning functions@>=
+
+          return HYPHEN_PAIR;
+
+        }  /* |else| (|next_char != '-'|)  */
+
+@q ******** (8).@> 
+        
+    } /* |if (curr_char == '-' && next_char == '-')|  */
+
+
+@q ******* (7) Arithmetical operation with assignment.@> 
+@q ******* (7) |next_char == '='|.                    @> 
+
+@ Arithmetical operation with assignment.
+|next_char == '='|.                   
+\initials{LDF 2004.08.29.}
+
+\LOG
+\initials{LDF 2004.08.29.}
+Added this section.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+      else if (next_char == '=')
+        {
+
+          int i;
+
+
+          if (curr_char == '+')
+            {
+               scanner_node->set_token_string("+=");
+               i = PLUS_ASSIGN;
+            }
+
+          else if (curr_char == '-')
+            {
+               scanner_node->set_token_string("-=");
+               i = MINUS_ASSIGN;
+            }
+
+          else if (curr_char == '*')
+            {
+               scanner_node->set_token_string("*=");
+               i = TIMES_ASSIGN;
+            }
+          else if (curr_char == '/') 
+            {
+               scanner_node->set_token_string("/=");
+               i = DIVIDE_ASSIGN;
+            }
+
+          scanner_node->ignore();
+          ++curr_position;
+          ++curr_column;
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_strm << "In `sub_yylex()': Returning `" 
+                        << name_map[i] << "'.";
+
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str("");
+ 
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+          return i;
+
+        } /* |if (next_char == '=')|  */
+
+@q ******* (7) |next_char != '='|.@> 
+
+@ |next_char != '='|.
+\initials{LDF 2004.11.28.}
+
+
+\LOG
+\initials{LDF 2004.11.29.}
+@:BUG FIX@> BUG FIX: 
+Commented-out |scanner_node->putback(next_char)|.
+This seems to work, but I'll have to keep an eye on it.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+      else /* |next_char != '='|  */
+        {
+
+#if DEBUG_COMPILE
+          if (DEBUG)
+            {
+              cerr_strm << "In `sub_yylex()': Not a special assignment."
+                        << "Returning `" << name_map[temp_catcode] << "'.";
+              
+              log_message(cerr_strm); 
+              cerr_message(cerr_strm); 
+              cerr_strm.str("");
+              
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          value->string_value[0] = curr_char;
+          value->string_value[1] = '\0';
+
+          curr_token_string += curr_char;
+ 
+          scanner_node->set_token_string(curr_token_string);
+
+#if 0 
+          if (   scanner_node->get_in_type() == Io_Struct::STDIN_TYPE
+              && next_char != EOF)
+            scanner_node->putback(next_char);
+#endif 
+
+
+          return temp_catcode;
+
+        }  /* |else| (|next_char != '='|)  */
+
+@q ******* (7).@> 
+
+ } /* |if| (possible special assignment).  */
+
+
+@q ****** (6) Periods not followed by digits or periods are ignored.@>
+@ Periods not followed by digits or periods are ignored.
+\initials{LDF Undated.}
+
+
+\LOG
+\initials{LDF 2004.05.13.}  
+Added code that tests for two or three
+|PERIODS| in a row.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+  if (temp_catcode == PERIOD)
+    {
+#if DEBUG_COMPILE
+        if (DEBUG)
+          {
+              cerr_strm << thread_name 
+                        << "In `sub_yylex()':  First character in token is "
+                        << "`PERIOD'.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm);
+              cerr_strm.str();
+          }
+#endif /* |DEBUG_COMPILE|  */@; 
+      
+      scanner_node->ignore();
+      ++curr_position;
+      ++curr_column;
+      
+      next_char = scanner_node->peek();
+
+@q ******* (7) |get_catcode(next_char) == PERIOD|.@> 
+
+@ |get_catcode(next_char) == PERIOD|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+      if (get_catcode(next_char) == PERIOD)
+        {
+          
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                cerr_strm << thread_name 
+                          << "In `sub_yylex()':  "
+                          << "Two `PERIODS'.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str();
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+          
+          scanner_node->ignore();
+          ++curr_position;
+          ++curr_column;
+          
+          next_char = scanner_node->peek();
+        
+@q ******** (8) |get_catcode(next_char) == PERIOD|.@> 
+  
+@ |get_catcode(next_char) == PERIOD|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+          if (get_catcode(next_char) == PERIOD)
+            {
+              
+#if DEBUG_COMPILE
+              if (DEBUG)
+                 {
+                    cerr_strm << thread_name 
+                              << "In `sub_yylex()':  "
+                              << "Three `PERIODS'. Returning `PERIOD_TRIPLE'."; 
+
+                    log_message(cerr_strm);
+                    cerr_message(cerr_strm);
+                    cerr_strm.str();    
+                  }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+              scanner_node->set_token_string("...");
+              return PERIOD_TRIPLE;
+
+            } /* |if (get_catcode(next_char) == PERIOD)|  */
+
+@q ******** (8) |get_catcode(next_char) != PERIOD|.@> 
+
+@ |get_catcode(next_char) != PERIOD|.
+\initials{LDF 2004.11.28.}
+
+@<Define scanning functions@>=
+
+          else  /* |get_catcode(next_char) != PERIOD|  */
+            {
+#if DEBUG_COMPILE
+              if (DEBUG)
+                 {
+                    cerr_strm << thread_name 
+                              << "In `sub_yylex()':  "
+                              << "Returning `PERIOD_PAIR'.";
+
+                    log_message(cerr_strm);
+                    cerr_message(cerr_strm);
+                    cerr_strm.str();    
+                 }
+#endif /* |DEBUG_COMPILE|  */@; 
+              
+              scanner_node->set_token_string("..");
+
+@q ********* (9).@> 
+
+@
+
+\LOG
+\initials{LDF 2004.10.26.}
+Commented this out.  It caused an error.
+\ENDLOG 
+
+@<Define scanning functions@>=
+#if 0 
+  /* !! START HERE.  LDF 2004.10.26.  Connectors must be preceded 
+        and/or followed by whitespace or an error occurs.  The exact 
+        behavior differs according to what connector is being used.  */@; 
+
+              if (scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)
+                scanner_node->putback(next_char);
+#endif 
+
+@q ********* (9).@> 
+
+@
+@<Define scanning functions@>=
+
+              return PERIOD_PAIR;
+              
+            } /* |else| (|get_catcode(next_char) != PERIOD|)  */@;
+        
+@q ******** (8).@> 
+
+        } /* |if (get_catcode(next_char) == PERIOD)|  */
+          
+
+@q ******* (7) |DIGIT|.@>   
+@ |DIGIT|
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+   if (get_catcode(next_char) == DIGIT)
+      {
+         
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name << "Next character is a digit."
+                           << endl 
+                           << "Setting `curr_token_string' to \"0.\", "
+                           << "changing `curr_catcode' to `REAL', "
+                           << "and continuing.";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str();
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+          curr_token_string = "0.";
+          curr_catcode = REAL;
+          continue;
+
+     }  /* |if (get_catcode(next_char) == DIGIT)|  */
+
+@q ******* (7).@> 
+
+   else  /* |get_catcode(next_char) != DIGIT|  */
+      {
+#if DEBUG_COMPILE
+         if (DEBUG)
+            {
+                cerr_strm << thread_name 
+                          << "In `sub_yylex()':  "
+                          << "Next character isn't a digit."
+                          << endl 
+                          << "Ignoring period and going to `loop_start'.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str();
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+#if 0 
+         location->first_line    = start_line;
+         location->first_column = start_column;
+         location->last_line     = curr_line;
+         location->last_column  = curr_column;
+         location->position     = curr_position;
+#endif 
+                  
+         goto loop_start;
+
+      }  /* |else| (|get_catcode(next_char) != DIGIT|)  */
+
+@q ******* (7).@> 
+
+    } /* |if (temp_catcode == PERIOD)|  */@;
+
+@q ****** (6).@>   
+@ 
+@<Define scanning functions@>=
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+       cerr_strm << "In `sub_yylex()': Continuing here. "
+                 << "`curr_char' == `" << curr_char << "'";
+
+       log_message(cerr_strm); 
+       cerr_message(cerr_strm); 
+       cerr_strm.str("");
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+
+   curr_catcode = temp_catcode;
+   curr_token_string = scanner_node->get();
+   ++curr_position;
+
+   if (curr_char == '\n')
+     {
+       ++curr_line;
+        curr_column = 0;
+     } 
+    else
+        ++curr_column;
+
+
+@q ****** (6) Loners, i.e., tokens that consist of a single character.@>   
+
+@ Loners, i.e., tokens that consist of a single character:
+|COMMA|, |SEMI_COLON|, |LEFT_PARENTHESIS|, or 
+|RIGHT_PARENTHESIS|.  We go immediately to |finish|.
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+   if (   curr_catcode == COMMA
+       || curr_catcode == SEMI_COLON 
+       || curr_catcode == LEFT_PARENTHESIS
+       || curr_catcode == RIGHT_PARENTHESIS)
+
+     {
+#if DEBUG_COMPILE
+        if (DEBUG)
+           {
+              cerr_strm << thread_name << "In `sub_yylex()':  `" 
+                        << name_map[curr_catcode]
+                        << "'." << endl 
+                        << "Going to `finish'.";
+
+              log_message(cerr_strm);
+              cerr_message(cerr_strm);
+              cerr_strm.str();
+           }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+        goto finish;
+
+     }  /* Loners.  */
+         
+@q ******* (7) |LEFT_PARENTHESIS|.@>   
+
+@ |LEFT_PARENTHESIS|.
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+
+   if (curr_catcode == LEFT_PARENTHESIS)
+      {
+#if DEBUG_COMPILE
+         if (DEBUG)
+            {
+               cerr_strm << thread_name << "In `sub_yylex()':  "
+                         << "`LEFT_PARENTHESIS'.  "
+                         << "going to `finish'.";
+
+               log_message(cerr_strm);
+               cerr_message(cerr_strm);
+               cerr_strm.str();
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+ 
+         goto finish;
+
+      } /* |if (curr_catcode == LEFT_PARENTHESIS)|  */
+
+
+@q ******* (7) |RIGHT_PARENTHESIS|.@>   
+
+@ |RIGHT_PARENTHESIS|.
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+   if (curr_catcode == RIGHT_PARENTHESIS)
+      {
+#if DEBUG_COMPILE
+         if (DEBUG)
+            {
+                cerr_strm << thread_name << "In `sub_yylex()':  "
+                          << "`RIGHT_PARENTHESIS'.  "
+                          << "going to `finish'.";
+
+                log_message(cerr_strm);
+                cerr_message(cerr_strm);
+                cerr_strm.str();
+            }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+              goto finish;
+
+      } /* |if (curr_catcode == RIGHT_PARENTHESIS)|  */
+          
+
+@q ****** (6) |DIGIT|.@>   
+
+@ |DIGIT|.   Change |curr_catcode| to |INTEGER|.  It may later change
+to |REAL|, if we scan a period. 
+\initials{LDF 2004.08.26.}
+
+@<Define scanning functions@>=
+
+   else if (curr_catcode == DIGIT)
+      curr_catcode = INTEGER;
+
+
+@q ****** (6) |PERCENT|.@>   
+@ |PERCENT|.  Comment.  Skip all characters up to and including the
+end-of-line character.  
+\initials{LDF 2004.04.05.}
+
+\LOG
+\initials{LDF 2004.04.05.}
+Added this conditional.
+
+\initials{LDF 2004.11.30.}
+@:BUG FIX@> BUG FIX:
+Now returning |SEMI_COLON| if 
+|scanner_node->get_in_type() == Io_Struct::STDIN_TYPE|.  This makes it
+possible to have comments in code read from standard input.  It does
+not work perfectly, however, since users must type \<RETURN> twice in
+order to end a comment.  This will probably also cause problems when
+passing input to the standard input of \.{3dldf} by means of a pipe or
+redirection. 
+\ENDLOG 
+
+
+@<Define scanning functions@>=
+
+         else if (curr_catcode == PERCENT)
+	    {
+#if DEBUG_COMPILE
+                if (DEBUG)
+                  {
+                      cerr_strm << thread_name 
+                                << "In `sub_yylex()':  Handling comment.";   
+
+                      log_message(cerr_strm);
+                      cerr_message(cerr_strm);
+                      cerr_strm.str();      
+                  }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 	
+	       for (;;)
+		  {
+                    prev_char = curr_char;
+		    curr_char = scanner_node->get();
+                    ++curr_position;
+
+
+@q ******* (7).@> 
+		    if (curr_char == EOF)
+		       {
+			  cerr_strm << thread_name 
+                                    << "WARNING! In `sub_yylex()':"
+                                    << endl 
+                                    << "File \"" 
+                                    << scanner_node->get_in_filename()  
+                                    << "\" ends in mid-comment."
+                                    << endl 
+                                    << "This is probably nothing to worry about, "
+                                    << "though." << endl << "Returning `"
+                                    << name_map[TERMINATE] << "'.";
+
+                          log_message(cerr_strm);
+                          cerr_message(cerr_strm);
+                          cerr_strm.str();
+
+#if 0 
+                          location->first_line    = start_line;
+          		  location->first_column = start_column;
+          		  location->last_line     = curr_line;
+          		  location->last_column  = curr_column;
+          		  location->position     = curr_position;
+#endif 
+
+                          scanner_node->set_token_string(curr_token_string);
+			  return TERMINATE;  
+
+		       } /* |if (curr_char == EOF)|  */
+
+@q ******* (7).@> 
+                    else if (curr_char == '\n')
+                       {
+                          ++curr_line;
+                          curr_column = 0;
+
+
+
+
+#if DEBUG_COMPILE
+                          if (DEBUG)
+                             {
+                                 cerr_strm << thread_name 
+                                           << "`sub_yylex()':  "
+                                           << "End of comment.  "
+                                           << "Going to `loop_start'.";
+
+                                 log_message(cerr_strm);
+                                 cerr_message(cerr_strm);
+                                 cerr_strm.str();                 
+                             }
+#endif /* |DEBUG_COMPILE|  */@; 
+                
+#if 0 
+                          location->first_line    = start_line;
+                          location->first_column = start_column;
+                          location->last_line     = curr_line;
+                          location->last_column  = curr_column;
+                          location->position     = curr_position;
+#endif 
+
+                          if (scanner_node->get_in_type() == Io_Struct::STDIN_TYPE)
+                             return SEMI_COLON;
+
+                          else
+
+                             goto loop_start;
+
+                       } /* |else if (curr_char == '\n')|  */
+
+@q ******* (7).@> 
+                    else
+                       ++curr_column;
+                             
+            } /* |for|  */
+
+          } /* |else if (curr_catcode == PERCENT)| (comment)  */
+
+@q ****** (6) STRING.@>
+
+@ |STRING|.  Collect characters up to next double-quote character 
+and return it as a |STRING|.  Error if |EOF| or |'\n'| occurs before 
+closing double quote.  
+
+\TODO
+@q { @>
+@:TO DO}{{\bf TO DO}@>
+@q } @> 
+@q !! TO DO:@>  
+\initials{LDF 2004.11.28.}
+Look up how {\MF/} handles this.
+\ENDTODO 
+
+\LOG
+\initials{LDF 2004.04.05.}
+Added this conditional.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+ 
+   else if (curr_catcode == DOUBLE_QUOTE)
+      {
+#if DEBUG_COMPILE
+          if (DEBUG)
+             {
+                 cerr_strm << thread_name << "In `sub_yylex()':"
+                           << endl 
+                           << "Double quote character.  "
+                           << "Collecting string.";
+
+                 log_message(cerr_strm);
+                 cerr_message(cerr_strm);
+                 cerr_strm.str(); 
+             }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+      curr_catcode = STRING;
+ 
+      curr_token_string = "";
+
+      for (;;)
+         {
+            prev_char = curr_char;
+            curr_char = scanner_node->get();
+            ++curr_position;
+            
+
+@q ******* (7).@>
+
+            if (curr_char == '\"' && prev_char != '\\')
+	       {
+                  ++curr_column;
+#if DEBUG_COMPILE
+                  if (DEBUG)
+                    {
+                        cerr_strm << thread_name << "In `sub_yylex()':  "
+                                  << "Ending string."
+                                  << endl 
+                                  << "`curr_token_string' == \"" 
+                                  << curr_token_string << "\".  "
+                                  << "Going to `finish'.";
+
+                        log_message(cerr_strm);
+                        cerr_message(cerr_strm);
+                        cerr_strm.str();        
+
+                    }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+	          goto finish;
+
+               } /* |if (curr_char == '\"' && prev_char != '\\')|  */
+
+@q ******* (7).@> 
+
+	    else if (curr_char == '\n')
+	       {
+                  ++curr_line;
+                  curr_column = 0;
+
+	          cerr_strm << thread_name 
+                            << "ERROR! In `sub_yylex()':"
+                            << endl 
+                            << "Line ends before string does:  \"" 
+                            << curr_token_string << "\""
+                            << endl << "Setting value->string_value to \"" 
+                            << curr_token_string 
+                            << "\", returning `STRING', and will try "
+                            << "to continue.";
+
+                  log_message(cerr_strm);
+                  cerr_message(cerr_strm);
+                  cerr_strm.str();  
+
+                  goto finish;
+
+               } /* |else if (curr_char == '\n')|  */
+
+@q ******* (7).@> 
+
+            else if (curr_char == EOF)
+ 	       {
+	          cerr_strm << thread_name << "ERROR! In `sub_yylex()':"
+                            << endl 
+                            << "File ends before string does:  \"" 
+                            << curr_token_string << "\"" 
+                            << endl 
+                            << "Setting `value->string_value' to \"" 
+                            << curr_token_string 
+                            << "\", returning `STRING', and will try "
+                            << "to continue.";
+
+                  log_message(cerr_strm);
+                  cerr_message(cerr_strm);
+                  cerr_strm.str();  
+
+                  goto finish;
+
+               } /* |else if (curr_char == EOF)|  */
+
+@q ******* (7).@> 
+
+            else
+               {
+                  ++curr_column;
+                  curr_token_string += curr_char;
+               }
+                
+         } /* |for|  */
+
+@q ******* (7).@> 
+
+   } /* |else if (curr_catcode == DOUBLE_QUOTE)|  */
+
+
+@q ****** (6) End of first characters.  @>
+@ End of first characters.
+@<Define scanning functions@>=
+ 
+        } /* |if (first_time)|  */
+
+@q ***** (5) Not first character in token string.@>
+@ Not first character in token string.
+@<Define scanning functions@>=
+
+      else  /* |!first_time|  */
+        {
+
+          if (   temp_catcode == curr_catcode
+              || (   temp_catcode == DIGIT 
+                  && (curr_catcode == INTEGER || curr_catcode == REAL)))
+            {
+              curr_token_string += scanner_node->get();
+
+
+              ++curr_position;
+
+              if (curr_char == '\n')
+                 {
+                   ++curr_line;
+                   curr_column = 0;
+                 } 
+              else
+                   ++curr_column;
+             }
+
+
+
+    
+@q ******* (7) Period, i.e., a decimal point.@>
+@ Period, i.e., a decimal point.
+@<Define scanning functions@>=
+
+          else if (   temp_catcode == PERIOD
+                   && curr_catcode == INTEGER)
+            {
+#if DEBUG_COMPILE
+                if (DEBUG)
+                  {
+                      cerr_strm << thread_name 
+                                << "In `sub_yylex()':  "
+                                << "`PERIOD' following `DIGIT'."
+                                << endl 
+                                << "Changing `curr_catcode' to `REAL'.";
+
+                      log_message(cerr_strm);
+                      cerr_message(cerr_strm);
+                      cerr_strm.str();      
+                  }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+                 curr_token_string += scanner_node->get();
+
+                 ++curr_position;
+
+                  if (curr_char == '\n')
+                     {
+                        ++curr_line;
+                        curr_column = 0;
+                     } 
+                  else
+                     ++curr_column;
+
+                  curr_catcode = REAL;
+
+              }  /* |else if (   temp_catcode == PERIOD
+                              && curr_catcode == INTEGER)|  */
+
+@q ***** (5) |finish|.  @>
+
+@ |finish|.  Any other character whose catcode differs
+from the catcode of the token we've been building.
+Processing also continues here for loners, when |EOF| is 
+reached when collecting characters for a token, and when a 
+period is found, except when we're collecting an integer.
+\initials{LDF 2004.04.04.} 
+
+@<Define scanning functions@>=
+          else /* |temp_catcode != curr_catcode|  */
+             {
+                finish:
+  
+@q ****** (6) Whitespace.  @>              
+@ Whitespace.  We don't bother returning from this function, 
+we just skip over the whitespace.
+@<Define scanning functions@>=
+
+                if (curr_catcode == SPACE) 
+                   {
+#if DEBUG_COMPILE
+                       if (DEBUG)
+                          {
+                              cerr_strm << thread_name 
+                                        << "In `sub_yylex()':  Whitespace.  "
+                                        << "Going to `loop_start'.";
+
+                              log_message(cerr_strm);
+                              cerr_message(cerr_strm);
+                              cerr_strm.str();              
+                          }
+#endif /* |DEBUG_COMPILE|  */@; 
+              
+#if 0 
+                       location->first_line   = start_line;
+                       location->first_column = start_column;
+                       location->last_line    = curr_line;
+                       location->last_column  = curr_column;
+                       location->position     = curr_position;
+#endif 
+ 
+                       goto loop_start;
+ 
+                  } /* |if (curr_catcode == SPACE)|  */
+
+@q  ****** (6) Numerical types.@> 
+@ Numerical types.
+\initials{LDF Undated.}
+
+@q ******* (7) INTEGER.@>
+
+@ |INTEGER|.  Convert |curr_token_string| to |long long| and check whether 
+it's less than or equal to |INT_MAX|.  If it is, set 
+|value->int_value| to it.  Otherwise, set |value->real_value| to it and
+change |curr_catcode| to |REAL|.
+\initials{LDF 2005.09.13.}
+
+\LOG
+\initials{LDF 2005.09.13.}
+@:BUG FIX@> BUG FIX:  Writing from |stringstream s| to |value->int_value| 
+using |operator>>| wasn't working.  Now using |sscanf| instead.
+
+\initials{LDF 2005.09.13.}
+Added code for converting |INTEGERS| greater than |INT_MAX| to |reals|.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+              if (curr_catcode == INTEGER)
+                {
+
+                    stringstream s(curr_token_string);
+
+#if DEBUG_COMPILE
+                    if (DEBUG)
+                       {
+                           cerr_strm << thread_name 
+                                     << "In `sub_yylex()':"
+                                     << endl 
+                                     << "s.str() == " 
+                                     << s.str() << endl;
+
+                           log_message(cerr_strm);
+                           cerr_message(cerr_strm);
+                           cerr_strm.str("");
+
+                       }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+@q ******** (8) @> 
+@
+\LOG
+\initials{LDF 2005.12.06.}
+Added this section.
+
+\initials{LDF 2005.12.06.}
+No longer setting |scanner_node->ulong_long_switch = false|.  
+This shouldn't always be done.  When it needs to be done, it's done in the parser rules, 
+or in functions called from them.
+\ENDLOG
+
+@<Define scanning functions@>=
+
+                   if (scanner_node->ulong_long_switch)
+                      {
+                                    
+
+                           unsigned long long ull = strtoull(s.str().c_str(), 0, 10);
+
+                           curr_catcode = ULONG_LONG_TYPE; 
+                
+                           value->ulong_long_value = ull;
+
+                      }  /* |if (scanner_node->ulong_long_switch)|  */
+
+@q ******** (8)@> 
+
+                   else /* |!scanner_node->ulong_long_switch|  */
+                      {
+                          long long ll;
+
+#if DEBUG_COMPILE
+                    if (DEBUG)
+                       {
+                           cerr_strm << "In `sub_yylex()':"
+                                     << endl 
+                                     << thread_name << "ll == " 
+                                     << ll << endl;
+
+                           log_message(cerr_strm);
+                           cerr_message(cerr_strm);
+                           cerr_strm.str("");
+                       }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+
+
+
+@q ******** (8) @> 
+
+                    ll = strtoll(s.str().c_str(), 0, 10);
+
+                    numeric_limits<int> int_limits;
+                    numeric_limits<long long> long_long_limits;
+
+
+@q ********* (9) Check for |ll >= long_long_limits.max|.@> 
+
+@ Check for |ll >= long_long_limits.max|.
+A string representing an integer greater than
+|long_long_limits.max| will be converted to an integer with the 
+value |long_long_limits.max|.  It is therefore not possible to 
+determine whether an integer with this value was created from a valid or
+an invalid input.
+\initials{LDF 2005.09.13.}
+
+\LOG
+\initials{LDF 2005.09.13.}
+Added this section.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+                    if (ll >= long_long_limits.max())
+                       {
+                           cerr_strm << thread_name 
+                                     << "ERROR!  In `sub_yylex()':"
+                                     << endl
+                                     << "integer value is greater "
+                                     << "than or equal to `LONG_LONG_MAX'."
+                                     << endl 
+                                     << "Setting `value->real_value' "
+                                     << "to `INVALID_REAL' "
+                                     << endl 
+                                     << "and `curr_catcode' to `REAL' and "
+                                     << "continuing.";
+
+                          log_message(cerr_strm);   
+                          cerr_message(cerr_strm);
+                          cerr_strm.str("");        
+
+                          value->real_value = INVALID_REAL;
+
+                          curr_catcode = REAL;
+
+
+                       }  /* |if (ll >= long_long_limits.max())|  */
+
+@q ********* (9) @> 
+
+                    else if (ll > int_limits.max())
+                       {
+
+#if DEBUG_COMPILE
+                           if (DEBUG)
+                              {
+                                  cerr_strm << thread_name
+                                            << "In `sub_yylex()':"
+                                            << endl 
+                                            << "ll > int_limits.max()" 
+                                            << endl;
+
+                                  log_message(cerr_strm);
+                                  cerr_message(cerr_strm);
+                                  cerr_strm.str("");
+
+                              }   
+#endif /* |DEBUG_COMPILE|  */@; 
+
+#if LDF_REAL_DOUBLE
+                            sscanf(s.str().c_str(), "%lf", 
+                                                    &(value->real_value));
+#else
+                            sscanf(s.str().c_str(), "%f", 
+                                                    &(value->real_value));
+#endif
+
+#if DEBUG_COMPILE
+                           if (DEBUG)
+                              {
+                                  cerr_strm << thread_name 
+                                            << "In `sub_yylex()':"
+                                            << endl 
+                                            << "value->real_value == " 
+                                            << value->real_value
+                                            << endl;
+
+                                  log_message(cerr_strm);
+                                  cerr_message(cerr_strm);
+                                  cerr_strm.str("");
+                              }   
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                            curr_catcode = REAL; 
+                       
+                       }  /* |if (ll > int_limits.max())|  */
+
+@q ********* (9) @>                                         
+
+
+                    else /* |ll <= int_limits.max|  */
+                       {
+
+#if DEBUG_COMPILE
+                           if (DEBUG)
+                              {
+                                  cerr_strm << thread_name 
+                                            << "In `sub_yylex()':"
+                                            << endl 
+                                            << "ll <= int_limits.max()" 
+                                            << endl;
+
+                                  log_message(cerr_strm);
+                                  cerr_message(cerr_strm);
+                                  cerr_strm.str("");
+
+                              }   
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                          sscanf(s.str().c_str(), "%i", &(value->int_value));
+
+#if DEBUG_COMPILE
+                        if (DEBUG)
+                          {
+                              cerr_strm << thread_name 
+                                        << "In `sub_yylex()':"
+                                        << endl 
+                                        << "s.str() == " << s.str()
+                                        << endl << "value->int_value' == `"
+                                        << static_cast<int>(value->int_value) 
+                                        << "'.";
+
+                              log_message(cerr_strm);
+                              cerr_message(cerr_strm);
+                              cerr_strm.str();        
+                          }   
+#endif /* |DEBUG_COMPILE|  */@; 
+                       
+                       }  /* |else| (|ll <= int_limits.max|)  */
+
+@q ********* (9) @> 
+  
+      }  /* |else| (|!scanner_node->ulong_long_switch|)  */
+
+
+@q ******** (8) @>              
+
+                } /* |if (curr_catcode == INTEGER)|  */
+
+@q ******* (7) REAL.@>
+
+@ |REAL|.  We convert |curr_token_string| to |real| and set
+|value->real_value| to it.
+\initials{LDF Undated.}
+
+@<Define scanning functions@>=
+
+              else if (curr_catcode == REAL)
+                {
+
+                    stringstream s(curr_token_string);
+                    s >> value->real_value;
+
+#if DEBUG_COMPILE
+                  if (DEBUG)
+                    {
+                        cerr_strm << thread_name << "In `sub_yylex()':"
+                                  << endl << "`value->real_value' == `"
+                                  << value->real_value << "'.";
+
+                        log_message(cerr_strm);
+                        cerr_message(cerr_strm);
+                        cerr_strm.str();        
+                    }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+                } /* |else if (curr_catcode == REAL)|  */
+
+@q ****** (6) STRING.@>
+
+@  |STRING|.  We create a new |string|, assign to it from |curr_token_string|,
+and point |value->pointer_value| at it.
+\initials{LDF Undated.}
+
+\LOG
+\initials{LDF 2004.11.28.}
+Now calling |new string| within a |try| block and rethrowing |bad_alloc| 
+upon failure.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+              else if (curr_catcode == STRING)
+                {
+                  
+                   string* s;
+
+                   try 
+                      {
+                         s = new string;
+                      }
+
+                   catch (bad_alloc)
+                      {
+                         cerr_strm << thread_name 
+                                   << "ERROR!  In `sub_yylex()':"
+                                   << endl << "`new string' failed.  "
+                                   << "Rethrowing `bad_alloc'.";
+
+                         log_message(cerr_strm);
+                         cerr_message(cerr_strm);
+                         cerr_strm.str();         
+
+                         throw;
+
+                      } /* |catch (bad_alloc)|  */
+
+                  *s = curr_token_string;
+                  value->pointer_value = static_cast<void*>(s); 
+                  
+                } /* |else if (curr_catcode == STRING)|  */
+
+
+@q ****** (6) Other types.@>
+
+@ Other types.  We set |value->string_value| to |curr_token_string|. 
+A value won't always be needed, but this will make it possible
+to check the token string in |yyparse|.
+\initials{LDF Undated.}
+
+@<Define scanning functions@>=
+
+              else /* Other types.  */
+                {
+
+                   strcpy(value->string_value, curr_token_string.c_str());
+
+#if DEBUG_COMPILE
+                   if (DEBUG)
+                     {
+                       cerr_strm << "In `sub_yylex()': `value->string_value' == "
+                                 << value->string_value << endl 
+                                 << "catcode == `" << name_map[curr_catcode]
+                                 << "'.";
+
+                       log_message(cerr_strm); 
+                       cerr_message(cerr_strm);
+                       cerr_strm.str(""); 
+                     }
+#endif /* |DEBUG_COMPILE|  */@; 
+
+                }  /* |else| (Other types.)  */
+
+@q ****** (6) Update positions.@>
+
+@ Update positions.  
+\initials{LDF 2004.04.04}
+
+
+\LOG
+\initials{LDF 2004.11.29.}
+@:BUG FIX@> BUG FIX: 
+Commented-out |scanner_node->putback(next_char)|.
+This seems to work, but I'll have to keep an eye on it.
+\ENDLOG 
+
+@<Define scanning functions@>=
+
+#if 0 
+              location->first_line   = start_line;
+              location->first_column = start_column;
+              location->last_line    = curr_line;
+              location->last_column  = curr_column;
+              location->position     = curr_position;
+#endif 
+
+#if DEBUG_COMPILE
+   if (DEBUG)
+     {
+#if 0 
+         cerr << "location->first_line == "
+              << location->first_line << endl;
+         cerr << "location->first_column == "
+              << location->first_column << endl;
+         cerr << "location->last_line == "
+              << location->last_line << endl;
+         cerr << "location->last_column == "
+              << location->last_column << endl;
+         cerr << "location->position == "
+              << location->position << endl;
+#endif 
+         cerr_strm << thread_name << "Exiting `sub_yylex()'.";
+
+         log_message(cerr_strm);
+         cerr_message(cerr_strm);
+         cerr_strm.str();
+     }
+#endif /* |DEBUG_COMPILE|  */@; 
+ 
+               scanner_node->set_token_string(curr_token_string);
+
+
+#if 0 
+               if (   scanner_node->get_in_type() == Io_Struct::STDIN_TYPE
+                   && next_char != EOF && !isspace(next_char))
+
+               scanner_node->putback(next_char);
+#endif 
+
+               return curr_catcode;
+
+            } /* |else| |(temp_catcode != curr_catcode)|.  */@;
+
+        } /* |else| (Not first character in token string). */@;
+
+    } /* |for|  */@;
+
+@q **** (4) End of sub_yylex() definition.@>  
+@ End of |sub_yylex| definition.  
+\initials{LDF 2004.04.04}
+
+@<Define scanning functions@>=
+
+} /* End of |sub_yylex| definition.  */
+
+@q ** (2) get_catcode() @>
+@*1 {\bf get\_catcode()}.
+\initials{LDF Undated.}
+
+
+\LOG
+\initials{LDF 2005.01.02.}
+Added code for returning |LEFT_BRACE| and |RIGHT_BRACE|.
+
+\initials{LDF 2005.01.03.}
+Now returning |SYMBOL_0| if the argument |const char c| is the
+``\copyright'' character, octal 251.  This is used internally for
+typed macro arguments in |Scan_Parse::macro_definition_func|, which
+is defined in \filename{scanprsf.web}.  This character should normally
+not be used by users in identifiers.
+\ENDLOG 
+
+@q *** (3) Declaration.@> 
+
+@<Declare scanning functions@>=
+
+unsigned int
+get_catcode(const char c);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define scanning functions@>=
+
+unsigned int
+get_catcode(const char c)
+{
+  using namespace Scan_Parse;
+
+  if (isspace(c))
+    return SPACE;
+
+  if (c == '.')
+    return PERIOD;
+
+  if (c == ',')
+    return COMMA;
+
+  if (c == ';')
+    return SEMI_COLON;
+
+  if (c == '(') // )
+    return LEFT_PARENTHESIS;
+// (
+
+  if (c == ')')
+    return RIGHT_PARENTHESIS;
+
+  if (isdigit(c))
+    return DIGIT;
+
+  if (c == '%')
+    return PERCENT;
+
+  if (c == '\"')
+    return DOUBLE_QUOTE;
+
+  if (isalpha(c) || c == '_' || c == '©')
+    return SYMBOL_0;
+
+  if (c == '<' || c == '=' || c == '>'
+      || c == ':' || c == '|')
+    return SYMBOL_1;
+
+  if (c == '`' || c == '\'')
+    return SYMBOL_2;
+
+  if (c == '+' || c == '-')
+    return SYMBOL_3;
+
+  if (c == '/' || c == '*' || c == '\\')
+    return SYMBOL_4;
+
+  if (c == '!' || c == '?')
+    return SYMBOL_5;
+
+  if (c == '#' || c == '&' || c == '@@' || c == '$')
+    return SYMBOL_6;
+
+  if (c == '^' || c == '~')
+    return SYMBOL_7;
+
+  if (c == '[' /* ] */    ) 
+    return LEFT_BRACKET;
+
+  if (c == /* [ */ ']')
+    return RIGHT_BRACKET;
+
+  if (c == '{' /* $\lbrace$ */    ) 
+    return LEFT_BRACE;
+
+  if (c == /* $\rbrace$ */ '}')
+    return RIGHT_BRACE;
+
+} /* End of |get_catcode| definition.  */
+
+@q * (1) Putting the scanner together.@>
+@* Putting the scanner together.
+\initials{LDF Undated.}
+  
+@ This is what's compiled.
+@c
+@<Include files@>@;
+@<Declare scanning functions@>@;
+@<Define scanning functions@>@;
+
+
+@ This is what's written to \filename{scan.h}.
+@(scan.h@>=
+@<Declare scanning functions@>@;
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 70))    @>
+
+
+
+
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>
+ 

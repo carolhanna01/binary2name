@@ -1,0 +1,60 @@
+#include <stdio.h>
+#include <sys/time.h>
+#include "queue.h"
+#include <limits.h>
+#include <elan/intrinsics.h>
+#define EW_MAXBACKOFFBREAKS           524287 
+
+/*Macro predicate that returns 1 if there is no room left in the remote queue*/
+
+ELAN_EVENT done;
+
+asm (".align 32");
+void Queue_Thread(queue_t *queue_ptr)
+{
+
+  register int array_tail=0; 
+  int i,bc=1;
+  register int *dest_address;
+  int remote_node;
+  register int rc;
+  volatile int *message_ptr,*message_base;
+
+  /*message ptr points to a contiguous array of 32 byte messages*/
+  message_base=message_ptr=queue_ptr->message_ptr;
+  ELAN_CLEAREVENT(&done);
+  dest_address = queue_ptr->queue_base_ptr;/*never changes*/
+
+
+/*type = 1 or 2
+  remote_node
+  6 words of data*/
+Start:
+    while (!(remote_node=*message_ptr))
+      c_break();
+    
+    loopA:
+	c_open(remote_node-1);
+	c_sendtrans1(TR_EQ,dest_address,NULL)
+	asm("ew_cb_se_begin:");
+	c_sendtrans (TR_WRITEBLOCK|TR_SENDACK, dest_address, message_ptr);
+	rc= c_close();
+	asm("ew_cb_se_end:");
+
+      if (rc == C_ACK){
+	*message_ptr=0; /*Clear message element*/
+	array_tail=(array_tail+1)&(queue_ptr->queue_size-1);
+	message_ptr=message_base+(array_tail*8);
+	bc=1;/*reset backoff parameter*/
+	goto Start;}
+      
+      for (i = 0; i < bc; i++)
+	c_break ();
+      if ((bc <<= 1) > EW_MAXBACKOFFBREAKS)
+	bc = EW_MAXBACKOFFBREAKS;
+goto loopA;
+    
+  c_suspend();
+}
+
+

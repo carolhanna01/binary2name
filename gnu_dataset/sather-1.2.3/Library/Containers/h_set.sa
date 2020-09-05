@@ -1,0 +1,178 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+--    Much of the implementation was written by Holger
+
+class SET{ETP} < $SET{ETP} is
+   -- A standard set is implemented using H_SETs after making all
+   -- the modification functions public
+   -- 
+   -- Usage:
+   --   s ::= #SET{INT}(|1,2,3|);
+   --   a:INT := 0; loop a := a+s.elt!; end;  -- Add all the elements
+   --   if s.has(3) then #OUT+"Set has the value 3" end;
+   --   s2:SET{INT} := #SET{INT}(|4,3,6|);
+   --   #OUT+" Size of union="+s.union(s2).size+"\n" -- Prints out 1
+   
+   include H_SET_IMPL{ETP};
+   include SET_INCL{ETP} clear->;
+   
+end;
+-------------------------------------------------------------------
+class VSET{ETP} < $VSET{ETP} is
+   -- A set with value semantics. All modifying operations return a new
+   -- object, thus eliminating the possibility of aliasing problems
+   include H_SET_IMPL{ETP}
+	 insert->private insert,
+	 delete->private delete,
+	 clear->private clear,
+	 insert_replace->private insert_replace;
+   include RO_SET_INCL{ETP};
+   
+   insert(e:ETP):SAME is
+      res ::= copy;    res.insert(e);     return res;
+   end;
+   
+   delete(e:ETP):SAME is
+      res ::= copy;  res.delete(e); return res;
+   end;
+
+   is_eq(a:$OB):BOOL is
+      -- Return true if 'self' and 'v' have the same value
+      typecase a
+      when $RO_BAG{ETP} then 
+	 if size /= a.size then return false; end;
+	 loop e:ETP := a.unique!;
+	    if count(e)/=a.count(e) then return false; end;
+	 end;
+	 return true;
+      else return false end;
+   end;
+
+   hash:INT is
+      res:INT := 0; loop e ::= elt!; res := res.bxor(elt_hash(e)); end;
+      return res;
+   end;
+end;
+-------------------------------------------------------------------
+class H_SET_IMPL{ETP} is
+    -- Implementation of sets using dynamic hash tables.  This
+    -- implementation is also capable of dealing with equal but not
+    -- same objects.
+   private include DYNAMIC_BUCKET_TABLE{ETP,BUCKET{ETP}} 
+	 map_copy->copy, create->create;
+   
+   size: INT is return n_inds end;
+   
+   has(e:ETP): BOOL pre ~void(self) is
+      loop
+	 if elt_key_eq(bucket(hash(e)).list!.item,e) then return true end;
+      end;
+      return false;
+   end;
+
+   get(e:ETP):ETP  pre ~void(self) is 
+      -- Returns the element equal to 'e' from the set.
+      -- Returns void or E::nil if there is no such element.
+      -- Self may not be void.
+      loop
+	 i ::= bucket(hash(e)).list!.item;
+	 if elt_key_eq(i,e) then return i end
+      end;
+      return elt_key_nil
+   end;
+
+   elt!:ETP pre ~void(self) is
+      loop
+	 b ::= bucket( 0.upto!(bound+split_pos-1) );
+	 loop yield b.list!.item; end
+      end
+   end;
+
+   --              ------ Insertion/Removal --------------- 
+   insert(e:ETP) pre ~void(self) is
+      h ::= hash(e);
+      loop
+	 if elt_key_eq(bucket(h).list!.item,e) then return end;
+      end;
+      set_bucket( h, #BUCKET{ETP}(e,bucket(h)) );
+      n_inds := n_inds + 1;
+      update_insert
+   end;
+
+   delete(e:ETP) is discard ::= delete_and_return(e) end;
+
+   clear is
+      -- Extremely inefficient.  Must be rewritten by someone who has
+      -- looked at the implementation (delete(elt!) may have problems)
+      -- Creates a separate list of elements to delete to separte out
+      -- iteration from modification
+      elts: ARRAY{ETP} := #(n_inds);
+      loop elts.set!(elt!) end;
+      loop delete(elts.elt!) end;
+   end;
+
+   -- The next routines deal with the problem of elements
+   -- being equal but not same.
+   delete_and_return(e:ETP):ETP 	pre ~void(self) is
+      -- Removes an element from the set. Returns the deleted element.
+      -- Returns void (or E::nil if E inherits $NIL{ETP}) if there is
+      -- no element to delete.
+      h ::= hash(e);
+      b ::= bucket(h);
+      prev ::= b; prev := void; -- NASTY HACK
+      loop until!( void(b) or elt_key_eq(b.item,e) );
+	 prev := b;
+	 b := b.next
+      end;
+      if void(b) then return void end;
+      res ::= b.item;
+      if void(prev) then set_bucket( h, b.next )
+      else  prev.next(b.next) end;
+      n_inds := n_inds - 1;
+      update_delete;
+      return res
+   end;
+
+   insert_replace(e:ETP) pre ~void(self) is
+      -- Inserts e into the set. If there is already an
+      -- element equal to e in the set, the old element
+      -- will be replaced.
+      dummy ::= insert_replace(e)
+    end;
+
+   insert_replace(e:ETP):ETP   pre ~void(self)  is
+      -- Does the same like insert_replace but returns
+      -- the old element which is being replaced or the
+      -- same object if there was no old one.
+      old:ETP;
+      h ::= hash(e);
+      firstb ::= bucket(h);
+      loop
+	 b ::= firstb.list!;
+	 old := b.item;
+	 if elt_key_eq(old,e) then
+	    b.item(e);
+	    return old
+	 end
+      end;
+      set_bucket(h,#BUCKET{ETP}(e,firstb));
+      n_inds := n_inds + 1;
+      update_insert;
+      return e
+   end;
+
+   
+end; -- H_SET{ETP}
+-------------------------------------------------------------------

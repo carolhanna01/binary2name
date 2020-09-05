@@ -1,0 +1,154 @@
+<html lang="en">
+<head>
+<title>Converting EPS Files - 3DLDF User and Reference Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="3DLDF User and Reference Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="start" href="index.html#Top">
+<link rel="up" href="Running-3DLDF.html#Running-3DLDF" title="Running 3DLDF">
+<link rel="prev" href="Running-3DLDF.html#Running-3DLDF" title="Running 3DLDF">
+<link rel="next" href="Command-Line-Arguments.html#Command-Line-Arguments" title="Command Line Arguments">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+This is the 3DLDF User and Reference Manual, edition 1.1.5.1 for
+3DLDF 1.1.5.1.
+This manual was last updated on
+16 January 2004.
+
+3DLDF is a GNU package for three-dimensional drawing with MetaPost
+output.
+The author is Laurence D. Finston.
+
+Copyright (C) 2003, 2004 , 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, no Front-Cover Texts, and
+     no Back-Cover Texts.  A copy of the license is included in the
+     section entitled ``GNU Free Documentation License''.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+</head>
+<body>
+<div class="node">
+<a name="Converting-EPS-Files"></a>
+<p>
+Next:&nbsp;<a rel="next" accesskey="n" href="Command-Line-Arguments.html#Command-Line-Arguments">Command Line Arguments</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="Running-3DLDF.html#Running-3DLDF">Running 3DLDF</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="Running-3DLDF.html#Running-3DLDF">Running 3DLDF</a>
+<hr>
+</div>
+
+<h4 class="subsection">11.2.1 Converting EPS Files</h4>
+
+<p><a name="index-ImageMagick-104"></a><a name="index-ImageMagick-convert-105"></a><a name="index-convert-_0028ImageMagick_0029-106"></a><a name="index-PNG-_0028Portable-Network-Graphics_0029-107"></a><a name="index-Portable-Network-Graphics-_0028PNG_0029-108"></a><a name="index-PS-_0028PostScript_0029-109"></a><a name="index-PostScript-_0028PS_0029-110"></a><a name="index-structured-PostScript-111"></a><a name="index-PostScript_002c-structured-112"></a><a name="index-EPS-_0028Encapsulated-PostScript_0029-113"></a><a name="index-Encapsulated-PostScript-_0028EPS_0029-114"></a><a href="http://www.imagemagick.org">ImageMagick</a> is a
+&ldquo;collection of tools and libraries&rdquo; for image manipulation. 
+It provides a `<tt>convert</tt>' utility which can convert images from one
+format to another.  It can convert structured PostScript (PS) to
+to <a href="http://www.libpng.org/pub/png/index.html">Portable Network Graphics (PNG)</a>, but <em>not</em>
+EPS (Encapsulated PostScript) to PNG.  Nor can it convert EPS to
+structured PostScript.
+
+   <p>It is possible to have MetaPost generate structured PostScript directly
+by including the command &lsquo;<samp><span class="samp">prologues:=1;</span></samp>&rsquo; at the beginning of the
+MetaPost input. 
+However, this &ldquo;generally doesn't work when you use TeX
+fonts.&rdquo;<a rel="footnote" href="#fn-1" name="fnd-1"><sup>1</sup></a>
+This is a significant problem if your labels contain math mode
+material, and you haven't already taken steps to ensure that appropriate
+fonts will be used in the PS output.
+
+   <p>In the following, I describe the <em>only way</em> I've found to convert
+an EPS image to PNG format while still using TeX fonts.  There may be
+other and better ways of doing this, but I haven't found them.
+
+     <ol type=1 start=1>
+<li>Assume the EPS image is in the file <samp><span class="file">3DLDFmp.1</span></samp>
+Include the EPS image in a TeX file
+which looks like this:
+
+     <pre class="example">          \advance\voffset by -1in
+          \advance\hoffset by -1in
+          \nopagenumbers
+          \input epsf
+          \epsfverbosetrue
+          \def\epsfsize#1#2{#1}
+          \setbox0=\vbox{\epsffile{3DLDFmp.1}}
+          \vsize=\ht0
+          \hsize=\wd0
+          \special{papersize=\the\wd0,\the\ht0}
+          \box0
+          \bye
+</pre>
+     <p><b>Do not</b> name this file <samp><span class="file">3DLDFmp.1.tex</span></samp>! 
+While this worked fine for me on a DECalpha Personal Workstation
+running under Tru64 Unix 5.1, with TeX, Version 3.1415
+(C version 6.1), and <b>dvipsk</b> 5.58f,
+it failed on a PC Pentium II XEON under Linux 2.4,
+with TeX, Version 3.14159 (Web2C 7.4.5), and
+<b>dvips(k)</b> 5.92b, kpathsea version 3.4.5,
+with the following error message:
+     <pre class="display">          &ldquo;No BoundingBox comment found in file examples.1; using defaults&rdquo;
+</pre>
+     <p class="noindent">The resulting PS image had the wrong size and the
+the graphic was positioned improperly.
+
+     <p>Apparently, it confuses the EPSF macros when the name of an
+included image is the same as &lsquo;<samp><span class="samp">\jobname</span></samp>&rsquo;. 
+So, for this example, let's call it <samp><span class="file">3DLDFmp.1_.tex</span></samp>.
+
+     <p>You don't really need to call the macro &lsquo;<samp><span class="samp">\epsfverbosetrue</span></samp>&rsquo;.  If you
+do, it will print the measurements of the bounding box and other information
+to standard output.<a rel="footnote" href="#fn-2" name="fnd-2"><sup>2</sup></a>
+
+     <li>Run &lsquo;<samp><span class="samp">tex 3DLDFmp.1_.tex</span></samp>&rsquo;.
+
+     <li>Run &lsquo;<samp><span class="samp">dvips -o 3DLDF.1.ps 3DLDFmp.1_.dvi</span></samp>&rsquo;.
+
+     <li>Run &lsquo;<samp><span class="samp">convert 3DLDF.1.ps 3DLDFmp.1.png</span></samp>&rsquo;.
+        </ol>
+
+   <p><a name="index-ImageMagick-115"></a><a name="index-ImageMagick-display-116"></a><a name="index-display-_0028ImageMagick_0029-117"></a><a href="http://www.imagemagick.org">ImageMagick</a>
+supplies a `<samp><span class="command">display</span></samp>' utility, which can be used to display the
+PNG image:
+
+<pre class="example">     display 3DLDFmp.1.png
+</pre>
+   <p>It can be included in an HTML document as follows:
+
+<pre class="example">     &lt;img src="3DLDFmp.1.png"
+              alt="[Fig. 1]."
+</pre>
+   <p><a name="index-CD_002dR-_0028Compact-Disk_002c-Recordable_0029-118"></a><a name="index-Compact-Disk_002c-Recordable-_0028CD_002dR_0029-119"></a><b>Please note!</b>  The PNG files for this manual are now called
+filename <samp><span class="file">3DLDF1.png</span></samp>,  <samp><span class="file">3DLDF2.png</span></samp>, <small class="dots">...</small>,
+<samp><span class="file">3DLDF199.png</span></samp>,
+because I wasn't able to write files
+with names like <samp><span class="file">3DLDFmp.&lt;</span><i>number</i><span class="file">&gt;.png</span></samp> to a CD-R (Compact
+Disk, Recordable), when `<i>number</i>' had more than one digit.
+
+<ul class="menu">
+<li><a accesskey="1" href="Converting-EPS-Files-ELISP.html#Converting-EPS-Files-ELISP">Converting EPS Files ELISP</a>
+</ul>
+
+   <div class="footnote">
+<hr>
+<h4>Footnotes</h4><p class="footnote"><small>[<a name="fn-1" href="#fnd-1">1</a>]</small> Hobby, <cite>A User's Manual for MetaPost</cite>, pp.&nbsp;<!-- /@w -->21&ndash;22.</p>
+
+   <p class="footnote"><small>[<a name="fn-2" href="#fnd-2">2</a>]</small> Rokicki, <cite>Dvips: A DVI-to-PostScript Translator</cite>, p.&nbsp;<!-- /@w -->24.</p>
+
+   <hr></div>
+
+   </body></html>
+

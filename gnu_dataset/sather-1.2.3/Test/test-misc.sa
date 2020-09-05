@@ -1,0 +1,217 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class TEST_MISC is
+
+    include TEST;
+ 
+    attr attr_i,attr_j,attr_k,attr_z:INT;
+
+    shared s1:INT;
+    shared s2:INT:=1;
+    shared s3:INT:=s2+1;
+
+    const c1:INT:=0;
+    const c2:INT:=c1+1;
+
+    create:SAME is return new; end;
+
+    main is
+
+	class_name("Misc");
+
+	test("shareds and const init",""+s1+' '+s2+' '+s3+' '+c1+' '+c2,"0 1 2 0 1");
+
+	i::=1;
+	j::=i+1;
+	k::=1+j;
+	kk:INT;
+        test("local vars",""+i+' '+j+' '+k+' '+kk,"1 2 3 0");
+
+        outp:STR:="";
+	loop outp:=outp+1.upto!(10)+' '; end;
+	test("simple iter",outp,"1 2 3 4 5 6 7 8 9 10 ");
+
+        attr_i:=1;
+	attr_j:=attr_i+1;
+	attr_k:=1+attr_j;
+	test("simple attr",""+attr_i+' '+attr_j+' '+attr_k+' '+attr_z,"1 2 3 0");
+
+        a:ARRAY{INT}:=|9,8,7,6,5,4,3,2,1,0|;
+        loop i:=0.upto!(4);
+            -- reverse order
+            temp::=a[i];
+            a[i]:=a[9-i];
+            a[9-i]:=temp;
+        end;
+	outp:="";
+        loop i:=0.upto!(9); outp:=outp+a[i]+' '; end;
+	test("Simple array",outp,"0 1 2 3 4 5 6 7 8 9 ");
+
+	outp:="";
+	b:$A:=#B;
+	typecase b when B then outp:=outp+"first "; end;
+	typecase b when $A then outp:=outp+"second "; end;
+	typecase b when C then else outp:=outp+"third"; end;
+	test("simple typecase",outp,"first second third");
+
+	outp:="";
+	loop outp:=outp+primes!+' '; end;
+	test("complex iter",outp,"2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 ");
+
+	c:$A:=#C;
+	test("routine dispatch",b.str+' '+c.str+' '+b.op(2,3)+' '+c.op(2,3),
+				  "first second 5 6");
+	outp:="";
+	b2:$AA:=#B;
+	c2:$AA:=#C;
+	loop outp:=outp+b2.it!+' '+c2.it!+' '; end;
+	test("iter dispatch",outp,"B1 C1 B2 C2 ");
+
+	test("basic arith",(2.0+3.0).str+' '+(2.0*3.0).str,"5 6");
+
+        x::=#CPX(1.0,2.0);
+	x:=x.re(4.0);
+        test("cpx",x.str+' '+(-x).str+' '+x.absolute,"4+2i -4-2i 4.47214");
+
+	z,y:D;
+	z:=y;
+	loop
+	    i:=0.upto!(3); 
+	    z:=z.aset(i,i.flt);
+	end;
+	outp:="";
+	loop outp:=outp+y[0.upto!(3)]+' '; end;
+	loop outp:=outp+z[0.upto!(3)]+' '; end;
+	int1::=123456;
+	int2::=654321;
+	loop ii::=0.upto!(31); int2:=int2.aset(ii,int1[ii]); end;
+	outp:=outp+int2;
+	test("value aset/aget",outp,"0 0 0 0 0 1 2 3 123456");
+
+        aa,bb:D;
+	aaa:$A;
+	aaa:=aa.x(2).y(3);
+	typecase aaa when D then bb:=aaa; end;
+	test("boxing",aaa.str+' '+bb.x+' '+bb.y+' '+aaa.op(2,3),"bing 2 3 7");
+
+	--
+	outp:="";
+	outp:= SYS::str_for_tp(SYS::tp(b)) + ' '
+	     + SYS::str_for_tp(SYS::tp(c)) + ' '
+	     + SYS::str_for_tp(SYS::tp(aaa)) + ' '
+	     + SYS::ob_eq(b,b) + ' ' 
+	     + SYS::ob_eq(b,c) + ' '
+	     + SYS::ob_eq(aa,aa) + ' '
+	     + SYS::ob_eq(aa,bb) + ' ';
+	bb:=aa;
+	outp:=outp + SYS::ob_eq(aa,bb);
+	test("SYS class",outp,"B C D true false true false true");
+
+        --
+        --#OUT + "Test of invariant, should output \"called\":\n";
+	--e::=#E;
+
+	d2,d3:D;
+	d3:=d3.x(1);
+        test("void test",""+void(d2)+' '+void(d3),"true false");
+
+        br1:ROUT{INT,STR}:STR:=bind(self.foo(_,2,_));
+        br2:ROUT:INT:=bind(self.foo2);
+        test("bound routines",br1.call(1,br2.call.str),"1 2 3");
+
+	s::="failed";
+	protect
+	    raise 3;
+	when INT then s:="passed";
+	end;
+	test("exception1",s,"passed");
+
+	s:="failed";
+	protect
+	    loop
+		protect
+		    break!;
+		else
+		end;
+	    end;
+	    raise 4;
+	when INT then s:="passed";
+	end;
+	test("exception2",s,"passed");
+
+        finish;
+
+    end;
+
+    foo(x,y:INT,s:STR):STR is return "" + x + " " + y + " " + s end;
+
+    foo2:INT is return 3 end;
+
+    sieve!(aprime:INT):BOOL is
+	d::=aprime;
+	yield true;
+	loop
+	    if d.evenly_divides(aprime) then yield false;
+	    else yield sieve!(aprime);
+	    end;
+	end;
+    end;
+
+    primes!:INT is
+	loop
+	    v::=2.upto!(50);
+	    if sieve!(v) then yield v; end;
+	end;
+    end;
+ 
+end;
+
+abstract class $A is
+    str:STR;
+    op(a,b:INT):INT;
+end;
+
+abstract class $AA is
+    it!:STR;
+end;
+
+class B<$A,$AA is
+    create:SAME is return new; end;
+    str:STR is return "first"; end;
+    op(a,b:INT):INT is return a+b; end;
+    it!:STR is yield "B1"; yield "B2"; end;
+end;
+
+class C<$A,$AA is
+    create:SAME is return new; end;
+    str:STR is return "second"; end;
+    op(a,b:INT):INT is return a*b; end;
+    it!:STR is yield "C1"; yield "C2"; end;
+end;
+
+immutable class D < $A is
+    include AVAL{FLT} asize->;
+    const asize:INT:=4;
+
+    attr x,y:INT;
+
+    str:STR is return "bing"; end;
+    op(a,b:INT):INT is return 2*a+b; end;
+end;
+
+class E is
+    create:SAME is return new; end;
+    invariant:BOOL is #OUT + "called.\n\n"; return true; end;
+end;
+

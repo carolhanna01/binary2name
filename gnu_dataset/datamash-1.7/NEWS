@@ -1,0 +1,208 @@
+* Noteworthy changes in release 1.7 (2020-04-23) [testing]
+
+** New Features
+
+  decorate(1): new program - sorts input in non-standard ordering, e.g.
+  IPv4, IPv6, roman numerals.
+
+  New operations: sha224/sha384.
+
+  New operations: geomean (Geometric mean) and harmmean (Harmonic mean).
+
+
+* Noteworthy changes in release 1.6 (2020-02-24) [stable]
+
+** Bug Fixes
+
+  The 'gutnum' operation (introduced in vresion 1.5) now correctly
+  prints detected numbers without truncating them.
+
+
+* Noteworthy changes in release 1.5 (2019-09-17) [stable]
+
+** New Features
+
+  Datamash now accepts backslash-escaped characters in field names.
+  This allows working with named fields containing dash/mins,colons,commas
+  or field names starting with digits (Note the interplay between
+  backslash and shell quoting). The following are equivalent,
+  and sum an input field named 'FOO-BAR':
+      datamash -H sum FOO\\-BAR < input.txt
+      datamash -H sum 'FOO\-BAR' < input.txt
+      datamash -H sum "FOO\\-BAR" < input.txt
+
+  New operations: dirname, basename
+  These behave just like dirname(1) and basename(1):
+     $ echo /home/foo/bar.txt | datamash dirname 1 basename 1
+     /home/foo    bar.txt
+
+  New operations: extname, barename
+  'extname' extract the extension of the file name.
+  'barename' (not to be confused with 'basename') extract the basename
+  without the extension.
+  Example:
+     $ echo /home/foo/bar.tar.gz | datamash barename 1 extame 1
+     bar         tar.gz
+
+  New operation: getnum
+  This operation extracts a number from a string.
+  'getnum' accepts an optional single letter option:
+     getnum:n - natural numbers (positive integers, including zero)
+     getnum:i - integers
+     getnum:d - decimal point numbers
+     getnum:p - positive decimal point numbers (this is the default)
+     getnum:h - hex numbers
+     getnum:o - octal numbers
+   Examples:
+     $ echo foo-42.0-bar | datamash getnum 1
+     42.0
+     $ echo foo-42.0-bar | datamash getnum:n 1
+     42
+     $ echo foo-42.0-bar | datamash getnum:i 1
+     -42
+     $ echo foo-42.0-bar | datamash getnum:d 1
+     -42.0
+
+  New operation: cut
+  Similar to cut(1), it copies the input field to the output as-is.
+  The advantage over cut(1) is that combined with datamash's other features,
+  input fields can be specified by name instead of column number, and
+  output fields can be re-ordered and duplicated.
+  Example:
+    $ printf "a b c\n1 X 6\n" | datamash -W -H cut c,a,c
+    cut(c)  cut(a)  cut(c)
+    6       1       6
+
+** Bug fixes
+
+  Datamash now correctly calculates mode/antimode for negative values.
+  In version 1.4 and earlier, the following produced incorrect results:
+    $ echo -1 | datamash-1.4 mode 1
+    1.844674407371e+19
+
+
+
+* Noteworthy changes in release 1.4 (2018-12-22) [stable]
+
+** New Features
+
+  New option: -C/--skip-comments to skip comment lines (lines starting
+  with '#' or ';' and optional whitespace).
+
+
+* Noteworthy changes in release 1.3 (2018-03-16) [stable]
+
+** New Features
+
+  New option: --format=FMT sets printf style floating-point format.
+  Example:
+     $ echo '50.5' | datamash --format "%07.3f" sum 1
+     050.500
+     $ echo '50.5' | datamash --format "%07.3e" sum 1
+     5.050e+01
+
+  New option: -R/--round=N rounds numeric values to N decimal places.
+
+  New option: --output-delimiter=X overrides -t/-W.
+
+  New operation: trimmean (trimmed mean value).
+  To calculate 20% trimmed mean:
+     $ printf "%s\n" 13 3 7 33 3 9 | datamash  trimmean:0.2  1
+     8
+
+
+** Bug fixes
+
+  Datamash now builds correctly with external OpenSSL libraries
+  (./configure --with-openssl=yes). The 'configure' script now reports
+  whether internal or external libraries are used:
+
+     $ ./configure [OPTIONS]
+     [...]
+     Configuration summary for datamash
+         md5/sha*: internal (gnulib)
+  OR
+         md5/sha*: external (-lcrypto)
+
+
+* Noteworthy changes in release 1.2 (2017-08-22) [stable]
+
+** New Features
+
+  New operations:
+    perc (percentile),
+    range (max-min of values in group/column)
+
+  Improved 'check' operation:
+    Expected number of lines/fields can be specified as parameter.
+
+** Improvements
+
+  Improved bash-completion script installation path (see README for details).
+
+
+* Noteworthy changes in release 1.1.1 (2017-01-19) [stable]
+
+** Bug fixes
+
+  'check' command correctly counts a trailing delimiter at end of lines.
+
+  'transpose' command correctly handles missing fields on the last line.
+
+
+* Noteworthy changes in release 1.1.0 (2016-01-16) [stable]
+
+** New Features
+
+  Bumped version to 1.1.0 to better comply to semver.
+
+  New operations:
+   crosstab (cross-tabulation / pivot-tables),
+   check (verify tabular structure),
+   bin (bin numeric values)
+   strbin (bin strings values)
+   pearson correlation,
+   covariance,
+   rounding functions: round,floor,ceil,trunc,frac
+
+** Improvements
+
+  Speed, Portability, Tests, Coverage improvements.
+
+
+* Noteworthy changes in release 1.0.7 (2015-06-29) [stable]
+
+** New Features
+
+  New operations: md5, sha1/256/512, base64, rmdup.
+
+  New option --narm to ignore NaN/NA values.
+
+  New feature: ability to specify field by names instead of numbers
+  (require using --header-in or -H).
+
+  New translations added.
+
+** Improvements
+
+  Speed, Portability, Coverage improvements.
+
+
+* Noteworthy changes in release 1.0.6 (2014-07-29) [stable]
+
+** New Features
+
+  New operations: transpose, reverse.
+
+** Improvements
+
+  Tests: improve portability, add I/O error tests, add few edge-case tests.
+
+  Build: improve man-page generation, cross-compiling, auxiliary build scripts.
+
+  Documentation: expand and fix man-page (and shorten --help screen).
+
+
+* Noteworthy changes in release 1.0.5 (2014-07-15) [stable]
+
+First release as GNU Datamash.

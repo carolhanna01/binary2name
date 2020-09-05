@@ -1,0 +1,165 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class FLIST_TEST is
+   include TEST;
+   -- Note that TEST_FSTR is actually a pretty rigorous test of FLIST
+   
+   shared ialg: ARR_ALG{INT,FLIST{INT}};
+   
+   main is
+      class_name("FLIST{STR}");
+      l1 ::= #FLIST{STR}.push("a").push("b").push("c").push("d");
+      l2 ::= #FLIST{STR}.push("a2").push("b2").push("c").push("d2");
+      l3 ::= #FLIST{STR}.push("a3").push("b3").push("c3").push("d3");
+      l4 ::= #FLIST{STR};
+      test("size",l1.size.str,4.str);
+      l1res:ARRAY{STR} := |"a","b","c","d"|;
+      test("elts",l1.str,l1res.str);
+      l2res:ARRAY{STR} := |"a2","b2","c","d2"|;
+      test("elts",l2.str,l2res.str);
+      l3res:ARRAY{STR} := |"a3","b3","c3","d3"|;
+      test("elts",l3.str,l3res.str);
+      l4res:ARRAY{STR} := #;
+      test("elts",l4.str,l4res.str);
+      l11 ::= l1.copy;
+      test("equal",l1.equals(l11).str,true.str);
+      test("equal",l1.equals(l3).str,false.str);
+      test("empty",l1.is_empty.str,false.str);
+      l9 ::= l1.copy;
+      l9.clear;
+      test("clear",l9.is_empty.str,true.str);
+      test("has",l1.has("a").str,true.str);
+      l1apres ::= #FLIST{STR}(|"a","b","c","d","a2","b2","c","d2"|);
+      test("append",l1.append(l2).str,l1apres.str);
+      l1unres ::= #FLIST{STR}(|"a","b","c","d","a2","b2","d2"|);
+      test("union",l1.union(l2).str,l1unres.str);
+      l1inres ::= #FLIST{STR}(|"c"|);
+      test("intersect",l1.intersect(l2).str,l1inres.str);
+      l1diffres ::= #FLIST{STR}(|"a","b","d"|);
+      test("difference",l1.difference(l2).str,l1diffres.str);
+      l1sdiffres ::= #FLIST{STR}(|"a","b","d","a2","b2","d2"|);
+      test("sym_difference",l1.sym_difference(l2).str,l1sdiffres.str);
+      l1subres ::= #FLIST{STR}(|"b","c"|);
+      test("sub list",l1.sublist(1,2).str,l1subres.str);
+      l10 ::= l1.copy;
+      l10.to_reverse;
+      l1revres ::= #FLIST{STR}(|"d","c","b","a"|);
+      test("destructive reverse",l10.str,l1revres.str);
+      l1.clear;
+      l1 := l1.push("a").push("b").push("c").push("d");
+      l5 ::= l1.copy;
+      l6 ::= l1.copy;
+      l5.delete(1);
+      l1delres ::= #FLIST{STR}(|"a","d","c"|);
+      test("delete ",l5.str,l1delres.str);
+      l5 := l5.delete_elt("a");
+      l1delelres ::= #FLIST{STR}(|"c","d"|);
+      test("delete elt",l5.str,l1delelres.str);
+      l6res ::= #FLIST{STR}(|"a","b","c","d"|);
+      test("l6",l6.str,l6res.str);
+      l6 := l6.delete_ordered(0);
+      l6res2 ::= #FLIST{STR}(|"b","c","d"|);
+      test("delete_ordered",l6.str,l6res2.str);      
+      l6 := l6.delete_elt_ordered("c");
+      l6resdo2 ::= #FLIST{STR}(|"b","d"|);
+      test("delete_elt_ordered",l6.str,l6resdo2.str);
+      lcatres ::= #FLIST{STR}(|"a","b","c","d","a2","b2","c","d2"|);
+      test("concat",l1.concat(l2).str,lcatres.str);
+      ll1 ::= #FLIST{INT}(|1,2,3,4|);
+      ll2 ::= #FLIST{INT};	-- May be modified after test, don't reuse
+      test("concat",ll1.concat(ll2).str,ll1.str);
+      ll3 ::= #FLIST{INT}(|1,2,3,4|);
+      ll4 ::= #FLIST{INT};
+      test("concat",ll4.concat(ll3).str,ll3.str);
+      
+      la1 ::= #FLIST{INT}(|1,2,3,4|);
+      la2 ::= #FLIST{INT};	
+      test("append",la1.concat(la2).str,la1.str);
+      la3 ::= #FLIST{INT}(|1,2,3,4|);
+      la4 ::= #FLIST{INT};
+      test("append",la4.concat(la3).str,la3.str);
+      test("append",la4.str,la4.str);
+      
+      k1: FLIST{INT} := #FLIST{INT}(|1,4,5|);
+      loop k1.set!(3); end;
+      test("set!",k1.str,#FLIST{INT}(|3,3,3|).str);
+      k1.fill(5);
+      test("fill",k1.str,#FLIST{INT}(|5,5,5|).str);
+      ialg.replace(k1,5,3);
+      test("replace",k1.str,#FLIST{INT}(|3,3, 3|).str);
+      k2: FLIST{INT} := #FLIST{INT}(|1,4,5,6,7|);
+      ialg.replace_if(k2,bind(_.is_lt(5)),15);
+      test("replace_if",k2.str,#FLIST{INT}(|15,15,5,6,7|).str);
+      k3: FLIST{INT} := #FLIST{INT}(|1,4|);
+      test("inds",k3.inds.str,#FLIST{INT}(|0,1|).str);
+      k4: FLIST{INT} := #FLIST{INT}(|7,4,5|);
+      k5: FLIST{INT} := #FLIST{INT}(|1,2,0|);
+      k6: FLIST{INT} := #FLIST{INT}(|9,9,9|);
+      -- k4 permuted by k5 into k6?
+      permute_into(k4,k5,k6);
+      test("permute_into",k6.str,#FLIST{INT}(|5,7,4|).str);
+      m: FLIST{INT} := #(|1,2,3,4|);
+      n: ARRAY{INT} := |2,3,4|;
+      rbef : ARRAY{INT} := |2,3,4,1,2,3,4|;
+      raft : ARRAY{INT} := |1,2,3,4,2,3,4|;
+      raft0 : ARRAY{INT} := |1,2,3,4,1|;
+      rbef0 : ARRAY{INT} := |-10,1,2,3,4|;
+      raft1 : ARRAY{INT} := |1,2,3,-10,4|;
+      rbef1 : ARRAY{INT} := |1,2,-10,3,4|;
+      mc ::= m.copy;
+      test("copy",mc.str,m.str);
+      test("insert after", mc.insert_after(m.size-1,1).str,raft0.str);
+      mc := m.copy;
+      test("insert before", mc.insert_before(0,-10).str,rbef0.str);
+      mc := m.copy;
+      test("insert after", mc.insert_after(2,-10).str,raft1.str);
+      mc := m.copy;
+      test("insert before", mc.insert_before(2,-10).str,rbef1.str);
+      mc := m.copy;
+      test("insert all before",mc.insert_all_before(0,n).str,rbef.str);
+      mc := m.copy;
+      test("insert all after ", mc.insert_all_after(m.size-1,n).str,raft.str);
+      mc := m.copy;
+      o: ARRAY{INT} := |2,3,4,5,6,7|;
+      rbef2 : ARRAY{INT} := |2,3,4,5,6,7,1,2,3,4|;
+      raft2 : ARRAY{INT} := |1,2,3,4,2,3,4,5,6,7|;
+      test("insert all before 2",mc.insert_all_before(0,o).str,rbef2.str); 
+      mc := m.copy;
+      test("insert all after 2", mc.insert_all_after(m.size-1,o).str,raft2.str);
+      mc := m.copy;
+      -- m = 1,2,3,4
+      -- Erik's tests for the -1 case
+      raft3 : ARRAY{INT} := |-10,1,2,3,4|;
+      rbef3 : ARRAY{INT} := |1,2,3,-10,4|;
+      raft4 : ARRAY{INT} := |2,3,4,1,2,3,4|;
+      rbef4 : ARRAY{INT} := |1,2,3,4,2,3,4|;
+      test("insert after (-1)", mc.insert_after(-1,-10).str,raft3.str);
+      mc := m.copy;
+      test("insert before (size)", mc.insert_before(mc.size-1,-10).str,rbef3.str);
+      mc := m.copy;
+      test("insert all after (-1)", mc.insert_all_after(-1,n).str,raft4.str);
+      mc := m.copy;
+      test("insert all before (size)",mc.insert_all_before(mc.size,n).str,rbef4.str);
+      
+      finish;
+   end;
+   
+   permute_into(a1,a2,a3: FLIST{INT}) is
+      ARR_PERMUTE_ALG{INT,FLIST{INT}}::permute_into(a1,a2,a3);
+   end;
+
+end;
+-------------------------------------------------------------------

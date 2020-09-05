@@ -1,0 +1,709 @@
+@c gspaths.texi
+ 
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+  
+@node Paths, Plane Figures, Drawing and Labeling Points, Top
+@chapter Paths
+
+@tindex Path
+@cindex paths
+@cindex connectors
+@c
+@code{Points} alone are not enough for making useful drawings.  The next
+step is to combine them into @code{Paths}, which are similar to
+Metafont's @b{paths}, except that they are three-dimensional.
+A @code{Path} consists of a number of @code{Points} and @code{strings}
+representing the @dfn{connectors}.  The latter are not processed by
+3DLDF, but are passed unchanged to the output file.  They must be valid
+connectors for MetaPost, e.g.:
+
+@cindex curl
+@cindex tension
+@cindex controls
+@cindex control points
+@c
+@example
+@t{..}
+@t{...}
+@t{--}
+@t{---}
+@t{&}
+@t{curl@{2@}..}
+@t{@{dir 60@}..}
+@t{@{z1 - z2@}..}
+@t{.. tension 1 and 1.5..}
+@t{..controls z1 and z2..}
+@end example
+
+Usually, it will only make sense to use @t{..} or @t{--}, and not
+@t{...}, @t{---}, @t{tension}, @t{curl}, @t{controls}, or any of the
+other possibilities, in @code{Paths}, unless
+you are sure that they will only be viewed with no foreshortening due to
+the perspective 
+projection.  This can be the case, when a @code{Path} lies in a plane
+parallel to one of the major planes, and is projected using parallel
+projection onto that plane.  Otherwise,
+the result of using these connectors is likely to be unsatisfactory, because
+MetaPost performs its calculations based purely on the two-dimensional
+values of the points in the perspective projection.  
+While the @code{Points} on the @code{Path} will be projected correctly,
+the course of the @code{Path} between these @code{Points} is likely to
+differ, depending on the values of the @code{Focus} 
+used (@pxref{Focuses Getstart,,Focuses}), so that
+different views of the same @code{Path} may well be mutually
+inconsistent.   
+This problem doesn't arise with ``@t{--}'', since the perspective
+projection does not ``unstraighten'' straight lines, 
+but it does with ``@t{..}'', even without @t{tension}, @t{curl}, 
+or @t{controls}. 
+The solution is to use enough @code{Points}, since a greater number of
+@code{Points} on a @code{Path} tends to reduce the number
+of possible courses through the @code{Points}.@c
+@c
+@footnote{I believe that
+counter-examples could probably constructed, but for the most common
+cases, the principle applies.}   
+
+@menu
+* Declaring and Initializing Paths::  
+* Drawing and Filling Paths Intro::  
+@end menu
+ 
+@node Declaring and Initializing Paths, Drawing and Filling Paths Intro, Paths, Paths
+@section Declaring and Initializing Paths
+
+There are various ways of declaring and initializing @code{Paths}.  The
+simplest is to use the constructor taking two @code{Point} arguments:
+
+
+
+@example
+Point A;
+Point B(2, 2);
+Path p(A, B);
+p.draw();
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP 
+\immediate\write\examples{Point A;}
+\immediate\write\examples{Point B(2, 2);}
+\immediate\write\examples{A.dotlabel("A", "lft");}
+\immediate\write\examples{B.dotlabel("B", "rt");}
+\immediate\write\examples{Path p(A, B);}
+\immediate\write\examples{p.draw();}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF9.png"
+alt="[Figure 9. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 9.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 9 not displayed.]
+@end ifinfo
+
+@code{Paths} created in this way are important, because they are
+guaranteed to be linear, as long as no operations are performed on them
+that cause them to become non-linear.
+Linear @code{Paths} can be used to find @dfn{intersections}.  
+@xref{Path Intersections}. 
+
+@code{Paths} can be declared and initialized using a single connector
+and an arbitrary number of @code{Points}.  The first argument is a
+@code{string} specifying the connector.  It is followed by a
+@code{bool}, indicating whether the 
+@code{Path} is cyclical or not. Then, an arbitrary number of
+pointers to @code{Point} follow.  The last argument must be 0.@c
+@c
+@footnote{It's easy to forget to use @code{Point*} arguments, rather
+than plain @code{Point} arguments, and to forget to end the list of
+arguments with 0.  If plain @code{Point} arguments are used, compilation
+fails with GCC.  With the DEC compiler, compilation succeeds, but a
+memory fault error occurs at run-time.  If the argument list doesn't end
+in 0, neither compiler signals an error, but a memory fault error always  
+occurs at run-time.} 
+
+@example
+Point p[3];
+p[0].shift(1);
+p[1].set(1, 2, 2);
+p[2].set(1, 0, 2);
+Path pa("--", true, &p[0], &p[1], &p[2], 0);
+pa.draw();
+@end example
+
+@iftex
+@tex 
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(7, 5, -10, 7, 5, 10, 10);}
+\immediate\write\examples{draw_axes(gray, 1.5, "rt");} 
+\immediate\write\examples{Point p[3];}
+\immediate\write\examples{p[0].shift(1);} 
+\immediate\write\examples{p[1].set(1, 2, 2);}
+\immediate\write\examples{p[2].set(1, 0, 2);}
+\immediate\write\examples{p[0].dotlabel("(1, 0, 0)", "bot");}
+\immediate\write\examples{p[1].dotlabel("(1, 2, 2)", "rt");}
+\immediate\write\examples{p[2].dotlabel("(1, 0, 2)", "rt");}
+\immediate\write\examples{Path pa("--", true, &p[0], &p[1], &p[2], 0);}
+\immediate\write\examples{pa.draw();}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF10.png"
+alt="[Figure 10. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 10.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 10 not displayed.]
+@end ifinfo
+
+Another constructor must be used for @code{Paths} with 
+more than one connector and an arbitrary number of @code{Points}.
+The argument list starts with a pointer to @code{Point}, followed by
+@code{string} for the first connector.  Then,
+pointer to @code{Point} arguments alternate with @code{string} arguments 
+for the connectors.
+Again, the list of arguments ends in 0.  There is no
+need for a @code{bool} to indicate whether the @code{Path} is cyclical
+or not;  if it is, the last non-zero argument will be a connector,
+otherwise, it will be a pointer to @code{Point}.    
+
+@example
+Point p[8];
+p[0].set(-2);
+p[1].set(2);
+p[2].set(0, 0, -2);
+p[3].set(0, 0, 2);
+p[4] = p[0].mediate(p[2]);
+p[5] = p[2].mediate(p[1]);
+p[6] = p[1].mediate(p[3]);
+p[7] = p[3].mediate(p[0]);
+p[4] *= p[5] *= p[6] *= p[7].shift(0, 1);
+Path pa(&p[0], "..", &p[4], "...", &p[2],
+        "..", &p[5], "...", &p[1], "..", &p[6], 
+        "...", &p[3], "..", &p[7], "...", 0);
+pa.draw();
+@end example
+
+@iftex
+@tex 
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(7, 5, -10, 7, 5, 10, 10);}
+\immediate\write\examples{draw_axes(gray);}
+\immediate\write\examples{Point p[8];}
+\immediate\write\examples{p[0].set(-2);}
+\immediate\write\examples{p[1].set(2);}
+\immediate\write\examples{p[2].set(0, 0, -2);}
+\immediate\write\examples{p[3].set(0, 0, 2);}
+\immediate\write\examples{p[4] = p[0].mediate(p[2]);}
+\immediate\write\examples{p[5] = p[2].mediate(p[1]);}
+\immediate\write\examples{p[6] = p[1].mediate(p[3]);}
+\immediate\write\examples{p[7] = p[3].mediate(p[0]);}
+\immediate\write\examples{p[4] *= p[5] *= p[6] *= p[7].shift(0, 1);}
+\immediate\write\examples{p[0].dotlabel("$p_0$", "bot"); }
+\immediate\write\examples{p[1].dotlabel("$p_1$");}
+\immediate\write\examples{p[2].dotlabel("$p_2$");}
+\immediate\write\examples{p[3].dotlabel("$p_3$");}
+\immediate\write\examples{p[4].dotlabel("$p_4$");}
+\immediate\write\examples{p[5].dotlabel("$p_5$");}
+\immediate\write\examples{p[6].dotlabel("$p_6$");}
+\immediate\write\examples{p[7].dotlabel("$p_7$");}
+\immediate\write\examples{Path pa(&p[0], "..", &p[4], "...", &p[2],^^J
+"..", &p[5], "...", &p[1], "..", &p[6], "...", &p[3], "..", &p[7], "...", 0);}
+\immediate\write\examples{pa.draw();}
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF11.png"
+alt="[Figure 11. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 11.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 11 not displayed.]
+@end ifinfo
+
+As mentioned above (@pxref{Accuracy}), specifying connectors is
+problematic for three-dimensional @code{Paths}, 
+because MetaPost ultimately calculates the ``most pleasing curve''
+based on the two-dimensional points in the MetaPost code written by
+3DLDF.@c
+@c
+@footnote{Knuth, @cite{The METAFONTbook}, Chapter 14, p.@: 127.} 
+@c
+For this reason, it's advisable to avoid specifying @samp{curl},
+@samp{dir}, @samp{tension} or control points in connectors.
+The more @code{Points} a (3DLDF) @code{Path} or other object contains, 
+the less freedom MetaPost has to determine the (MetaPost) @code{path}
+through them. 
+So a three-dimensional @code{Path} or
+other object in 3DLDF should have enough @code{Points} to ensure
+satisfactory results.  The @code{Path} in @PREFIG{} does not
+really have enough @code{Points}.  It may require some trial and error
+to determine 
+what a sufficient number of @code{Points} is in a given case.
+
+@code{Paths} are very flexible, but not always convenient.  3DLDF
+provides a number of classes representing common geometric
+@code{Shapes}, which will be described in subsequent sections, and I
+intend to add more in the course of time.     
+
+@node Drawing and Filling Paths Intro,  , Declaring and Initializing Paths, Paths
+@section Drawing and Filling Paths
+
+The easiest way to draw a @code{Path} is with no arguments.
+
+@example
+Point pt[5];
+pt[0].set(-1, -2);
+pt[1].set(0, -3);
+pt[2].set(1, 0);
+pt[3].set(2, 1);
+pt[4].set(-1, 2);
+Path pa("..", true, &pt[0], &pt[1], &pt[2], &pt[3], &pt[4], 0);
+pa.draw();
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{Point pt[5];}
+\immediate\write\examples{pt[0].set(-1, -2);}
+\immediate\write\examples{pt[1].set(0, -3);}
+\immediate\write\examples{pt[2].set(1, 0);}
+\immediate\write\examples{pt[3].set(2, 1);}
+\immediate\write\examples{pt[4].set(-1, 2);}
+\immediate\write\examples{pt[0].dotlabel(Point::WORLD_VALUES_X_Y, "lft"); }
+\immediate\write\examples{pt[1].dotlabel(Point::WORLD_VALUES_X_Y, "bot"); }
+\immediate\write\examples{pt[2].dotlabel(Point::WORLD_VALUES_X_Y, "rt"); }
+\immediate\write\examples{pt[3].dotlabel(Point::WORLD_VALUES_X_Y, "rt"); }
+\immediate\write\examples{pt[4].dotlabel(Point::WORLD_VALUES_X_Y, "lft"); }
+\immediate\write\examples{Path pa("..", true, &pt[0], &pt[1], &pt[2], &pt[3], &pt[4], 0);}
+\immediate\write\examples{pa.draw();}
+\OEX{Projections::PARALLEL_X_Y}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF12.png"
+alt="[Figure 12. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 12.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 12 not displayed.]
+@end ifinfo
+
+Since @code{pa} is closed, it can be filled as well as drawn.  The
+following example uses @code{fill()} with a @code{Color} argument, in
+order to avoid having a large splotch of black on the page.  
+Common @code{Colors} are declared in the @code{namespace Colors}.
+@xref{Color Reference}.
+
+@example
+pa.fill(Colors::gray);
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{pa.fill(Colors::gray);} 
+\OEX{Projections::PARALLEL_X_Y}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF13.png"
+alt="[Figure 13. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 13.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 13 not displayed.]
+@end ifinfo
+
+Closed @code{Paths} can be filled and drawn, using the function
+@code{filldraw()}.  This function draws the @code{Path} using the pen
+specified, or MetaPost's @code{currentpen} by default.  A @code{Color}
+for drawing the @code{Path} can also be specified, otherwise, the
+default color (currently @code{Colors::black}) is used.  
+In addition, the @code{Path} is filled using a second @code{Color},
+which can be specified, or the background_color
+(@code{Colors::background_color}), by default.   
+Filling a @code{Path} using the background color causes it to hide
+objects that lie behind it.
+@xref{Surface Hiding}, for a description of the surface hiding
+algorithm, and examples.  Currently, this algorithm is quite primitive
+and only works 
+for simple cases.
+
+@example
+Point p0(-3, 0, 1);
+Point p1(3, 1, 1);
+p0.draw(p1);
+pa.filldraw();
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{Point p0(-3, 0, 1);}
+\immediate\write\examples{Point p1(3, 1, 1);}
+\immediate\write\examples{p0.dotlabel(Point::WORLD_VALUES, "bot"); }
+\immediate\write\examples{p1.dotlabel(Point::WORLD_VALUES, "bot"); }
+\immediate\write\examples{p0.draw(p1);}
+\immediate\write\examples{pa.filldraw();}
+\OEX{Projections::PARALLEL_X_Y}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF14.png"
+alt="[Figure 14. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 14.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 14 not displayed.]
+@end ifinfo
+
+The following example uses arguments for the @code{Colors} used for
+drawing and filling, and the pen.  The empty string argument before the
+pen argument is a placeholder for the dash pattern argument.
+
+@example
+pa.filldraw(black, gray, "", 
+   "pensquare xscaled 3mm yscaled 1mm rotated 60");
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{pa.filldraw(black, gray, "", 
+"pensquare xscaled 3mm yscaled 1mm rotated 60");}  
+\OEX{Projections::PARALLEL_X_Y}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF15.png"
+alt="[Figure 15. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 15.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 15 not displayed.]
+@end ifinfo
+
+@code{Paths} can also be ``undrawn'', ``unfilled'', and ``unfilldrawn'',
+using the corresponding functions:
+
+@example
+pa.fill(gray);
+p0.undraw(p1, "", "pencircle scaled 3mm");
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{p0.dotlabel(Point::WORLD_VALUES, "bot"); }
+\immediate\write\examples{p1.dotlabel(Point::WORLD_VALUES, "bot"); }
+\immediate\write\examples{pa.fill(gray);}
+\immediate\write\examples{p0.undraw(p1, "", "pencircle scaled 3mm");}
+\OEX{Projections::PARALLEL_X_Y}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF16.png"
+alt="[Figure 16. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 16.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 16 not displayed.]
+@end ifinfo
+
+@example
+pa.fill(gray);
+Path q;
+q = pa;
+q.scale(.5, .5);
+q.unfill();
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{pa.fill(gray);}
+\immediate\write\examples{Path q;}
+\immediate\write\examples{q = pa;}
+\immediate\write\examples{q.scale(.5, .5);}
+\immediate\write\examples{q.unfill();}
+\OEX{Projections::PARALLEL_X_Y}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF17.png"
+alt="[Figure 17. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 17.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 17 not displayed.]
+@end ifinfo
+
+The function @code{unfilldraw()} takes a @code{Color} argument for
+drawing the @code{Path}, which is @code{*Colors::background_color} by
+default.  This makes it possible to unfill the @code{Path} while drawing
+the outline with a visible @code{Color}.  On the other hand, it also
+makes it necessary to specify @code{*Colors::background_color} or
+@code{Colors::white}, if the user wants to use the dash pattern and/or
+pen arguments, without drawing the @code{Path}.
+
+@example
+pa.fill(gray);
+q.unfilldraw(white, "", "pensquare xscaled 3mm yscaled 1mm");
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{pa.fill(gray);}
+\immediate\write\examples{q.unfilldraw(white, "", "pensquare xscaled 3mm yscaled 1mm");}
+\OEX{Projections::PARALLEL_X_Y}
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF18.png"
+alt="[Figure 18. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 18.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 18 not displayed.]
+@end ifinfo
+
+The following example demonstrates the use of @code{unfilldraw()} with
+@code{black} as its @code{Color} argument.  Unfortunately, it also
+demonstrates one of the limitations of the surface hiding algorith:  The
+line from @code{p0} to @code{p1} is hidden by the 
+filled @code{Path pa}.  Since the portion of @code{pa} covered by
+@code{Path q} has been unfilled, 
+@c
+@iftex
+@tex
+$\overrightarrow{p_0p_1}$
+@end tex
+@end iftex
+@c
+@ifnottex
+the line from @math{p_0} to @math{p_1}
+@end ifnottex 
+@c
+should be visible as it passes through @code{q}.  However, from the
+point of view of 3DLDF, there is no relationship between @code{pa} and
+@code{q};  nor does it ``know'' whether a @code{Path} has been filled or
+unfilled.  If it's on a @code{Picture}, it will hide objects lying
+behind it, unless the surface hiding algorithm fails for another
+reason.  @xref{Surface Hiding}, for more information.
+
+@example
+p0.draw(p1);
+pa.fill(gray);
+q.unfilldraw(black, "", "pensquare xscaled 3mm yscaled 1mm");
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\immediate\write\examples{p0.dotlabel(Point::WORLD_VALUES, "bot");}
+\immediate\write\examples{p1.dotlabel(Point::WORLD_VALUES, "bot");}
+\immediate\write\examples{p0.draw(p1);} 
+\immediate\write\examples{pa.fill(gray);}
+\immediate\write\examples{q.unfilldraw(black, "", "pensquare xscaled 3mm yscaled 1mm");}
+\OEX{Projections::PARALLEL_X_Y}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF19.png"
+alt="[Figure 19. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 19.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 19 not displayed.]
+@end ifinfo
+
+@xref{Drawing and Filling Paths,,Paths; Drawing and Filling}, for more
+information, and complete descriptions of the functions. 
+
+  

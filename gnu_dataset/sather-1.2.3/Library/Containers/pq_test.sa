@@ -1,0 +1,105 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class PQ_TEST is
+   -- Test of PQ{INT}
+   include TEST;
+   
+   main is
+      -- Test of PQ{INT}.
+      test_max_pq;
+      test_min_pq;
+   end;
+   
+   test_max_pq is
+      class_name("A_PQ{INT}(max)");
+      p:A_PQ{INT}:=#;
+      loop p.insert(50.downto!(40)); end;
+      loop  p.insert(10.upto!(20)); end;
+      p.insert(-1);
+      p.insert(90);
+      test("check_heap", p.check_heap, true);
+      test("top", p.top, 90);
+      test("pop 1", p.pop, 90);
+      test("pop 2", p.pop, 50);
+      test("pop 3", p.pop, 49);
+      test("pop 4", p.pop, 48);
+      test("pop 5", p.pop, 47);
+      test("is_empty 1",p.is_empty, false);
+      p.clear;
+      test("is_empty 2", p.is_empty, true);
+      p:=A_PQ{INT}::create_sized(10);
+      p.insert(1);
+      p.insert(10);
+      p.insert(5);
+      p.insert(3);
+      pl: FLIST{INT};
+      loop pl := pl.push(p.elt!) end;
+      plres ::= #FLIST{INT}(#ARRAY{INT}(|10,3,5,1|));
+      test("elt! Elements (any order)",pl.str,plres.str);
+      pl.clear;
+      loop pl := pl.push(p.pop!) end;
+      plres2 ::= #FLIST{INT}(#ARRAY{INT}(|10,5,3,1|));
+      test("pop! ",pl.str,plres2.str);
+      p4 ::= #A_PQ{INT};
+      loop p4.bounded_insert(50.downto!(40),5); end;
+      loop  p4.bounded_insert(10.upto!(20),5); end;
+      loop p4.bounded_insert(70.downto!(30),5); end;
+      pl.clear;
+      loop pl := pl.push(p4.pop!) end;
+      popres ::= #FLIST{INT}(#ARRAY{INT}(|14,13,12,11,10|));
+      test("pop 1",pl.str,popres.str);
+      finish;
+   end;
+   
+   test_min_pq is
+      class_name("A_PQ{PQMIN{INT}}");
+      mw: PQMIN{INT};
+      p:A_PQ{PQMIN{INT}}:=#;
+      loop p.insert(#PQMIN{INT}(50.downto!(40))); end;
+      loop  p.insert(#PQMIN{INT}(10.upto!(20))); end;
+      p.insert(#PQMIN{INT}(-1));
+      p.insert(#PQMIN{INT}(90));
+      test("check_heap", p.check_heap, true);
+      test("top", p.top.element, -1);
+      test("pop 1", p.pop.element, -1);
+      test("pop 2", p.pop.element, 10);
+      test("pop 3", p.pop.element, 11);
+      test("pop 4", p.pop.element, 12);
+      test("pop 5", p.pop.element, 13);
+      test("is_empty 1",p.is_empty, false);
+      p.clear;
+      test("is_empty 2", p.is_empty, true);
+      p:=A_PQ{PQMIN{INT}}::create_sized(10);
+      p.insert(#PQMIN{INT}(1));
+      p.insert(#PQMIN{INT}(10));
+      p.insert(#(5));
+      p.insert(#(3));
+      pl: FLIST{INT};
+      loop pl := pl.push(p.elt!.element) end;
+      plres ::= #FLIST{INT}(#ARRAY{INT}(|1,3,5,10|));
+      test("elt! Elements (any order)",pl.str,plres.str);
+      pl.clear;
+      loop pl := pl.push(p.pop!.element) end;
+      popres ::= #FLIST{INT}(#ARRAY{INT}(|1,3,5,10|));
+      test("pop! ",pl.str,popres.str);
+      finish;
+   end; -- main
+   
+
+end; -- class PQ_TEST
+
+-------------------------------------------------------------------
+

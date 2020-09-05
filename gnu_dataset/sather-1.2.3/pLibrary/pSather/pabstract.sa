@@ -1,0 +1,261 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+abstract class $LOCK < $LM_LOCK_MANAGER_ACCESS is
+   acquirable(tid:THREAD_ID):BOOL;
+   acquire(tid:THREAD_ID);
+   release(tid:THREAD_ID);
+   request(tid:THREAD_ID);
+   cancel_request(tid:THREAD_ID);
+   wait_for(tid:THREAD_ID):ARRAY{THREAD_ID};
+   combinations:ARRAY{ARRAY{$LOCK}};
+   combined_with(lcks:ARRAY{$LOCK},tids:ARRAY{THREAD_ID});
+end;
+
+abstract class $LM_LOCK_MANAGER_ACCESS is
+   manager:$LM_LOCK_MANAGER;
+   get_manager:$LM_LOCK_MANAGER;
+   try_manager:$LM_LOCK_MANAGER;
+   set_manager(lm:$LM_LOCK_MANAGER);
+   init_queue;
+   queue:LM_THREAD_HANDLE_QUEUE;
+   set_queue(q:LM_THREAD_HANDLE_QUEUE);
+   local_queue:LM_THREAD_HANDLE_QUEUE;
+   access_acquire_single_lock;
+   access_try_single_lock:C_INT;
+   access_release_single_lock;
+   access_acquire_double_lock(this_lock:QMUTEX);
+   access_try_double_lock(this_lock:QMUTEX):C_INT;
+   access_release_double_lock(this_lock:QMUTEX);
+   access_acquire_conjunctive_locks(these_locks:EXT_OB,number:INT);
+   access_try_conjunctive_locks(these_locks:EXT_OB,number:INT):C_INT;
+   access_release_conjunctive_locks(these_locks:EXT_OB,number:INT);
+   access_acquire_disjunctive_locks(stmt:EXT_OB):C_INT;
+   access_try_disjunctive_locks(stmt:EXT_OB):C_INT;
+end;
+
+partial class LM_LOCK_STUBS_INCLUDE is
+   stub my_manager:$LM_LOCK_MANAGER;
+   stub my_queue:LM_THREAD_HANDLE_QUEUE;
+   stub my_local_queue:LM_THREAD_HANDLE_QUEUE;
+   stub manager:$LM_LOCK_MANAGER;
+   stub get_manager:$LM_LOCK_MANAGER;
+   stub try_manager:$LM_LOCK_MANAGER;
+   stub set_manager(lm:$LM_LOCK_MANAGER);
+   stub init_queue;
+   stub queue:LM_THREAD_HANDLE_QUEUE;
+   stub set_queue(q:LM_THREAD_HANDLE_QUEUE);
+   stub local_queue:LM_THREAD_HANDLE_QUEUE;
+   stub access_acquire_single_lock;
+   stub access_try_single_lock:C_INT;
+   stub access_release_single_lock;
+   stub access_acquire_double_lock(this_lock:$LOCK);
+   stub access_try_double_lock(this_lock:$LOCK):C_INT;
+   stub access_release_double_lock(this_lock:$LOCK);
+   stub access_acquire_conjunctive_locks(these_locks:EXT_OB,number:INT);
+   stub access_try_conjunctive_locks(these_locks:EXT_OB,number:INT):C_INT;
+   stub access_release_conjunctive_locks(these_locks:EXT_OB,number:INT);
+   stub access_acquire_disjunctive_locks(stmt:EXT_OB):C_INT;
+   stub access_try_disjunctive_locks(stmt:EXT_OB):C_INT;
+   stub acquirable(tid:THREAD_ID):BOOL;
+   stub acquire(tid:THREAD_ID);
+   stub release(tid:THREAD_ID);
+   stub request(tid:THREAD_ID);
+   stub cancel_request(tid:THREAD_ID);
+   stub wait_for(tid:THREAD_ID):ARRAY{THREAD_ID};
+   stub combinations:ARRAY{ARRAY{$LOCK}};
+   stub combined_with(lcks:ARRAY{$LOCK},tids:ARRAY{THREAD_ID});
+end;
+
+abstract class $LM_LOCK_MANAGER is
+   try:BOOL;
+   lck;
+   release;
+   lm_is_locked:BOOL;
+   taken_over:BOOL;
+   taken_over(to:BOOL);
+   controls(these_locks:EXT_OB,size:INT):BOOL;
+   managed_locks:ARRAY{$LOCK};
+   managed_queues:ARRAY{LM_THREAD_HANDLE_QUEUE};
+   number_of_threads_holding_locks:INT;
+   acquire_single_lock(lck:$LOCK);
+   try_single_lock(lck:$LOCK):C_INT;
+   release_single_lock(lck:$LOCK);
+   unlock_single_lock(lck:$LOCK);
+end;
+
+abstract class $LM_SINGLE_LOCK_MANAGER < $LM_LOCK_MANAGER is end;
+
+abstract class $LM_COMBINED_LOCKS_MANAGER < $LM_LOCK_MANAGER is
+   acquire_conjunctive_locks(these_locks:EXT_OB,number:INT);
+   try_conjunctive_locks(these_locks:EXT_OB,number:INT):C_INT;
+   release_conjunctive_locks(these_locks:EXT_OB,number:INT);
+   acquire_disjunctive_locks(these_locks:EXT_OB,max_size:INT,clauses:INT):C_INT;
+   try_disjunctive_locks(these_locks:EXT_OB,max_size:INT,clauses:INT):C_INT;
+end;
+
+-- defines some of the not so often used methods
+-- It does not define acquirable(), acquire() and release()
+partial class LOCK_INCLUDE < $LOCK is
+   include LM_LOCK_MANAGER_ACCESS;
+   request(tid:THREAD_ID) is end;
+   cancel_request(tid:THREAD_ID) is end;
+   wait_for(tid:THREAD_ID):ARRAY{THREAD_ID} is return void; end;
+   combinations:ARRAY{ARRAY{$LOCK}} is return void; end;
+   combined_with(lcks:ARRAY{$LOCK},tids:ARRAY{THREAD_ID}) is end;
+end;
+
+-- This class is used as interface between
+-- the lock manager of the runtime and the lock
+-- types. We can only pass EXT_OB ans basic types,
+-- and use SYS::inlined_C for casting.
+-- As external classes have no 'self' the $LOCK is
+-- passed as first argument.
+external class EXT_LOCK is
+   -- tests if the argument if of the correct type
+   -- only used when checking is on
+   is_dlock(lck:EXT_OB):C_INT is
+      l:$OB;
+      SYS::inlined_C("#l=(void *)#lck;");
+      typecase l when $LOCK then return #C_INT(1);
+      else return #C_INT(0); end;
+   end;
+
+   -- lck is supposed to be of type $LOCK
+   -- tid is supposed to be a pointer to a THREAD_ID object
+   acquirable(lck:EXT_OB,tid:EXT_OB):BOOL is
+      t:THREAD_ID;
+      l:$LOCK;
+      SYS::inlined_C("#t= *(THREAD_ID*)#tid;");
+      SYS::inlined_C("#l= (void *)#lck;");
+      return l.acquirable(t);
+   end;
+
+   -- lck is supposed to be of type $LOCK
+   -- tid is supposed to be a pointer to a THREAD_ID object
+   acquire(lck:EXT_OB,tid:EXT_OB) is 
+      t:THREAD_ID;
+      l:$LOCK;
+      SYS::inlined_C("#t= *(THREAD_ID*)#tid;");
+      SYS::inlined_C("#l= (void *)#lck;");
+      l.acquire(t);
+   end;
+
+   -- lck is supposed to be of type $LOCK
+   -- tid is supposed to be a pointer to a THREAD_ID object
+   release(lck:EXT_OB,tid:EXT_OB) is
+      t:THREAD_ID;
+      l:$LOCK;
+      SYS::inlined_C("#t= *(THREAD_ID*)#tid;");
+      SYS::inlined_C("#l= (void *)#lck;");
+      l.release(t);
+   end;
+
+   -- lck is supposed to be of type $LOCK
+   -- tid is supposed to be a pointer to a THREAD_ID object
+   request(lck:EXT_OB,tid:EXT_OB) is
+      t:THREAD_ID;
+      l:$LOCK;
+      SYS::inlined_C("#t= *(THREAD_ID*)#tid;");
+      SYS::inlined_C("#l= (void *)#lck;");
+      l.request(t);
+   end;
+
+   -- lck is supposed to be of type $LOCK
+   -- tid is supposed to be a pointer to a THREAD_ID object
+   cancel_request(lck:EXT_OB,tid:EXT_OB) is
+      t:THREAD_ID;
+      l:$LOCK;
+      SYS::inlined_C("#t= *(THREAD_ID*)#tid;");
+      SYS::inlined_C("#l= (void *)#lck;");
+      l.cancel_request(t);
+   end;
+
+   -- lck is supposed to be of type $LOCK
+   -- tid is supposed to be a pointer to a THREAD_ID object
+   wait_for(lck:EXT_OB,tid:EXT_OB):EXT_OB is
+      t:THREAD_ID;
+      l:$LOCK;
+      ret:EXT_OB;
+      SYS::inlined_C("#t= *(THREAD_ID*)#tid");
+      SYS::inlined_C("#l= (void *)#lck;");
+      r::=l.wait_for(t);
+      SYS::inlined_C("#ret= (void *)#r;");
+      return ret;
+   end;
+
+   -- lck is supposed to be of type $LOCK
+   -- tid is supposed to be a pointer to a THREAD_ID object
+   combinations(lck:EXT_OB):EXT_OB is
+      l:$LOCK;
+      ret:EXT_OB;
+      SYS::inlined_C("#l= (void *)#lck;");
+      r::=l.combinations;
+      SYS::inlined_C("#ret= (void *)#r;");
+      return ret;
+   end;
+
+   combined_with(lck:EXT_OB,lcks:EXT_OB,tids:EXT_OB) is
+      a:ARRAY{THREAD_ID}:=#(1);
+      a_tag::=SYS::tp(a);
+      l:$LOCK;
+      ls:ARRAY{$LOCK}:=#(1);
+      ls_tag::=SYS::tp(ls);
+      SYS::inlined_C("#l= (void *)#lck;");
+      SYS::inlined_C("#ls= (void *)#lcks;#ls->header.tag=#ls_tag;");
+      SYS::inlined_C("#a= (void *)#tids;#a->header.tag=#a_tag;");
+      l.combined_with(ls,a);
+   end;
+end;
+
+abstract class  $ATTACH < $MUTEX, $ATTACH_SYNC is
+   birth;
+   death;
+   synchronize;
+end;
+
+abstract class  $ATTACH{T} < $MUTEX, $ATTACH_SYNC is
+   birth;
+   death(val:T);
+   synchronize;
+end;
+
+-- we need this type, otherwise we cannot call
+-- sync on $ATTACH{T} types from within C.
+abstract class  $ATTACH_SYNC is
+   synchronize;
+   birth;
+end;
+
+external class EXT_ATTACH is
+   -- we have to make sure that PAR_ATTACH is used, otherwise
+   -- some functions will be missing. The following function is not
+   -- actually used, but makes the compiler believe that it should read
+   -- the class PAR_ATTATCH
+   par_attach is a::=#PAR_ATTACH; end;
+
+   synchronize(a:EXT_OB) is
+      o:$ATTACH_SYNC;
+      SYS::inlined_C("#o=(void *)#a;");
+      o.synchronize;
+   end;
+   birth(a:EXT_OB) is
+      o:$ATTACH_SYNC;
+      SYS::inlined_C("#o=(void *)#a;");
+      o.birth;
+   end;
+end;
+
+-- used to prefetch data, only used internally, has no real use outside
+-- the compiler.
+immutable class PREFETCH is end;

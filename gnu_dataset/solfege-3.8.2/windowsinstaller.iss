@@ -1,0 +1,31 @@
+
+[Setup]
+AppName=GNU Solfege
+AppVerName=GNU Solfege 3.8.2
+DefaultDirName={pf}\GNU Solfege
+DefaultGroupName=GNU Solfege
+OutputBaseFilename=solfege-win32-3.8.2
+Compression=bzip/9
+SolidCompression=yes
+SourceDir=dist
+LicenseFile=COPYING.txt
+
+[Files]
+Source: "*.*"; DestDir: "{app}"; Flags: recursesubdirs
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}"
+
+;[Tasks]
+;Name: desktopicon; Description: "Create a &desktop icon"; GroupDescription: "Additional icons:"
+;Name: quicklaunchicon; Description: "Create a &Quick Launch icon"; GroupDescription: "Additional icons:"; Flags: unchecked
+;
+[Icons]
+Name: "{group}\GNU Solfege"; Filename: "{app}\solfege.exe"; WorkingDir: "{app}"
+Name: "{group}\Gtk Theme Selector"; Filename: "{app}\bin\gtkthemeselector.exe"; WorkingDir: "{app}\bin"
+Name: "{group}\GNU Solfege (debug)"; Filename: "{app}\solfege.bat"; WorkingDir: "{app}"
+Name: "{group}\README"; Filename: "{app}\README.txt"
+Name: "{group}\INSTALL.win32"; Filename: "{app}\INSTALL.win32.txt"
+Name: "{group}\INSTALL"; Filename: "{app}\INSTALL.txt"
+Name: "{group}\AUTHORS"; Filename: "{app}\AUTHORS.txt"
+

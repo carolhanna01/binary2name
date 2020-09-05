@@ -1,0 +1,1 @@
+../xdico/gnu/gettext.h

@@ -1,0 +1,191 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Hash table based bag implementations
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+class BAG{ETP} < $BAG{ETP} is
+   -- A standard bag is implemented using H_BAGs after making all
+   -- the modification functions public
+   -- 
+   -- Usage:
+   --   b ::= #BAG{INT}(|10,10,11|);
+   --   a: INT := 0;
+   --   loop a := a+b.elt!; end;     -- adds the bag elemetns in some 
+   --                                -- undefined order. 
+   --   
+   include H_BAG_IMPL{ETP};
+   include BAG_INCL{ETP} n_unique->;
+   
+end;
+------------------------------------------------------------------------
+class VBAG{ETP} < $VBAG{ETP} is
+   -- A bag with value semantics. All modifying operations return
+   -- a new object, thus eliminating the possibility of aliasing
+   -- problems
+   include H_BAG_IMPL{ETP}
+	 add->private add,
+	 delete->private delete,
+	 delete_and_return->private delete_and_return,
+	 delete_all->private delete_all;
+   include RO_BAG_INCL{ETP} n_unique->;
+
+   add(e:ETP):SAME is
+      res ::= copy;    res.add(e);     return res;
+   end;
+   
+   delete(e:ETP):SAME is
+      res ::= copy;  res.delete(e); return res;
+   end;
+   
+   delete_all(e:ETP):SAME is
+      res ::= copy;  res.delete_all(e); return res;
+   end;
+
+   is_eq(a:$OB):BOOL is
+      -- Return true if 'self' and 'v' have the same value
+      typecase a
+      when $RO_BAG{ETP} then 
+	 if size /= a.size then return false; end;
+	 loop e:ETP := a.unique!;
+	    if count(e)/=a.count(e) then return false; end;
+	 end;
+	 return true;
+      else return false end;
+   end;
+
+   hash:INT is
+      res:INT := 0; loop e ::= elt!; res := res.bxor(elt_hash(e)); end;
+      return res;
+   end;
+   
+end;
+-------------------------------------------------------------------
+partial class H_BAG_IMPL{ETP} is
+   -- An implementation of the $BAG abstraction using a bucketed hash
+   -- table. This bag stores its elements by counting the number of
+   -- occurences.  If two _different but equal_ elements are inserted
+   -- only one of them will be stored, but this one will be yielded
+   -- twice.
+   private include DYNAMIC_DATABUCKET_TABLE{ETP,INT}
+	 create->private old_create, 
+	 map_aget->private aget,map_aset->private aset,
+	 map_key!->unique!;    -- Make the key routine public
+
+   private attr total_size: INT;
+   
+   stub elt_eq(e1,e2:ETP):BOOL;
+   
+   stub elt_hash(o:$OB):INT;
+   
+   create: SAME is
+      return old_create
+   end;
+
+   copy: SAME  pre ~void(self) is
+      res ::= map_copy;
+      res.total_size := total_size;
+      return res
+   end;
+
+   n_unique: INT is return n_inds end;
+   -- Return the number of unique indicies
+
+   count(e:ETP): INT  pre ~void(self) is
+      -- Return the number of occurences of element "e"
+      loop
+	 b ::= bucket(hash(e)).list!;
+	 if elt_eq(b.item,e) then return b.data end
+      end;
+      return 0
+   end;
+
+   has(e:ETP): BOOL pre ~void(self) is
+      return count(e) > 0
+   end;
+
+   add(e:ETP)  pre ~void(self) is
+      h ::= hash(e);
+      loop
+	 b ::= bucket(h).list!;
+	 if elt_eq(e,b.item) then
+	    b.data := b.data + 1;
+	    total_size := total_size + 1;
+	    return
+	 end
+      end;
+      set_bucket(h,#DATABUCKET{ETP,INT}(e,1,bucket(h)));
+      -- TODO: optimize the bucket(h)
+
+      total_size := total_size + 1;
+      n_inds := n_inds + 1;
+      update_insert
+   end;
+
+   size:INT is return total_size end;
+   
+   delete(e:ETP) pre ~void(self) is
+      dummy ::= delete_and_return(e)
+   end;
+
+   delete_and_return(e:ETP):ETP   pre ~void(self) is
+      h ::= hash(e);
+      b ::= bucket(h);
+      prev ::= b; prev := void;	-- NASTY HACK
+      if void(b) then return void end;
+      loop until!( void(b) );
+	 res ::= b.item;
+	 if elt_eq(res,e) then
+	    total_size := total_size - 1;
+	    if b.data = 1 then
+	       -- last occurrence removed
+	       if void(prev) then
+		  set_bucket(h,b.next)
+	       else
+		  prev.next(b.next)
+	       end;
+	       n_inds := n_inds - 1;
+	       update_delete
+	    else
+	       b.data := b.data - 1
+	    end;
+	    return res
+	 end;
+	 prev := b;
+	 b := b.next
+      end;
+      return void
+   end;
+
+
+   delete_all(e:ETP)   pre ~void(self) is
+      -- Delete all elements equal to "e"
+      anz ::= count(e);
+      if anz = 0 then end;
+      total_size := total_size - anz;
+      discard ::= map_delete(e);
+   end;
+
+   elt!:ETP  pre ~void(self) is
+      loop
+	 b ::= bucket( 0.upto!(asize-1) );
+	 loop
+	    bk ::= b.list!;
+	    loop bk.data.times!; yield bk.item end
+	 end
+      end
+   end;
+
+end; -- H_BAG{ETP}
+-------------------------------------------------------------------
+

@@ -1,0 +1,78 @@
+# This file is part of GNU Rush. 
+# Copyright (C) 2019 Sergey Poznyakoff
+#
+# GNU Rush is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# GNU Rush is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Rush.  If not, see <http://www.gnu.org/licenses/>.
+
+AT_SETUP([match arg])
+AT_KEYWORDS([match arg])
+
+AT_RUSH_TEST([
+rush 2.0
+rule
+  match \$1 ~ "^fo+\$"
+  set RULE = 1
+
+rule
+  match \${1} ~ "^ba"
+  set RULE = 2
+
+rule
+  match \${-1} ~ "/"
+  set RULE = 3
+],
+[cmdline,vars],
+
+[/usr/bin/echo foo],
+[0],
+[{
+    "cmdline":"/usr/bin/echo foo",
+    "vars":{
+        "RULE":"1"
+    }
+}
+],
+[],
+
+[/usr/bin/echo bar],
+[0],
+[{
+    "cmdline":"/usr/bin/echo bar",
+    "vars":{
+        "RULE":"2"
+    }
+}
+],
+[],
+
+[/usr/bin/echo /var],
+[0],
+[{
+    "cmdline":"/usr/bin/echo /var",
+    "vars":{
+        "RULE":"3"
+    }
+}
+],
+[],
+
+[/usr/bin/echo for],
+[1],
+[],
+[rush: Error: no matching rule for "/usr/bin/echo for", user $MY_USER
+],
+
+)
+
+AT_CLEANUP
+

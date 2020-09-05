@@ -1,0 +1,137 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- TkApp.sa: Tk applications
+-- Author: Matthias Ernst <tisi@home>
+
+class TK_APP is
+   -- Tk application
+   readonly shared tcl_tk: TCL_TK; -- the interpreter et al
+   private shared windows: FMAP{STR, $TK_WINDOW}; -- all windows created
+   readonly shared root: TK_ROOT;
+   private shared callbacks: FMAP{STR, $TKKIT_CB};
+   
+
+   create(basename, classname: STR): SAME is
+      if (~void(windows)) then 
+	 #ERR+"Cannot create more than one root application - shared state";
+      end;
+      tcl_tk := #TCL_TK(basename, classname);
+      TCL_TK_COMMANDS::tkkit_cb_command :=
+	    bind(TK_APP::exec_callback(_));
+      windows := #;
+      root := #(self);
+      callbacks := #;
+      return self;
+   end;
+
+   create_no_window(basename, classname: STR): SAME is
+      if (~void(windows)) then 
+	 #ERR+"Cannot create more than one root application - shared state";
+      end;
+      tcl_tk := TCL_TK::create_no_window(basename, classname);
+      windows := #;
+      root := #(self);
+      callbacks := #;
+
+      return self;
+   end;
+
+   add_window(w: $TK_WINDOW)	-- is -- for hilighting
+      pre ~windows.test(w.pathname)
+   is
+      windows := windows.insert(w.pathname, w)
+   end;
+
+   get_window(s: STR): $TK_WINDOW is
+      return windows.get(s)
+   end;
+
+   destroy(w: $TK_WINDOW) is
+      typecase w
+      when TK_ROOT then		-- ignore for now
+      else
+	 if w.visible then w.hide end; -- seems appropriate
+	 tcl_tk.eval("destroy " + w.pathname)
+      end;
+   end;
+
+   -- register callbacks with/out args with/out result
+
+   cb_args_res(id: STR, cb: ROUT{ARRAY{STR}}: TUP{INT, STR}) is
+      callback(#TKKIT_CB_ARGS_RES(id, cb));
+   end;
+
+   cb_res(id: STR, cb: ROUT: TUP{INT, STR}) is
+      callback(#TKKIT_CB_RES(id, cb));
+   end;
+
+   cb_args(id: STR, cb: ROUT{ARRAY{STR}}) is
+      callback(#TKKIT_CB_ARGS(id, cb));
+   end;
+
+   cb(id: STR, cb: ROUT) is
+      callback(#TKKIT_CB(id, cb));
+   end;
+
+   -- you may call this directly when you want to share callbacks
+   -- and don't always want to create the same bound routine
+   
+   callback(callb: $TKKIT_CB) is -- overrides old entry !
+      callbacks := callbacks.insert(callb.id, callb);
+   end;
+
+   callback(id: STR): $TKKIT_CB is
+      return callbacks.get(id)
+   end;
+
+   exec_callback(argv:ARRAY{STR}):INT is
+      -- Execute teh callback specified by the list of
+      -- strings "argv"
+      rout: $TKKIT_CB:= TK_APP::callback(argv[1]);
+      if void(rout) then
+	 raise "There's no callback named" + argv[1].pretty;
+      else
+	 ret: TUP{INT, STR};
+	 if argv.size = 2 then
+	    ret := rout.call_from_tcl(void);
+	 else
+	    ret := rout.call_from_tcl(argv.subarr(2, argv.size-2));
+	 end;
+	 C_TCL_TK::Tcl_SetResult(TK_APP::tcl_tk.interpreter, 
+				 ret.t2, 
+				 C_TCL_TK::ConstTclVolatile);
+	 return ret.t1;
+      end;
+   end;
+   ------------------------------------------
+   -- obsolete, replace by cb_args_res et al.
+   ------------------------------------------
+   register_callback_args_res(id: STR, cb: ROUT{ARRAY{STR}}: TUP{INT, STR}) is
+      cb_args_res(id, cb);
+   end;
+
+   register_callback_res(id: STR, cb: ROUT: TUP{INT, STR}) is
+      cb_res(id, cb);
+   end;
+
+   register_callback_args(id: STR, cb: ROUT{ARRAY{STR}}) is
+      cb_args(id, cb);
+   end;
+
+   register_callback(id: STR, cb: ROUT) is
+      cb(id, cb);
+   end;
+end; -- class TK_APP
+
+-------------------------------------------------------------------

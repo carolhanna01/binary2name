@@ -1,0 +1,176 @@
+@c line.texi
+     
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+    
+@node Line Reference, Plane Reference, Focus Reference, Top
+@chapter Line Reference
+
+@tindex Line
+The @code{struct Line} is defined in @file{lines.web}.
+@code{Lines} are not @code{Shapes}.  They are used for
+performing vector operations.  A @code{Line} is defined by a
+@code{Point} representing a position vector and a @code{Point}
+representing a direction vector.
+
+See also the descriptions of @code{Point::get_line()} in 
+@ref{Points and Lines}, and 
+@code{Path::get_line()} in 
+@ref{Querying Paths,,Path Reference; Querying}.
+
+
+@menu
+* Line Data Members::           
+* Line Global Constants::       
+* Line Constructors::           
+* Line Operators::              
+* Get Path::                    
+* Showing::                     
+@end menu
+ 
+@node Line Data Members, Line Global Constants, Line Reference, Line Reference
+@section Data Members
+
+@deftypevr {Public variable} Point position
+Represents the position vector of the @code{Line}.
+@end deftypevr 
+
+@deftypevr {Public variable} Point direction
+Represents the direction vector of the @code{Line}.
+@end deftypevr 
+
+@node Line Global Constants, Line Constructors, Line Data Members, Line Reference
+@section Global Constants
+@deftypevr {Constant} {const Line} INVALID_LINE
+@code{position} and @code{direction} are both @code{INVALID_POINT}.
+@end deftypevr 
+
+@node Line Constructors, Line Operators, Line Global Constants, Line Reference
+@section Constructors
+
+@deftypefn {Default constructor} void Line ({const Point&} @var{pos} = @code{origin}, {const Point&} @var{dir} = @code{origin})
+Creates a @code{Line}, setting @code{position} to @var{pos}, and
+@code{direction} to @var{dir}.  If this function is called with no
+arguments, it creates a @code{Line} at the @code{origin} with no
+direction.  
+
+@example
+Point p(2, 1, 2);
+Point d(-3, 3, 3.5);
+Line L0(p, d);
+Line L1 = p.get_line(d);
+@end example
+
+@iftex
+@tex
+\ifmakeexamples
+\BEX
+\BGRP
+\immediate\write\examples{default_focus.set(2, 3, -10, 0, 3, 10, 10);}
+\immediate\write\examples{draw_axes(gray);}
+\immediate\write\examples{stringstream s;}
+\immediate\write\examples{Point p(2, 1, 2);}
+\immediate\write\examples{Point d(-3, 3, 3.5);}
+\immediate\write\examples{p.dotlabel("$p$"); }
+\immediate\write\examples{p.label(Point::WORLD_VALUES, "bot");}
+\immediate\write\examples{p.draw(d, black, "evenly");}
+\immediate\write\examples{Line L0(p, d);}
+\immediate\write\examples{s << "$d @DBKS{equiv} L_0.@OCB@DBKS{tt} direction@CCB @DBKS{equiv} (" }
+\immediate\write\examples{  << L0.direction.get_x()}
+\immediate\write\examples{  << ", " << L0.direction.get_y() << ", " << L0.direction.get_z()}
+\immediate\write\examples{  << ")$";}
+\immediate\write\examples{L0.direction.label(s.str()); }
+\immediate\write\examples{origin.drawarrow(L0.direction);}
+\immediate\write\examples{Line L1 = p.get_line(d);}
+\immediate\write\examples{s.str("");}
+\immediate\write\examples{s << "$L_1.@OCB@DBKS{tt} direction@CCB @DBKS{equiv} (" << L1.direction.get_x()}
+\immediate\write\examples{  << ", " << L1.direction.get_y() << ", " << L1.direction.get_z()}
+\immediate\write\examples{  << ")$";}
+\immediate\write\examples{L1.direction.label(s.str());}
+\immediate\write\examples{origin.drawarrow(L1.direction); }
+\OEX{}
+\EGRP
+\EEX 1
+\fi
+\PEX
+@end tex
+@end iftex
+
+@ifhtml
+@html
+<p align="center">
+<br>
+<img src="./graphics/png/3DLDF104.png"
+alt="[Figure 104. Not displayed.]"
+/>
+<br>
+<br>
+Fig. 104.
+<br>
+</p>
+@end html
+@end ifhtml
+
+@ifinfo
+[Figure 104 not displayed.]
+@end ifinfo
+
+@end deftypefn
+
+@deftypefn {Copy constructor} void Line ({const Line&} @var{l})
+Creates a @code{Line}, making it a copy of @var{l}.
+@end deftypefn 
+
+
+@node Line Operators, Get Path, Line Constructors, Line Reference
+@section Operators
+
+@deftypefn {Assignment operator} void operator= ({const Line&} @var{l})
+Sets @code{*this} to @var{l}.
+@end deftypefn 
+
+@c LDF 2003.06.03.  Add description of @code{get_distance()}, when I've
+@c fixed it. 
+
+@node Get Path, Showing, Line Operators, Line Reference
+@section Get Path
+
+@deftypefn {@code{const} function} Path get_path (void)
+Returns a linear @code{Path} with two @code{Points}
+on the @code{Line}.  The first @code{Point} will be @code{position}, and
+the second will be @code{position + direction}.
+@end deftypefn 
+
+@node Showing,  , Get Path, Line Reference
+@section Showing
+
+@deftypefun void show ([string @var{text} = ""])
+If @var{text} is not the empty @code{string} (the default), it is
+printed on a line of its own to standard output.  Otherwise, @samp{Line:}
+is printed.  Following this, @code{Point::show()} is called on
+@code{position} and @code{direction}.
+
+@example
+Point p(1, -2, 3);
+Point d(-12.3, 21, 36.002);
+Line L0(p, d);
+L0.show("L0:");
+@print{} L0:
+   position: (1, -2, 3)
+   direction: (-12.3, 21, 36.002)
+Line L1 = p.get_line(d);
+L1.show("L1:");
+@print{} L1:
+   position: (1, -2, 3)
+   direction: (-13.3, 23, 33.002)
+Path q = L1.get_path();
+q.show("q:");
+@print{} q:
+   fill_draw_value == 0
+   (1, -2, 3) -- (-12.3, 21, 36.002);
+@end example
+@end deftypefun 
+

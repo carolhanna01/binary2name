@@ -1,0 +1,255 @@
+@c -*-texinfo-*-
+
+@c Copyright (C) 2003-2020 Free Software Foundation, Inc.
+@c See file doclicense.texi for copying conditions.
+
+@include trampver.texi
+
+@c The installation chapter.
+@node Installation
+@ifplaintext
+@unnumbered Installing @value{tramp} into Emacs
+@end ifplaintext
+@ifnotplaintext
+@chapter Installing @value{tramp} into Emacs
+@end ifnotplaintext
+@cindex installation
+
+@value{tramp} is part of Emacs since version 22.
+@ifplaintext
+This @value{tramp} version, @value{trampver}, has been used
+successfully on Emacs 24, on Emacs 25, on Emacs 26, on Emacs 27, and
+on Emacs 28.
+@end ifplaintext
+If you use the version that comes with your Emacs, or the version from
+GNU ELPA, the following information is not necessary.
+
+@node System Requirements
+@section System Requirements
+
+For installation, it requires at least the following program versions:
+
+@itemize @bullet
+@item GNU Emacs @value{emacsver}
+@item GNU Autoconf 2.50 if sources are taken from GIT
+@item GNU make 3.76
+@item GNU texinfo 4.6
+@end itemize
+
+On MS Windows, you need Posix programs for installation.  These and
+other useful Posix utilities can be obtained from one of several
+projects:
+
+@itemize @bullet
+@item @url{http://www.mingw.org/msys.shtml} @ ( MSYS )
+@item @url{http://www.cygwin.com/} @ @ @ @ @ @ @ @ @ @ ( Cygwin )
+@item @url{http://unxutils.sourceforge.net/} ( UnxUtils )
+@item @url{http://gnuwin32.sourceforge.net/} ( GnuWin32 )
+@end itemize
+
+
+@node Basic Installation
+@section Basic Installation
+
+Installing @value{tramp} into your Emacs is a relatively easy process,
+at least compared to rebuilding your machine from scratch. ;)
+
+Seriously, though, the installation should be a fairly simple matter.
+The easiest way to proceed is as follows:
+
+@itemize @bullet
+@item
+Choose a directory, say @file{~/emacs/}.  Change into that directory
+and unpack the tarball.  This will give you a directory
+@file{~/emacs/tramp-@value{trampver}/} which contains subdirectories
+@file{lisp} for the Lisp code, @file{texi} for the documentation, and
+@file{test} for code running @value{tramp}'s test suite.  Make a
+symbolic link:
+
+@example
+$ ln -s tramp-@value{trampver} tramp
+@end example
+
+@item
+@command{cd} to @file{~/emacs/tramp/}.  If you've taken @value{tramp}
+from the GIT sources, type @command{autoconf} in order to get an
+up-to-date @command{configure} script.  This is needed only one time
+after you've cloned @value{tramp} from GIT.
+
+@item
+Type @command{./configure} to configure @value{tramp} for your system.
+
+Running @command{configure} takes a while.  While running, it prints
+some messages telling which features it is checking for.
+
+@item
+Type @command{make} to build the byte-compiled Lisp files as well as
+the Info manual.
+
+@item
+Type @command{make install} to install the @value{tramp} Lisp files
+and Info manual.
+
+@item
+You can remove the byte-compiled Lisp files and the Info manual from
+the source directory by typing @command{make clean}.  To also remove
+the files that @command{configure} created, type @command{make
+distclean} instead.
+
+@item
+NOTE: If you run into problems running the example @command{make}
+command, don't despair.  You can still byte compile the @file{*.el}
+files by opening Emacs in @code{dired} (@kbd{C-x d}) mode, at
+@file{~/emacs/tramp/lisp}.  Mark the lisp files with @kbd{m}, then
+press @kbd{B} to byte compile your selections.
+
+Something similar can be done if there were problems creating the info
+manual.  Just change to directory @file{~/emacs/tramp/texi} and load
+the @file{tramp.texi} file in Emacs.  Then press @kbd{M-x
+texinfo-format-buffer @key{RET}} to generate
+@file{~/emacs/tramp/info/tramp}.
+@end itemize
+
+
+@node Installation parameters
+@section Parameters in order to control installation
+@cindex installation
+
+By default, @command{make install} will install @value{tramp}'s files
+in @file{@value{lispdir}} and @file{@value{infodir}}.  You can specify
+an installation prefix other than @file{@value{instprefix}} by giving
+@command{configure} the option @option{--prefix=PATH}.  On GNU/Linux
+systems, it has been reported useful to apply
+
+@example
+$ ./configure --prefix=/usr
+@end example
+
+If your installed copy of Emacs is named something other than
+@option{emacs}, you will need to tell `make' where to find it so that
+it can correctly byte-compile the @value{tramp} sources.
+
+For example, to pass the Emacs command to be called:
+
+@example
+$ ./configure --with-emacs=emacs24
+@end example
+
+If you specify the absolute path of the command, it must not contain
+whitespaces.  If you need it, the corresponding path shall be appended
+to the @env{PATH} environment variable.
+
+Also, the @option{--prefix=PATH} option to @command{configure} may not
+be general enough to set the paths you want.  If not, you can declare
+the directories Lisp and Info files should be installed.
+
+For example, to put the Lisp files in @file{$HOME/elisp} and the Info
+file in @file{$HOME/info}, you would type:
+
+@example
+$ ./configure --with-lispdir=$HOME/elisp --infodir=$HOME/info
+@end example
+
+On MS Windows, given Emacs is installed at
+@w{@file{C:/Program Files/Emacs}}, you should apply
+
+@example
+$ ./configure \
+    --with-lispdir='C:/Program Files/Emacs/share/emacs/site-lisp' \
+    --infodir='C:/Program Files/Emacs/share/info'
+@end example
+
+@vindex DESTDIR@r{, environment variable}
+@command{make} supports the @env{DESTDIR} environment variable for staged
+@ifplaintext
+installation:
+@end ifplaintext
+@ifnotplaintext
+installation; @inforef{Command Variables, , standards}:
+@end ifnotplaintext
+
+@example
+$ make DESTDIR=/tmp install
+@end example
+
+Running @command{configure} might result in errors or warnings.  The
+output explains in detail what's going wrong.
+
+In case of errors, it is mandatory to fix them before continuation.
+This can be missing or wrong versions of @command{emacs}, Emacs
+packages, @command{make}, or @command{makeinfo}.
+
+Warnings let @command{configure} (and the whole installation process)
+continue, but parts of @value{tramp} aren't installed.  This can
+happen with missing or wrong versions of @command{texi2dvi} or
+@command{install-info}.  Here you can decide yourself whether you want
+to renounce on the related feature (@file{tramp.dvi} file for printed
+output, @value{tramp} entry in Info's @file{dir} file), or whether you
+want to adapt your @env{PATH} environment variable, and rerun
+@command{configure}.  An alternative is calling the missed parts
+manually later on.
+
+
+@node Testing
+@section A test suite for @value{tramp}
+@cindex installation
+@cindex testing
+
+@value{tramp} comes with an own test suite.  In order to run this test
+suite, you call
+
+@example
+$ make check
+@end example
+
+@vindex REMOTE_TEMPORARY_FILE_DIRECTORY@r{, environment variable}
+This test suite uses a mock-up connection method for the tests.  This
+means, that no real connection is established, and no password is
+required for the tests.  You can change this default behaviour by
+tweaking the environment variable @env{REMOTE_TEMPORARY_FILE_DIRECTORY}:
+
+@example
+$ env REMOTE_TEMPORARY_FILE_DIRECTORY=@file{@trampfn{sudo,,/tmp}} make check
+@end example
+
+If you are using MS Windows, the mock-up trick does not work, and you
+must change the default anyway.
+
+See the file @file{test/README} for further details how to run the
+test suite.
+
+@ifnotplaintext
+If there are errors in that test suite you could not cover yourself,
+you might send a @ref{Bug Reports, bug report}.
+@end ifnotplaintext
+
+
+@node Load paths
+@section How to plug-in @value{tramp} into your environment
+@cindex installation
+
+If you don't install @value{tramp} into the intended directories, but
+prefer to use from the source directory, you need to add the following
+lines into your @file{.emacs}:
+
+@lisp
+(add-to-list 'load-path "~/emacs/tramp/lisp/")
+(require 'tramp)
+@end lisp
+
+@vindex INFOPATH@r{, environment variable}
+If the environment variable @env{INFOPATH} is set, add the directory
+@file{~/emacs/tramp/info/} to it.  Else, add the directory to
+@code{Info-directory-list}, as follows:
+
+@lisp
+(add-to-list 'Info-directory-list "~/emacs/tramp/info/")
+@end lisp
+
+
+@ifplaintext
+@node Suggestions
+@section Suggestions/Bug Reports
+
+Send all suggestions for fixes, etc to @email{@value{tramp-bug-report-address}}.
+@end ifplaintext

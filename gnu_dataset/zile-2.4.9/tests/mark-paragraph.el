@@ -1,0 +1,5 @@
+(mark-paragraph)
+(kill-region (point) (mark))
+(insert "aaa")
+(save-buffer)
+(save-buffers-kill-emacs)

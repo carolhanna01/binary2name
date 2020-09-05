@@ -1,0 +1,48 @@
+# This file is part of GNU Dico
+# Copyright (C) 1998-2019 Sergey Poznyakoff
+#
+# GNU Dico is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# GNU Dico is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Dico.  If not, see <http://www.gnu.org/licenses/>.
+
+SUBDIRS = gnu
+
+AM_CPPFLAGS = \
+ @DICO_PROG_CONFIG@\
+ -I${top_srcdir}/include\
+ -I${srcdir}/gnu\
+ -I${builddir}/gnu\
+ -DLOCALEDIR=\"$(localedir)\"
+
+noinst_LTLIBRARIES=libxdico.la
+if COND_LIBDICOSASL
+  noinst_LIBRARIES=libdicosasl.a
+endif
+
+libxdico_la_SOURCES=\
+ appi18n.c\
+ iputil.c\
+ timer.c\
+ userprivs.c\
+ xalloc-die.c\
+ xhostname.c\
+ xscript.c\
+ xstream.c\
+ xtkn.c\
+ xutil.c
+
+libxdico_la_LIBADD = gnu/libgnu.la
+
+libdicosasl_a_SOURCES=\
+ gsaslstr.c
+
+

@@ -1,0 +1,79 @@
+GNU/EDMA Aspect Oriented Programming
+by David Martínez Oliveira < dmartin at tsc.uvigo.es >
+
+
+Introduction
+------------
+This tutorial will introduce aspect oriented programming with the GNU/EDMA system
+
+GNU/EDMA does not provides an AOP framework as we are used to see on other platforms, where an Aspect language must be used. Maybe an aspect language will be defined in the future but for now, GNU/EDMA provides a low level interface which allows to achieve AOP features in a simple way.
+
+Strictly speaking, what GNU/EDMA provides is a general method/property interceptor solutions which allows to inject code around main object interaction primitives.
+
+SIU Proxies as Method Interceptors
+----------------------------------
+Method interception is performed using SIU proxies. Even when SIU proxies where designed to allow easy extension of the GNU/EDMA core to interface similar systems, those proxies can be used as general method interceptors and so, they can be used to inject code after and before any GNU/EDMA object interaction primitive.
+
+From this point of view, Aspects become SIU proxies within the GNU/EDMA environment and after and before code blocks are seen in a very simple way. Examples in next section will show this.
+
+Static AOP. Predefined SIU Proxies
+----------------------------------
+SIU proxies can be assigned to existing objects in several ways:
+
+1. Permanently, when the SIU proxy is specified in the GNU/EDMA class registry
+2. Creation-time, when the SIU proxy is attached to a given object when it is created
+3. Dynamically, when the SIU proxy is attached or deattached from an existing class/component instance.
+
+The last case is described in next section.
+
+In the directory 'tests/aop' you can find to complete code of the examples described in this text.
+
+To illustrate the use of static AOP lets see the general example of method call logging, common on AOP literature. For that, a SIU proxy named LOG_PROXY is defined and its 'Met3' method is coded as indicated bellow:
+
+----------8<----------------------------------------------------------------------
+ESint32 EDMAPROC
+run_method (OBJID id, CLASSID cid, EPChar met_name, EPVoid val)
+{
+  OBJID   obj;
+
+    edma_rprop3 (id, "obj", &obj);
+    edma_printf ("[LOGGING] Runnoing method %s on object %d", met_name, obj);
+    return edma_met3_pargs (obj, met_name, NULL, 1, val);
+}
+----------8<----------------------------------------------------------------------
+
+The Met3 method of a SIU proxy is executed whenever a method is invoked on the object the SIU proxy represents. As can be seen in the code above the method first recovers the object identifier the proxy is representing and just prints a message with the information of the method being executed. Then the real method is executed as usual.
+
+The example above is a simple example of after joint point for the LOG_PROXY aspect (in AOP jargon).
+
+In order to attach this aspect to a running object, it must be included in the GNU/EDMA registry or it can be specified when the object to be monitirized is created:
+
+OBJID  id = edma_new_obj ("LOG_PROXY:HELLO_WORLD");
+  
+The line above indicates that the LOG_PROXY proxy will be attached to a HELLO_WORLD object. Hereinafter, any interaction with the HELLO_WORLD instance will go through our LOG_PROXY and so, any method invocation will be logged to the standard output.	
+
+Dynamic AOP. Run-time proxy attaching
+-------------------------------------
+Additionally, SIU Proxies (or aspects) can be attached or deattached to any running object. Two primitives are provided by the system for this. The sniplet below shows how to use them.
+
+-------8<------------------------------------------------------------
+OBJID    id = edma_new_obj ("HELLO_WORLD");
+
+edma_met3 (id, "say"); /* Normal Execution */
+
+edma_attach_proxy (id, "LOG_PROXY");
+edma_met3 (id, "say"); /* Logged executuon */
+
+edma_deattach_proxy (id);
+edma_met3 (id, "say"); /* Normal executuon */
+-------8<------------------------------------------------------------
+
+As can be seen it is very easy to attach and deattach SIU proxies (or aspects) to running instances.
+
+Towards an AOP language for GNU/EDMA
+------------------------------------
+TBC
+
+Final Words
+-----------
+Even when GNU/EDMA does not provides a classical AOP/DAOP as found in other systems, the use of SIU proxies as general primitive interceptors provides the basic cross-cutting and separation of concerns philosophy behind AOP and so this ideas can be used freely in your applications without requiring external solutions. Additionally, GNU/EDMA unifies AOP and DAOP below an unique phylosophy making more easy and coherent the use of this concepts within the general GNU/EDMA programming model

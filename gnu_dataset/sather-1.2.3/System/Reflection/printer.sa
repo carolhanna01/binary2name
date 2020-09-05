@@ -1,0 +1,191 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- The PRINTER class allows users to print out arbitrary objects
+-- In order to use this class, you must compile with the -reflect
+-- compiler option.
+-- It is quite safe to use this class. It does not violate typing;
+-- encapsulation is violated, but in a relatively harmless
+-- manner (private attributes are printed out).
+
+class PRINTER_CONTEXT is
+   -- Printer context object
+
+   attr print_object_to_depth: INT;
+   attr print_str_len:INT;
+   attr print_array_len:INT;
+   attr print_attr_names:BOOL;
+   attr print_actual_type:BOOL;
+   attr print_short_source:BOOL;
+   attr print_void_arr_elts:BOOL;
+
+   -- Less useful features (set to false by default)
+   attr print_class_definition_location:BOOL;
+   attr print_attr_declaration_location:BOOL;
+   attr print_declared_type:BOOL;
+   attr print_ref_obj_id:BOOL;
+   attr print_gdb: BOOL;
+   
+   create: SAME is
+      res ::= new;
+      res.set_default;
+      return res;
+   end;
+   
+   private set_default pre ~void(self) is
+      print_gdb := false;
+      print_object_to_depth := 1;
+      print_str_len := 10;
+      print_array_len := 10;
+      print_attr_names := true;
+      print_declared_type := false;
+      print_actual_type := true;
+      print_class_definition_location := false;
+      print_attr_declaration_location := false;
+      print_void_arr_elts := false;
+      print_ref_obj_id := true;
+      print_short_source := true;
+   end;
+end;
+------------------------------------------------------------------------
+class PRINTER is
+   -- Print out objects  - similar functionality to that provided by
+   -- PO::, but does not have access to stack traces.
+   -- Usage:
+   --    With a created "PRINTER" object:
+   --    f ::= #STACK{STR};
+   --    f.push("this is a long test");
+   --    printer ::= #PRINTER'
+   --    printer.print(f);
+   --    printer.params.print_str_len := 3;
+   --    printer.print(f);
+   -- 
+   --     With void self:
+   --     f ::= #STACK{STR};
+   --     PRINTER::shared_params.print_object_to_depth := 15;
+   --     PRINTER::print(f);
+   
+   
+   private include PO_HELP_TMP;
+   private attr saved_context: PRINTER_CONTEXT; -- For saving prior context
+   readonly attr params: PRINTER_CONTEXT;   -- Context of this printer
+   
+   private shared shared_saved_context: PRINTER_CONTEXT;
+   private shared shared_params_attr: PRINTER_CONTEXT;
+
+   create: SAME is
+      res ::= new;
+      res.params := #;
+      res.saved_context := #;
+      return res;
+   end;
+   
+   shared_params: PRINTER_CONTEXT is
+      if void(shared_params_attr) then shared_params_attr := #; end;
+      return shared_params_attr;
+   end;
+   
+   print(ob:$OB) is
+      -- Use the current settings of the other options such as the "depth"
+      if void(self) then
+	 if void(shared_saved_context) then shared_saved_context := #; end;
+	 copy_params(shared_saved_context);
+	 set_params(shared_params);
+	 SYS::inlined_C("PO(#ob);");  
+	 set_params(shared_saved_context);
+      else
+	 copy_params(saved_context);
+	 set_params(params);
+	 SYS::inlined_C("PO(#ob);");  
+	 set_params(saved_context);
+      end;
+   end;
+      
+   private copy_params(into: PRINTER_CONTEXT) is
+      into.print_gdb := (print_gdb = 1);
+      into.print_object_to_depth := print_depth;
+      into.print_str_len := print_str_len;
+      into.print_array_len := print_index;
+      into.print_attr_names := (print_attr=1);
+      into.print_declared_type := (print_type=1);
+      into.print_actual_type := (print_real=1);
+      into.print_class_definition_location := (print_class_source =1);
+      into.print_attr_declaration_location := (print_declared_source=1);
+      into.print_void_arr_elts := (print_void=1);
+      into.print_ref_obj_id := (print_id=1);
+      into.print_short_source := (print_short_source=1);
+   end;
+   
+   private set_params(p: PRINTER_CONTEXT) is
+      print_gdb(p.print_gdb.int);
+      print_depth(p.print_object_to_depth);
+      print_str_len(p.print_str_len);
+      print_index(p.print_array_len); 
+      print_attr(p.print_attr_names.int);
+      print_type(p.print_declared_type.int); 
+      print_real(p.print_actual_type.int); 
+      print_class_source(p.print_class_definition_location.int); 
+      print_declared_source(p.print_attr_declaration_location.int);
+      print_void(p.print_void_arr_elts.int);
+      print_id(p.print_ref_obj_id.int); 
+      print_short_source(p.print_short_source.int); 
+   end;
+   
+end;
+------------------------------------------------------------------------
+class PO_HELP_TMP is
+    print_depth:INT is i:INT;SYS::inlined_C("{ extern int print_depth;#i=print_depth; }");return i;end;
+    print_lines:INT is i:INT;SYS::inlined_C("{ extern int print_lines;#i=print_lines; }");return i;end;
+    print_func:INT is i:INT;SYS::inlined_C("{ extern int print_func;#i=print_func; }");return i;end;
+    print_str_len:INT is i:INT;SYS::inlined_C("{ extern int print_str_len;#i=print_str_len; }");return i;end;
+    print_index:INT is i:INT;SYS::inlined_C("{ extern int print_index;#i=print_index; }");return i;end;
+    print_attr:INT is i:INT;SYS::inlined_C("{ extern int print_attr;#i=print_attr; }");return i;end;
+    print_type:INT is i:INT;SYS::inlined_C("{ extern int print_type;#i=print_type; }");return i;end;
+    print_real:INT is i:INT;SYS::inlined_C("{ extern int print_real;#i=print_real; }");return i;end;
+    print_c_attr:INT is i:INT;SYS::inlined_C("{ extern int print_c_attr;#i=print_c_attr; }");return i;end;
+    print_c_type:INT is i:INT;SYS::inlined_C("{ extern int print_c_type;#i=print_c_type; }");return i;end;
+    print_c_real:INT is i:INT;SYS::inlined_C("{ extern int print_c_real;#i=print_c_real; }");return i;end;
+    print_void:INT is i:INT;SYS::inlined_C("{ extern int print_void;#i=print_void; }");return i;end;
+    print_id:INT is i:INT;SYS::inlined_C("{ extern int print_id;#i=print_id; }");return i;end;
+    print_pointer:INT is i:INT;SYS::inlined_C("{ extern int print_pointer;#i=print_pointer; }");return i;end;
+    print_gdb:INT is i:INT;SYS::inlined_C("{ extern int print_gdb;#i=print_gdb; }");return i;end;
+    print_class_source:INT is i:INT;SYS::inlined_C("{ extern int print_class_source;#i=print_class_source; }");return i;end;
+    print_declared_source:INT is i:INT;SYS::inlined_C("{ extern int print_declared_source;#i=print_declared_source; }");return i;end;
+    print_short_source:INT is i:INT;SYS::inlined_C("{ extern int print_short_source;#i=print_short_source; }");return i;end;
+
+    print_depth(i:INT) is SYS::inlined_C("{ extern int print_depth;print_depth=#i; }");end;
+    print_lines(i:INT) is SYS::inlined_C("{ extern int print_lines;print_lines=#i; }");end;
+    print_func(i:INT) is SYS::inlined_C("{ extern int print_func;print_func=#i; }");end;
+    print_str_len(i:INT) is SYS::inlined_C("{ extern int print_str_len;print_str_len=#i; }");end;
+    print_index(i:INT) is SYS::inlined_C("{ extern int print_index;print_index=#i; }");end;
+    print_attr(i:INT) is SYS::inlined_C("{ extern int print_attr;print_attr=#i; }");end;
+    print_type(i:INT) is SYS::inlined_C("{ extern int print_type;print_type=#i; }");end;
+    print_real(i:INT) is SYS::inlined_C("{ extern int print_real;print_real=#i; }");end;
+    print_c_attr(i:INT) is SYS::inlined_C("{ extern int print_c_attr;print_c_attr=#i; }");end;
+    print_c_type(i:INT) is SYS::inlined_C("{ extern int print_c_type;print_c_type=#i; }");end;
+    print_c_real(i:INT) is SYS::inlined_C("{ extern int print_c_real;print_c_real=#i; }");end;
+    print_void(i:INT) is SYS::inlined_C("{ extern int print_void;print_void=#i; }");end;
+    print_id(i:INT) is SYS::inlined_C("{ extern int print_id;print_id=#i; }");end;
+    print_pointer(i:INT) is SYS::inlined_C("{ extern int print_pointer;print_pointer=#i; }");end;
+    print_gdb(i:INT) is SYS::inlined_C("{ extern int print_gdb;print_gdb=#i; }");end;
+    print_class_source(i:INT) is SYS::inlined_C("{ extern int print_class_source;print_class_source=#i; }");end;
+    print_declared_source(i:INT) is SYS::inlined_C("{ extern int print_declared_source;print_declared_source=#i; }");end;
+    print_short_source(i:INT) is SYS::inlined_C("{ extern int print_short_source;print_short_source=#i; }");end;
+
+    PO(ob:$OB,d:INT)  
+    		is SYS::inlined_C("{ extern int print_depth;int xxx=print_depth;print_depth=#d;PO(#ob);print_depth=xxx; }"); end;
+    PO(ob:$OB)  is SYS::inlined_C("PO(#ob);"); end;
+    PT  	is SYS::inlined_C("PT(prev_func_frame);"); end;
+    PF  	is SYS::inlined_C("PF(prev_func_frame);"); end;
+end;
+

@@ -1,0 +1,147 @@
+;;; Excercise the XDR type API.                  -*- Scheme -*-
+;;;
+;;; GNU Guile-RPC --- A Scheme implementation of ONC RPC.
+;;; Copyright (C) 2007, 2008, 2010  Free Software Foundation, Inc.
+;;;
+;;; This file is part of GNU Guile-RPC.
+;;;
+;;; GNU Guile-RPC is free software; you can redistribute it and/or modify it
+;;; under the terms of the GNU Lesser General Public License as published by
+;;; the Free Software Foundation; either version 3 of the License, or (at
+;;; your option) any later version.
+;;;
+;;; GNU Guile-RPC is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+(define-module (tests xdr)
+  :use-module (rnrs bytevectors)
+  :use-module (rpc xdr)
+  :use-module (rpc xdr types)
+  :use-module (srfi srfi-4)
+  :use-module (srfi srfi-64))
+
+
+
+;;;
+;;; Type size.
+;;;
+
+(test-begin "xdr-type-size")
+
+
+(test-equal "basic" 4
+            (xdr-type-size xdr-integer 0))
+
+(test-equal "enumeration" 4
+            (xdr-type-size (make-xdr-enumeration 'ordinals
+                                                 '((one . 1) (two . 2)))
+                           'one))
+
+(test-equal "struct" 20
+            (xdr-type-size (make-xdr-struct-type (list xdr-integer
+                                                       xdr-hyper-integer
+                                                       xdr-double))
+                           (list 0 1 2.0)))
+
+(test-equal "vector" 44
+            (xdr-type-size (make-xdr-vector-type xdr-integer #f)
+                           (make-vector 10 0)))
+
+(test-equal "u8vector" 44
+            (xdr-type-size (make-xdr-vector-type xdr-integer #f)
+                           (make-u8vector 10 0)))
+
+(test-equal "complex" 28
+            (let ((v (make-xdr-vector-type xdr-integer #f)))
+              (xdr-type-size (make-xdr-struct-type (list xdr-float v
+                                                         xdr-double))
+                             (list 1.0 (vector 1 2 3) 2.0))))
+
+(test-equal "fixed-length opaque array (exact)" 12
+            (xdr-type-size (make-xdr-fixed-length-opaque-array 12)
+                           (make-list 12 0)))
+
+(test-equal "fixed-length opaque array (rounded up)" 16
+            (xdr-type-size (make-xdr-fixed-length-opaque-array 13)
+                           (make-list 13 0)))
+
+(test-equal "variable-length opaque array (exact)" 16
+            (xdr-type-size xdr-variable-length-opaque-array
+                           (make-vector 12 0)))
+
+(test-equal "variable-length opaque array (rounded up)" 20
+            (xdr-type-size xdr-variable-length-opaque-array
+                           (make-vector 13 0)))
+
+(test-equal "union (1)" (+ 4 4)
+            (let* ((o (make-xdr-fixed-length-opaque-array 32))
+                   (u (make-xdr-union-type xdr-integer
+                                           `((1 . ,xdr-integer)
+                                             (2 . ,o))
+                                           #f)))
+              (xdr-type-size u (cons 1 77))))
+
+(test-equal "union (2)" (+ 4 32)
+            (let* ((o (make-xdr-fixed-length-opaque-array 32))
+                   (u (make-xdr-union-type xdr-integer
+                                           `((1 . ,xdr-integer)
+                                             (2 . ,o))
+                                           #f)))
+              (xdr-type-size u (cons 2 (list 255 255 255)))))
+
+(test-equal "union (default)" (+ 4 8)
+            (let* ((o (make-xdr-fixed-length-opaque-array 32))
+                   (u (make-xdr-union-type xdr-integer
+                                           `((1 . ,xdr-integer)
+                                             (2 . ,o))
+                                           xdr-hyper-integer)))
+              (xdr-type-size u (cons 55 77777))))
+
+(test-equal "self-referential struct"
+            '(24 16 8)
+
+            ;; We build a self-referential struct like this one (in XDR
+            ;; language):
+            ;;
+            ;;   struct s { int x; s *next; };
+            ;;
+            ;; We use a thunk for the self-reference in `next'.
+            (letrec ((s (make-xdr-struct-type
+                         (list xdr-integer
+                               (lambda ()
+                                 (make-xdr-union-type xdr-boolean
+                                                      `((TRUE  . ,s)
+                                                        (FALSE . ,xdr-void))
+                                                      #f))))))
+              (list (xdr-type-size s `(1 (TRUE  . (2 (TRUE  . (3 (FALSE . #f)))))))
+                    (xdr-type-size s `(1 (TRUE  . (2 (FALSE . #f)))))
+                    (xdr-type-size s `(1 (FALSE . #f))))))
+
+(test-equal "self-referential vector"
+            '(24 16 8)
+
+            ;; A variant with self-referential types, which is equivalent to
+            ;; the one above:
+            ;;
+            ;;   struct s { int x; s next<1>; };
+            ;;
+            ;; Again, `letrec' is our friend.
+            (letrec ((s (make-xdr-struct-type
+                         (list xdr-integer
+                               (make-xdr-vector-type (lambda () s) 1)))))
+              (list (xdr-type-size s `(1 #((2 #((3 #()))))))
+                    (xdr-type-size s `(1 #((2 #()))))
+                    (xdr-type-size s `(1 #())))))
+
+(test-end "xdr-type-size")
+
+
+(exit (= (test-runner-fail-count (test-runner-current)) 0))
+
+
+;;; arch-tag: c26141f7-367a-4f7b-8b12-03080ec8706d

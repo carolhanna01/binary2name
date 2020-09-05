@@ -1,0 +1,111 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<!-- Created by GNU Texinfo 5.1, http://www.gnu.org/software/texinfo/ -->
+<head>
+<title>Mifluz: Data Storage Spec</title>
+
+<meta name="description" content="Mifluz: Data Storage Spec">
+<meta name="keywords" content="Mifluz: Data Storage Spec">
+<meta name="resource-type" content="document">
+<meta name="distribution" content="global">
+<meta name="Generator" content="makeinfo">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link href="index.html#Top" rel="start" title="Top">
+<link href="Concept-Index.html#Concept-Index" rel="index" title="Concept Index">
+<link href="Concept-Index.html#SEC_Contents" rel="contents" title="Table of Contents">
+<link href="index.html#Top" rel="up" title="Top">
+<link href="Cache-tuning.html#Cache-tuning" rel="next" title="Cache tuning">
+<link href="Document-name-scheme.html#Document-name-scheme" rel="previous" title="Document name scheme">
+<style type="text/css">
+<!--
+a.summary-letter {text-decoration: none}
+blockquote.smallquotation {font-size: smaller}
+div.display {margin-left: 3.2em}
+div.example {margin-left: 3.2em}
+div.indentedblock {margin-left: 3.2em}
+div.lisp {margin-left: 3.2em}
+div.smalldisplay {margin-left: 3.2em}
+div.smallexample {margin-left: 3.2em}
+div.smallindentedblock {margin-left: 3.2em; font-size: smaller}
+div.smalllisp {margin-left: 3.2em}
+kbd {font-style:oblique}
+pre.display {font-family: inherit}
+pre.format {font-family: inherit}
+pre.menu-comment {font-family: serif}
+pre.menu-preformatted {font-family: serif}
+pre.smalldisplay {font-family: inherit; font-size: smaller}
+pre.smallexample {font-size: smaller}
+pre.smallformat {font-family: inherit; font-size: smaller}
+pre.smalllisp {font-size: smaller}
+span.nocodebreak {white-space:nowrap}
+span.nolinebreak {white-space:nowrap}
+span.roman {font-family:serif; font-weight:normal}
+span.sansserif {font-family:sans-serif; font-weight:normal}
+ul.no-bullet {list-style: none}
+-->
+</style>
+
+
+</head>
+
+<body lang="en" bgcolor="#FFFFFF" text="#000000" link="#0000FF" vlink="#800080" alink="#FF0000">
+<a name="Data-Storage-Spec"></a>
+<div class="header">
+<p>
+Next: <a href="Cache-tuning.html#Cache-tuning" accesskey="n" rel="next">Cache tuning</a>, Previous: <a href="Document-name-scheme.html#Document-name-scheme" accesskey="p" rel="previous">Document name scheme</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+<hr>
+<a name="Data-Storage-Spec-1"></a>
+<h2 class="chapter">5 Data Storage Spec</h2>
+
+<p>Efficient management of the data storage space is an important issue of
+the management of inverted indexes. The needs of an inverted index are
+very similar to the needs of a regular file system. We need:
+</p>
+<ul>
+<li> A cache associated with an LRU list to keep the
+most frequently used entries in memory.
+
+</li><li> To group postings into pages of fixed size to optimize I/O
+on disk.
+
+</li><li> A locking mechanism to prevent race conditions between threads or
+multiple processes accessing the same data.
+
+</li><li> A transaction system to ensure data integrity and atomicity of logical
+operations.
+
+</li><li> Transparent compression of pages to reduce I/O bottleneck for large
+volumes of data and reduce disk usage as a bonus.
+
+</li><li> To create indexes using up to 1 tera bytes.
+
+</li></ul>
+
+<p>All these functionalities are provided by file systems and kernel
+services. Since we also wanted the <code>mifluz</code> library to be portable
+we chose the Berkeley DB library that implements all the services
+above. The transparent compression is not part of Berkeley DB and is
+implemented as a patch to Berkeley DB (version 3.1.14).
+</p>
+<p>Based on these low level services, Bekeley DB also implements a Btree
+structure that <code>mifluz</code> used to store the postings. Each posting is
+an entry in the Btree structure. Indexing 100 million words implies creating
+100 million entries in the Btree. When transparent compression is
+used and assuming we have 6 byte words and a document identifier using
+7 * 8 bits, the average disk size used per entry is 6 bytes.
+</p>
+<p>Unique word statistics are also stored in the inverted index. 
+For each unique word, an entry is created in a dictionnary and associated
+with a serial number (the word identifier and the total number of occurrences.
+</p>
+<hr>
+<div class="header">
+<p>
+Next: <a href="Cache-tuning.html#Cache-tuning" accesskey="n" rel="next">Cache tuning</a>, Previous: <a href="Document-name-scheme.html#Document-name-scheme" accesskey="p" rel="previous">Document name scheme</a>, Up: <a href="index.html#Top" accesskey="u" rel="up">Top</a> &nbsp; [<a href="Concept-Index.html#SEC_Contents" title="Table of contents" rel="contents">Contents</a>][<a href="Concept-Index.html#Concept-Index" title="Index" rel="index">Index</a>]</p>
+</div>
+
+
+
+</body>
+</html>

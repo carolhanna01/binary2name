@@ -1,0 +1,408 @@
+sauce (0.7.7) unstable; urgency=high
+
+  Important new features and improvements:
+  * SAUCE now does not normally reject until it sees RCPT.  This makes it
+    possible to mix SAUCEd and effectively un-SAUCEd addresses at the same
+    domain.
+  * Policy strictness, and the delay feature, are now much more
+    configurable, and the possible recipient classes have been improved,
+    clarified and documented.  The configuration can be per recipient
+    address, including taking into account the local-part, as well as
+    details of the sending site or user.  Policy can be configured by
+    users using userv.  
+  * Rejection log entries are much improved.  They now nearly always
+    include:
+     - the sending site name (or address) and envelope sender;
+     - the recipient(s), and the SMTP response code given to each;
+     - any RBL domains hit, as a separate item;
+     - all the reasons why the rejection or deferral happened.
+  * Now we try to be generous at `accepting' mails to bait addresses.  We
+    return 250, but throw the message away.
+  * For mails we'd like to reject, but policy says to accept, we add an
+    X-SAUCE-Warning to the headers saying what was wrong.
+
+  Minor improvements and new features:
+  * Count avf MAIL FROM:<> => 5xx as a definite failure.
+  * Irritation amount strings as displayed in SMTP responses are
+    configurable.
+  * When stalling due to anger (teergrube), fill up with anger_stallwith
+    messages, not repeats.  These messages are configurable.
+  * Transaction IDs are improved and appear in some visible outputs.
+  * configurable notifybl from, default sauce-bounces@canonical_hostname.
+  * When doing recipient verifications, we pause before accepting most of
+    the header, rather than at final dot.  This may slightly reduce
+    message duplication under pathological conditions.
+  * Default blmessage.text simplified and now uses 1st person plural.
+  * Debug messages are now indended by procedure call level.
+  * Default set-firewall script included.
+  * Internal syntax changes and cleanups.
+
+  Many bugfixes:
+  * If avf fails (except for 5xx), try again on a fresh connection.
+  * Debian init.d stop script uses start-stop-daemon to ensure death.
+  * When we shut down, catch_close_cleardesc the mtachan to abort any
+    teergrube output currently happening.
+  * Don't let the SMTP thread hang around after caller goes away.
+  * Properly kill subthreads in when we finish an SMTP thread.
+  * Originator header syntax checking uses its own errorCode to avoid
+    550 due to internal errors.
+  * Copyright dates updated.
+  * Assorted other bugfixes.
+
+  Debian packaging changes:
+  * Now `extra' rather than `experimental'.
+  * Depends on libadns1-bin.
+  * Maintainer address corrected.
+
+  (Version numbers 0.7.0-0.7.5 are on the branch-2000-12-21-overhaul, where
+   the code should be considered ALPHA; this change log lists only changes
+   that are relevant compared to the state in 0.6.1.)
+
+ -- Ian Jackson <ian@chiark.greenend.org.uk>  Wed, 21 Mar 2001 23:59:54 +0000
+
+sauce (0.6.1) unstable; urgency=low
+
+  Bugfixes from chiark:
+  * Cope with new format of ipchains -L output.
+  * dbreasons log is more important than reject log.
+  * --unknown option added to sauce-bwlist.
+  * Allow HELO name to be CNAME (why?).
+  * If HELO DNS lookup gives MISCONFIG, print correct error message.
+  * Always print postmaster@... address in HELO response.
+  * If RBL gave unexpected answer, preserve flow of control.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 20 Aug 2000 17:50:21 +0100
+
+sauce (0.6.0) unstable; urgency=medium
+
+  Major improvement:
+  * Now uses adnshost(1) instead of host(1) for DNS lookups.  (`host' is
+    from BIND and is buggy.)  This will produce some stricter checks.
+
+  Bugfixes from chiark:
+  * When ident gives garbage, do not lose thread flow-of-control.
+  * RCPT arguments containing { } (and other metacharacters) properly
+    processed rather than causing internal error.
+  * userblacklist now -bwlist, can whitelist too.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed, 10 May 2000 01:51:41 +0100
+
+sauce (0.5.0) experimental; urgency=low
+
+  * New documentation files {README,BLURB,ERRORS,INSTALL}.text.
+  * Give `install' the `-c' flag (and not `-o root -g root').
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 17 Oct 1999 19:57:34 +0100
+
+sauce (0.4.14) unstable; urgency=low
+
+  * Split sauce.tcl into two parts; have goes into new smtp.tcl.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sat,  9 Oct 1999 16:48:20 +0100
+
+sauce (0.4.13) unstable; urgency=medium
+
+  New features:
+  * Limit number of connections (prefer sites we're pleased with).
+  * Firewall out sites which make us very angry and exceed conn limit. 
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sat,  9 Oct 1999 15:58:47 +0100
+
+sauce (0.4.12) unstable; urgency=medium
+
+  Bugfixes:
+  * When databases have bad format, show the line in question.
+  * Blank commands, read errors, & unexpected EOFs reported sensibly.
+  * Send blacklist notifications from <>.
+  * Do not become angry (or pleased) with any local interface.
+  * New `Ecstatic' pleasure level.
+  * Show anger/pleasure in greeting.
+  * Avoid unset variable bug with state(mf_parms).
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sat, 18 Sep 1999 18:00:10 +0100
+
+sauce (0.4.11) unstable; urgency=low
+
+  Bugfixes:
+  * Properly store and remember quoted datastate keys.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 23:15:16 +0100
+
+sauce (0.4.10) unstable; urgency=low
+
+  Bugfixes:
+  * Do not listen to input after timeout-disconnect.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 22:28:59 +0100
+
+sauce (0.4.9) unstable; urgency=low
+
+  Bugfixes:
+  * Greeting doesn't count as a minor fault any more.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 21:24:21 +0100
+
+sauce (0.4.8) unstable; urgency=low
+
+  Bugfixes:
+  * Show sending hostname in acceptance messages.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 20:29:29 +0100
+
+sauce (0.4.7) unstable; urgency=low
+
+  Bugfixes:
+  * Defer really counts as a minor fault.   Greeting, too.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 20:05:40 +0100
+
+sauce (0.4.6) unstable; urgency=low
+
+  Bugfixes:
+  * More improvements to irritation logging.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 19:34:03 +0100
+
+sauce (0.4.5) unstable; urgency=low
+
+  Bugfixes:
+  * When irritated, log the causes.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 19:00:51 +0100
+
+sauce (0.4.4) unstable; urgency=low
+
+  Bugfixes:
+  * Do not go into infinite recursing when shutting down !
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 18:44:24 +0100
+
+sauce (0.4.3) unstable; urgency=low
+
+  Bugfixes:
+  * Remove rcsid line from /etc/sauce/sys-config.
+  * Proper timing of annoyed messages (no long gap at end of delays).
+  * Properly encode anger values in datastate.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 18:32:01 +0100
+
+sauce (0.4.0) unstable; urgency=medium
+
+  New features/improvements:
+  * sauce-blacklist => sauce-bwlist, and can now whitelist too.
+  * SAUCE now gets "angry" with sites sending lots of bogus stuff.
+
+  Bugfixes:
+  * Allow CNAMEs to point to non-hostnames (needed for classless in-addr).
+  * Copyright notices and dates updated.
+  
+  * Now uses tcl 8.2.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 12 Sep 1999 17:25:30 +0100
+
+sauce (0.3.6) unstable; urgency=low
+
+  Bugfixes:
+  * Check for missing config settings works (thanks Dan Sheppard).
+  * Don't produce dbreasons log entry if new state is same as old.
+  * Don't spout silly `mfok' debugging to stderr.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sat, 21 Aug 1999 03:51:23 +0100
+
+sauce (0.3.5) unstable; urgency=medium
+
+  New features/improvements:
+  * Extra quitting check when actually issuing responses.
+  * New ds state for addr 'verified' to save on avf's for bypass.
+  * Changed defaults for various things to match chiark's config.
+
+  Bugfixes:
+  * Allow blacklisted senders/sites to contact admins, as intended !
+  * Be case-insensitive about domain names in addr_classify.
+  * Make admin addresses avoid header checks like bypass addrs.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu, 12 Aug 1999 00:42:52 +0100
+
+sauce (0.3.4) unstable; urgency=medium
+
+  Bugfixes:
+  * Allow CNAMEs with strange data (sigh).
+  * Don't put deferrals in the reject.log.
+  * Lowercase the domain in addr_classify.
+  * Apply teergrube delay to closing message `421 ... some error ...'.
+  * Include domain in listing of bait addresses in dbreasons.log.
+  * Use fconfigure -translation binary to avoid crazyness on CR-CR-LF.
+  * Put dates and exit status in the sauce-startup.log, and append.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu, 29 Jul 1999 02:46:47 +0100
+
+sauce (0.3.3) unstable; urgency=high
+
+  * Make socket translation mode be {binary crlf} throughout;
+    and strip CRs ourselves in threadio_gets.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Mon, 19 Jul 1999 22:05:27 +0100
+
+sauce (0.3.2) unstable; urgency=low
+
+  * Better error messages for connection and verification failure.
+  * Make userblacklist work again.
+  * Make RSET on verify connection work properly.
+  * Make error handling cleanup for avfpool crash be complete.
+  * ipaddr_phase_proportion requires local_interfaces to avoid inability
+    to use sauceadmin.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu, 15 Jul 1999 03:08:49 +0100
+
+sauce (0.3.1) unstable; urgency=low
+
+  * sauceadmin shutdown waits for the shutdown to happen.
+  * Bugfixes.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun,  4 Jul 1999 21:01:48 +0100
+
+sauce (0.3.0) unstable; urgency=high
+
+  Major overhaul:
+  * Redone persistent database handling.
+  * No more pause after final dot.
+  * Bugfixes and other changes.
+  * VRFY implemented.
+  * Add Received header.
+  * RBL support.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun,  4 Jul 1999 20:25:06 +0100
+
+sauce (0.2.13) unstable; urgency=low
+
+  More bugfixes and features from chiark, including:
+  * userblacklist support.
+  * reject.log.
+  * Accept source-routes in addresses in MAIL FROM and RCPT TO.
+  * Make require_messageid configurable (default=true).
+  * Missing `quit' causes no peeved 421 message.
+  * Attempt to set -oMr to include -sauce.
+  * Do not advertising PIPELINING.
+  * Advertise X-SAUCE (temporary?)
+  * show and help moved to yesmaster.
+  * Default *_whitelist_delay increased to 5d from 1d.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed, 16 Jun 1999 23:21:44 +0100
+
+sauce (0.2.11) unstable; urgency=low
+
+  More bugfixes and features from chiark, including:
+  * Logging of rejection after body transfer in notice log.
+  * Teergrube.
+  * Limit number of SMTP errors.
+  * Logging of connection close (421) messages in notice log.
+  * More diagnostics to far end if MTA fails on banner or hello.
+  * More info about which threads were around if shutdown times out.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu,  3 Jun 1999 02:56:41 +0100
+
+sauce (0.2.10) unstable; urgency=low
+
+  * Bugfixes from chiark.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Mon, 24 May 1999 20:57:57 +0100
+
+sauce (0.2.9) unstable; urgency=low
+
+  * Default bait address patterns really fixed.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 25 Apr 1999 19:39:42 +0100
+
+sauce (0.2.8) unstable; urgency=low
+
+  * Default bait address patterns fixed.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed, 21 Apr 1999 23:30:10 +0100
+
+sauce (0.2.7) unstable; urgency=low
+
+  * DNS threads now distinguish nonexistent domains and no RR of requested
+    type; this improves error messages.
+  * DNS RR syntax (as out of `host') is now checked.
+  * standard output and standard error from host is now distinguished - no
+    more misunderstanding error messages as RRs.
+  * `record currently not present' message from host is now treated as
+    permanent error meaning no RR of requested type; this is right unless
+    the local nameserver is misconfigured.  host does not appear to
+    properly distinguish real permanent errors here from transient ones.
+  * If Tcl were not broken then a nonzero exit status from host would
+    prevent successful answers from coming back from DNS queries.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sun, 13 Sep 1998 23:29:18 +0100
+
+sauce (0.2.6) unstable; urgency=low
+
+  * Several bugfixes, and new timeout beyond which shutdown is forced.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu, 10 Sep 1998 01:53:08 +0100
+
+sauce (0.2.5) unstable; urgency=low
+
+  * Report errors properly in thread_sysshutdown.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu,  3 Sep 1998 11:30:54 +0100
+
+sauce (0.2.4) unstable; urgency=low
+
+  * Do not die if ident unavailable.
+  * Debug level 2 gives sendmail command line args.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Thu,  3 Sep 1998 11:22:43 +0100
+
+sauce (0.2.3) unstable; urgency=low
+
+  * Add config-info.text.
+  * Don't make unkillable daemon if many are started.
+  * If msg_origverify gives error, do not get Tcl error.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed,  2 Sep 1998 19:38:03 +0100
+
+sauce (0.2.2) unstable; urgency=low
+
+  * Various minor fixes, proper version number.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed,  2 Sep 1998 18:11:18 +0100
+
+sauce (0.2.1) experimental; urgency=low
+
+  * First version with source package, proper maintainer scripts.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed,  2 Sep 1998 17:56:02 +0100
+
+sauce (0.2) unstable; urgency=low
+
+  * Many improvements.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Wed,  2 Sep 1998 15:28:37 +0100
+
+sauce (0.1-1) experimental; urgency=low
+
+  * Initial release.
+
+ -- Ian Jackson <ian@davenant.greenend.org.uk>  Sat, 29 Aug 1998 14:57:50 +0100
+
+(This file is part of SAUCE, a very picky anti-spam receiver-SMTP.
+ SAUCE is Copyright (C) 1997-1999 Ian Jackson
+
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation; either version 2, or (at your option)
+ any later version.
+
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software Foundation,
+ Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.)
+
+# Local variables:
+# mode: debian-changelog
+# End:

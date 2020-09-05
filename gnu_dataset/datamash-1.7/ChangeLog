@@ -1,0 +1,2425 @@
+2020-04-23  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update NEWS with version 1.7 and date
+
+2020-04-23  Assaf Gordon  <assafgordon@gmail.com>
+
+	decorate: new program (experimental)
+	decorate(1) works in tandem with sort(1) to enable sorting by
+	non-standard ordering, e.g. IPv4, IPv6, roman numerals.
+
+	Suggested by Pádraig Brady in:
+	https://lists.gnu.org/r/bug-coreutils/2015-06/msg00076.html
+
+	* NEWS: Mention new program.
+	* bootstrap.conf: Add sys_socket, netinet_in gnulib modules.
+	* .gitignore: Ignore decorate related files.
+	* Makefile.am (bin_PROGRAMS): Add decorate.
+	  (decorate_SOURCES/CFLAGS/CPPFLAGS/LDFLAGS): New items.
+	  (man_MANS): Add decorate.
+	  (TESTS): Add new tests.
+	* src/decorate.c, src/key-compare.{c,h}: New program, adapted from
+	  https://lists.gnu.org/archive/html/coreutils/2019-03/msg00056.html
+	* src/decorate-functions.{c,h}: New module.
+	* man/decorate.x: New file.
+	* src/system.h: Add quotef,quotef_n,FALLTHROUGH,SORT_FAILURE.
+	* tests/decorate-errors.pl, tests/decorate-sort-tests.pl,
+	  tests/decorate-tests.pl: New tests.
+	* po/POTFILES.in: Add new .c files.
+
+2020-04-23  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: fix syntax-checks following sha256,geomean additions
+	* src/datamash.c (usage),
+	  tests/datamash-sha.pl,
+	  tests/datamash-stats.pl: Break line at 80 characters.
+	* src/fields-ops.c: Fix space-before-parentheses.
+
+2020-04-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update help2man
+
+2020-04-22  Shawn  <shawnw.mobile@gmail.com>
+
+	datamash: new operations: geomean,harmmean
+	They compute the geometric and harmonic means, thus adding support
+	for all three classic Pythagorean means.
+
+	  $ seq 5 | datamash harmmean 1
+	  2.1897810218978
+	  $ seq 5 | datamash geomean 1
+	  2.6051710846974
+
+	Equivalent to the following R code:
+
+	  > library("psych")
+	  > x = seq(5)
+	  > harmonic.mean(x)
+	  [1] 2.189781
+	  > geometric.mean(x)
+	  [1] 2.605171
+
+	* NEWS,  doc/datamash.texi,
+	  man/datamash.x: Mention new operations
+	* bootstrap.conf: Use gnulib's logl module.
+	* Makefile.am (datamash_LDADD): Add more math libraries.
+	* m4/.gitignore: Add logl files.
+	* src/op-defs.{h,c}: Define new operations.
+	* src/field-ops.c: Implement new operations
+	* src/datamash.c (usage): List new operations.
+	* tests/datamash-stats.pl: Add tests.
+
+2020-04-10  Shawn  <shawnw.mobile@gmail.com>
+
+	datamash: new line operations: sha224 and sha384
+	Added for the sake of completeness; the implementations are already present.
+
+	  $ printf "%s\n" 1 2 3 | datamash sha224 1
+	  e25388fde8290dc286a6164fa2d97e551b53498dcbf7bc378eb1f178
+	  58b2aaa0bfae7acc021b3260e941117b529b2e69de878fd7d45c61a9
+	  4cfc3a1811fe40afa401b25ef7fa0379f1f7c1930a04f8755d678474
+
+	  $ printf a | datamash sha384 1
+	  54a59b9f22b0b80880d8427e548b7c23abd873486e1f035dce9cd697e85175033caa88e6d57bc35efae0b5afd3145f31
+
+	Equivalent to:
+
+	  $ printf 1 | sha224sum
+	  e25388fde8290dc286a6164fa2d97e551b53498dcbf7bc378eb1f178  -
+	  $ printf 2 | sha224sum
+	  58b2aaa0bfae7acc021b3260e941117b529b2e69de878fd7d45c61a9  -
+	  $ printf 3 | sha224sum
+	  4cfc3a1811fe40afa401b25ef7fa0379f1f7c1930a04f8755d678474  -
+
+	  $ printf a | sha384sum
+	  54a59b9f22b0b80880d8427e548b7c23abd873486e1f035dce9cd697e85175033caa88e6d57bc35efae0b5afd3145f31
+
+	* NEWS,
+	  doc/datamash.texi,
+	  man/datamash.x: Mention new operations.
+	* src/datamash.c (usage): List new options.
+	* src/op-defs.{h,c}: Define new operations.
+	* src/field-ops.c: Implement operations.
+	* tests/datamash-sha.pl: Add tests.
+
+2020-02-23  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: update NEWS with version 1.6 and date
+
+	build: update bootstrap.conf with xstrtol-error
+	* bootstrap.conf: add xstrtol-error (following gnulib update, without
+	it "make dist" fails at "update-po" stage).
+
+	gnulib: update to latest
+	* m4/.gitignore: Auto-updated by 'bootstrap'.
+
+	doc: mention getnum bugfix in NEWS
+	* NEWS: Mention bugfix
+
+2020-02-12  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: bug fix 'getnum' operation ignoring 8,9 chars
+	Digits 8,9 were wrongly ignored on in default numeric format (decimal):
+
+	   $ echo foo411586 | datamash getnum 1
+	   4115   [ wrong result ]
+	   411586 [ fixed result ]
+
+	* src/utils.c (extract_number_types): Add missing digits to string
+	pattern.
+	* tests/datamash-tests-2.pl: Add tests to catch this error.
+
+2020-01-01  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update copyright date to 2020
+	* all files: Run "make update-copyright".
+
+2019-09-17  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: update NEWS with version 1.5 and date
+
+2019-09-03  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operation: cut
+	Similar to cut(1), it copies the input field to the output as-is.
+	The advantage over cut(1) is that combined with datamash's other features,
+	input fields can be specified by name instead of column number,
+	and output fields can be re-ordered and duplicated.
+
+	  Example:
+	    $ printf "a b c\n1 X 6\n" | datamash -W -H cut c,a,c
+	    cut(c)  cut(a)  cut(c)
+	    6       1       6
+
+	Suggested by Torsten Seemann <torsten.seemann@gmail.com> in
+	https://lists.gnu.org/archive/html/bug-datamash/2019-09/msg00000.html
+
+	* NEWS: Mention new operation.
+	* src/datamash.c (usage): Add new op.
+	* src/op-defs.{h,c}: Define new OP_CUT.
+	* src/field-ops.{c}: Implement new OP_CUT.
+	* contrib/bash-completion/datamash: Add new operation.
+	* doc/datamash.texi, man/datamash.x: Mention new operation.
+	* tests/datamash-tests-2.pl: Add tests.
+
+2019-08-26  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operation: getnum
+	Extract numeric values from a string:
+
+	  $ echo foo-42.0-bar | datamash getnum 1
+	  42.0
+
+	Also accept single-letter option for different numeric types:
+
+	  $ echo zoo-42.0-bar | datamash getnum:p 1  # positive decimal (default)
+	  -42.0
+	  $ echo zoo-42.0-bar | datamash getnum:n 1  # Natural numbers
+	  42
+	  $ echo zoo-42.0-bar | datamash getnum:i 1  # Integers
+	  -42
+	  $ echo zoo-42.0-bar | datamash getnum:d 1  # Decimal
+	  -42.0
+	  $ echo zoo-42.0-bar | datamash getnum:h 1  # Hex
+	  66
+	  $ echo zoo-42.0-bar | datamash getnum:o 1  # Oct
+	  34
+
+	* NEWS: Mention new operation.
+	* src/datamash.c (usage): Add new op.
+	* src/op-defs.{h,c}: Define new OP_GETNUM.
+	*src/op-parser.c (set_op_params): Parse single-letter options.
+	(parse_operation_params): Accept character parameters (not just numbers).
+	* src/field-ops.{c}: Implement new OP_GETNUM.
+	* src/utils.{h,c} (extract_number): New function.
+	* contrib/bash-completion/datamash: Add new operation.
+	* doc/datamash.texi, man/datamash.x: Mention new operation.
+	* tests/datamash-tests-2.pl: Add tests.
+
+2019-08-26  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: work-around automake 1.16 regression with non-gnu make
+	Discussed in https://lists.gnu.org/r/automake/2019-08/msg00000.html
+	Solved by Bruno Haible:
+	https://lists.gnu.org/r/automake/2019-08/msg00005.html
+	https://lists.gnu.org/r/bug-gnulib/2019-08/msg00064.html
+
+	* Makefile.am (LDADD): Remove $(top_builddir) from library path.
+
+2019-08-26  Assaf Gordon  <assafgordon@gmail.com>
+
+	gnulib: update to latest (gettext 0.20 fix)
+
+2019-08-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: don't syntax-check for trailing spaces on a unit test file
+
+	maint: appease space_before_parens syntax-check
+
+	maint: ignore space_before_parens syntax-check on STREQ_LEN
+
+2019-08-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operations: extname, barename
+	Extract the file extension, and the basename without the extension:
+
+	   $ echo foo.tar.gz | datamash barename 1 extname 1
+	   foo     tar.gz
+
+	   $ echo /home/foo/bar.txt \
+	       | datamash dirname 1 basename 1 barename 1 extname 1
+	   /home/foo    bar.txt    bar     txt
+
+	* NEWS: Mention new operation.
+	* src/datamash.c (usage): Add new op.
+	* src/op-defs.{h,c}: Define new OP_BARENAME,OP_EXTNAME.
+	* src/field-ops.{c}: Implement new OP_BARENAME,OP_EXTNAME.
+	* src/utils.{h,c} (is_add_on_extension,+guess_file_extension): New
+	helper functions.
+	* contrib/bash-completion/datamash: Add new operation.
+	* doc/datamash.texi, man/datamash.x: Mention new operation.
+	* tests/datamash-tests-2.pl: Add tests.
+
+2019-08-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operations: dirname, basename
+	Similar to dirname(1) and basename(1), but operate on a file.
+
+	   $ echo /home/foo/bar.txt | datamash dirname 1 basename 1
+	   /home/foo    bar.txt
+
+	* NEWS: Mention new operation.
+	* src/datamash.c (usage): Add new op.
+	* src/op-defs.{h,c}: Define new OP_DIRNAME,OP_BASENAME.
+	* src/field-ops.{c}: Implement new OP_DIRNAME,OP_BASENAME.
+	* contrib/bash-completion/datamash: Add new operation.
+	* doc/datamash.texi, man/datamash.x: Mention new operation.
+	* tests/datamash-tests-2.pl: Add tests.
+
+2019-08-06  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: accept backslash-escaped characters in field names
+	Suggested by Renato Alves <renato.alves@embl.de> in
+	https://lists.gnu.org/archive/html/bug-datamash/2019-08/msg00000.html
+
+	The following are now possible:
+	      datamash -H sum FOO\\-BAR < input.txt
+	      datamash -H sum 'FOO\-BAR' < input.txt
+	      datamash -H sum "FOO\\-BAR" < input.txt
+
+	* NEWS: Mention the feature.
+	* doc.datamsah.texi, man/datamash.x: Document the feature.
+	* src/op-scanner.h(MAX_IDENTIFIER_LENGTH): New limit.
+	* src/op-scanner.c(scanner_get_token): Improve identifier scanning to
+	allow backslashes.
+	* tests/datamash-error-msgs.pl, tests/datamash-tests-2.pl: Add tests.
+
+2019-08-06  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: fix mode/antimode incorrect results for negative values
+	In version 1.4 and earlier, this resulted in incorrect values:
+
+	  $ echo -1 | datamash mode 1
+	  1.844674407371e+19
+
+	Reported by Renan Valieris <rvalieris@gmail.com> in
+	https://lists.gnu.org/archive/html/bug-datamash/2019-06/msg00001.html
+
+	* src/utils.c (mode_value): Fix type from size_t to long double.
+	* tests/datamash-tests-2.pl: Add test.
+	* NEWS: Mention fix.
+
+2019-01-01  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update gnulib to latest
+	* gnulib: Update to latest.
+	* bootstrap, tests/init.sh: Sync from gnulib.
+
+	maint: update copyright date to 2019
+	* all files: Run "make update-copyright".
+
+2018-12-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: update release date for version 1.4
+	* NEWS: Update date.
+
+2018-12-21  Assaf Gordon  <assafgordon@gmail.com>
+
+	gnulib: update to latest
+
+2018-12-14  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update .gitignore
+	Following gnulib recent update.
+
+	* m4/.gitignore: Update file list.
+
+2018-12-14  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: update autoconf version requirements
+	Require version 2.69 to bootstrap.
+	After recent gnulib update, gnulib-tool would complain:
+
+	  $ ./gnulib/gnulib-tool
+	  ./gnulib/gnulib-tool: *** minimum supported autoconf version is 2.63. \
+	      Try adding AC_PREREQ([2.63]) to your configure.ac.
+	  ./gnulib/gnulib-tool: *** Stop.
+
+	Hence this update.
+
+	* configure.ac, bootstrap.conf: Require autoconf version 2.69 or later.
+
+2018-12-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: add special CPPFLAGS for windows binaries
+	FORCE_C_LOCALE: Force C/POSIX locale, instead of assuming it is
+	available as an environment variable (not easily changeable in cmd.exe).
+
+	SORT_WITHOUT_LOCALE: don't add "LC_ALL=C" to the sort command-line
+	execution string - the windows interpreter (cmd.exe) can't handle that.
+
+	* src/datamash.c (main): Add preprocessor conditionals.
+
+2018-12-07  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new option -C/--skip-comments
+	Suggested by Mark van Rossum in
+	https://lists.gnu.org/r/bug-datamash/2018-11/msg00001.html
+	https://lists.gnu.org/r/bug-datamash/2018-12/msg00003.html
+
+	* NEWS: Mention new option.
+	* src/datamash.c (usage, main): Update getopt parsing and help screen.
+	* src/text-options.{c,h} (skip_comments): New varaible.
+	* src/text-lines.{c,h} (line_record_fread): New option to skip comments.
+	(line_record_is_comment): New function.
+	* contrib/bash-completion/datamash: Update bash auto-completion options.
+	* man/datamash.x: Add "skipping comment lines" section.
+	* tests/datamash-tests-2.pl: Add new test cases.
+
+2018-12-07  Assaf Gordon  <assafgordon@gmail.com>
+
+	gnulib: update to latest
+
+2018-08-21  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: fix man-page typo
+	Reported by Steve Ward in
+	https://lists.gnu.org/r/bug-datamash/2018-08/msg00004.html .
+
+	* man/datamash.x: Fix missing formatting letter B.
+
+2018-03-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: disable --format="%a" test
+	Valid output can differ (e.g. 0x8.000p-3 vs 0x1.000p+0).
+
+	* tests/datamash-output-format.pl: Disable 'a1' test.
+
+2018-03-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: fix --format='%4000f' expected output
+	Can be 1.000009... or 1.000008999, depending on representation.
+
+	* tests/datamash-output-format.pl: Check only the first 5 digits.
+
+2018-03-16  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: update NEWS with new version and date
+	* NEWS: Set version 1.3 and date.
+
+2018-01-24  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: fix syntax-check issues
+	* doc/datamash-texinfo.css: Limit to 80 characters.
+	* po/POTFILES.in: Add missing files.
+	* src/double-format.c: Remove unused "ignore-value.h".
+	* src/text-options.{c,h}: Space after parens.
+
+2018-01-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: change URLs from http to https
+	* all files: Change to https URLs.
+
+	datamash: add --format=FORMAT option
+	* NEWS: Mention this.
+	* Maefile.am:
+	* doc/datamash.texi: Mention new option.
+	* src/datamash.c
+	* src/double-format.{c,h}:
+	* src/text-options.{c,h}:
+	* tests/datamash-error-msgs.pl,
+	  tests/datamash-output-format.pl: Test new option.
+	* tests/datamash-valgrind.sh: Test large output buffer under valgrind.
+
+2018-01-17  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: add -R/--round=N option
+	Print numeric values with N decimal places.
+	Example:
+	  $ echo 1.1 | datamash --round=5 sum 1
+	  1.10000
+
+	Requested in https://github.com/agordon/datamash/issues/5 .
+
+	* NEWS: Mention this.
+	* src/datamash.c (usage): Mention new option.
+	* configure.ac: Remove nonliteral-printf warning.
+	* doc/datamash.texi: Mention new option.
+	* src/text-options.c,src/text-options.h (numeric_output_format,
+	  numeric_output_bufsize): New variables.
+	  (set_numeric_output_precision,finalize_numeric_output_buffer): New
+	  functions to set the printf style based on requested precision.
+	* src/fields-ops.c: Print numeric output using new format variables.
+	* tests/datamash-error-msgs.pl: Test invalid --round usage.
+	* tests/datamash-output-format.pl: Test --round usage.
+	* Makefile.am: Add new test file.
+
+2018-01-03  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update copyright year to 2018
+	* all files: Update with 'make update-copyright'.
+
+	gnulib: update to latest
+
+2017-12-10  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: add github ISSUE/PULL-REQUEST templates
+	Encourage contributors to use bug-datamash@gnu.org instead of github.
+
+	* .github/ISSUE_TEMPLATE.txt,
+	  .github/PULL_REQUEST_TEMPLATE.txt: New files.
+
+2017-11-14  Assaf Gordon  <assafgordon@gmail.com>
+
+	gnulib: update to latest
+	* m4/.gitignore: Automatically updated git newest gnulib bootstrap.
+
+2017-11-14  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operation 'trimmean'
+	To calculate 20% trimmed mean:
+	   $ printf "%s\n" 13 3 7 33 3 9 | datamash  trimmean:0.2  1
+	   8
+
+	Using 'trimmean:0' is equivalent to 'mean'.
+	Using 'trimmean:0.5' is equivalent to 'median' (for R compatability).
+
+	Suggested by Khavish Bhundoo in
+	https://lists.gnu.org/archive/html/bug-datamash/2017-10/msg00004.html .
+
+	* NEWS: Mention new operation.
+	* src/datamash.c (usage): Add new op.
+	  (print_column_headers): Print percent value in headers.
+	* src/op-defs.{h,c}: Define new OP_TRIMMED_MEAN.
+	* src/field-ops.{h,c}: Implement new OP_TRIMMED_MEAN.
+	* src/op-parser.c: (set_op_params): Handle 'trimmean:N' paramater.
+	* src/utils.{h,c} (trimmed_mean_value): New function.
+	* contrib/bash-completion/datamash: Add new operation.
+	* doc/datamash.texi, man/datamash.x: Mention new operation.
+	* tests/datamash-error-msgs.pl: Test 'trimmean' parameter error messages.
+	* tests/datamash-stats.pl: Add tests, compare against R results.
+
+2017-09-06  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: indicate which hash functions are used at end of ./configure
+	* NEWS: Mention the change (and the link fix from previous commit).
+	* configure.ac: Print 'internal' or 'external' based on $LIB_CRYPTO.
+
+2017-09-06  Jeroen Roovers  <jer@gentoo.org>
+
+	build: link with external crypto libraries if needed
+	Datamash uses gnulib's sha* modules, which allow linking with OpenSSL
+	for increased performance (using ./configure --with-openssl=yes).
+	Adjust the LDADD flags to link with the external libraries.
+
+	Reported in
+	http://lists.gnu.org/archive/html/bug-datamash/2017-08/msg00007.html .
+
+	* Makafile.am (datamash_LDADD): Add $(LIB_CRYPTO)
+
+2017-09-05  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new --output-delimiter=X option
+	Suggested by Dave Myron in
+	https://lists.gnu.org/archive/html/bug-datamash/2017-08/msg00008.html .
+
+	* src/datamash.c (explicit_output_delimiter): New variable.
+	(main): Handle new option.
+	(usagE): Mention new option.
+	* NEWS: Mention feature.
+	* contrib/bash-completion/datamash: Add option.
+	* doc/datamash.texi: Mention new option.
+	* tests/datamash-tests-2.pl,
+	  tests/datamash-error-msgs.pl: Test new option.
+
+2017-09-05  Yu Fu  <yfu@yfu.me>
+
+	doc: fixed two typos
+	Reported in: https://github.com/agordon/datamash/pull/2 .
+
+	* examples/readme.md: Fixed transcribes -> transcribed.
+
+2017-08-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	version 1.2
+	* NEWS: Record release date.
+
+	maint: remove missing files from Makefile.am
+	* Makefile.am: Remove files (which were deleted in previous commit).
+
+	maint: remove outdated build-aux scripts
+	* build-aux/check-remote-make-all.sh,
+	  build-aux/check-remote-make-extra.sh,
+	  build-aux/check-remote-make-git.sh,
+	  build-aux/check-remote-make.sh: Precursors the http://pretest.nongnu.org,
+	  no need for standalone scripts any more.
+	* build-aux/gen-coverage-report.sh,
+	  build-aux/rebuild-coverage.sh: obsoleted by 'make coverage'.
+	* build-aux/tag-new-version.sh: Removed.
+
+	maint: update prerelease checks script
+	* build-aix/prerelease-checks.sh: Remove outdated checks, add
+	non-root-installation check.
+
+	maint: fix 'syntax-check' errors
+	* src/crosstab.c: space-before-parens.
+	* src/datamash.c: double-word.
+
+	gnulib: update to latest
+
+2017-08-20  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: skip tests if paste(1) is not found
+	On Alpine linux, paste(1) is not installed by default - skip instead
+	of failing.
+
+	* init.cfg (require_paste_): New shell function.
+	* tests/datamash-rand.sh,
+	  tests/datamash-sort-errors.sh: Skip if paste(1) is not found.
+
+2017-08-20  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: quote '^' in shell commands
+	The '^' character has special meaning in older shells (e.g. OpenSolaris
+	10/sparc). Quote it to prevent test failures.
+
+2017-08-20  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: accept '-nan' under OpenBSD
+	OpenBSD systems return '-nan' instead of 'nan' for two tests.
+	Ignore the '-' prefix.
+
+	* tests/datamash-tests-2.pl (narm12,narm15): Discard '-' prefix.
+
+2017-08-20  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: fix incorrect int size for percetiles
+	On SunOS 5.11/i86pc, sizeof(size_t)==4 while sizeof(uintmax_t)==8.
+	This leads to incorrect printf output.
+	Reported by Dagobert Michelseni in
+	https://lists.gnu.org/archive/html/bug-datamash/2017-08/msg00004.html .
+
+	A better long term solution is to switch entirely from size_t to uintmax_t.
+
+	* src/op-parser.c,
+	  src/datamash.c: use PRIuMAX for printf, and convert to uintmax_t.
+
+2017-08-09  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: improve bash-completion script installation (again)
+	Reported by Bruno Haible in
+	https://lists.gnu.org/archive/html/bug-datamash/2017-08/msg00002.html:
+	the current installation defaults to global location
+	(e.g /usr/share/bash-completion.d) and does not work with non-root
+	installation. Change default to local installation, with option to
+	auto-detect the system's global location.
+	Usage:
+	 ./configure --with-bash-completion-dir=[no|local|global|PATH]
+	See README for more details.
+
+	* configure.ac: Change --with-bash-copmletion-dir processing.
+	* NEWS: Mention this.
+	* README: Document this.
+
+2017-08-07  Assaf Gordon  <assafgordon@gmail.com>
+
+	bash-completion: add range,perc operations
+	* contrib/bash-completion/datamash: Add range/perc (percentile)
+	operations to list of suggested completions.
+
+2017-06-07  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: add lines/fields option to 'check' operation
+	Datamash will fail with non-zero exit code if the input does not
+	have the expected number of lines/fields.
+
+	Typical usage:
+
+	    $ seq 10 | paste - - | datamash check 2 fields && echo ok
+	    5 lines, 2 fields
+	    ok
+
+	    $ seq 10 | paste - - | datamash check 6 fields && echo ok
+	    line 1 (2 fields):
+	      1     2
+	    datamash: check failed: line 1 has 2 fields (expecting 6)
+
+	    $ seq 10 | datamash check 11 lines
+	    datamash: check failed: input had 10 lines (expecting 11)
+
+	* NEWS: Mention new options.
+	* src/datamash.c (tabular_check_file): Implement additional checks.
+	* src/op-parser.h (struct mode_check_params_t): New struct to hold
+	  options. (struct datamash_ops): Add new struct.
+	* src/op-parser.c (parse_check_line_or_field, parse_mode_check): New
+	  functions to parse 'check' options.
+	  (parse_mode): Parse option in 'check' mode.
+	* tests/datamash-parser.pl: Add parsing tests.
+	* tests/datamash-check.pl: Add 'check' tests.
+	* Makefile.am: Add 'datamash-check.pl' test script.
+	* man/datamash.x: Add 'check' examples.
+	* doc/datamash.texi: Expand 'check' section.
+
+2017-06-06  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: mark more lines as LCOV_EXCL_LINE for more accurate coverage
+
+2017-05-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	gnulib: update to latest
+
+2017-05-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: free crosstab memory if LINT
+	Detected by Covrity scan (CID 72245, 72246).
+
+	* src/crosstab.c (print_crosstab): Call free() if lint is enabled.
+
+2017-05-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: add lint option to configure script
+	Usage: ./configure --enable-lint
+
+	Use during development to supress non-critical warnings.
+
+	* configure.ac: Add --enable-lint option.
+	* HACKING: Mention this option.
+
+2017-05-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: add src/die.h to source files list
+	Omitted from previous commit v1.1.1-10-gedab279
+	"datamash: use die() instead of error()".
+
+	* Makefile.am (datamash_SOURCES): Add missing file.
+
+2017-05-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operation 'range'
+	Calculate the range of values in the group:
+
+	  $ printf '%s\n' 5 3 14 6 | datamash range 1
+	  11
+
+	Using 'range' is equivalent to:
+	  $ printf '%s\n' 5 3 14 6 | datamash min 1 max 1 | awk '{print $2-$1}'
+	  11
+
+	Suggested by Kingsley G. Morse Jr. in
+	https://lists.gnu.org/archive/html/bug-datamash/2017-05/msg00000.html .
+
+	* NEWS: Mention new operation.
+	* src/datamash.c: (usage): Add new op.
+	* src/op-defs.{h,c}: Define new OP_RANGE.
+	* src/field-ops.{h,c}: Implement new OP_RANGE.
+	* tests/datamash-stats.pl: Test new operation.
+	* tests/datamash-tests-2.pl: Test new operation with various inputs.
+	* doc/datamash.texi, man/datamash.x: Mention new operation.
+
+2017-05-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: add 'fallthrough' comments to supress gcc-7.1 warnings
+	gcc-7.1 warns about:
+	   src/op-parser.c:491:10: error: this statement may fall through
+	      [-Werror=implicit-fallthrough=]
+	   if (scan_val_int>0)
+	       ^
+
+	The fallthrough is intentional - add an explicit comment that will
+	detected by the compiler and supress the warnings.
+
+	* src/op-parser.c: Add explicit 'fallthrough' comment in two intentional
+	fall through cases.
+
+2017-05-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: use die() instead of error()
+	Copied from GNU coreutils v8.25-79-g492dcb2,
+	http://git.savannah.gnu.org/cgit/coreutils.git/commit/?id=492dcb2eb1:
+	  "die() has the advantage of being apparent to the compiler
+	   that it doesn't return, which will avoid warnings in some cases,
+	   and possibly generate better code."
+
+	* src/die.h: Copied from GNU coreutils.
+	* src/op-parser.c,
+	  src/op-scanner.c,
+	  src/field-ops.c,
+	  src/datamash.c: Changed 'error(EXIT_FAILURE,...)' to 'die(...)'.
+
+2017-05-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: require pkg-config>=0.28 when building from git
+	configure.ac uses the PKG_CHECK_VALUE macro from the pkg-config' pkg.m4
+	file for bash-completion directory detection. This macro is not
+	available in older pkg-config versions.
+	Does is only required when building from git and running ./bootstrap.
+	Building from tarball does not require pkg-config at all.
+
+	* bootstrap.conf: Specify minimum version for pkg-config.
+
+2017-05-02  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: remove bashcompdir from Makefile.am
+	It is already defined in configure.ac (warning generated by autoreconf).
+
+	* Makefile.am: Remove bashcompdir.
+
+2017-04-18  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: expand build instructions in README and HACKING.md
+	Explain how to build from git.
+
+2017-04-18  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: require 'pkg-config' when bootstrapping
+	pkg-config is used to detect the bash-completion directory.
+	It is optional during ./configure (and ./configure will succeed even if
+	pkg-config is not installed), but pkg.m4 is required by ./bootstrap
+	for the PKG_CHECK_VAR in 'configure.ac'.
+
+	* bootstrap.conf: Add pkg-config requirement.
+
+2017-04-05  Assaf Gordon  <assafgordon@gmail.com>
+
+	gnulib: update to latest
+
+2017-03-23  Barry Nisly  <barry.nisly@gmail.com>
+
+	datamash: new operation 'perc' (percentiles)
+	Usage:
+	    $ seq 100 | datamash --header-out perc:95 1
+	    perc:95(field-1)
+	    95.05
+
+	See https://lists.gnu.org/archive/html/bug-datamash/2017-03/msg00000.html .
+
+	* NEWS: Mention new operation.
+	* src/datamash.c: (usage): Add new op.
+	  (print_column_headers): Print percentile value in headers.
+	* src/op-defs.{h,c}: Define new OP_PERCENTILE.
+	* src/field-ops.{h,c}: Implement new OP_PERCENTILE.
+	* src/op-parser.c: (set_op_params): Handle 'perc:N' paramater.
+	* tests/datamash-stats.pl: Test new operation.
+	* tests/datamash-tests.pl: Test 'perc' headers.
+	* doc/datamash.texi, man/datamash.x: Mention new operation.
+	* tests/datamash-error-msgs.pl: Test 'perc' parameter error messages.
+
+2017-03-16  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: install bash-completion script by default (if possible)
+	If the 'bash-completion' package is instaleld with pkg-config support,
+	detect the default bash-completion directory and install the datamash
+	completion script there (typically: /usr/share/bash-completion/completions).
+	Otherwise, install in /usr/local/share/datamash/bash-completion.d (as
+	before).
+
+	Disable with `./configure ---with-bash-completion-dir=no`.
+	Set custom path with `./configure ---with-bash-completion-dir=PATH`.
+
+	* README: Mention bash-completion options to './configure'.
+	* configure.ac: Add --with-bash-completion-dir=DIR option, and
+	  autodetect bash-completion directory using pkg-config.
+	* Makefile.am: Add bash-completion target (if enabled).
+
+2017-03-16  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update .gitignore
+
+	gnulib: update to latest
+
+2017-01-19  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update bootstrap script to latest
+	* bootstrap: Copy latest version from gnulib/build-aux/bootstrap.
+
+	maint: update NEWS
+
+	gnulib: update to latest
+
+2017-01-10  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: fix out-of-tree builds without dep-tracking
+	Create src,lib,doc,tests subdirectories at the end of
+	'configure', preventing build problems when building out of tree
+	with --disable-dependency-tracking.
+	Inspired by sed's https://bugs.gnu.org/25371 .
+
+	* configure.ac: Call AS_MKDIR_P() to create subdirectories.
+
+2017-01-10  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update copyright year to 2017
+	Automatic update with 'make update-copyright'.
+
+	maint: add gnulib's 'update-copyright' module
+	* bootstrap.conf: Add 'update-copyright'.
+	* cfg.mk: Define 'update-copyright-env' with relevant values for
+	  'make update-copyright'
+
+	maint: update gnulib to latest
+	* m4/.gitignore: Ignore few more m4 files.
+
+2016-09-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: fix man page escapes
+	Suggested by Dave Love in
+	http://lists.gnu.org/archive/html/bug-datamash/2016-02/msg00002.html
+
+2016-09-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: bugfix: trailing delimiter should count as an empty field
+	In version 1.1.0 and earlier, trailing delimiter at the end of the line
+	did not count as an empty field:
+
+	    $  printf "a:b:\n" | datamash -t: check
+	    1 line, 2 fields
+
+	After bugfix:
+
+	    $  printf "a:b:\n" | datamash -t: check
+	    1 line, 3 fields
+
+	Related to bug report by Sanjeev Kumar Sharma in
+	http://lists.gnu.org/archive/html/bug-datamash/2016-09/msg00000.html
+
+2016-09-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: 'transpose' bugfix (missing values in last line)
+	Missing values in the last line would cause fields to be silently dropped:
+
+	    $ printf "1\t2\na\n" | datamash --no-strict transpose
+	    1       a
+
+	After bugfix:
+
+	    $ printf "1\t2\na\n" | datamash --no-strict transpose
+	    1       a
+	    2       N/A
+
+2016-01-16  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update date in NEWS
+	* NEWS: update release version, metion version bump.
+
+	doc: add 'field delimiters' section to manual
+	* doc/datamash.texi: add new 'field delimiters' section.
+
+2016-01-02  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update gnulib to latest version
+	* gnulib: update to latest version with copyright year adjusted
+	* tests/init.sh,
+	  bootstrap: sync with latest gnulib.
+
+	maint: update all copyright year number ranges
+
+2015-12-31  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: rename pmccabe makefile target name
+	* Makefile.am: rename 'CYCLO_SOURCES' to 'cyclo_sources', to avoid
+	  confusing autoreconf about missing library 'CYCLO'.
+
+	doc: add rounding,binning sections to manual
+
+	doc: add 'crosstab' section to manual
+
+	doc: add 'check' usage example
+
+	doc: add 'groupby on /etc/passwd' usage example section
+
+	doc: merge reverse+transpose nodes
+
+	doc: added 'Usage Examples' chapter
+
+	doc: reword 'overview' section
+
+	doc: add custom CSS to the texinfo HTML output
+	* doc/datamash-texinfo.css: new custom styles
+	* doc/local.mk: use new CSS file in 'make html'
+	* Makefile.am: use new CSS file in 'make web-manual'
+
+	doc: update manual with new operations
+
+2015-12-25  Benno Schulenberg  <bensberg@justemail.net>
+
+	datamash: improve an error message
+
+	datamash: gettextize an option description as a whole
+
+	datamash: remove redundant header, and refer correctly to the man page
+
+	datamash: improve the punctuation and grammar of the usage text
+
+2015-12-19  Assaf Gordon  <assafgordon@gmail.com>
+
+	doc: update NEWS for upcoming version
+
+	maint: update gnulib submodule to latest version
+
+2015-12-17  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operation: strbin (binning strings to numeric value)
+	hashes a text string into a number, returns values from 0 to #bins
+	(default 10). Can be used to bin many free-text input values into a
+	finite (small) set of bins. Identical strings will be hashed to same
+	numeric values.
+
+	Examples:
+	assign a bin (0 to 9) to a list of strings (bin number added
+	as last field):
+
+	    seq 100 | xargs printf "user-%d\n" \
+	       | datamash --full strbin 1
+
+	identical input values will be assigned identical bin number:
+
+	    ( seq 100 ; seq 20 ) | xargs printf "user-%d\n" \
+	       | datamash --full strbin 1
+
+	Splitting input values into 10 output files, while keeping
+	identical keys in the same file:
+
+	    ( seq 100 ; seq 20 ) | xargs printf "user-%d\n" \
+	       | datamash --full strbin 1 \
+	       | awk '{print $0 > $NF ".txt"}'
+
+	* bootstrap.conf: add gnulib's hash-pjw-bare module
+	* src/op-defs.{c,h}: add new op constant
+	* src/field-ops.{c,h}: implement new operation
+	* src/op-parser.c: strbin can take a parameter (# bins)
+	* src/datamash.c: update usage()
+	* man/datamash.x: update man page
+	* contrib/bash-completion/datamash: add new op
+	* tests/datamash-error-msgs.pl,
+	  tests/datanash-strbin: test new operation
+	* Makefile.am: add new tests
+
+2015-12-17  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: use gnulib's pmccabe2html module
+	Generate report with:
+	    make cyclo-datamash.html
+
+	* bootstrap.conf: add the pmccabe2html module
+	* Makefile.am: add new target
+	* .gitignore: ignore generated html file
+
+2015-11-12  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: remove superfluous 'with' from doc's "invariant section"
+	pointed by Debian/Ubuntu package maintainer (alejandro@debian.org).
+
+	* doc/datamash.texi: remove 'with' from 'invariant section' of GFDL
+	  to comply with official wording.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: prefer %PRIuMAX to %zu in printf
+	%zu doesn't play well with mingw cross-compilers.
+
+	* src/column-headers.c, src/op-parser.c: include <inttypes.h>,
+	   use %PRIuMAX instead of '%zu' in printf .
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: add gnulib's stpcpy module (for mingw)
+	* bootstrap.conf: add stpcpy.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: fail on invalid cov/pearson input
+	Unequal number of items can occur if ignoring N/A values.
+
+	* src/field-ops.c: fail if the two fields have different number of
+	    items.
+	* tests/datamash-pair-tests.pl: tests such inputs.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: fail on incorrect usage
+	* src/op-parser.c: fail when primary operations are given fields
+	    ranges or pairs (e.g. 'groupby 1:2'). fail when crosstab is
+	    given more than one operation.
+	* tests/datamash-{crosstab,error-msgs,parser}.pl: add new tests.
+
+	doc: improve man page (new ops, examples)
+	* man/datamash.x: mention new operations,
+	   use 'field' instead of 'column',
+	   add more examples, improve formatting.
+
+	datamash: improve usage()
+	* src/datamash.c: improve usage(), mention new operations,
+	    use 'field' instead of 'column'.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	new operations: round,floor,ceil,trunc,frac
+	typical usage:
+
+	    $ (echo X ; seq -1 0.5 1 ) \
+	        | datamash -H --full round 1 floor 1 ceil 1 trunc 1 frac 1
+	        X  round(X)  floor(X)  ceil(X)  trunc(X)  frac(X)
+	     -1.0  -1        -1        -1       -1         0
+	     -0.5  -1        -1         0        0        -0.5
+	      0.0   0         0         0        0         0
+	      0.5   1         0         1        0         0.5
+	      1.0   1         1         1        1         0
+
+	* bootstrap.conf: add gnulib's floorl,ceill,roundl,modfl modules.
+	* src/op-defs.{c,h}: add new operations constants.
+	* src/field-ops.c: handle new operations.
+	* tests/datamash-tests-2.pl: add tests.
+	* contrib/bash-completion/datamash: add new operations.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	utils: add functions for long-double zero handling
+	* src/utils.c: is_zero(), is_signed_zero() - retruns true/false.
+	   pos_zero(): negates a negative zero, nop otherwise.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	new operation: bin (binning into buckets)
+	typical usage (bin into buckets of size 5):
+
+	    $ seq 0 10 | ./datamash bin:5 1
+	    0
+	    0
+	    0
+	    0
+	    0
+	    5
+	    5
+	    5
+	    5
+	    5
+	    10
+
+	* src/op-defs.{c,h}: add new operation constant and name.
+	* src/op-parser.c:   special handling for operation with an optional
+	                     parameter.
+	* src/field-ops.h:   add optional parameter to struct fieldop.
+	* src/field-ops.c:   implement binning operation.
+	* tests/*.pl:        add tests
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: reword error messages
+	* src/op-parser.c: use 'field' instead 'column', standarize error
+	    messages.
+	* tests/*.pl: adapt tests to new wording.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: fix long-double precision under NetBSD
+	Under NetBSD (and others?) default precision is set to 'double'
+	even for 'long double' variables. This results in incorrect
+	results for 'roundl' and crahes for 'expl' (when using
+	gnulib's implementations.
+	Force 'long double' precision. See gnulib's 'lib/fpucw.h' file
+	for many more details.
+
+	* bootstrap.conf: add fpucw module.
+	* src/datamash.c: force 'long double' precision.
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: add rmdup expensive tests
+	* src/datamash.c: add undocumented option to reduce initial size of
+	   rmdup structures (forcing more frequent reallocations).
+	* tests/datamash-valgrind.sh: use new option, validate results.
+
+	tests: add pcov with header
+	* tests/datamash-pair-tests.pl: tests pcov (taking two fields) with
+	   output headers (print 1 field, 1 header).
+
+2015-07-13  Assaf Gordon  <assafgordon@gmail.com>
+
+	refactor: create new scanner module
+	Use proper tokenizing instead of relying on argc/argv 'tokens' with
+	ad-hoc string manipulation. In the future, this will allow accepting the
+	script as on string (like sed's -e).
+
+	* bootstrap.conf: add gnulib's c-type module
+	* src/op-scanner.{c,h}: new scanner module, improved tokenizing.
+	* src/op-parser.c: use new scanner, support _STANDALONE_ mode for
+	    quicker testing (without autotools,gnulib).
+	* src/op-defs.c: prefer name 'groupby' to 'grouping' when reporting errors.
+	* src/system.h: support_STANDALONE_ mode for
+	    quicker testing (without autotools,gnulib).
+	* tests/datamash-{tests,parser,crosstab}.pl: adapt error message text
+	    to new parser (no change in functionality).
+	* Makefile.am: include new scanner.
+	* po/POTFILES.in: include new scanner.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: move 'assert.h' to 'system.h'
+	* src/op-defs.c: move 'assert.h' from here...
+	* src/system.h: to here.
+	  avoids 'syntax-check' warings about including 'assert.h' without using
+	  it (it is used indirectly with 'internal_error()' macro).
+
+	build: conditionally include minmax.h
+	Don't include "lib/minmax.h" if MAX is already defined.
+	Seems redundant (per the comment in minmax.h), but tcc 0.9.26 still fails.
+
+	maint: force -std=c99 with static analysis
+	* cfg.mk: force -std=c99 when using clang's scan-build program, as it
+	   does not to do so automatically, and compliation fails.
+
+	maint: improve configure messages
+	* configure.ac: simplify printing of examples directory;
+	  print bash-completion directory.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: improve,install bash-completion script
+	By default, script installed to program's datadir, e.g.
+	  /usr/local/datamash/share/bash-completion.d/datamash
+	and the user can manually source it from ~/.bashrc.
+
+	Optionally, can be installed to another location, e.g.
+	  ./configure --with-bash-completion-dir=/etc/bash_completion.d
+	to be automatically loaded.
+
+	* contrib/bash-completion/datamash: fix script, improve suggestions,
+	  do not use '_init_completion' (not available in bash-comp<1.9)
+	* configure.ac: add option --with-bash-completion-dir
+	* Makefile.am: install script.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operation: Pearson Correlation
+	usage (calculate pearson (population) correlation coefficient on fields 1,2):
+	  datamash ppearson 1:2 < 1.txt
+
+	* src/op-defs.{c,h}: new op enums.
+	* src/op-parser.c:   handle new op.
+	* src/utils.{c,h}:   implement pearson correlation function.
+	* src/field-ops.c:   handle new op.
+	* tests/datamash-pair-tests.pl: add tests
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operation: covariance
+	usage (calculate population-covariance on fields 1,2):
+	  datamash pcov 1:2 < 1.txt
+
+	* src/op-defs.{c,h}: new op enums.
+	* src/op-parser.c: handle new operation, with special parsing for column
+	   pairs (e.g. '1:2').
+	* src/field-ops.{c,h}: implement new operation, and add master/slave
+	   field-op options (as covariance is implemented as two linked field
+	   ops, one for each column).
+	* src/datamash.c: skip 'slave' field-ops when printing.
+	* tests/datamash-parser.pl: test column-pairs parsing
+	* tests/datamash-pair-tests.pl: test column-pair operations.
+	* tests/datamash-valgrind.sh: test covariance operation.
+	* Makefile.am: include new tests.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: utils: add covariance implementation
+	* src/utils.{c,h}: covariance_value() - new function.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: improve parser, allow field range
+	allows: datamash sum 1-5,7-9
+
+	* src/op-parser.c: improve field parsing
+	* tests/datamash-parser.pl: add new tests
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new feature: check
+	reports back number of lines,fields - or exit with failure if the input
+	lines do have have same number of fields.
+
+	usage:
+	    $ seq 10 | paste - - | datamash check
+	    5 lines, 2 fields
+
+	    $ seq 9 | paste - - | datamash check
+	    line 4 (2 fields):
+	      7 8
+	    line 5 (1 fields):
+	      9
+	    ./datamash: check failed: line 5 has 1 fields (previous line had 2)
+
+	* src/datamash.c: tabular_check_file() - new function.
+	* src/op-defs.{h,c}: new mode enum.
+	* src/op-parser.c: handle new mode.
+	* tests/datamash-check-tabular.pl: add tests.
+	* Makefile.am: add new test file.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: git-ignore more files
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new feature: crosstab
+	usage:
+	    datamash crosstab 1,2 sum 3
+
+	* src/crosstab.{c,h} - implementation
+	* src/datamash.c     - handle new crosstab processing mode.
+	* src/op-defs.{c,h}  - additional crossab constants.
+	* src/op-parser.c    - special handling for crosstab mode.
+	* tests/datamash-crosstab.pl - new tests.
+	* Makefile.am        - add new files.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: add GL_ATTRIBUTE_PURE where needed
+
+	maint: fix NEWS syntax-check
+	* NEWS: add missing empty line.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: add coverage hints
+	1. Add LCOV_EXCL_BR_LINE to skip few switch cases where the default case
+	   should never be reached.
+	2. Add LCOV_EXCL_LINE.
+
+	LCOV_EXCL_BR_LINE requires geninfo from lcov>=1.11 .
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: remove unused strcnt module
+
+	datamash: improve parser module, add tests
+	* src/datamash.c: remove redundant left-over code.
+	* src/op-parser.c: improve token processing
+	* src/op-defs.c: rename 'grp' alias to 'gb' (=groupby)
+	* tests/datamash-parser.pl: new tests
+	* Makefile.am: add new tests.
+
+	maint: fix syntax-check errors
+
+	datamash: move config vars to text-options
+	* src/datamash.c,src/field-ops.c: move several configuration
+	   parameters from here ...
+	* src/text-options.{c,h}: ... to here.
+
+	maint: fix empty variable init
+	* src/field-ops.c: CLANG complained about '{0}'. replace with memset().
+
+	refactor: move field-operation list.
+	* src/field-ops.{c,h}: refactored to handle just one struct at a time.
+	   private functions removed from the header file.
+	* src/op-parser.{c,h}: the list of field-ops is handled here.
+	* src/datamash.c: adapted as needed.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	refactor: create parsing module
+	1. Better handling of processing modes (e.g. group-by/transpose/reverse/rmdup)
+	   vs operations (e.g sum/count/min/max/mean).
+	2. Support new syntax:
+	     datamash groupby 1,2 sum 3
+	   equivalent to:
+	     datamash -g 1,2 sum 3
+
+	* src/op-defs.{c,h} - list of processing modes and operations.
+	* src/op-parser.{c,h} - parsing module. returns structure with parsed
+	   information (mode, grouping fields, operations, etc.).
+	* src/op-fields.{c,h} - adapt to new parsing, remove old pasring functions.
+	* src/datamash.c - adapt to new parsing module.
+	* tests/*.pl - minor changes to error messages.
+
+2015-06-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	refactor: extract group-processing to a function
+	* src/datamash.c:
+	  process_group(): new function to print/summarize each group.
+
+	refactor: fields-ops printing
+	* src/field.ops{h,c}:
+	  field_op_summarize_empty(), field_op_summarize():
+	    store results in 'op->out_buf', don't directly print to stdout.
+	  summarize_field_ops(), field_op_print_empty_value():
+	    print buffer to stdout.
+
+	refactor: print empty values (for testing)
+	* src/datamash.c: move empty value printing code from here ...
+	* src/field-ops.{h,c}: ... to new function field_op_print_empty_value().
+
+2015-06-21  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: add NEWS about 1.0.7 features
+
+2015-05-28  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: update gettext/autoconf/automake versions
+	* bootstrap.conf: require gettext>=0.19.4, autoconf=>2.62,
+	automake>=1.11.1.
+	* configure.ac: require gettext=>=0.19.4
+	* po/ChangeLog: updated to mention gettext 0.19.4 by 'gettextize -f'
+
+2015-05-27  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: update gnulib to latest version.
+	specifically, for mingw fixes:
+	http://lists.gnu.org/archive/html/bug-gnulib/2015-05/msg00026.html
+	http://lists.gnu.org/archive/html/bug-gnulib/2015-05/msg00030.html
+	http://lists.gnu.org/archive/html/bug-gnulib/2015-05/msg00031.html
+
+2015-05-26  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: improve printf portability, remove mingw hack
+	* bootstrap.conf: use gnulib's inttypes,stdint,extensions modules.
+	See http://lists.gnu.org/archive/html/bug-gnulib/2015-05/msg00021.html .
+	* configure.ac: remove mingw hack. gnulib's extensions module should
+	take care of making PRIuMAX work correctly.
+	* src/datamash.c: use PRIuMAX as format speficier in printf, instead of
+	previous ugly mingw hack (which also didn't work with translations, see
+	http://lists.gnu.org/archive/html/bug-datamash/2015-05/msg00001.html ).
+
+	maint: avoid compiler warning about no-return.
+	* src/fields-ops.c: add 'return' which should never be reached.
+
+2015-05-19  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: improve portability of perl Digest::MD5
+	On some systems (Centos7, Fedora21), Perl's Digest::MD5 is not installed
+	by default (despite being official a core module).
+	If so, skip the MD5 tests instead of failing.
+
+	* tests/datamash-md5.pl: separate tests file for MD5.
+	* tests/datamash-tests{,-2}.pl: don't use Digest::MD5 by default.
+	* Makefile.am: add the new test file
+
+2015-05-18  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: improve tests portability of inf/nan
+	Depending on the OS/libc, printf(Not-a-number) can be
+	'nan' or 'NaN'. printf(Infinity) can be 'inf', 'Inf', 'Infinity'.
+	Instead of guessing it, add undocumented option to print the
+	value on the current system.
+
+	* src/datamash.c: add undocumented options to print the values of
+	  inf/nan/progname.
+	* tests/datamash-{tests,tests-2,stats}.pl: use the undocumented
+	  option as the expected result string of various tests.
+
+2015-01-17  A. Gordon  <assafgordon@gmail.com>
+
+	build: update to lastest gnulib
+	* gnulib: Update to latest
+	* tests/init.sh: update from gnulib
+
+2015-01-17  Benno Schulenberg  <bensberg@justemail.net>
+
+	doc: fix some inconsistencies
+
+	doc: do not mention the nonexistent options -h and -v
+
+2015-01-17  A. Gordon  <assafgordon@gmail.com>
+
+	maint: update copyright year to 2015
+
+	maint: enable po translation
+	* bootstrap.conf: remove SKIP_PO
+	* .gitignore: ignore fetched po/ files
+
+2014-11-26  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: new option '--narm': ignore NA/NaN values
+	Suggested by Brandon Invergo:
+	http://lists.gnu.org/archive/html/bug-datamash/2014-11/msg00002.html
+
+	* src/utils.{h,c}: is_na() new function
+	* src/field-ops.{c,h}:
+	    field_op_collect(): detect and skip NA/NaN values.
+	    field_op_summarize_empty(): print results of empty values.
+	    field_op_summarize(): call above function if no values.
+	* src/datamash.c: update usage(), main()
+	* doc/datamash.texi: mention new option
+	* tests/datamash-tests-2.pl: add tests for new option.
+
+2014-10-05  A. Gordon  <assafgordon@gmail.com>
+
+	maint: update syntax-check rule to allow digits
+	* cfg.mk: change regex in 'sc_prohibit_test_backticks' rule to allow digits
+	  in file names of tests. Also remove two unrelated file names
+	  (left-overs from 'coreutils')
+
+2014-10-05  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: keep correct lines with '--full'
+	Discussed in https://github.com/agordon/datamash/issues/3 ,
+	and also existed in (very) old revisions of 'calc'.
+
+	When using a selection operation (first/last/min/max/etc) which
+	selects one line out of the group, and combining with --full,
+	this ensures the correct line is selected (not just the correct
+	fields intemixed with the values of the first line).
+
+	* src/datamash.c: keep the correct line
+	* src/field-ops.{c,h}: for selection operation, determine whether to
+	    keep the line or not.
+	* src/datamash-tests.pl: adapt one test of 'lst' to new behavior.
+	* src/datamash-tests-2.pl: tests new --full behavour
+
+2014-10-05  A. Gordon  <assafgordon@gmail.com>
+
+	maint: add 'static-analysis' make target
+	Example:
+	    make static-analysis
+	or:
+	    make static-analysis-configure
+	    make static-analysis-make
+
+	Uses clang's scan-build static analysis tool to analyze the code.
+
+	Use the two-step method to change code and re-analyze without
+	re-runnning './configure' again.
+
+2014-09-11  A. Gordon  <assafgordon@gmail.com>
+
+	build: Enable build using Mingw cross-compilers
+	* configure.ac: add flag and auto-detection for mingw
+	* Makefile.am: add compilation flag
+	* src/datamash.c: Use conditional printf type for size_t ("%zu" for all
+	  unixes, "%Iu" for mingw)
+	* HACKING.md: mention this issue
+	* build-aux/check-remote-make-extra.sh: add mingw checks
+
+	maint: add gnulib 'strsep' and 'random' modules
+	These modules were missing when cross-compiling with mingw.
+	* bootstrap.conf: add missing modules
+	* m4/.gitignore: add files
+
+2014-08-21  A. Gordon  <assafgordon@gmail.com>
+
+	maint: expand HACKING.md file
+	* HACKING.md: add notes.
+	* cfg.mk: skip syntax-check on HACKING.md for few rules.
+
+	datamash: improve delimiter edge-case handling
+	* src/datamash.c: reject NUL delimiter, prevent shell-quoting problems
+	  when sorting with single-quote delimiter.
+	* tests/datamash-tests.pl: add tests for these edge-cases.
+
+	datamash: improve '--group' parameter parsing
+	* src/strcnt.{c,h}: new utility function to count characters in string.
+	* Makefile.am: add new module.
+	* src/datamash.c: parse_group_spec(): improve parsing code.
+	* tests/datamash-tests.pl: add more tests.
+
+2014-08-12  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new feature: accept named columns
+	Examples:
+	    datamash -H sum price < input.txt
+	       (If 'input.txt' has a column named 'price').
+
+	    datamash -H -g id sum 2 < FILE
+	       (assuming FILE has column named 'id')
+
+	Suggested by Shaun Jackman (sjackman@gmail.com).
+
+	* bootstrap.conf: use gnulib's xstrndup module.
+	* src/field-ops.{h,c}: if column parameter is not a valid number,
+	  keep parameter as string, and defer finding the number to later.
+	* src/column-headers.{h,c}: add a function to get the column number by
+	  its name.
+	* src/datamash.c: process_file(): if some column are named, try to find
+	    the columns' number based on the header line, or exit with an error.
+	  parse_group_spec(): optionally use names.
+	  process_input_header(), remove_dups_in_file(): if grouping/operations
+	    use named columns, find column number after reading the header line.
+	  usage(): mention named columns.
+	* tests/datamash-tests.pl: adapt existing tests to new error messages,
+	  add new tests for this feature.
+	* man/datamash.x: add named-columns examples.
+
+2014-08-11  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: improve 'syntax-check'
+
+2014-08-08  A. Gordon  <assafgordon@gmail.com>
+
+	maint: new 'coverage-expensive' target
+	* cfg.mk: add 'coverage-expensive' target, for better coverage.
+
+	maint: improve build-check scripts
+	* build-aux/check-remote-make-all.sh: accept -c/-b/-m/-e arguments and
+	pass them to 'check-remote-make.sh' script.
+	* build-aux/check-remote-make-extra.sh: check cross-compilation and
+	other compilers
+	* build-aux/check-remote-make-git.sh: check building from git
+	repository.
+	* build-aux/prerelease-checks.sh: use new script.
+
+2014-08-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	tests: test more rmdup edge-cases
+
+	datamash: fix header line edge-case
+	* src/datamash.c: if the input contains a header line but no further lines,
+	print the output header line correctly.
+	* tests/datamash-tests.pl: add tests for this edge case.
+
+2014-08-08  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: improve header handling in rmdup/reverse
+	* src/datamash.c: handle input/output header combinations.
+	* tests/datamash-tests.pl: add tests
+	* tests/datamash-transpose.pl: add tests
+
+	maint: add git-log-fix file
+	* build-aux/git-log-fix: this file is used by gnulib's build module,
+	but after gnulib ugprade it was removed. Add it back.
+
+	datamash: improve debase64 error handling
+	* src/field-ops.{c,h}: return error code on failed base64 decoding.
+	* src/datamash.c: handle decoding errors.
+	* tests/datamash-tests.pl: test failed base64 decoding.
+	* tests/datamash-valgrind.sh: test base64 encoding/decoding on large
+	input.
+
+2014-08-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: improve output of parallel-tests
+	* Makefile.am, init.cfg: redirect stderr to file-descriptor 9,
+	improving error reporting using automake's parallel-tests.
+	Based on similar setttings in GNU coreutils.
+
+	build: add PURE attribute to functions
+
+	build: add compiler warnings, -Werror
+
+	build: speedup with gnulib's unlocked-io module
+	* bootstrap.conf: add gnulib's unlocked-io module, providing
+	significant speed improvement with readlinebuffer_delim().
+
+2014-08-08  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: improve field-parsing code
+	* src/text-lines.c:
+	  line_record_parse_fields(): revise code in case of single-character delimiter.
+
+2014-08-08  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: new operations: rmdup, noop
+	rmdup: remove lines based on duplicated keys. Similar to:
+	   awk '!a[$1]++'
+	noop: no-operation (optionally with --full: print file as-is). Used for
+	testing and profiling.
+
+	* bootstrap.conf: use gnulib's hash module.
+	* src/field-ops.{c,h}: add new operations
+	* src/utils.{h,c}:
+	   hash_compare_strings(): helper function for gnulib's hash module.
+	* src/datamash.c:
+	   noop_file(), remove_dups_in_file(): functions for new operations;
+	   main(): call new functions.
+	   usage(): mention new operation.
+	* tests/datamash-valgrind.sh: test 'rmdup' operation with large input.
+	* man/datamash.x: mention new operation, add example.
+
+2014-08-08  A. Gordon  <assafgordon@gmail.com>
+
+	maint: improve syntax-check
+	* src/field-ops.c: replace tabs with spaces.
+
+	datamash: improve assert and code coverage
+	Asserts impossible conditions, and exclude from code coverage.
+
+	tests: test more edge-case
+
+	datamash: refactor operation output type
+	* src/field-ops.{h,c} - define the output type (numeric/string) in the
+	operations table, instead of during runtime.
+
+	maint: fix/improve 'make coverage'
+	* cfg.mk: force deletion of '*.gcno/*.gcda' when using 'make coverage'.
+	Otherwise, some failures occur with lcov reporting 'unexpected end of
+	file'.
+
+	maint: fix syntax-check, part 3
+
+	maint: fix syntax-check issues, part 2
+
+	maint: fix source files for 'syntax-check', part 1
+
+	maint: add few more syntax-check rules
+	* cfg.mk: copy syntax-check rules from GNU coreutils.
+
+	build: update gnulib submodule to latest
+
+	build: disable --debug option
+	* configure.ac: remove --enable-debug option.
+	* src/*.c: remove #ifdef debug code.
+
+2014-08-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: refactor field-splitting
+	Instead of using gnulib's linebuffer directly, handle line-reading and
+	field-splitting with a new structure 'line_record_t' .
+	Field-splitting by delimiter is performed once, automatically, when a
+	line is read.
+	Pointers to each field are stored in 'line_record_t'.
+
+	* src/text-lines.{c,h}: implement 'line_record_t' functionality.
+	* src/datamash.c: replace 'linebuffer' with 'line_record_t' .
+	* src/column-headers.{c,h}: use new functionality.
+	* tests/datamash-tests.pl: adapt tests for new error messages.
+	* tests/datamash-valgrind.sh: fix field delimiter in tests.
+
+2014-08-07  Assaf Gordon  <assafgordon@gmail.com>
+
+	maint: add 'default' case to prevent compiler warning
+
+	datamash: bugfix: detect invalid column values
+	* src/field-ops.c: add more checks
+	* tests/datamash-tests.pl: add more tests
+
+	tests: tests few more edge-cases
+
+	datamash: improve field-op output handling
+	* src/field-ops.{c,h}: pre-allocate buffer for string output when
+	initializing the field-op, instead of malloc/free on every print.
+	   field_op_reserve_out_buf(): ensures the field-op's output buffer is
+	      large enough to hold the resulting string;
+	   field_op_to_hex(), unique_values(), count_unique_values(),
+	   collapse_values(), field_op_summarize(): use new output buffer.
+
+2014-08-07  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: new line operations: md5/sha*, base64
+	Line-Operations work on each line on the file (no grouping by key).
+
+	Example: md5 on the first column on a file:
+	    datamash md5 1 < FILE
+	Is similar to:
+	    perl -MDigest::MD5=md5_hex -lane 'print md5_hex($F[0])' < FILE
+
+	* bootstrap.conf: add gnulib's md5/sha*/base64 modules
+	* src/field-ops.{c,h}: implement new operations
+	* src/datamash.c:
+	    process_file(): implement new 'line mode' processing;
+	    usage() mention new options.
+	* man/datamash.x: mention new operations
+	* doc/datamash.texi: ditto
+	* tests/datamash-tests.pl: test new operations
+	* tests/datamash-sha.pl: test sha1/256/512 opertions (requiring recent
+	perl module Digest::SHA, this test might be skipped on systems with old Perl).
+	* Makefile.am: add new test file.
+
+2014-08-02  A. Gordon  <assafgordon@gmail.com>
+
+	maint: fix wrong path in previous commit
+
+	maint: added bash-completion script
+	* contrib/bash-completion/datamash - bash completion script
+	* Makefile.am: include script in distribution (without installing it)
+	* .gitignore: ignore the binary executable only
+
+2014-07-29  A. Gordon  <assafgordon@gmail.com>
+
+	maint: update NEWS
+
+	maint: gitignore more files
+
+	maint: add pre-release build-and-check script
+
+	maint: improve check-and-build scripts
+	* build-aux/check-remote-make.sh: report system inforation, accept
+	custom git branch to check-out.
+	* build-aux/check-remote-make-all.sh: add more hosts.
+
+	tests: skip some tests if perl isn't found
+	* configure.ac: test for Perl, setup PERL_FOUND automake varaible.
+	* Makefile.am: enable parallel tests for pl,sh files, and use a stub to
+	skip tests if Perl is not found on the system.
+
+	tests: mark valgrind test as 'expensive'
+
+2014-07-26  A. Gordon  <assafgordon@gmail.com>
+
+	tests: improve portability under qemu/binfmt
+	When building with cross-compiling AND running (non-native) binary
+	locally with qemu/binfmt, the argv[0] (binary name) is changed by qemu.
+	argv[0] is used for error reporting.
+
+	Example with most systems, argv[0] is exactly the same as the user
+	entered:
+	    $ datamash --foobar
+	    datamash: invalid option --foobar
+
+	    $ /custom/path/datamash --foobar
+	    /custom/path/datamash: invalid option --foobar
+
+	But under qemu/binfmt, argv[0] becomes the full path:
+
+	    $ datamash --foobar
+	    /home/gordon/projects/datamash/datamash: invalid option --foobar
+
+	The tests were modified to detect the actual path reported by the
+	program, or fall back to 'datamash' (as it was before).
+
+2014-07-26  A. Gordon  <assafgordon@gmail.com>
+
+	maint: improve build-aux check scripts
+	* renamed remote-make-check.sh => check-remote-make.sh
+	* renamed remote-make-check-all.sh => check-remote-make-all.sh
+	* check-remote-make.sh: added features:
+	  1) more source: local/remote tarball, git
+	  2) more compressions: gz/bz2/xz
+	  3) building from git with './bootstrap'
+	  4) command-line options to set parameters to env/configure/make
+
+2014-07-26  A. Gordon  <assafgordon@gmail.com>
+
+	maint: improve debian-hardening build method
+	* configure.ac: move option from './configure' to ..
+	* cfg.mk: make rules.
+
+	Instead of:
+	    ./configure --enable-debian-hardenning
+	Now use:
+	    make deb-hard
+
+2014-07-26  A. Gordon  <assafgordon@gmail.com>
+
+	man page: improve hyphen vs minus characters
+	* man/datamash.x: escape minus characters where needed, to distinguish between
+	hyphens and minus/dash.
+	Suggested by Alejandro Garrido Mota <alejandro@debian.org>
+
+	tests: test I/O errors
+	* tests/datamash-io-errors.sh: tests I/O errors using specially pre-mounted
+	filesystems.
+	* Makefile.am: add test.
+	* build-aux/create_corrupted_filesystem.sh: script to create corrupted
+	ext3 filesystem image.
+	* build-aux/create_small_filesystem.sh: script to create small ext3
+	filesystem which can be filled easily.
+
+2014-07-24  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: add 'internal_error' macro
+	* src/system.h: define 'internal_error' macro.
+	* src/field-ops.c: Replace 'error' call with 'internal_error' macro.
+	* src/datamash.c: ditto.
+
+	build: don't re-generate manpage from tarball
+	* configure.ac: search for '.git' directory, implying building from git
+	(if found) or tarball (if not found).
+	* Makefile.am: If building from GIT, re-generate manpage. If building
+	rom tarball, assume the manpage is already there, do not regenerate it,
+	and do not clean it (with 'make clean').
+
+2014-07-22  Assaf Gordon  <assafgordon@gmail.com>
+
+	datamash: new operations: transpose, reverse
+	* src/datamash.c: new functions: transpose_file(), reverse_fields_in_file().
+	main(): parse new options
+	usage(): update help screen
+	* src/field-ops.{h,c}: new function: parse_operation_mode().
+	parse_operations() renamed to parse_grouping_operations().
+	* man/datamash.x: updated man-page information
+	* doc/datamash.texi: updated texinfo manual
+	* tests/datamash-transpose.pl - new tests
+	* tests/datamash-valgrind.sh - new tests
+	* Makefile.am: include new tests
+
+2014-07-17  A. Gordon  <assafgordon@gmail.com>
+
+	datamash: fix typo in help screen
+	* src/datamash.c: usage(): fix 'pto' => 'dpo' typo.
+
+2014-07-16  A. Gordon  <assafgordon@gmail.com>
+
+	build: fix configure's message of examples path
+	* configure.ac: Report correct path of installed examples
+	( PACKAGE_NAME = "GNU Datamash" while PACKAGE = "datamash" ).
+
+	build: fix configure.ac parameter typo
+	* configure.ac: fix param definition (otherwise --disable-debug would fail).
+
+	build: add build prerequisites
+	* bootstrap.conf: add gettext, gperf, makeinfo as prerequisites when
+	building from git source.
+
+	tests: test headers with whitespace delimiters
+	* tests/datamash-tests.pl: add test for header line with whitespace
+	delimiters.
+
+	datamash: simplify line buffer handling
+	* src/text-lines.c: linebuffer_nullify(): based on
+	readlinebuffer_delim(), there is always a EOL-delimiter present in the
+	buffer.
+
+	tests: add Sample-Skewness test
+	* tests/datamash-stats.pl: test sample-skewness with just 2 data points.
+
+	maint: improve internal errors
+	* src/field-ops.c: don't gettextize internal errors (no need to
+	translate them), and exclude them from coverage reports.
+	* src/utils.c: exclude internal error from coverage reports.
+
+	datamash: improve gettext strings
+	* src/datamash.c: usage(): improve wording, gettextize missed string,
+	line up long options.
+	Based on suggestion by Benno Schulenberg from the Translation Project.
+
+2014-07-15  A. Gordon  <assafgordon@gmail.com>
+
+	maint: update NEWS and README
+
+	maint: syntax-check fix
+	* Makefile.am: reduce spaces to appease 'make syntax-check' rule.
+
+	build: Explicitly use perl for help2man
+	* Makefile.am: Use 'perl' executable in $PATH for help2man,
+	don't count on #! path in help2man - Hydra/NixOS doesn't have
+	"/usr/bin/env", so it can't be used.
+	NOTE: Using customized help2man (see commit 33c75d), so don't use
+	system's installed help2man.
+
+2014-07-14  A. Gordon  <assafgordon@gmail.com>
+
+	Expand manual page
+	* man/datamash.x: expand manual page with content from old help screen.
+
+	datamash: shorten help screen
+	src/datamash.c: usage(): shorten help screen.
+
+	build: man page depends on .x template
+	* Makefile.am: make manual page generation depend on datamash.x
+	template.
+
+	build: accept single example in help2man
+	* man/help2man: Modify the EXAMPLES pattern detection to accept
+	a single example.
+
+2014-07-14  A. Gordon  <assafgordon@gmail.com>
+
+	build: don't hard-code Perl path in scripts
+	* man/help2man - Use "/usr/bin/env perl" instead of "/usr/bin/perl".
+	* tests/datamash-stats.pl - ditto
+	* tests/datamash-tests.pl - ditto
+
+	Hard-coded Perl fails Hydra/NixOS builds
+	(http://hydra.nixos.org/build/12516876), and is also generally bad form.
+
+2014-07-05  A. Gordon  <assafgordon@gmail.com>
+
+	GNU Datamash: remove files relating to external sites
+
+	GNU Datamash: update README
+
+	GNU Datamash: rename package
+
+2014-05-19  A. Gordon  <assafgordon@gmail.com>
+
+	maint: improve comments in tests
+
+2014-05-12  A. Gordon  <assafgordon@gmail.com>
+
+	maint: add 'texlive' package to Travis-CI
+
+	maint: add 'texinfo' package to travis-CI
+
+2014-05-12  A. Gordon  <agordon@wi.mit.edu>
+
+	doc: add texinfo documentation
+
+2014-04-29  A. Gordon  <agordon@wi.mit.edu>
+
+	maint: update copyright/license in files
+
+2014-04-18  A. Gordon  <agordon@wi.mit.edu>
+
+	maint: update 'git-log-fix' due to gnulib upgrade.
+
+	gnulib: upgrade to latest version
+
+	maint: add more hosts to build-check script
+
+	maint: .gitignore more files
+
+	maint: fix 'make syntax-check' errors
+
+	maint: replace old bcopy/bzero calls with memmove/memset
+
+2014-04-14  A. Gordon  <agordon@wi.mit.edu>
+
+	maint: add cygwin distribution packing script
+
+	build: work-around strtold() bug on cygwin
+
+	build: remove unneeded header from src/compute.c
+	Compilation failed on Cygwin with this header.
+
+	maint: improve automatic checks script
+
+	Formalize rarely used debug option
+	To build with debug option:
+	   ./configure --enable-debug
+	To use:
+	   compute --debug [other options]
+
+	build: fix compilation on Cygwin (missing nanl/expl)
+
+2014-04-11  A. Gordon  <agordon@wi.mit.edu>
+
+	maint: improve instructions in 'tag-new-version' script
+
+	maint: .gitignore few more files
+
+	maint: add script to build and test on multiple hosts.
+
+	maint: Improve output of 'aws-upload' script
+
+	portability: cater to systems without a stable sort
+
+	tests: improve portability when detecting 'nan'
+	It's 'nan' on most systems, but 'NaN' on some.
+
+	build: portability: add missing <strings.h> header
+	bzero() and bcopy() fail to compile on DilOS without it.
+
+	tests: improve portability of mktemp
+	Five X's fail on OpenBSD.
+
+	compute: default to TAB instead of Whitespace as delimiter
+
+	compute: fix typos
+
+2014-04-10  A. Gordon  <agordon@wi.mit.edu>
+
+	maint: add script to build & check on remote machine
+
+	tests: improve portability of error message detection.
+
+	tests: don't assume 'seq' is installed. SKIP if not found.
+
+	build: improve 'inline' declaration for two functions.
+	They failed to build on OpenBSD.
+
+	compute: improve help screen
+
+	compute: new operation: D'Agostino-Pearson omnibus (dpo) normality test
+
+	src/utils: adjust math functions for consistant nan results
+
+	compute: new operation: Jarque-Bera normality test
+
+	tests: test mad/madraw with unsorted input
+
+2014-04-09  A. Gordon  <agordon@wi.mit.edu>
+
+	tests: tests more sequences
+
+	compute: new operation: excess kurtosis
+
+	compute: new operation: skewness (for pop./sample)
+
+	src/utils: extract function for arithmetic mean.
+
+	tests: document equivalent R code for stat tests + reorder.
+
+	compute: new operations: mad,madraw
+
+	tests: add tests for pop/sample stdev/variance
+
+	compute: new operations: q1,q3,iqr
+
+	compute: new operation: rand
+
+2014-04-08  A. Gordon  <agordon@wi.mit.edu>
+
+	build: add -Werror to ./src/ files.
+
+	tests: fix comments
+
+	compute: new operations: first,last
+
+2014-04-07  A. Gordon  <agordon@wi.mit.edu>
+
+	compute: set numeric output precision
+
+	build: improve comment in configure.ac
+
+2014-04-07  A. Gordon  <agordon@wi.mit.edu>
+
+	build: Use compiler warnings from gl_WARN_ADD
+	Those were wrongly dropped when changed to non-recursive makefile.
+
+	The new flags are used only with the 'compute' sources,
+	but not with the gnulib sources.
+
+2014-04-07  A. Gordon  <agordon@wi.mit.edu>
+
+	compute: detect invalid suffix in numeric input.
+
+	fields-ops: remove 'keep_lines' feature.
+	Perhaps will be added in future versions.
+
+	compute: move numeric conversion into 'field-ops' module.
+
+2014-03-21  A. Gordon  <agordon@wi.mit.edu>
+
+	build: add helper scripts to EXTRA_DIST
+
+	build: work-around for missing '.tarball-version'
+	See:
+	http://lists.gnu.org/archive/html/bug-hello/2014-03/msg00017.html
+
+	maint: update helper scripts
+
+	build: include 'help2man' and use it.
+	Not all systems have "help2man" installed.
+
+2014-03-19  A. Gordon  <agordon@wi.mit.edu>
+
+	maint: add helper script to upload files to AWS S3
+
+	build: update helper scripts to new name
+
+2014-03-18  A. Gordon  <agordon@wi.mit.edu>
+
+	RENAME: calc -> compute
+	To avoid name conflicts with existing software.
+
+2014-03-17  A. Gordon  <agordon@wi.mit.edu>
+
+	TravisCI - no need for GNU Sed 4.2.2 anymore.
+
+	calc: bugfix on --sort without grouping.
+	'pipe_through_sort' was not cleared, caused errors on FreeBSD
+	(all other systems seems not to mind calling pclose on a non-popen
+	FILE).
+
+	calc: sort+headers: don't use GNU sed.
+	Implement unbuffered input to avoid GNU sed dependency.
+
+2014-03-14  A. Gordon  <agordon@wi.mit.edu>
+
+	calc: fix 'make syntax-check' errors
+
+	build: improve ./configure messages
+
+	gitignore: ignore more files
+	Automatically generated by gnulib
+
+2014-03-13  A. Gordon  <agordon@wi.mit.edu>
+
+	Travis-CI: add 'make distcheck', disable encode binary
+	No need to save the static binary from a Linux build - can be
+	easily created anywhere.
+
+	build: make-bin script: improve tar filename
+
+	build: update gnulib
+
+	build: add empty git-log-fix
+	Will be needed if there are ever commit tyops/errors,
+	see http://lists.gnu.org/archive/html/coreutils/2011-11/msg00004.html
+
+	build: fix help2man issue on FreeBSD
+	http://lists.gnu.org/archive/html/bug-hello/2014-03/msg00003.html
+
+2014-03-12  A. Gordon  <agordon@wi.mit.edu>
+
+	Travis-CI: don't get git submodules. 'bootstrap' should do it.
+
+	Travis-CI: build with debian hardening flags
+
+	src/calc: (temporarily) ignore the return value of fwrite
+	using gnulib's 'clouseout' module will check for write
+	errors when the program terminates.
+
+	build: add '--enable-debian-hardening' to './configure'
+	report CPPFLAGS at the end of './configure'
+
+	tests: minor change to improve portability
+	Previous syntax failed on Mac-OS X.
+
+	Switch to non-recursive Makefile
+
+2014-03-10  A. Gordon  <agordon@wi.mit.edu>
+
+	Travis-CI: check coverage after successful build
+
+	gitignore: ignore coverage files
+
+	tests: tests sort-pipe failure
+
+	coverage tests: exclude unreachable line
+
+	build: remove unused module 'strnumcmp'
+
+	src/field-ops.c: document unreachable code.
+
+	src/field-ops.c: refactor free() code.
+
+	tests: add tests, improve coverage
+
+	src/column-headers.c: improve error message
+
+	build: add scripts to generate coverage information
+
+	build: define inline'd symbols in src/text-options.c
+	Avoids 'undefined reference' errors when compiling with coverage
+	instrumentation.
+
+2014-03-09  A. Gordon  <agordon@wi.mit.edu>
+
+	Travis: improve build, add scripts
+
+2014-03-08  A. Gordon  <agordon@wi.mit.edu>
+
+	build: add 'make-bin' script to distribution
+
+	build: print message at the end of ./configure
+
+	build: make GZ tarballs, not XZ.
+
+	build: add required README file as a stub.
+
+	.gitignore: ignore more files
+
+	build: helper script to build static binaries
+
+	README: update information, refer to website
+
+	.gitignore: ignore build-related files
+
+	calc: free column headers, add tests
+
+	calc: bugfix for headers without grouping
+
+	tests: don't use valgrind on static binaries
+
+2014-03-07  A. Gordon  <agordon@wi.mit.edu>
+
+	calc: new global case-sensitive option '-i' + tests
+
+	build: fix minor errors
+
+	refactor: extract common functions into modules
+
+	maint: update copyright year, add GPL
+
+	calc: conditionally compile '--debug' option.
+	To enable it, Use
+	    ./configure CFLAGS="-DENABLE_DEBUG"
+
+	calc: improve help screen.
+
+	examples: improve 'scores' example
+
+2014-03-06  A. Gordon  <agordon@wi.mit.edu>
+
+	build: remove 'make distcheck' from Travis-CI.
+	It fails for unclear reason.
+
+	calc: remove extraneous 'const'
+	Caused compilation errors with clang.
+
+	build: Add ".travis.yml" for Travis-CI
+
+	calc: fix sort+headers, add tests
+
+	examples: use '-s' instead of piping to 'sort|'
+
+	calc: implement auto-sorting, add tests
+
+	calc: add stub for '--sort' option.
+
+	build: remove 'key-compare' from PO list
+
+	calc: simplify code, don't use key-compare module.
+
+	calc: simply parameters, remove '--key' option.
+
+	calc: add '-T' as shortcut for tab separator.
+
+	Merge branch 'examples'
+
+	examples: add example files.
+
+2014-03-05  A. Gordon  <agordon@wi.mit.edu>
+
+	tests: fix valgrind test for 'make distcheck'
+
+	tests: add valgrind tests
+
+	calc: fix memory problems
+
+2014-03-04  A. Gordon  <agordon@wi.mit.edu>
+
+	examples: new sub-directory
+
+	tests: add countunique tests
+
+	new operation: countunique
+
+2014-03-03  A. Gordon  <agordon@wi.mit.edu>
+
+	tests: test single-line groups
+
+2014-02-26  A. Gordon  <agordon@wi.mit.edu>
+
+	tests: check empty input
+
+	bugfix: '--full' and no groups would return the wrong line.
+	Returned the last line of the last group, instead of the first line of
+	the last group (as it returns the first line of every other group).
+
+	tests: add --header-in tests
+
+	headers: don't print group headers with --full.
+
+	tests: test count on non-numeric fields
+
+	remove unused cruft (from header feature)
+
+	bugfix: Allow 'count' to count non-numeric fields
+
+	key-compare: make 'blanks' public.
+
+	implement headers support.
+
+	Implement output headers (without --full).
+
+	Command-line processing and Help for 'headers' options.
+
+2013-05-03  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: touch missing files
+
+2013-04-26  Assaf Gordon  <assafgordon@gmail.com>
+
+	build: use gl_WARN_ADD for compiler warnings
+
+	key-compare: fix compilation warnings
+	-Wunused-parameter and -Wswitch-default will trigger warnings.
+	change code to avoid them.
+
+2013-04-25  Assaf Gordon  <assafgordon@gmail.com>
+
+	Merge branch 'gitchangelog'
+
+	build: add gnulib's gitlog-to-changelog
+
+2013-04-11  Assaf Gordon  <assafgordon@gmail.com>
+
+	calc: improve help message for help2man
+
+	gettext-ify the package
+
+	autoconf: switch from gz to xz
+
+	system.h: minor improvements
+
+2013-04-09  Assaf Gordon  <assafgordon@gmail.com>
+
+	calc: use gnulib closeout module
+	Protect against write errors at the end of te program,
+	e.g. 'calc XXX > /dev/full' (which should fail).
+
+	Merge branch 'better_autotools'
+
+	GNU-ify: add auto-generated man page
+
+	cleanups: remove 'scripts' directory
+	There are no add-on scripts for calc (at the moment).
+
+	GNU-ify: update src/Makefile.am
+
+	GNU-ify: update tests/Makefile.am
+
+	GNU-ify: add AUTHORS,THANKS
+
+	GNU-ify based on GNU-hello, step 1 (configure.ac)
+
+	code cleanups and more comments
+
+	add GPLv3+ text to source files
+
+2013-04-08  Assaf Gordon  <assafgordon@gmail.com>
+
+	some more comments
+
+	minor code cleanups
+
+	minor code cleanups
+
+	calc: groupping support (with proper output)
+
+	calc: process groups.
+
+	calc: add tests for groups
+
+	calc: re-arrange headers
+
+	calc: compare lines using --key
+
+	calc: prepare code for key-compare.
+
+	calc: import key-compare form coreutils.
+
+2013-04-05  Assaf Gordon  <assafgordon@gmail.com>
+
+	calc: expand '--help' section
+
+	README: add simple use-case.
+
+	tests: more tests (groups)
+
+	tests: fix automake for out-of-tree builds
+
+	calc: more tests
+
+	calc: more tests
+
+	calc: initial testing framework
+	run with:  make check
+	or: make check VERBOSE=yes
+	or: make check VERBOSE=yes DEBUG=yes SAVE_TEMPS=yes
+
+	calc: proper printing of output
+
+	calc: field extractiong works
+
+2013-04-04  Assaf Gordon  <assafgordon@gmail.com>
+
+	calc: re-factor, prepare for field support.
+
+	calc: bugfix for numeric values with groups
+
+	calc: initial grouping, by empty line
+
+	calc: re-implement unique/collapse
+
+	calc: implement unique/unique-nocase
+
+	calc: implement mode/antimode
+
+	calc: implement stdev/variance, other fixes.
+
+2013-04-03  Assaf Gordon  <assafgordon@gmail.com>
+
+	calc: first shot at multi-valued numeric (median)
+
+	calc: single-value operations working.
+
+	calc: add stub input reading
+
+2013-04-02  Assaf Gordon  <assafgordon@gmail.com>
+
+	calc: create field/op structures
+
+	calc: parse operation arguments
+
+	calc: set GNU coding styles for VIM
+
+	calc: process -z and --debug
+
+2013-03-29  Assaf Gordon  <assafgordon@gmail.com>
+
+	build system: fix auto generated version.c
+
+	calc: add template code
+	Add version, coyright, help, usage messages.
+
+	gnulib: add modules.
+
+	configure.ac: remove extra GCC checks
+	gnulib doesn't compile with them.
+	TODO: add GCC warnings to projec'ts build in src/Makefile.am.
+	      (but only if using GCC).
+
+	added gnulib submodule
+
+	Initial Commit

@@ -1,0 +1,287 @@
+I made this list for myself to help sort out design and configuration issues
+as I was adding support for the GNATS newtork daemon (gnatsd). I haven't
+clearly marked what applies to local disk access or network daemon access.
+
+
+GNATS programs executed by TkGnats
+==================================
+
+o  query-pr (local GNATS) / nquery-pr (network GNATS)
+
+    - tkpr_library.tcl (check_release_based_batch) to determine if GNATS is Release Based
+        - tkpr_library.tcl (get_gnats_config) calls check_release_based
+            - called by tkeditpr, tkgnats, tkquerypr, tksendpr, tkviewpr
+    - tkpr_library.tcl (get_gnats_list_batch) to get lists from GNATS
+        - tkpr_library.tcl (get_gnats_list)
+            - get_categories / get_submitters / get_responsible
+                - tkeditpr, tkgnats, tkquerypr, tksendpr, tkviewpr
+    - tkpr_library.tcl (get_pr_medium_text_batch) to get medium list of PR
+        - tkpr_library.tcl (delete_pr_local) to get Category and State only
+            - tkquery-pr (selection_Delete_cmd) to delete PRs
+        - tkprintpr.tcl (Medium) to get medium listing of PRs for printing
+    - tkpr_library.tcl (get_pr_medium_text_batch) to get medium list of PR
+        - tkprintpr.tcl (print_parsepr_medium) to get medium listing of PRs for printing
+            - print/Synopsis_Summary to get Number,Arrival-Date,Responsible,Category,
+                                            Priority,Synopsis,Last-Modified,Originator,
+                                            State,Severity.
+    - tkpr_library.tcl (get_pr_full_text_batch) to get full list of PR
+        - tkpr_library.tcl (lock_pr) to get full list of PR for editing when GNATS_ACCESS=local
+            - see npr-edit below for callers of lock-pr
+        - tkprintpr.tcl (Raw_Data) to get full listing of PRs for printing
+        - tkprintpr.tcl (print_parsepr) to get full listing of PRs for printing
+            - tkprintpr.tcl (Full) to get full listing of PRs for printing
+            - print/Description_Summary to get Number,Synopsis,State,Description
+                                        (Can't use medium)
+        - tkquerypr (selection_Email_cmd) to get Reply-To,Responsible,From,Category,Synopsis
+                                        (Can't use medium)
+        - tkviewpr (main) to get full list of PR for viewing Raw or Formatted
+    - tkquerypr (query_cmd_batch) to perform actual database queries
+
+o  pr-edit (local GNATS) / npr-edit (network GNATS)
+
+    - tkpr_library.tcl (lock_pr_batch) to lock PR for editing and to get full list of PR 
+      for editing (npr-edit)
+        - tkeditpr (edit_window) to lock PR for editing
+        - tkeditpr (real_file_report) to re-lock PR: this is a get-around for a 
+                   bug in gnatsd that unlocks a pr when the update fails
+        - tkpr_library.tcl (delete_pr_local) to lock PR for deleting
+    - tkeditpr (real_file_report_batch) to send edited PR back to GNATS
+    - tkpr_library.tcl (unlock_pr_batch) to unlock PR
+        - tkeditpr (edit_window) to unlock the PR after updating
+        - tkpr_library.tcl (delete_pr_local) to unlock the PR after deleting
+
+
+External programs executed by TkGnats
+=====================================
+
+o  TkGnats(Mailer) - sendmail, if TkGnats(MailMethod)=mailer
+o  TkGnats(InfoReader) - tkinfo, xinfo, etc; optional in tkgnats main menu
+o  TkGnats(MailReader) - pine, etc; optional in tkgnats main menu
+o  groups in tkpr_library.tcl (TkGnats_config) - to get GROUP list
+o  id in tkpr_library.tcl (TkGnats_config) - to get USER and GROUP
+o  whoami optionally in tkgnats.config, if id fails and env(USER) and env(LOGNAME) don't exist
+o  true in tkpr_library.tcl (do_reap) (protected by catch)
+o  ypcat|grep|cut in tkpr_library.tcl (fullname_from_logname) (protected with catch)
+    - tkpr_library.tcl (TkGnats_config) calls fullname_from_logname to set TkGnats(FullName)
+    - tksendpr uses TkGnats(FullName) as the default for Originator
+o  /bin/sh -c in tkquery_pr (perform_print_cmd) to execute Print(Previewer,*)
+    - can this be just directly exec'd? No, because it's chained to rm tempfile in background
+o  uname, arch, xdpyinfo|fgrep in tksendpr to get Environment defaults (optional)
+    - tcl_platform and [info hostname] values are used if uname fails
+o  sort, if TkGnats(QuerySortMethod)=external, to sort queries for the query listbox
+o  groff in tkprintpr.tcl is the input to Print(Printspooler,*)
+
+
+GNATS configuration details needed by TkGnats
+=============================================
+
+o GNATS_ROOT: TkGnats(GNATS_ROOT)
+
+    - set in tkgnats.config by the Makefile
+    - used in Makefile to read $(GNATS_ROOT)/gnats-adm/config which in turn sets
+      GNATS_ADDR, GNATS_USER and SUBMITTER in tkgnats.config
+    - tkpr_library.tcl (TkGnats_config) looks for env variable GNATS_ROOT and resets
+      GNATS_ADDR, GNATS_USER, SUBMITTER and GNATS_ROOT itself
+    - tkpr_library.tcl (delete_pr_local) gets the GNATS index from 
+      $TkGnats(GNATS_ROOT)/gnats-adm/index
+      and the PR pathname from $TkGnats(GNATS_ROOT)/$full_id for deletion
+
+o GNATS_SITE: TkGnats(GNATS_SITE)
+
+    - REMOVED. No longer used. See SUBMITTER.
+
+o GNATS_USER: TkGnats(GNATS_USER)
+
+    - set in tkgnats.config by the Makefile
+    - tkpr_library.tcl (TkGnats_config) looks for env variable GNATS_ROOT and resets 
+      this from the GNATS config file
+    - this is used for the default TkGnats(delete_authorized_users) in tkgnats.config
+      which is only required for GNATS_ACCESS=local.
+
+o GNATS_ADDR: TkGnats(GNATS_ADDR)
+
+    - set in tkgnats.config by the Makefile or gotten from the "servers" file info
+    - tkpr_library.tcl (TkGnats_config) looks for env variable GNATS_ROOT and resets
+      this from the GNATS config file
+    - tkpr_library.tcl (email_originator) as the recipient of the follow-up email
+    - tksendpr (send_report) as the recipient of the email bug report
+
+o LIBEXECDIR: TkGnats(GNATS_LIBEXECDIR)
+
+    - set in tkgnats.config by the Makefile
+    - tkpr_library.tcl (TkGnats_config) as $TkGnats(GNATS_LIBEXECDIR)/gnats/pr-edit 
+      and npr-edit to get the path for the GNATS (n)pr-edit program
+
+o SUBMITTER
+
+    - set in tkgnats.config by the Makefile
+    - tkpr_library.tcl (TkGnats_config) looks for env variable GNATS_ROOT and resets
+      this from the GNATS config file
+    - tkpr_library.tcl (TkGnats_config) uses this as the default Organization if 
+      nothing else is found
+    - tksendpr uses this to set the default Submitter in the dialog
+
+o GNATS category list
+
+    - TkGnats(CategoryList)    in tkpr_library.tcl (get_category_list)
+    - got from (n)query-pr or direct socket call
+
+o GNATS submitter list
+
+    - TkGnats(SubmitterList)   in tkpr_library.tcl (get_submitter_list)
+    - got from (n)query-pr or direct socket call
+
+o GNATS responsible list
+
+    - TkGnats(ResponsibleList) in tkpr_library.tcl (get_responsible_list)
+    - got from (n)query-pr or direct socket call
+
+o TkGnats(ReleaseBased)
+
+    - set automatically in tkpr_library.tcl (get_gnats_config / check_release_based)
+    - used throughout to determine if the Keywords field is used
+
+o TkGnats(GNATS_ACCESS) 
+
+    - set in tkpr_library.tcl(TkGnats_config_rc) to local if GNATS_SERVER is blank,
+      otherwise set to network
+    - tkeditpr (real_file_report) to know to do the get-around for a bug in gnatsd
+      that unlocks a pr when the update fails
+    - tkpr_library.tcl (TkGnats_config) to inhibit TkGnats(delete_authorized) if not a 
+      local GNATS system
+    - tkpr_library.tcl (lock_pr) to know if pr-edit is meant to return the full text of the 
+      PR or not
+
+o TkGnats(GNATS_ACCESS_METHOD) (where used/how set/etc)
+
+    - defaults to socket if GNATS_ACCESS is network, but can be set to batch to
+      force usage of nquery-pr and npr-edit (not recommended)
+
+o TkGnats(GNATS_SERVER) 
+
+    - set from the "servers" file info
+    - if GNATS_ACCESS=network: used as the --host argument to nquery-pr and npr-edit 
+      (GNATS_ACCESS_METHOD=batch) or gnatsd socket (GNATS_ACCESS_METHOD=socket)
+
+o  TkGnats(GNATS_PORT)
+
+    - set from the "servers" file info
+    - if GNATS_ACCESS=network: used as the --port argument to nquery-pr and npr-edit 
+      (GNATS_ACCESS_METHOD=batch) or gnatsd socket (GNATS_ACCESS_METHOD=socket)
+
+
+Other TkGnats configuration issues
+==================================
+
+o  tkgnats.config
+
+    - this file is sourced in tkpr_library.tcl (TkGnats_config), where only TkGnats
+      and env are declared global.
+
+o  TkGnats(EmailAddr)
+
+    - tkpr_library.tcl (TkGnats_config) checks for the environment variable REPLYTO. If it exists,
+      TkGnats(EmailAddr) is set to this value rather than TkGnats(LogName)
+    - tkeditpr (real_file_report) to know who is doing the edit so that name can be
+      omitted from receiving notification of the edit
+    - tkeditpr (real_file_report) as the name in the Audit Trail "Responsible-Changed-By:" 
+      and "State-Changed-By:" entries, along with TkGnats(FullName)
+    - tkeditpr (real_file_report) as the From and Reply-To mail headers of the mail being sent
+    - tkpr_library.tcl (email_send) as the From and Reply-To mail headers of the mail being sent
+    - tkpr_library.tcl (email_send) to know who is sending the mail so that name can be
+      omitted from receiving notification of the edit 
+
+o  TkGnats(ENVIRONMENT)
+
+    - tksendpr.tcl will use this to set the initial value of the Environment text when 
+      creating new problem reports. Otherwise, the output of the UNIX command "uname -a"
+      (or the tcl_platform Tcl variables) is used.
+
+o  TkGnats(LogName)
+
+    - tkpr_library.tcl (TkGnats_config) sets by searching in this order:
+        - check the first output field of the id command
+        - then check USER environment variable
+        - then try LOGNAME environment variable
+        - then try running whoami
+    - tkpr_library.tcl (TkGnats_config) to set TkGnats(EmailAddr) if the environment 
+      variable REPLYTO isn't available
+    - tkeditpr (main) to make sure root doesn't edit PRs
+    - tkpr_library.tcl (TkGnats_config) to compare against TkGnats(edit_authorized)
+    - tkpr_library.tcl (TkGnats_config) to compare against TkGnats(delete_authorized)
+    - tkpr_library.tcl (fullname_from_logname) to search "ypcat passwd" or /etc/passwd
+    - tkpr_library.tcl (lock_pr_batch) as the --lock argument to (n)pr-edit or for the
+      LOCK command when calling the gnatsd socket (lock_pr_socket)
+    - tksendpr (main) to make sure root doesn't send PRs
+    - used in the filename of various temporary files
+    - used in iconnames
+
+o  TkGnats(GroupName)
+
+    - tkpr_library.tcl (TkGnats_config) sets by searching in this order:
+        - first check the output of the groups command for a list of groups
+        - then check the second output field of the id command for a primary group
+        - then check GROUP environment variable
+    - tkpr_library.tcl (TkGnats_config) to compare against TkGnats(edit_authorized)
+    - tkpr_library.tcl (TkGnats_config) to compare against TkGnats(delete_authorized)
+
+o  TkGnats(ORGANIZATION)
+
+    - tkpr_library.tcl (TkGnats_config) sets by searching in this order:
+        - environment variable ORGANIZATION, which is either a filename whose 
+          contents is used or else a string to use
+        - $env(HOME)/.signature, which is a filename whose contents is used
+        - if the above aren't found then $TkGnats(SUBMITTER) is used
+
+o  TkGnats(CreateDefaultCategory)
+
+    - tksendpr (main) to use as a pre-selected category default
+
+o  TkGnats(QuerySortMethod)
+
+    - tkpr_library.tcl (TkGnats_config) sets or overrides TkGnats(QuerySortMethod)
+      (internal or external)
+    - determines if Query listbox will be sorted by Tcl code (internal) or the unix 
+      "sort" program (external). The internal sort runs as fast or faster than the
+      external sort in Tcl/Tk 8.0 due to the byte compiler. The internal sort
+      is mandatory for Win95/98/NT.
+    - tkpr_library.tcl (build_sort_cmd) to build sort keys
+    - tkquerypr (perform_sort_cmd) to sort listbox
+
+o  TkGnats(SMTP_SERVER)
+
+    - MailMethod is either mailer (like sendmail) or smtp to connect directly to
+      an smtp server when sending mail. smtp is mandatory for Win95/98/NT.
+
+o  TkGnats(SMTP_PORT)
+
+    - defaults to the standard 25.
+
+o TkGnats(GNATS_BINDIR)
+
+    - This can be set if the GNATS programs query-pr and nquery-pr aren't in your path.
+
+Full list of TkGnats array variables
+====================================
+
+o  This list can be viewed from the Help menu on any TkGnats window.
+
+
+Full list of environment variables checked by TkGnats
+=====================================================
+
+environment variable            sets TkGnats variable
+--------------------            ---------------------
+
+env(GNATS_ROOT)                 TkGnats(GNATS_ROOT), TkGnats(GNATS_ADDR), 
+                                TkGnats(GNATS_USER), TkGnats(SUBMITTER)
+env(GROUP)                      TkGnats(GroupName) (if unix 'groups' and 'id' cmds not available)
+env(HOME)                       TkGnats(HOME)
+env(HOSTNAME)                   TkGnats(HOSTNAME)
+env(LOGNAME)                    TkGnats(LogName) (if env(USER) not found)
+env(ORGANIZATION)               TkGnats(ORGANIZATION)
+env(REPLYTO)                    TkGnats(EmailAddr) (otherwise use TkGnats(LogName))
+env(TKGNATSINI)                 TkGnats(TKGNATSINI)        
+env(TKGNATSLIB)                 TkGnats(TKGNATSLIB) (and TkGnats(lib), which is actually used)
+env(TKGNATSSERVERS)             TkGnats(TKGNATSLIB) (and TkGnats(lib), which is actually used)
+env(USER)                       TkGnats(LogName) (if unix 'id' cmd not available)

@@ -1,0 +1,1175 @@
+%%%% bldelem5.lmc
+%%%% Created by Laurence D. Finston (LDF) Thu Jul 19 07:26:02 CEST 2012
+
+%% * (1) Copyright and License.
+
+%%%% This file is part of GNU 3DLDF, a package for three-dimensional drawing.  
+%%%% Copyright (C) 2012, 2013 The Free Software Foundation  
+
+%%%% GNU 3DLDF is free software; you can redistribute it and/or modify 
+%%%% it under the terms of the GNU General Public License as published by 
+%%%% the Free Software Foundation; either version 3 of the License, or 
+%%%% (at your option) any later version.  
+
+%%%% GNU 3DLDF is distributed in the hope that it will be useful, 
+%%%% but WITHOUT ANY WARRANTY; without even the implied warranty of 
+%%%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
+%%%% GNU General Public License for more details.  
+
+%%%% You should have received a copy of the GNU General Public License 
+%%%% along with GNU 3DLDF; if not, write to the Free Software 
+%%%% Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA 
+
+%%%% GNU 3DLDF is a GNU package.  
+%%%% It is part of the GNU Project of the  
+%%%% Free Software Foundation 
+%%%% and is published under the GNU General Public License. 
+%%%% See the website http://www.gnu.org 
+%%%% for more information.   
+%%%% GNU 3DLDF is available for downloading from 
+%%%% http://www.gnu.org/software/3dldf/LDF.html.
+
+%%%% Please send bug reports to Laurence.Finston@gmx.de
+%%%% The mailing list help-3dldf@gnu.org is available for people to 
+%%%% ask other users for help.  
+%%%% The mailing list info-3dldf@gnu.org is for sending 
+%%%% announcements to users. To subscribe to these mailing lists, send an 
+%%%% email with ``subscribe <email-address>'' as the subject.  
+
+%%%% The author can be contacted at: 
+
+%%%% Laurence D. Finston 
+%%%% c/o Free Software Foundation, Inc. 
+%%%% 51 Franklin St, Fifth Floor 
+%%%% Boston, MA  02110-1301  
+%%%% USA
+
+%%%% Laurence.Finston@gmx.de
+ 
+
+
+%% Created:        July 19, 2012
+%% Last Updated:   September 15, 2012
+
+input "bldelem0.lmc";
+
+%% * (1) Macros
+
+%% ** (2) rect_prism (square ends --> sides are similar)
+
+%% !! TODO: LDF 2012.09.15.  
+%% Improve the labelling when A = B = C.
+
+
+macro rect_prism;
+
+%% AA:  Rectangles
+%% BB:  Guidelines and Crosshairs
+%% CC:  Single tabs
+%% DD:  Double tabs on drawing 
+%% EE:  Separate double tabs
+%% FF:  Text
+
+def rect_prism (AA, BB, CC, DD, EE, FF) {numeric h_val_side, 
+                    	     	     	 numeric v_val_side, 
+                    	     	     	 numeric height_end, 
+                    	     	     	 boolean ddouble_tabs, 
+                    	     	     	 boolean do_guidelines, 
+                    	     	     	 numeric ccross_a, 
+                    	     	     	 numeric ccross_b, 
+                    	     	     	 numeric ccross_c} =
+
+%% *** (3)
+
+
+   numeric h_offset;
+   numeric tab_height;
+
+   point P[][];
+   point M[];
+   rectangle R[];
+   transform T[];
+
+   R0 := unit_rectangle rotated (90, 0) scaled (h_val_side, height_end);
+   R1 := unit_rectangle rotated (90, 0) scaled (h_val_side, v_val_side);
+
+   P[0][0] := get_point 0 R0;
+   P[1][3] := get_point 3 R1;
+
+   pen thin_pen;
+   thin_pen := pencircle scaled (.25mm, .25mm, .25mm);
+  
+   T0 := identity shifted by (P[0][0] - P[1][3]);
+
+   P[1][3] *= R1 *= T0;
+
+   draw R0 on_picture AA; % with_color red;
+   draw R1 on_picture AA; % with_color blue;
+
+   for i := 0 upto 1:
+      for j := 0 upto 3:
+         P[i][j] := get_point (j) R[i];
+      endfor;
+   endfor;
+
+   M0 := mediate(P[1][0], P[1][3]);
+   M1 := mediate(P[1][1], P[1][2]);
+
+   R2 := unit_rectangle rotated (90, 0) scaled (height_end, v_val_side);
+   shift R2 by (P[1][1] - get_point 0 R2);
+
+
+   R3 := R1 shifted by (get_point 1 R2 - P[1][0]);
+
+   draw R2 on_picture AA; % with_color green;
+   draw R3 on_picture AA; % with_color cyan;
+
+   for i := 2 upto 3:
+      for j := 0 upto 3:
+         P[i][j] := get_point (j) R[i];
+      endfor;
+   endfor;
+
+   R4 := R2 shifted by (P[1][0] - get_point 1 R2);
+   R5 := R0 rotated_around (M0, M1) 180;
+
+   draw R4 on_picture AA;
+   draw R5 on_picture AA;
+
+   for i := 4 upto 5:
+      for j := 0 upto 3:
+         P[i][j] := get_point (j) R[i];
+      endfor;
+   endfor;
+
+%% *** (3) Guidelines and crosshairs (not on tabs)
+
+   point S[];
+
+%% **** (4)  Top end 
+
+      S0 := get_center R0;
+
+      S1 := P[0][0] shifted (.25cm, .25cm);
+      S2 := P[0][1] shifted (-.25cm, .25cm);
+      S3 := P[0][2] shifted (-.25cm, -.25cm);
+      S4 := P[0][3] shifted (.25cm, -.25cm);
+
+      %draw S1 -- S2 -- S3 -- S4 -- cycle with_color gray with_pen thin_pen;
+
+      draw S1 shifted (-.25cm, 0) -- S2 shifted (.25cm, 0) with_color gray with_pen thin_pen 
+              on_picture BB;
+
+      draw S3 shifted (.25cm, 0) -- S4 shifted (-.25cm, 0) with_color gray with_pen thin_pen 
+              on_picture BB;;
+
+      draw S1 shifted (-.0, -.25cm) -- S4 shifted (.0, .25cm) with_color gray with_pen thin_pen
+              on_picture BB;
+
+      draw S2 shifted (-.0, -.25cm) -- S3 shifted (.0, .25cm) with_color gray with_pen thin_pen
+              on_picture BB;
+
+
+      crosshair (BB) {S0, .1, P[0][0], P[0][1]};
+      crosshair (BB) {S1, .1, P[0][0], P[0][1]};
+      crosshair (BB) {S2, .1, P[0][0], P[0][1]};
+      crosshair (BB) {S3, .1, P[0][0], P[0][1]};
+      crosshair (BB) {S4, .1, P[0][0], P[0][1]};
+
+
+%% **** (4)  Bottom end 
+
+      S5 := get_center R5;
+
+      picture ZZ;
+
+      ZZ := BB;
+      shift ZZ by (S5 - S0);
+
+      BB += ZZ;
+
+      %dotlabel.rt("$S_5$", S5) with_text_color red;
+
+
+%% **** (4)
+
+      draw S0 shifted (0, -.5 height_end) -- S0 shifted (0, .5 height_end) with_color gray with_pen thin_pen
+              on_picture BB;
+
+      draw S0 shifted (-.5 height_end, 0) -- S0 shifted (.5 height_end, 0) with_color gray with_pen thin_pen
+              on_picture BB;
+
+      crosshair (BB) {S0, .1, P[0][0], P[0][1]};
+
+
+%% **** (4)  Rectangles (sides)
+
+      string temp_str;
+      
+
+      for i = 1 upto 4:
+        S[i + 5] := get_center R[i];
+        S[i + 9] := mediate(get_point 0 R[i], get_point 1 R[i]); 
+        S[i + 13] := mediate(get_point 1 R[i], get_point 2 R[i]); 
+        S[i + 17] := mediate(get_point 2 R[i], get_point 3 R[i]); 
+        S[i + 21] := mediate(get_point 3 R[i], get_point 0 R[i]); 
+        %temp_str := "$S_{" & decimal (i + 5) & "}$";
+        %dotlabel.top(temp_str, S[i + 5]);
+        temp_str := "$S_{" & decimal (i + 9) & "}$";
+        %dotlabel.bot(temp_str, S[i + 9]);
+        temp_str := "$S_{" & decimal (i + 13) & "}$";
+        %dotlabel.rt(temp_str, S[i + 13]);
+        temp_str := "$S_{" & decimal (i + 17) & "}$";
+        %dotlabel.top(temp_str, S[i + 17]);
+        temp_str := "$S_{" & decimal (i + 21) & "}$";
+        %dotlabel.lft(temp_str, S[i + 21]);
+
+        draw S[i + 9] -- S[i + 17] with_color gray with_pen thin_pen on_picture AA;
+        draw S[i + 13] -- S[i + 21] with_color gray with_pen thin_pen on_picture AA;
+
+        crosshair (BB) {S[i + 5], .1, P[0][0], P[0][1]};
+
+      endfor;
+
+      crosshair (BB) {(get_point 0 R1) shifted (.25cm, .25cm), .1, P[0][0], P[0][1]};
+      crosshair (BB) {(get_point 1 R1) shifted (-.25cm, .25cm), .1, P[0][0], P[0][1]};
+      crosshair (BB) {(get_point 2 R1) shifted (-.25cm, -.25cm), .1, P[0][0], P[0][1]};
+      crosshair (BB) {(get_point 3 R1) shifted (.25cm, -.25cm), .1, P[0][0], P[0][1]};
+
+      for i = 1 upto 4:
+         crosshair (BB) {(get_center R[i]) shifted (0, .25 * v_val_side), .1, P[0][0], P[0][1]};         
+         crosshair (BB) {(get_center R[i]) shifted (0, -.25 * v_val_side), .1, P[0][0], P[0][1]};         
+      endfor;
+
+%% **** (4)
+
+%% *** (3) Tabs
+
+   rectangle RA;
+
+   RA := R0;
+
+   unfilldraw RA with_pen thin_pen on_picture DD;
+
+   draw mediate(get_point 0 RA, get_point 1 RA) -- 
+        mediate(get_point 2 RA, get_point 3 RA)
+        with_color gray with_pen thin_pen on_picture DD;
+
+   draw mediate(get_point 1 RA, get_point 2 RA) -- 
+        mediate(get_point 3 RA, get_point 0 RA)
+        with_color gray with_pen thin_pen on_picture DD;
+
+   crosshair (DD) {get_center RA, .1, P[0][0], P[0][1]};         
+
+
+   tab (RA, DD, h_offset, tab_height) {0, 3, .875, .75, .2, ccross_c, -1};
+   tab (RA, DD, h_offset, tab_height) {1, 2, .875, .75, .2, ccross_c, 1};
+   tab (RA, DD, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_a, 1};
+
+
+   tab (RA, CC, h_offset, tab_height) {0, 3, .875, .75, .2, ccross_c, 1};
+   tab (RA, CC, h_offset, tab_height) {1, 2, .875, .75, .2, ccross_c, -1};
+   tab (RA, CC, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_c, -1};
+
+
+   RA := R2;
+   tab (RA, CC, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+   tab (RA, CC, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_c, 1};
+
+   RA := R2;
+   tab (RA, DD, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+   tab (RA, DD, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_c, 1};
+
+   RA := R3;
+
+   numeric tab_val_a;
+   numeric tab_val_b;
+
+   if (h_val_side == v_val_side) && (h_val_side == height_end):
+     %message "All sides equal:"; 
+     tab_val_a := .875;
+     tab_val_b := .75;
+   else:
+     %message "All sides not equal:"; 
+     tab_val_a := .95;
+     tab_val_b := .9;
+   fi;
+
+   tab (RA, CC, h_offset, tab_height) {1, 2, tab_val_a, tab_val_b, .2,  ccross_b, 1};  %% long tab
+   tab (RA, DD, h_offset, tab_height) {1, 2, tab_val_a, tab_val_b, .2,  ccross_b, 1};  %% long tab
+
+   tab (RA, CC, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+   tab (RA, CC, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_a, 1};
+
+   tab (RA, DD, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+   tab (RA, DD, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_a, 1};
+
+   RA := R4;
+   tab (RA, CC, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+   tab (RA, CC, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_c, 1};
+   tab (RA, DD, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+   tab (RA, DD, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_c, 1};
+  
+   tab (RA, DD, h_offset, tab_height) {0, 3, tab_val_a, tab_val_b, .2, ccross_b, -1};   %% long tab
+   tab (RA, CC, h_offset, tab_height) {0, 3, tab_val_a, tab_val_b, .2, ccross_b, 1};    %% long tab
+
+   RA := R5;
+
+   unfilldraw RA with_pen thin_pen on_picture DD;
+  
+   draw mediate(get_point 0 RA, get_point 1 RA) -- 
+        mediate(get_point 2 RA, get_point 3 RA)
+        with_color gray with_pen thin_pen on_picture DD;
+
+   draw mediate(get_point 1 RA, get_point 2 RA) -- 
+        mediate(get_point 3 RA, get_point 0 RA)
+        with_color gray with_pen thin_pen on_picture DD;
+
+   crosshair (DD) {get_center RA, .1, P[0][0], P[0][1]};         
+
+
+   tab (RA, DD, h_offset, tab_height) {0, 3, .875, .75, .2, ccross_c, 1};
+   tab (RA, DD, h_offset, tab_height) {1, 2, .875, .75, .2, ccross_c, -1};
+   tab (RA, DD, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_a, -1};
+
+
+   tab (RA, CC, h_offset, tab_height) {0, 3, .875, .75, .2, ccross_c, -1};
+   tab (RA, CC, h_offset, tab_height) {1, 2, .875, .75, .2, ccross_c, 1};
+   tab (RA, CC, h_offset, tab_height) {2, 3, .875, .75, .2, ccross_a, 1};
+
+%%    *** (3)  Draw the main rectangles and squares
+
+   draw R0 with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture AA;
+   draw R2 with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture AA; % withcolor red;
+   draw R3 with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture AA; % withcolor blue;
+   draw R4 with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture AA; % withcolor magenta;
+   draw R5 with_pen pencircle scaled (.5mm, .5mm, .5mm) on_picture AA; % withcolor green;
+
+%% *** (3) Labels (for debugging)
+
+   if false: % true 
+
+      label("$R_0$", get_center R0);
+      label("$R_1$", get_center R1);
+      label("$R_2$", get_center R2);
+      label("$R_3$", get_center R3);
+      label("$R_4$", get_center R4);
+      label("$R_5$", get_center R5);
+
+
+      dotlabel.bot("$P^0_0$", P[0][0]);
+      dotlabel.bot("$P^0_1$", P[0][1]);
+      dotlabel.top("$P^0_2$", P[0][2]);
+      dotlabel.top("$P^0_3$", P[0][3]);
+
+      % dotlabel.lft("$P^1_0$", P[1][0]);
+      % dotlabel.rt("$P^1_1$", P[1][1]);
+      % %dotlabel.lrt("$P^1_2$", P[1][2]);
+      % %dotlabel.llft("$P^1_3$", P[1][3]);
+
+      % dotlabel.lft("$P^2_0$", P[2][0]);
+      % dotlabel.bot("$P^2_1$", P[2][1]);
+      % dotlabel.top("$P^2_2$", P[2][2]);
+      % dotlabel.llft("$P^2_3$", P[2][3]);
+
+      dotlabel.lft("$P^3_0$", P[3][0]);
+      dotlabel.rt("$P^3_1$", P[3][1]);
+      dotlabel.lrt("$P^3_2$", P[3][2]);
+      dotlabel.llft("$P^3_3$", P[3][3]);
+
+      % dotlabel.lft("$P^4_0$", P[4][0]);
+      % %dotlabel.rt("$P^4_1$", P[4][1]);
+      % %dotlabel.lrt("$P^4_2$", P[4][2]);
+      % dotlabel.llft("$P^4_3$", P[4][3]);
+
+      dotlabel.llft("$P^5_0$", P[5][0]);
+      dotlabel.lrt("$P^5_1$", P[5][1]);
+      dotlabel.lrt("$P^5_2$", P[5][2]);
+      dotlabel.llft("$P^5_3$", P[5][3]);
+
+      %dotlabel.lft("$M_0$", M0);
+      %dotlabel.rt("$M_1$", M1);
+
+   fi;
+
+
+%% *** (3) Separate Double Tabs
+
+   label.bot("$A$", mediate(get_point 2 R5, get_point 3 R5)) DD;
+
+   path temp_path;
+
+   numeric h_offset;
+   numeric tab_height;
+
+   numeric shift_val;
+   shift_val := -.75cm;
+
+   numeric temp_mag;
+
+   temp_mag := magnitude (get_point 0 R5 - get_point 1 R5);
+
+   temp_path := origin -- (temp_mag, 0);
+
+   if h_val_side == height_end:
+     label.rt("$C = A$", mediate(get_point 1 R5, get_point 2 R5)) DD;
+     label.lft("$A$, $C$", origin) EE;
+
+     for j = 1 upto 3:
+        for i = 0 upto 3:
+           tab (temp_path, EE, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};  %% A, B
+           tab (temp_path, EE, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, -1};
+           shift temp_path (temp_mag - h_offset + .25cm, 0);
+        endfor;
+     temp_path := (origin -- (temp_mag, 0)) shifted (0, j * shift_val);
+     endfor;
+
+   else:
+     label.lft("$A$", origin) EE;
+     label.rt("$C$", mediate(get_point 1 R5, get_point 2 R5)) DD;
+
+     for j = 0 upto 1:
+        for i = 0 upto 3:
+           tab (temp_path, EE, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};  %% A
+           tab (temp_path, EE, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, -1};
+           shift temp_path (temp_mag - h_offset + .25cm, 0);
+        endfor;
+     temp_path := (origin -- (temp_mag, 0)) shifted (0, shift_val);
+     endfor;
+
+     label.lft("$C$", (0, 2 * shift_val)) EE;
+
+     temp_mag := magnitude (get_point 1 R5 - get_point 2 R5);
+
+     temp_path := origin -- (temp_mag, 0);
+
+     temp_path := (origin -- (temp_mag, 0)) shifted (0, 2 * shift_val);
+
+     for i = 0 upto 3:
+        tab (temp_path, EE, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};  %% B
+        tab (temp_path, EE, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, -1};
+        shift temp_path (temp_mag - h_offset + .25cm, 0);
+     endfor;
+
+   fi;
+
+
+   label.rt("$B$", mediate(get_point 1 R3, get_point 2 R3)) DD;
+
+   label.lft("$B$", (0, 3 * shift_val)) EE;
+
+   temp_mag := magnitude (get_point 1 R3 - get_point 2 R3);
+
+   temp_path := origin -- (temp_mag, 0);
+
+   temp_path := (origin -- (temp_mag, 0)) shifted (0, 3 * shift_val);
+
+   for i = 0 upto 1:
+      tab (temp_path, EE, h_offset, tab_height) {0, 1, tab_val_a, tab_val_b, .2, ccross_b, 1};  %% B
+      tab (temp_path, EE, h_offset, tab_height) {0, 1, tab_val_a, tab_val_b, .2, ccross_b, -1};
+      shift temp_path (0, shift_val);
+   endfor;
+
+%% **** (4)
+    
+   temp_str :=    "\vbox{\halign{#:\space&\hfil$#\rm{cm}$\cr "
+               & "Width ($A$)&" & decimal h_val_side & "\cr "
+               & "Height ($B$)&" & decimal v_val_side & "\cr "
+               & "Depth ($C$)&" & decimal height_end & "\cr}}";
+
+   label(temp_str, origin) FF;
+
+   % h_val_side, 
+   % v_val_side, 
+   % height_end, 
+
+%% **** (4)
+
+%% *** (3) End of rect_prism definition
+
+enddef;
+
+%% ** (2) Non-right prism
+
+%% V picture or ZERO.  Passed as a picture variable or numeric variable when called.
+%% If V is a numeric variable, I use the convention that it's value is 0.  However,
+%% the value isn't tested.  
+%%
+%% LDF 2012.06.17.
+
+%% BUG:  `ccross' cannot be called `crosshair_ctr', because that's
+%% the name of the parameter in `tab'.  This causes interference when
+%% replacement is performed on the text of the macro.  !! TODO: 
+%% Do something about this.  It shouldn't be too difficult to fix this.
+%% Perhaps adding one or more characters to the parameter names
+%% when storing the macro definition, and making sure that the character
+%% or characters are unique for each macro definition would work.
+%% 
+%% LDF 2012.06.09.
+
+%% This version only works for a single `bevel' value.
+%% For two different values, the end rectangles are different.
+%% LDF 2012.06.11.
+
+macro rect_prism_nr;
+
+def rect_prism_nr (V) {numeric h_val_end, 
+                       numeric v_val_end, 
+                       numeric v_val_side, 
+                       numeric bevel_a,
+                       numeric bevel_b,
+                       boolean do_double_tabs, 
+                       boolean do_labels, 
+                       numeric ccross_a,
+                       numeric ccross_c,
+                       numeric ccross_b,
+                       boolean double_tab_shift_value, % true for vertical, false for horizontal.  
+                       numeric final_rotation}=
+
+%% *** (3)
+
+rectangle R[];
+
+point P[][];
+path Q[];
+
+transform T[];
+
+pen big_pen;
+
+big_pen := pencircle scaled (.5mm, .5mm, .5mm);
+
+numeric ZERO;
+ZERO := 0;
+
+numeric h_offset;
+numeric tab_height;
+
+R0 := unit_rectangle scaled (h_val_end, 0, v_val_end) rotated (0, 0, bevel_a);
+R1 := unit_rectangle scaled (v_val_side, 0, v_val_end);
+R2 := unit_rectangle scaled (h_val_end, 0, v_val_end) rotated (0, 0, bevel_b);
+
+if bevel_b > 0:
+   rotate R2 (0, 0, 180);
+fi;
+
+for i := 0 upto 2:
+   for j := 0 upto 3:
+      P[i][j] := get_point (j) R[i];
+   endfor;
+endfor;
+
+T0 := identity shifted by (P[1][0] - P[0][0]);
+
+P[0][0] *= P[0][1] *= P[0][2] *= P[0][3] *= R0 *= T0;
+
+T1 := identity shifted by (P[1][1] - P[2][1]);
+
+P[2][0] *= P[2][1] *= P[2][2] *= P[2][3] *= R2 *= T1;
+
+point Y[];
+
+if magnitude bevel_a <> magnitude bevel_b:
+     %message "magnitudes of bevel_a and bevel_b are unequal."; 
+     
+     Q5 := R1 shifted by (P[0][1] - P[0][0]);
+
+     for i = 0 upto 3:
+        P[5][i] := get_point (i) Q5;
+     endfor;
+
+     %draw Q5 with_color magenta;
+
+     Y0 := (P[2][0] -- P[2][1]) intersection_point (P[0][1] -- P[5][1]);
+     Y1 := (P[2][3] -- P[1][2]) intersection_point (P[0][2] -- P[5][2]);
+
+     % dotlabel.top("$Y_0$", Y0);
+     % dotlabel.top("$Y_1$", Y1);
+     % %dotlabel.top("$5_0$", P[5][0]);
+     % dotlabel.rt("$5_1$", P[5][1]);
+     % dotlabel.urt("$5_2$", P[5][2]);
+     % %dotlabel.top("$5_3$", P[5][3]);
+
+     Q6 := P[2][1] -- P[1][2] -- Y1 -- Y0 -- cycle;
+     
+else:
+     %message "magnitudes of bevel_a and bevel_b are equal."; 
+     Q6 := R2;
+     Y0 := P[2][0];
+     Y1 := P[2][3];
+fi;
+
+% draw R0 with_color red;
+% draw R1 with_color blue;
+% draw Q6 with_color green;
+
+% dotlabel.bot("$0_0$", P[0][0]);
+% dotlabel.top("$0_1$", P[0][1]);
+% dotlabel.top("$0_2$", P[0][2]);
+% dotlabel.bot("$0_3$", P[0][3]);
+
+% dotlabel.bot("$1_0$", P[1][0]);
+% dotlabel.top("$1_1$", P[1][1]);
+% dotlabel.top("$1_2$", P[1][2]);
+% dotlabel.bot("$1_3$", P[1][3]);
+
+% dotlabel.top("$Y_0$", Y0);
+% dotlabel.bot("$2_1$", P[2][1]);
+% dotlabel.bot("$2_2$", P[2][2]);
+% dotlabel.top("$Y_1$", Y1);
+
+
+Q0 := P[0][1] -- Y0 -- Y1 -- P[0][2] -- cycle;
+
+Q1 := P[0][0] -- P[2][1] -- Y0 -- P[0][1] -- cycle;
+
+Q2 := Q1 rotated_around (P[0][0], P[2][1]) 90;
+
+point M[];
+
+M0 := mediate(P[0][0], P[0][3]);
+M1 := mediate(P[2][1], P[2][2]);
+
+Q3 := Q2 rotated_around (M0, M1);
+
+for i := 0 upto 3:
+  M[i + 2] := get_point (i) Q3;
+endfor;
+
+Q7 := Q6 rotated_around (P[2][1], P[2][2])  (-bevel_b);
+
+if bevel_b < 0:
+   rotate_around Q7 (P[2][1], P[2][2]) 180;
+fi;
+
+R4 := R0 rotated_around (P[0][0], P[0][3]) (180 - bevel_a);
+
+% draw Q7 with_color cyan;
+% draw R4 with_color magenta;
+
+Q4 := Q0 shifted by (M4 - Y0);
+
+if false: % true 
+
+   if false: % true
+      message "R1:"; 
+      show R1;
+      message "Q7:"; 
+      show Q7;
+      message "R4:"; 
+      show R4;
+      message "Q2:"; 
+      show Q2;
+      message "Q3:"; 
+      show Q3;
+      message "Q4:"; 
+      show Q4;
+   fi;
+
+   draw R0 with_color red;  %% Not on plan
+   draw Q6 with_color blue with_pen big_pen;  %% Not on plan;
+   draw Q1 with_color green with_pen big_pen;  %% Not on plan
+   draw Q0 with_color cyan;  %% Not on plan
+fi;
+
+if false: % true
+   if do_labels:
+      dotlabel.top("$Y_0$", Y0);
+      dotlabel.bot("$2_1$", P[2][1]);
+      dotlabel.bot("$2_2$", P[2][2]);
+      dotlabel.top("$Y_1$", Y1);
+
+      dotlabel.bot("$0_0$", P[0][0]);
+      dotlabel.top("$0_1$", P[0][1]);
+      dotlabel.top("$0_2$", P[0][2]);
+      dotlabel.bot("$0_3$", P[0][3]);
+
+      dotlabel.top("$M_2$", M2);
+      dotlabel.top("$M_3$", M3);
+      dotlabel.top("$M_4$", M4);
+      dotlabel.top("$M_5$", M5);
+
+      dotlabel.ulft("$M_0$", M0);
+      dotlabel.lrt("$M_1$", M1);
+   fi;
+fi;
+
+%% Rotate into x-y plane to avoid problem with finding intersections.
+%% LDF 2012.06.08.
+
+T2 := identity rotated (90, 0);
+
+R1 *= Q7 *= R4 *= Q2 *= Q3 *= Q4 *=  T2;
+
+draw R1;                      %% On plan
+draw Q7;%  with_color red;    %% On plan
+draw R4;                      %% On plan
+draw Q2; % with_color blue;   %% On plan
+draw Q3; % with_color green;  %% On plan
+draw Q4;                      %% On Plan
+
+point S[];
+
+for i := 0 upto 3:
+   S[i] := get_point (i) R1;
+   S[i + 8] := get_point (i) R4;
+   S[i + 12] := get_point (i) Q2;
+   S[i + 16] := get_point (i) Q3;
+   S[i + 20] := get_point (i) Q4;
+endfor;
+
+
+S4 := get_point (0) Q7;
+S5 := get_point (1) Q7;
+S6 := get_point (2) Q7;
+S7 := get_point (3) Q7;
+
+if S1 == S5:
+ S4 := get_point (1) Q7;
+ S5 := get_point (2) Q7;
+ S6 := get_point (3) Q7;
+ S7 := get_point (0) Q7;
+fi;
+
+S24 := get_center R1;
+S25 := mediate(get_point 0 Q7, get_point 2 Q7);
+
+S26 := get_center R4;
+S27 := mediate(mediate(S0, S15), mediate(S1, S14));  %% Q2
+S28 := mediate(mediate(S20, S3), mediate(S2, S21));  %% Q3
+S29 := (S20 -- S22) intersection_point (S23 -- S21); %% Q4
+
+%do_labels := true;
+
+if do_labels:
+   label.top("$R_1 (S_{24})$", S24);   
+   label.top("$Q_7 (S_{25})$", S25);   
+   label.top("$R_4 (S_{26})$", S26);   
+   label.top("$Q_2 (S_{27})$", S27);   
+   label.top("$Q_3 (S_{28})$", S28);   
+   label.top("$Q_4 (S_{29})$", S29);   
+
+   %% R1
+
+   dotlabel.llft("$S_0$", S0);   
+   dotlabel.lrt("$S_1$", S1);
+   dotlabel.urt("$S_2$", S2);
+   dotlabel.ulft("$S_3$", S3);
+
+   %% Q7
+
+   dotlabel.lrt("$S_{4}$", S4);
+   dotlabel.top("$S_{5}$", S5);
+   dotlabel.top("$S_{6}$", S6);
+   dotlabel.urt("$S_{7}$", S7);
+
+   %% R4
+
+   %dotlabel.top("$S_{8}$", S8);
+   dotlabel.llft("$S_{9}$", S9);
+   dotlabel.ulft("$S_{10}$", S10);
+   %dotlabel.top("$S_{11}$", S11);
+
+   %% Q2
+
+   %dotlabel.top("$S_{12}$", S12);
+   %dotlabel.top("$S_{13}$", S13);
+   dotlabel.lrt("$S_{14}$", S14);
+   dotlabel.llft("$S_{15}$", S15);
+
+   %% Q3
+
+   % dotlabel.top("$S_{16}$", S16);
+   % dotlabel.top("$S_{17}$", S17);
+   % dotlabel.top("$S_{18}$", S18);
+   % dotlabel.top("$S_{19}$", S19);
+
+   %% Q4
+
+   dotlabel.ulft("$S_{20}$", S20);
+   dotlabel.urt("$S_{21}$", S21);
+   dotlabel.top("$S_{22}$", S22);
+   dotlabel.top("$S_{23}$", S23);
+
+fi;  %% do_labels
+
+path temp_path;
+
+%% *** (3) Tabs 
+
+pen big_pen;
+
+big_pen := pencircle scaled (1.5mm, 1.5mm, 1.5mm);
+
+temp_path := S2 -- S21;
+tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+
+temp_path := S21 -- S22;
+tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+
+temp_path := S14 -- S1;
+tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+
+temp_path := S14 -- S15;
+tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_b, -1};
+
+temp_path := S23 -- S20;
+tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+
+temp_path := S20 -- S3;
+tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+
+temp_path := S0 -- S15;
+tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+
+if do_double_tabs:
+
+   temp_path := S4 -- S7;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+
+   temp_path := S6 -- S7;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, -1};
+
+   temp_path := S5 -- S6;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, -1};
+
+   temp_path := S22 -- S23;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_b, 1};
+
+   temp_path := S10 -- S3;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, -1};
+
+   temp_path := S10 -- S9;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+
+   temp_path := S9 -- S0;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+else:
+
+   temp_path := S4 -- S7;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, -1};
+
+   temp_path := S6 -- S7;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+
+   temp_path := S5 -- S6;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+
+   temp_path := S22 -- S23;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_b, -1};
+
+   temp_path := S10 -- S3;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+
+   temp_path := S10 -- S9;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+
+
+   temp_path := S9 -- S0;
+   tab (temp_path, ZERO, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, -1};
+fi;
+
+
+
+if false: % true
+   draw S9 -- S10 with_pen big_pen with_color red;
+   draw S4 -- S7 with_pen big_pen with_color red;
+   draw S20 -- S23 with_pen big_pen with_color red;
+   draw S21 -- S22 with_pen big_pen with_color red;
+
+   draw S0 -- S9 with_pen big_pen with_color blue;
+   draw S3 -- S10 with_pen big_pen with_color blue;
+   draw S1 -- S4 with_pen big_pen with_color blue;
+   draw S2 -- S7 with_pen big_pen with_color blue;
+   draw S1 -- S14 with_pen big_pen with_color blue;
+   draw S2 -- S21 with_pen big_pen with_color blue;
+   draw S0 -- S15 with_pen big_pen with_color blue;
+   draw S3 -- S20 with_pen big_pen with_color blue;
+
+   draw S14 -- S15 with_pen big_pen with_color green;
+   draw S22 -- S23 with_pen big_pen with_color green;
+
+   dotlabel.lft("$S_{0}$", S0);
+   dotlabel.lft("$S_{1}$", S1);
+   dotlabel.rt("$S_{2}$", S2);
+   dotlabel.rt("$S_{3}$", S3);
+   dotlabel.lft("$S_{4}$", S4);
+   dotlabel.rt("$S_{7}$", S7);
+   dotlabel.top("$S_{9}$", S9);
+   dotlabel.top("$S_{10}$", S10);
+   dotlabel.lft("$S_{14}$", S14);
+   dotlabel.lft("$S_{15}$", S15);
+   dotlabel.urt("$S_{20}$", S20);
+   dotlabel.lrt("$S_{21}$", S21);
+   dotlabel.lrt("$S_{22}$", S22);
+   dotlabel.top("$S_{23}$", S23);
+
+fi;
+
+string s;
+
+numeric shift_val;
+
+shift_val := -.75cm;
+
+%% *** (3) Separate Double Tabs
+
+if do_double_tabs:
+
+   if is_picture V:
+      %message "V is a picture.";
+      %message "Creating separate double tabs.";
+
+      %draw S21 -- S22 with_pen big_pen with_color blue;  
+
+      label.bot("$A$", mediate(S21, S22));
+
+      if bevel_b < 0:
+         label.lrt("$C$", mediate(S2, S21));
+      else:
+         label.bot("$C$", mediate(S2, S21) shifted (1mm, 0));
+      fi;
+
+
+      label.rt("$B$", mediate(S22, S23));
+
+      temp_path := origin -- (magnitude (S21 - S22), 0);
+
+      label.lft("$A$", origin) V;
+
+      for i = 0 upto 3:
+         tab (temp_path, V, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, 1};
+         tab (temp_path, V, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_a, -1};
+         shift temp_path (magnitude (S21 - S22) - h_offset + .25cm, 0);
+      endfor;
+
+      temp_path := (origin -- (magnitude (S2 - S21), 0)) shifted (0, shift_val);
+ 
+      label.lft("$C$", (0, shift_val)) V;
+
+      for j = 0 upto 1:
+      	 for i = 0 upto 3:
+      	    tab (temp_path, V, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, 1};
+      	    tab (temp_path, V, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_c, -1};
+      	    shift temp_path (magnitude (S2 - S21) - h_offset + .25cm, 0);
+      	 endfor;
+      temp_path := (origin -- (magnitude (S2 - S21), 0)) shifted (0, 2shift_val);
+      endfor;
+
+      temp_path := (origin -- (magnitude (S14 - S15), 0)) shifted (0, 3shift_val);
+
+      picture WW;
+
+      tab (temp_path, WW, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_b, 1};
+      tab (temp_path, WW, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_b, -1};
+
+
+      if double_tab_shift_value:
+         shift temp_path (0, shift_val);
+      else:
+         shift temp_path (magnitude (S14 - S15) - h_offset + .25cm, 0);
+      fi;
+
+
+
+      tab (temp_path, WW, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_b, 1};
+      tab (temp_path, WW, h_offset, tab_height) {0, 1, .875, .75, .2, ccross_b, -1};
+
+      shift WW (.25cm -.5h_offset, 0);
+
+      V += WW;
+
+
+      %message "h_offset:"; 
+      %show h_offset;
+
+      label.lft("$B$", (0, 3shift_val)) V;
+
+
+   else:
+      %message "V isn't a picture.\nNot creating separate double tabs.";
+
+      s := "Double tabs needed:\n" &  
+           "End width:  " & decimal h_val_end &
+           "\nEnd length:  " & decimal v_val_end &
+           "\nSide length:  " & decimal v_val_side &
+           "\nBevel:  " & decimal bevel_a &
+           "\nlength: " & decimal magnitude (S21 - S22) & " divisions:  " & decimal ccross_a & " (2) " &
+           "\nlength: " & decimal magnitude (S2 - S21) & " divisions:  " & decimal ccross_c & " (4) " &
+           "\nlength: " & decimal magnitude (S14 - S15) & " divisions:  " & decimal ccross_b & " (1) \n";
+
+      %message s;
+   fi;
+%else:
+%   message "Not doing double tabs:"; 
+fi;
+
+
+%% *** (3) Guidelines and non-tab crosshairs
+
+numeric j;
+
+for i = 0 upto 3:
+   j := i + 1;
+   if j == 4:
+     j := 0;
+   fi;
+   S[30 + i] := mediate(get_point (i) R4, get_point (j) R4);
+   S[34 + i] := mediate(get_point (i) R1, get_point (j) R1);
+   S[38 + i] := mediate(get_point (i) Q7, get_point (j) Q7);
+   S[42 + i] := mediate(get_point (i) Q2, get_point (j) Q2);
+   S[46 + i] := mediate(get_point (i) Q3, get_point (j) Q3);
+   S[50 + i] := mediate(get_point (i) Q4, get_point (j) Q4);
+endfor;
+
+crosshair (ZERO) {S24, .1, S0, S1};
+crosshair (ZERO) {S25, .1, S0, S1};
+crosshair (ZERO) {S26, .1, S0, S1};
+crosshair (ZERO) {S27, .1, S0, S1};
+crosshair (ZERO) {S28, .1, S0, S1};
+crosshair (ZERO) {S29, .1, S0, S1};
+
+crosshair (ZERO) {S0 shifted (.25, .25), .1, S0, S1};
+crosshair (ZERO) {S1 shifted (-.25, .25), .1, S0, S1};
+crosshair (ZERO) {S2 shifted (-.25, -.25), .1, S0, S1};
+crosshair (ZERO) {S3 shifted (.25, -.25), .1, S0, S1};
+
+crosshair (ZERO) {mediate(S24, S33), .1, S0, S1};
+crosshair (ZERO) {mediate(S24, S35), .1, S0, S1};
+
+crosshair (ZERO) {mediate(S2, S3, .75) shifted (0, .25), .1, S0, S1};
+crosshair (ZERO) {mediate(S2, S3, .25) shifted (0, .25), .1, S0, S1};
+
+crosshair (ZERO) {mediate(S20, S21, .75) shifted (0, -.25), .1, S0, S1};
+crosshair (ZERO) {mediate(S20, S21, .25) shifted (0, -.25), .1, S0, S1};
+
+crosshair (ZERO) {mediate(S20, S21, .75) shifted (0, .25), .1, S0, S1};
+crosshair (ZERO) {mediate(S20, S21, .25) shifted (0, .25), .1, S0, S1};
+
+crosshair (ZERO) {mediate(S22, S23, .75) shifted (0, -.25), .1, S0, S1};
+crosshair (ZERO) {mediate(S22, S23, .25) shifted (0, -.25), .1, S0, S1};
+
+crosshair (ZERO) {mediate(S0, S1, .75) shifted (0, -.25), .1, S0, S1};
+crosshair (ZERO) {mediate(S0, S1, .25) shifted (0, -.25), .1, S0, S1};
+
+if bevel_b > 0:
+   crosshair (ZERO) {S14 shifted (-1, .25), .1, S0, S1};
+else:
+   crosshair (ZERO) {S14 shifted (-.25, .25), .1, S0, S1};
+fi;
+
+crosshair (ZERO) {S15 shifted (.25, .25), .1, S0, S1};
+
+if not do_double_tabs:
+    crosshair (ZERO) {S0 shifted (-.25, .25), .1, S0, S1};
+    crosshair (ZERO) {S1 shifted (.25, .25), .1, S0, S1};
+    crosshair (ZERO) {S2 shifted (.25, -.25), .1, S0, S1};
+    crosshair (ZERO) {S3 shifted (-.25, -.25), .1, S0, S1};
+    crosshair (ZERO) {S4 shifted (-.25, .25), .1, S0, S1}
+    crosshair (ZERO) {S7 shifted (-.25, -.25), .1, S0, S1};;
+    crosshair (ZERO) {S9 shifted (.25, .25), .1, S0, S1};
+    crosshair (ZERO) {S10 shifted (.25, -.25), .1, S0, S1};
+fi;
+
+
+pen dot_pen;
+
+dot_pen := pencircle scaled (1mm, 1mm, 1mm);
+
+
+if do_labels:
+
+   if do_double_tabs:
+      dotlabel.bot("$S_{30}$", S30);
+      dotlabel.lft("$S_{31}$", S31);
+      dotlabel.top("$S_{32}$", S32);
+      dotlabel.bot("$S_{38}$", S38);
+      dotlabel.top("$S_{40}$", S40);
+      dotlabel.rt("$S_{41}$", S41);
+      dotlabel.top("$S_{52}$", S52);
+   else:
+
+      label("$S_{30}$", S30 shifted (0, -.5));
+      drawdot S30 withpen dot_pen;
+
+      label("$S_{31}$", S31 shifted (-.5, 0));
+      drawdot S31 withpen dot_pen;
+
+      label("$S_{32}$", S32 shifted (0, .5));
+      drawdot S32 withpen dot_pen;
+
+      label("$S_{38}$", S38 shifted (0, -.5));
+      drawdot S38 withpen dot_pen;
+
+      label("$S_{40}$", S40 shifted (-.0, .5));
+      drawdot S40 withpen dot_pen;
+
+      label("$S_{41}$", S41 shifted (.5, 0));
+      drawdot S41 withpen dot_pen;
+
+      label("$S_{52}$", S52 shifted (0, .5));
+      drawdot S52 withpen dot_pen;
+
+   fi;
+
+   dotlabel.rt("$S_{33}$", S33);
+
+   dotlabel.top("$S_{34}$", S34);
+   dotlabel.rt("$S_{35}$", S35);
+   dotlabel.top("$S_{36}$", S36);
+   %dotlabel.top("$S_{37}$", S37);
+   %dotlabel.top("$S_{39}$", S39);
+
+   %dotlabel.top("$S_{42}$", S42);
+   dotlabel.lrt("$S_{43}$", S43);
+   dotlabel.bot("$S_{44}$", S44);
+   dotlabel.llft("$S_{45}$", S45);
+
+   %dotlabel.top("$S_{46}$", S46);
+   dotlabel.urt("$S_{47}$", S47);
+   dotlabel.top("$S_{48}$", S48);
+   dotlabel.ulft("$S_{49}$", S49);
+
+
+   %dotlabel.top("$S_{50}$", S50);
+   dotlabel.rt("$S_{51}$", S51);
+   dotlabel.lft("$S_{53}$", S53);
+
+fi; %% do_labels:
+
+%% *** (3)
+
+rotate current_picture (0, 0, final_rotation);
+
+%% *** (3)
+
+enddef;  %% End of rect_prism_nr definition 
+
+%% *** (3)
+
+%% ** (2)
+
+%% * (1) End of macro definitions
+
+%% * (1) Emacs-Lisp code for use in indirect buffers when using the          
+%%       GNU Emacs editor.  The local variable list is not evaluated when an 
+%%       indirect buffer is visited, so it's necessary to evaluate the       
+%%       following s-expression in order to use the facilities normally      
+%%       accessed via the local variables list.                              
+%%       LDF 2004.02.12.
+
+%% (progn (metafont-mode) (outline-minor-mode t) (setq fill-column 80) (ignore '(  
+%% )) (setq outline-regexp "%% [*\f]+"))
+
+%% * (1) Local variables for Emacs.
+
+%% Local Variables:
+%% mode:Metafont
+%% eval:(outline-minor-mode t)
+%% eval:(read-abbrev-file abbrev-file-name)
+%% outline-regexp:"%% [*\f]+"
+%% eval:(set-register ?c "bldelem5.ldf")
+%% eval:(set-register ?, "bldelem5.lmc")
+%% eval:(set-register ?. "bldelem5.txt")
+%% End:
+

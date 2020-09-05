@@ -1,0 +1,268 @@
+@c  This is ~/metafont/metapost/perspective/DOCUMENTATION/future.texi
+  
+@c This file is part of the 3DLDF User and Reference Manual.
+@c Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 The Free Software Foundation 
+@c See the section "GNU Free Documentation License" in the file 
+@c fdl.texi for copying conditions.
+
+
+@node Future Plans, Changes, Adding a File, Top
+@chapter Future Plans
+
+3DLDF is a work-in-progress.  In fact, it can never be 
+finished, because the supply of interesting geometric constructions 
+is inexhaustible.  However, presently 3DLDF still has a number of major
+gaps. 
+
+If you're interesting in contributing to 3DLDF, with respect to one of
+the topics below and in the following sections, or if you have ideas 
+of your own, see @ref{Contributing to 3DLDF}.
+
+@itemize @bullet
+@item Input routine.  
+The lack of one is the most significant
+defect in 3DLDF, as mentioned in @ref{No Input Routine}.  
+
+@item Port to other platforms.
+@xref{Ports}.
+@end itemize
+ 
+@menu
+* Geometry::                    
+* Curves and Surfaces::         
+* Shadows::                     
+* Multi-Threading::             
+@end menu
+
+@node Geometry, Curves and Surfaces, Future Plans, Future Plans
+@section Geometry
+
+3DLDF currently provides a set of basic plane and solid geometrical
+figures.  However, some important ones are still missing.  
+There are many useful geometrical data types and functions whose
+implementation would require no more than elementary geometry.  
+
+@itemize @bullet
+
+@item
+Add constructors with a normal vector argument rather than angles of
+rotation about the main axes.
+
+@item
+I have started defining @code{class Triangle}, which can be used for 
+calculating triangle solutions.
+
+@item
+@cindex multiple inheritance
+@cindex derived classes
+@cindex derivation
+@c
+Add a class @code{Conic_Section} and derive @code{Ellipse} 
+from it.  This will be the first case of 
+@dfn{multiple inheritance}@c
+@c
+@footnote{Stroustrup, @cite{The @cpp{} Programming Language}, 
+@c
+@iftex 
+@tex 
+\S 15.2 
+@end tex
+@end iftex
+@ifhtml 
+&sect;15.2
+@end ifhtml
+@ifinfo 
+section 15.2
+@end ifinfo
+@c
+``Multiple Inheritance'', pp.@w{ }390--92.}  
+@c
+in 3DLDF, since @code{Ellipse} is already
+derived from @code{Path}.  @xref{Ellipse Reference}. 
+Add the classes @code{Parabola} and @code{Hyperbola}.
+
+@item
+Add more functions for finding the intersections of objects of various
+types, starting with the plane figures.  
+In particular, I believe I've found an algebraic solution for 
+the intersection of an @code{Ellipse} and a @code{Circle} in a plane,
+but I haven't had a chance to try implementing it yet.
+
+If this works, I think it will make it possible to find the intersection
+of two coplanar ellipses algebraically, because it will be possible to
+transform them both such that one of them becomes circular.  
+
+
+@item Class @code{Octahedron} will complete the set of regular Platonic 
+polyhedra.  
+
+@item
+Add classes for the Kepler-Poinsot polyhedra, the semi-regular
+Archimedean polyhedra,  the dual solids, the stellated Archimedean
+polyhedra, and the regular compounds.@c
+@c
+@footnote{Cundy and Rollet, @cite{Mathematical Models}, Chapter 3,
+``Polyhedra'', pp.@: 76--160.} 
+
+@item
+Add class @code{Ellipsoid} and a derived class @code{Sphere}. 
+
+@item
+Improve the specification of @code{Solid} and
+@code{Solid_Faced}.  
+In particular, it would help to store the vertices of 
+@code{Polyhedra} as individual @code{Points}, rather
+than using @code{Reg_Polygons}.  I'd also
+like to find a better way of generating @code{Solids}, without using
+rotations, if possible. 
+
+@end itemize
+
+@node Curves and Surfaces, Shadows, Geometry, Future Plans
+@section Curves and Surfaces
+
+@cindex splines
+@cindex spline curves
+@cindex B@'ezier curves
+@cindex B-splines
+@cindex NURBS (non-uniform rational B-splines)
+@cindex non-uniform rational B-splines (NURBS)
+@cindex patches
+@cindex surface patches
+@c
+3D modelling software usually supports the creation and manipulation of
+various kinds of @dfn{spline curves}: @dfn{B@'ezier curves},
+@dfn{B-splines}, and @dfn{non-uniform rational B-splines} or
+@dfn{NURBS}.  These curves can be used for generating surfaces.@c
+@c
+@footnote{Huw Jones,
+@i{Computer Graphics through Key Mathematics}, and 
+David Salomon,  
+@i{Computer Graphics and Geometric Modeling}, are my main sources of
+information about spline curves.}
+
+@cindex projective invariance
+@cindex invariance, projective
+@c
+@code{paths} in Metafont and MetaPost are B@'ezier curves.  
+It would be possible to implement three-dimensional B@'ezier curves in
+3DLDF, but unfortunately they are not @dfn{projectively invariant}: 
+
+Let @math{c_0} represent a B@'ezier curve in three dimensions,
+@math{P} the control points of @math{c_0}, and  
+@math{t} a projection transformation.
+Further, let @math{Q} represent the points generated from applying
+@math{t} to @math{P}, and @math{c_1} the curve generated from @math{Q}.  
+Finally, let @math{R} represent the points generated from applying
+@math{t} to all of the points on @math{c_0}, and 
+ @math{c_2} the curve through @math{R}:
+@math{c_1 \not\equiv c_2}.
+
+@cindex NURBS (non-uniform rational B-splines)
+@cindex non-uniform rational B-splines (NURBS)
+@cindex projective invariance
+@cindex invariance, projective
+@c
+NURBS, on the other hand, are projectively invariant,@c
+@c
+@footnote{Jones, Huw.
+@i{Computer Graphics through Key Mathematics}, p.@w{ }282.}
+@c 
+so I will probably
+concentrate on implementing them.  On the other hand, it would be nice
+to be able to implement Metafont's way of specifying @code{paths} 
+using `@code{curl}', `@code{tension}', and `@code{dir}' in 3DLDF. 
+This may prove to be difficult or impossible.  I do not yet know
+whether Metafont's @code{path} creation algorithm can be generalized to
+three dimensions.@c
+@c
+@footnote{Knuth, Donald Ervin.
+@i{The METAFONTbook}, p.@w{ }130, and 
+Hobby, John D. 
+@i{Smooth, Easy to Compute Interpolating Splines}. 
+Discrete and Computational Geometery 1(2).} 
+
+Curves and surfaces are advanced topics, so it may be a while
+before I implement them in 3DLDF.
+
+@node Shadows, Multi-Threading, Curves and Surfaces, Future Plans
+@section Shadows, Reflections, and Rendering
+
+@cindex shadows
+@cindex reflections
+@c
+Shadows and reflections are closely related to transformations and
+projections.
+A shadow is the projection of the outline of an object onto a surface or
+surfaces, and reflection in a plane is an affine transformation.  
+
+@cindex shading
+@c
+3D rendering software generally implements shadows, or more generally, 
+@dfn{shading}, reflections, and certain other effects using methods
+involving the calculation of individual pixel values.  
+Surface hiding is also often implemented at the pixel level.
+3DLDF does no scan converting ((@pxref{Accuracy}), and hence
+no calculation of pixel values at all, so these methods cannot be
+used in 3DLDF at present. 
+
+However, it is possible to define functions for generating
+shadows and reflections within 3DLDF by other means.  
+
+I have defined the function @code{Point::reflect()} for reflecting a
+@code{Point} in a @code{Plane}, and have begun definining versions for
+other classes.  
+
+However, in order for reflections to work, I must define functions for
+breaking up objects into smaller units.  This is also necessary for
+surface hiding to work properly.  
+
+For MetaPost output, I will have to implement shadows, reflections, and
+surface hiding in this way.  However, 3DLDF could be made to produce
+output in other formats.  There are two possibilities:  implementing
+rendering functionality within 3DLDF, or interfacing to
+existing rendering software.  If I decide to do the latter, there are
+again two possibilities:  having 3DLDF write output in a format that a
+renderer can input, or linking to a library supplied by a rendering
+package. 
+
+I haven't yet decided which course to pursue.  However, in the long run,
+I'd like it to be possible to use 3DLDF for fancier graphics than is 
+currently possible using MetaPost and PostScript alone.
+
+@node Multi-Threading,  , Shadows, Future Plans
+@section Multi-Threading
+
+@cindex multi-threading
+@c
+When 3DLDF is run, there is only one thread of execution.  
+However, it could benefit from the use of multiple threads.  
+In particular, it may be faster and more efficient to have
+@code{Picture::output()} run in its own thread.  
+In this case, it will no longer be possible to share
+@code{current_picture} among figures.  
+
+It may also be
+worthwhile to execute the code for ``figures'', i.e., the code 
+between @samp{beginfig()} and @samp{endfig()}, inclusive, 
+in their own threads.  This will require some changes in the way data
+are handled.  For example, if non-constant objects are shared
+among figures, there may be no advantage to multi-threading because of
+the need to coordinate the access of the threads to the objects. 
+If threads are used, then non-constant objects should be 
+declared locally within the figure.  They may be locally declared 
+copies of global objects.  Alternatively,  @code{beginfig()} could be
+changed so that objects could be passed to it as  arguments, perhaps as
+a @code{vector<void*>} and/or a @code{vector<Shape*>}.
+
+@c Local Variables:
+@c eval:(outline-minor-mode)
+@c eval:(read-abbrev-file)
+@c run-texi2dvi-on-file:"3DLDF.texi"
+@c run-dvips-on-file:"3DLDF.dvi"
+@c End:
+
+
+
+
+

@@ -1,0 +1,79 @@
+#!/bin/sh
+#------------------------->  Bourne shell - script  <-------------------------#
+#- Copyright (C) 199x by International Computer Science Institute            -#
+#- This file is part of the GNU Sather package. It is free software; you may -#
+#- redistribute  and/or modify it under the terms of the  GNU General Public -#
+#- License (GPL)  as  published  by the  Free  Software  Foundation;  either -#
+#- version 3 of the license, or (at your option) any later version.          -#
+#- This  program  is distributed  in the  hope that it will  be  useful, but -#
+#- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY -#
+#- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        -#
+#- The license text is also available from:  Free Software Foundation, Inc., -#
+#- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     -#
+#------------->  Please email comments to <bug-sather@gnu.org>  <-------------#
+
+# 1) Run the browser non-interactively and generate the dump information
+# 2) Run the script to generate the html from the dumped info
+# Both depend on a correct setting of the $SATHER_HOME environment variable.
+# without a trailing slash
+#
+# Example usage: 
+# Create a new directory, say weblib
+# > cd weblib
+# > gen_html $SATHER_HOME/Browser/test.sa
+# This will generate (in time!) a htmlified version of "Hello world" 
+# (Browser/test.sa is hello world)
+# If this works, you can try it out on larger modules
+# You need to have the program dot installed for the last stage 
+# (generating graphs)
+#
+# To get dot, see
+#   http://www.research.att.com:80/orgs/ssr/book/reuse/
+# under the binary for graph visualization.
+# It is available for free, but cannot be redistributed by us (AT&T
+# wants you to agree to some terms).
+
+echo $1
+echo "******************** WARNING ****************************"
+echo "This process generates a huge number of files.  "
+echo "******************** WARNING ****************************"
+echo ""
+$SATHER_HOME/Bin/sabrowse -non_interactive $SATHER_HOME/Browser/Web/dump-pre-html-info -verbose $1
+# echo "******************** WARNING ****************************"
+# echo "Generate the caller information. "
+# echo "******************** WARNING ****************************"
+# $SATHER_HOME/Bin/sacomp -only_reachable  -show_calls all -O_no_inline -only_check $1 > gen_func_dests
+
+echo "*************************************************"
+echo "            GENERATING TOP LEVEL HTML FILE "
+echo "*************************************************"
+$SATHER_HOME/Browser/Web/gen_html_top_level
+echo "*************************************************"
+echo "            GENERATING CLASS INDEX"
+echo "*************************************************"
+$SATHER_HOME/Browser/Web/gen_html_class_index
+echo "***********************************************************************"
+
+echo "*************************************************"
+echo "            GENERATING SHORT FLAT FILES"
+echo "*************************************************"
+$SATHER_HOME/Browser/Web/gen_html_shortflat
+echo "*************************************************"
+echo "  GENERATING HTMLIFIED SATHER FILES (takes time)"
+echo "*************************************************"
+$SATHER_HOME/Browser/Web/gen_html_sa_files
+
+echo "***********************************************************************"
+echo " gr2gif: GENERATING GIFS FROM DOT FILES (slow) "
+echo "Dot must be installed for this to work. If it is not installed,"
+echo "the inheritance graphs will not be seen"
+echo "This relies on a bunch of programs (ghostscript, pnm and other stuff)"
+echo "working correctly. "
+echo "If it fails, take a look at ps2gif, which is called from gr2gif."
+echo "Replace it with any program that will translate postscript to gif"
+echo "***********************************************************************"
+echo "***********************************************************************"
+$SATHER_HOME/Browser/Web/gr2gif
+rm *ppm 
+rm *.ps
+echo ""

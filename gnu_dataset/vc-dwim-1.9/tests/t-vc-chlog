@@ -1,0 +1,666 @@
+#! /bin/sh
+# Test vc-chlog.
+
+. "${srcdir=.}/init.sh"; path_prepend_ ..
+print_ver_ vc-chlog
+
+# Let's see whether this system knows unidiff format.
+# We assume that if diff doesn't, then patch also won't.
+# As long as vc-chlog only works with unidiff, SKIP the test.
+: ${diff=diff}
+: >empty
+if ($diff -u empty empty) >/dev/null 2>&1; then
+  diff_u="$diff -u"
+else
+  diff_u=$diff
+  skip_test_ "$diff -u does not work"
+  (exit 77); exit 77
+fi
+
+run_vc_chlog ()
+{
+  infile=$1
+  shift
+  { vc-chlog --stdin ${1+"$@"} < "$infile" 2>stderr ||
+    { echo; echo; echo vc-chlog failed; }; } |
+      sed 1,2d > stdout
+  test "$VERBOSE" != yes || { cat stdout; cat stderr >&2; }
+}
+
+fail=0
+set -e
+
+### Set up files ###
+
+cat >add-several.c <<\EOF
+int old_function (void)
+{
+  return 2
+    +
+    3;
+}
+
+static int
+another_old_function (void)
+{
+  return old_function ();
+}
+
+EOF
+
+cat >append.c <<\EOF
+int old_function (void)
+{
+  return 2
+    +
+    3;
+}
+
+static int
+another_old_function (void)
+{
+  return old_function ();
+}
+EOF
+
+cat >moved.c <<\EOF
+int old_function (void)
+{
+  return 2
+    +
+    3;
+}
+
+static int
+another_old_function (void)
+{
+  return old_function ();
+}
+
+int global_data = 2;
+
+extern int will_be_moved_1 (int X);
+
+int will_be_moved_2 (int t)
+{
+  return will_be_moved_1 (t);
+}
+
+int keep_this (int t)
+{
+  return 2*t;
+}
+EOF
+
+cat >prepend.c <<\EOF
+int old_function (void)
+{
+  return 2
+    +
+    3;
+}
+
+static int
+another_old_function (void)
+{
+  return old_function ();
+}
+EOF
+
+cat >remove-several.c <<\EOF
+int old_function (void)
+{
+  return 2
+    +
+    3;
+}
+
+static int
+another_old_function (void)
+{
+  return old_function ();
+}
+
+int global_data = 2;
+
+extern int will_be_gone_1 (int X);
+
+int will_be_gone_2 (int t)
+{
+  return will_be_gone_1 (t);
+}
+
+int keep_this (int t)
+{
+  return 2*t;
+}
+EOF
+
+cat >several-changes-per-hunk.c <<\EOF
+int function (void)
+{
+  return 2
+    +
+    3;
+}
+
+static int
+another_function (void)
+{
+  return function ();
+}
+
+int global_data = 2;
+
+extern int yet_another (int X);
+
+int function3 (int t)
+{
+  return yet_another (t);
+}
+
+int keep_this (int t)
+{
+  return 2*t;
+}
+EOF
+
+### set up patch ###
+
+# Solaris patch is too stupid to
+# - apply a unidiff patch to an empty or nonexisting file
+# - apply a patch changing multiple files unless
+#     * the old and new files names (on the --- and +++ lines) are different,
+#   or
+#     * the new name is listed in a preceding 'Index: ' line.
+#
+# So we are adding Index: lines everywhere.
+
+cat >p1 <<\EOF
+Index: add-several.c
+--- add-several.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ add-several.c	5 Oct 2006 15:13:09 -0000
+@@ -5,6 +5,15 @@
+     3;
+ }
+
++int new_function (void)
++{
++  return old_function ();
++}
++
++extern int another_new_function (void);
++
++int new_data = 17;
++
+ static int
+ another_old_function (void)
+ {
+Index: append.c
+--- append.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ append.c	5 Oct 2006 15:13:39 -0000
+@@ -10,3 +10,12 @@
+ {
+   return old_function ();
+ }
++
++int new_function (void)
++{
++  return old_function ();
++}
++
++extern int another_new_function (void);
++
++int new_data = 17;
+Index: moved.c
+--- moved.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ moved.c	19 Oct 2006 11:13:50 -0000
+@@ -5,6 +5,11 @@
+     3;
+ }
+
++int will_be_moved_2 (int t)
++{
++  return will_be_moved_1 (t);
++}
++
+ static int
+ another_old_function (void)
+ {
+@@ -15,11 +20,6 @@
+
+ extern int will_be_moved_1 (int X);
+
+-int will_be_moved_2 (int t)
+-{
+-  return will_be_moved_1 (t);
+-}
+-
+ int keep_this (int t)
+ {
+   return 2*t;
+Index: prepend.c
+--- prepend.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ prepend.c	5 Oct 2006 15:14:20 -0000
+@@ -1,3 +1,11 @@
++int new_function (void)
++{
++  return old_function ();
++}
++
++extern int another_new_function (void);
++
++int new_data = 17;
+ int old_function (void)
+ {
+   return 2
+Index: remove-several.c
+--- remove-several.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ remove-several.c	5 Oct 2006 15:14:25 -0000
+@@ -13,13 +13,6 @@
+
+ int global_data = 2;
+
+-extern int will_be_gone_1 (int X);
+-
+-int will_be_gone_2 (int t)
+-{
+-  return will_be_gone_1 (t);
+-}
+-
+ int keep_this (int t)
+ {
+   return 2*t;
+Index: several-changes-per-hunk.c
+--- several-changes-per-hunk.c	19 Oct 2006 11:15:28 -0000	1.1
++++ several-changes-per-hunk.c	19 Oct 2006 11:16:21 -0000
+@@ -8,10 +8,10 @@
+ static int
+ another_function (void)
+ {
+-  return function ();
++  return 1 + function ();
+ }
+
+-int global_data = 2;
++int global_data = 3;
+
+ extern int yet_another (int X);
+
+@@ -20,7 +20,8 @@
+   return yet_another (t);
+ }
+
++/* comment */
+ int keep_this (int t)
+ {
+   return 2*t;
+-}
++} /* comment */
+EOF
+
+# This is what a perfect tool should do:
+cat >expected-perfect <<\EOF
+	* add-several.c (new_function, new_data):
+	* append.c (new_function, new_data):
+	* moved.c (will_be_moved_2):
+	* prepend.c (new_function, new_data):
+	* remove-several.c (will_be_gone_2):
+	* several-changes-per-hunk.c (another_function, global_data)
+	(keep_this):
+
+EOF
+
+# This is what exuberant ctags currently does, i.e., including known
+# limitations:
+cat >expected-exuberant <<\EOF
+	* add-several.c (new_function, new_data):
+	* append.c (new_function, new_data):
+	* moved.c (will_be_moved_2):
+	* prepend.c (new_function, new_data):
+	* remove-several.c (global_data, will_be_gone_2):
+	* several-changes-per-hunk.c (another_function, global_data)
+	(keep_this):
+
+EOF
+
+# This is with ctags.emacs21:
+cat >expected-emacs <<\EOF
+	* add-several.c (new_function):
+	* append.c (new_function):
+	* moved.c (will_be_moved_2):
+	* prepend.c (new_function):
+	* remove-several.c (will_be_gone_2):
+	* several-changes-per-hunk.c (another_function, keep_this):
+
+EOF
+
+# This is with --no-functions:
+cat >expected-no-functions <<\EOF
+	* add-several.c:
+	* append.c:
+	* moved.c:
+	* prepend.c:
+	* remove-several.c:
+	* several-changes-per-hunk.c:
+
+EOF
+
+$PATCH -p0 <p1 >stdout 2>stderr || fail=1
+test "$VERBOSE" != yes || { cat stdout; cat stderr >&2; }
+test "$fail" -ne 1
+
+run_vc_chlog p1
+# Yes, all those if..$VERBOSE then..fi are on purpose
+# inside this outer if clause.  Thanks to BSD sh -e...
+success=false
+for file in expected-perfect expected-exuberant expected-emacs; do
+  if $diff_u $file stdout >diffout 2>differr; then
+    success=:
+    break
+  fi
+  test "$VERBOSE" != yes || { cat diffout; cat differr >&2; }
+done
+$success
+
+run_vc_chlog p1 --no-functions
+$diff_u expected-no-functions stdout
+
+# Now for some error checking:
+
+### broken diffs ###
+cat >p2 <<\EOF
+EOF
+cat >expected <<\EOF
+EOF
+run_vc_chlog p2
+$diff_u expected stdout
+
+cat >p3 <<\EOF
+@@ -3,4 +2,7 @@
+EOF
+: >expected
+cat >err-expected <<\EOF
+error: hunk but no file in patch at line 1
+error: incomplete hunk at end of patch
+EOF
+run_vc_chlog p3
+$diff_u expected stdout
+$diff_u err-expected stderr
+
+
+cat >p4 <<\EOF
+--- several-changes-per-hunk.c	19 Oct 2006 11:15:28 -0000	1.1
++++ several-changes-per-hunk.c	19 Oct 2006 11:16:21 -0000
+@@ -8,10 +8,10 @@
+ static int
+ another_function (void)
+ {
+-  return function ();
++  return 1 + function ();
+ }
+
+-int global_data = 2;
++int global_data = 3;
+
+ extern int yet_another (int X);
+@@ -20,7 +20,8 @@
+   return yet_another (t);
+ }
+
++/* comment */
+ int keep_this (int t)
+ {
+   return 2*t;
++} /* comment */
+EOF
+: >expected
+cat >err-expected <<\EOF
+error: incomplete hunk in patch at line 15
+error: incomplete hunk at end of patch
+EOF
+run_vc_chlog p4
+$diff_u expected stdout
+$diff_u err-expected stderr
+
+cat >p5 <<\EOF
+--- file1.c	19 Oct 2006 11:15:28 -0000	1.1
++++ file1.c	19 Oct 2006 11:16:21 -0000
+--- file2.c	19 Oct 2006 11:15:28 -0000	1.1
++++ file2.c	19 Oct 2006 11:16:21 -0000
+EOF
+: >expected
+cat >err-expected <<\EOF
+error: empty changes for file file1.c
+error: empty changes for file file2.c
+EOF
+run_vc_chlog p5
+$diff_u expected stdout
+$diff_u err-expected stderr
+
+
+### diffs containing an empty line (simulate GNU diff 2.8.8) ###
+
+# note the lines matching `^$' rather than `^ $'.
+cat >p6 <<\EOF
+--- remove-several.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ remove-several.c	5 Oct 2006 15:14:25 -0000
+@@ -13,11 +13,6 @@
+
+ int global_data = 2;
+
+-int will_be_gone_2 (int t)
+-{
+-  return will_be_gone_1 (t);
+-}
+-
+ int keep_this (int t)
+ {
+   return 2*t;
+EOF
+cat >expected <<\EOF
+	* remove-several.c (will_be_gone_2):
+
+EOF
+: >err-expected
+run_vc_chlog p6
+$diff_u expected stdout
+# FreeBSD patch is verbose here...
+#$diff_u err-expected stderr
+
+
+### changes that start or end up with one-line files ###
+
+: >add-oneline.c
+cat >p7 <<\EOF
+--- add-oneline.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ add-oneline.c	5 Oct 2006 15:13:30 -0000
+@@ -0,0 +1 @@
++int new_function (void) { return 0; }
+EOF
+cat >expected <<\EOF
+	* add-oneline.c (new_function):
+
+EOF
+: >err-expected
+$PATCH -p0 < p7 >stdout 2>stderr
+test "$VERBOSE" != yes || { cat stdout; cat stderr >&2; }
+run_vc_chlog p7
+$diff_u expected stdout
+# FreeBSD patch is verbose here...
+#$diff_u err-expected stderr
+
+
+
+: >remove-oneline.c
+cat >p8 <<\EOF
+--- remove-oneline.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ remove-oneline.c	5 Oct 2006 15:13:30 -0000
+@@ -1 +0,0 @@
+-int new_function (void) { return 0; }
+EOF
+cat >expected <<\EOF
+	* remove-oneline.c (new_function):
+
+EOF
+: >err-expected
+run_vc_chlog p8
+# It seems non-GNU patch have some problems with reversing this diff:
+if $diff_u expected stdout >diffout 2>differr; then :; else
+  test "$VERBOSE" != yes || { cat diffout; cat differr >&2; }
+  # OpenBSD patch understands --version, and does not fail upon --help.
+  # So we try this rather obscure method.
+  case `$PATCH --help 2>/dev/null` in
+  *bug-patch@gnu.org*)
+    (exit 1); exit 1 ;;
+  esac
+fi
+# FreeBSD patch is verbose here...
+#$diff_u err-expected stderr
+
+
+# Solaris patch has troubles applying the following two patches.
+
+: >add-to-empty.c
+cat >p9 <<\EOF
+--- add-to-empty.c	5 Oct 2006 15:12:00 -0000	1.1.1.1
++++ add-to-empty.c	5 Oct 2006 15:13:30 -0000
+@@ -0,0 +1,8 @@
++int new_function (void)
++{
++  return old_function ();
++}
++
++extern int another_new_function (void);
++
++int new_data = 17;
+EOF
+cat >expected-exuberant <<\EOF
+	* add-to-empty.c (new_function, new_data):
+
+EOF
+cat >expected-emacs <<\EOF
+	* add-to-empty.c (new_function):
+
+EOF
+$PATCH -p0 <p9 >stdout 2>stderr
+test "$VERBOSE" != yes || { cat stdout; cat stderr >&2; }
+run_vc_chlog p9
+success=false
+for file in expected-exuberant expected-emacs; do
+  if $diff_u $file stdout >diffout 2>differr; then
+    success=:
+    break
+  fi
+  test "$VERBOSE" != yes || { cat diffout; cat differr >&2; }
+done
+$success
+
+
+rm -f new.c
+cat >p10 <<\EOF
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ new.c	20 Oct 2006 06:49:47 -0000
+@@ -0,0 +1,8 @@
++int new_function (void)
++{
++  return old_function ();
++}
++
++extern int another_new_function (void);
++
++int new_data = 17;
+EOF
+cat >expected-exuberant <<\EOF
+	* new.c (new_function, new_data):
+
+EOF
+cat >expected-emacs <<\EOF
+	* new.c (new_function):
+
+EOF
+$PATCH -p0 <p10 >stdout 2>stderr
+test "$VERBOSE" != yes || { cat stdout; cat stderr >&2; }
+run_vc_chlog p10
+success=false
+for file in expected-exuberant expected-emacs; do
+  if $diff_u $file stdout >diffout 2>differr; then
+    success=:
+    break
+  fi
+  test "$VERBOSE" != yes || { cat diffout; cat differr >&2; }
+done
+$success
+
+
+### a patch may contain a line matching '^--- ' within a hunk ###
+
+cat >plus_at_beginning.c <<\EOF
+/* there can be a plus (or more than one) at the beginning of a line */
+int foo (int a, int b, int c)
+{
+  return a
+- b -
+-- c;
+}
+
+int bar (int a, int b, int c)
+{
+  return a +
+-- b;
+}
+EOF
+
+cat >p11 <<\EOF
+--- plus_at_beginning.c	19 Oct 2006 11:40:59 -0000	1.4
++++ plus_at_beginning.c	19 Oct 2006 11:41:18 -0000
+@@ -2,12 +2,14 @@
+ int foo (int a, int b, int c)
+ {
+   return a
+-- b -
+--- c;
+++ b +
++++ c
++- 2 -
++--a;
+ }
+
+ int bar (int a, int b, int c)
+ {
+   return a +
+--- b;
++++ b;
+ }
+EOF
+
+cat >expected <<\EOF
+	* plus_at_beginning.c (foo, bar):
+
+EOF
+
+$PATCH -p0 < p11 >stdout 2>stderr
+test "$VERBOSE" != yes || { cat stdout; cat stderr >&2; }
+run_vc_chlog p11
+$diff_u expected stdout
+
+
+cat >p12 <<\EOF
+diff --git a/removed.c b/removed.c
+deleted file mode 100644
+index 587be6b..0000000
+--- a/removed.c
++++ /dev/null
+@@ -1 +0,0 @@
+-x
+EOF
+
+cat >expected <<\EOF
+	* removed.c:
+
+EOF
+
+run_vc_chlog p12
+$diff_u expected stdout
+
+Exit 0

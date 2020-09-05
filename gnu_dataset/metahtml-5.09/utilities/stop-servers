@@ -1,0 +1,28 @@
+#!/bin/sh
+# -*- Bash -*-
+# Stop local Meta-HTML Web Servers from running.
+#
+
+# List of hostnames that should start their own copy of Mhttpd.
+dir=`echo $0 | sed -e 's@/[^/]*$@@'`
+if [ "$dir" = "" ]; then dir=`pwd`; fi
+HOSTNAMES=$1
+if [ "$HOSTNAMES" = "" ]; then HOSTNAMES=$dir/LOCAL-SITES; fi
+MHTTPD_HOSTS=`cat $HOSTNAMES`
+
+if [ "$MHTTPD_HOSTS" ]; then
+   for server in $MHTTPD_HOSTS; do
+      if [ -f /www/$server/conf/mhttpd.pid ]; then
+	 kill -TERM `cat /www/$server/conf/mhttpd.pid`;
+      fi
+      if [ -f /www/$server/conf/httpd.pid ]; then
+	 kill -TERM `cat /www/$server/conf/httpd.pid`;
+      fi
+      if [ -f /www/$server/mhttpd/conf/mhttpd.pid ]; then
+	 kill -TERM `cat /www/$server/mhttpd/conf/mhttpd.pid`;
+      fi
+      if [ -f /www/$server/apache/conf/httpd.pid ]; then
+	 kill -TERM `cat /www/$server/apache/conf/httpd.pid`;
+      fi
+   done
+fi

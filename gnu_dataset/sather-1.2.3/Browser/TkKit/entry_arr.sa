@@ -1,0 +1,64 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- entry_arr.sa: An array of entries
+-- Hit Return in one of the entries to set the caption
+-- Author: Matthias Ernst <mernst@desy.de>
+
+class MAIN is
+   -- A collection of entries
+   
+   set_caption(caption: TK_LABEL, argv: ARRAY{STR}) is
+      if argv.size = 0 then return
+      else caption.text := argv[0]
+      end;
+   end;
+
+   set_caption(caption: TK_LABEL) is
+      set_caption(caption, |caption.app.tcl_tk.eval("selection get")|);
+   end;
+   
+   main is
+      sather_home ::= UNIX::get_env("SATHER_HOME");
+      if void(sather_home) then
+	 raise "Please define the environment variable SATHER_HOME";
+      end;
+      app ::=#TK_APP("TkKit Test","TkKit",sather_home+"Library/System/TkKit/");
+
+      caption ::= #TK_LABEL("caption", app.root).relief_raised.text("caption");
+      frame ::= #TK_FRAME("frame", app.root).relief_raised;
+
+      entry_return ::= 
+	    #TKKIT_CB_ARGS("entry_return", bind(set_caption(caption, _)));
+      app.callback(entry_return);
+
+      loop i ::= 1.upto!(3);
+	 fi ::= #TK_FRAME("f"+i, frame).relief_raised.configure("bd", 2.str);
+	 
+	 loop j ::= 1.upto!(3);
+	    ej ::= #TK_ENTRY("e"+j, fi).relief_groove;
+	    ej.set("" + i + " " + j);
+	    ej.bind_command("<Return>", 
+			    entry_return, | "["+ej.pathname+" get]" |)
+	 end;
+      end;
+
+      button ::= #TK_BUTTON("button", app.root).text("Set from selection");
+      button.rout := bind(set_caption(caption));
+
+      app.root.show_all;
+      app.tcl_tk.main_loop;
+   end;
+end; -- class MAIN
+
+-------------------------------------------------------------------

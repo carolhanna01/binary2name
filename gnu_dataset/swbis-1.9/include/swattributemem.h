@@ -1,0 +1,1 @@
+../swstructlib/src/misc/swattributemem.h

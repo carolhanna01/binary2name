@@ -1,0 +1,57 @@
+-- Definition of a Test program
+-- name: 	name of the program  (used as a title)
+-- title: 	a onle line description of the test.
+-- prio:	priotity of the test. Can be one of 
+--		QUICK:	to be executed for each test
+--		STD:	(default) to be executed during standard and extensive tests 
+--		EXT:	to be executed during extensive tests only
+-- options: options to be used when compiling this program
+--          they must include all files needed to compile the
+--	    program. There may be several options: lines,
+--	    each one will be used in a separate run. They must also include
+--	    the -o option, but never any of the -prolix, -verbose or several
+--	    debugging options, as the test program considers a compilation
+--	    to have failed if the compiler outputs anything.
+--	    (This is not true if you use type: ERROR).
+-- files:   List of files speparated by white space that go with this program
+-- type:    the type of this test program. The following types are known:
+--	    ERROR:	The compiler must generate an error. This error
+--			messages is "piped" into the exec commands.
+--			The exec command is supposed
+--			to check its stdin and print an error if something
+--			went wrong. If several exec lines are given,
+--			they are used one after the other until all options:
+--			lines have been processed. In this case you must
+--			have one exec line per options line.
+--			You should normaly use the option -only_C, because
+--			if you don't you have to make sure that errors
+--			comming from pmake do not interfere with your inter-
+--			pretation of the output.
+--	    STD:	(default). Each options: line is used to generate
+--			an executable. Then each exec: line is executed.
+--			Any output of those commands is considered to be an
+--			error.
+--	    MULTIPLEX:	After compilation of each single options: line all exec
+--			lines are executed. This assumes of course that
+--			all options: produce the same executable.
+-- exec:    command to be executed after the program ends. The current 
+--	    working directory will have all the files mentioned in the files
+--	    line, plus the executables created by the option line.
+--          The commands given here should not print out anything if
+--	    there is no error.
+-- lang:    either pSather or Sather (Sather is the default)
+-- arch:    only available in pSather. Defines the architecture on which
+--          this program is supposed to run. Currently the following 
+--          ones are recognised (it is possible to mention more than
+--	    one architecture by separating them with a ,)
+--	    Solaris Solaris-TCP Solaris-Myrinet LWP Meiko
+--	    If this line is ommited or empty, the test program assumes
+--	    that this test program runs on all architectures.
+
+name:		matrix
+title:		Tests the inlinier and the loop constant hoisting
+prio:		STD
+files:		mat.sa speedup
+options:	-only_reachable -o mats mat.sa 
+options:	-only_reachable -o matf -O_fast mat.sa
+exec:		./speedup

@@ -1,0 +1,68 @@
+
+database engdb end
+
+define
+  variable i1     float
+  variable i2     float
+  variable i3     float
+  variable i4     float
+  variable i5     float
+end
+
+output
+  page length 100
+  top margin 5
+  bottom margin 0
+  left margin 0
+end
+
+select
+	asof,
+	open,
+	analyzed,
+	suspended,
+	feedback,
+	closed,
+	total mytotal
+from history
+      order by asof 
+
+end
+
+format
+  page header
+    print column 1, "*** GNATS HISTORY as of ", date, " ***"
+    skip 2 lines
+
+    print 
+          column 13, "  %",
+          column 21, "  %",
+          column 29, "  %",
+          column 37, "  %",
+          column 45, "  %"
+
+    print 
+          column  1, "Date",
+          column 13, "Open", 
+          column 21, "Analzd",
+          column 29, "Fdback",
+          column 37, "Closed",
+          column 45, "Suspnd",
+          column 53, "Total"
+    skip 1 line
+
+on every row 
+  let i1 = open      * 100 / mytotal 
+  let i2 = analyzed  * 100 / mytotal 
+  let i3 = feedback  * 100 / mytotal 
+  let i4 = closed    * 100 / mytotal 
+  let i5 = suspended * 100 / mytotal 
+  print 
+        column  1, asof using "mm/dd/yy",
+        column 13, i1 using "###.#",
+        column 21, i2 using "###.#",
+        column 29, i3 using "###.#",
+        column 37, i4 using "###.#",
+        column 45, i5 using "###.#",
+        column 53, mytotal using "#####"
+end

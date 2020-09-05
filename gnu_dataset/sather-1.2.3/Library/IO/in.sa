@@ -1,0 +1,87 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- in.sa: Input from stdin.
+-------------------------------------------------------------------
+class IN is
+    -- Direct access to stdin.
+
+    create:SAME is return self end;   
+    
+    get_char:INT is
+	-- Retrieve a single character as an INT from stdin, negative for
+	-- end of file.  Built-in.
+	builtin IN_GETCHAR;
+    end;
+
+    get_str:STR is
+	-- A string containing the characters on stdin up to the next
+	-- newline.
+	return get_line.str;
+    end;
+    
+    get_line:FSTR is
+	-- A string buffer containing the characters on stdin up to the 
+	-- next newline.
+	return append_line(void);
+    end;
+    
+    private const size : INT := 256;
+    append_line(s:FSTR):FSTR is
+	-- Retrieve a string from stdin up to the next newline and append 
+	-- it to `s'.
+	
+	-- Implementation contributed by hikichi@srarc2.sra.co.jp
+	-- (Nobuyuki Hikichi).
+
+	bsize ::= size;
+	loop
+	    buf ::= #FSTR(bsize); -- buffer to hold C string
+	    buf.loc := bsize - 1;
+	    get_str_sized(buf, bsize);
+
+	    m: INT := buf.index_of('\n');
+	    if m >= 0 then buf.loc := m; return s + buf; end; 
+
+	    n: INT := buf.index_of('\0');
+	    if n = -1 then s := s + buf; bsize := bsize * 2;
+	    elsif n = 0 then return s;
+	    elsif n <= (bsize - 1) then buf.loc := n; return s + buf;
+	    else raise "IN::append_line, out of range [-1, bsize-1]";
+	    end;  -- if
+	end; -- loop
+    end; -- fstr (s:FSTR)
+
+    private get_str_sized(buf:FSTR,sz:INT) is
+	-- Read at most sz-1 characters and place them in buf,
+	-- followed by trailing '\0'.  Built-in.
+	builtin IN_GET_STR_SIZED;
+    end;
+
+    error:BOOL is
+	-- true if an error has been encountered.  Cleared by "clear".
+	return RUNTIME::ferror(FILE::stdin_macro);
+    end;
+
+    eof:BOOL is
+	-- true if EOF has been encountered.  Cleared by "clear".
+	return RUNTIME::feof(FILE::stdin_macro);
+    end;
+
+    clear is
+	-- resets end_seen and error status
+	RUNTIME::clearerr(FILE::stdin_macro);
+    end;
+    
+end; -- class IN
+    

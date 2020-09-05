@@ -1,0 +1,303 @@
+;; system.scm -- Low-level operating system interface.
+;; Copyright (C) 2013, 2014, 2016, 2018, 2020 Ludovic Courtès <ludo@gnu.org>
+;; Copyright (C) 2018 Carlo Zancanaro <carlo@zancanaro.id.au>
+;; Copyright (C) 2020 Jan (janneke) Nieuwenhuizen <janneke@gnu.org>
+;;
+;; This file is part of the GNU Shepherd.
+;;
+;; The GNU Shepherd is free software; you can redistribute it and/or modify it
+;; under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3 of the License, or (at
+;; your option) any later version.
+;;
+;; The GNU Shepherd is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with the GNU Shepherd.  If not, see <http://www.gnu.org/licenses/>.
+
+(define-module (shepherd system)
+  #:use-module (system foreign)
+  #:use-module (ice-9 binary-ports)
+  #:use-module (rnrs bytevectors)
+  #:use-module (srfi srfi-11)
+  #:use-module (srfi srfi-26)
+  #:export (disable-reboot-on-ctrl-alt-del
+            reboot
+            halt
+            power-off
+            max-file-descriptors
+            prctl
+            PR_SET_CHILD_SUBREAPER
+            getpgid
+            SFD_CLOEXEC
+            signalfd
+            consume-signalfd-siginfo
+            block-signals
+            unblock-signals
+            set-blocked-signals
+            with-blocked-signals
+            without-automatic-finalization))
+
+;; The <sys/reboot.h> constants.
+(define RB_AUTOBOOT @RB_AUTOBOOT@)
+(define RB_HALT_SYSTEM @RB_HALT_SYSTEM@)
+(define RB_POWER_OFF @RB_POWER_OFF@)
+(define RB_DISABLE_CAD @RB_DISABLE_CAD@)          ; integer | #f
+
+(define (syscall->procedure return-type name argument-types)
+  "Return a procedure that wraps the C function NAME using the dynamic FFI,
+and that returns two values: NAME's return value, and errno.
+
+If an error occurs while creating the binding, defer the error report until
+the returned procedure is called."
+  (catch #t
+    (lambda ()
+      (pointer->procedure return-type (dynamic-func name (dynamic-link))
+                          argument-types
+                          #:return-errno? #t))
+    (lambda args
+      (lambda _
+        (throw 'system-error name  "~A" (list (strerror ENOSYS))
+               (list ENOSYS))))))
+
+(define %libc-reboot
+  ;; libc's 'reboot' function as declared in <sys/reboot.h>.
+  (let ((proc (syscall->procedure int "reboot" (list unsigned-int))))
+    (define (howto->symbol howto)
+      (cond ((eqv? howto RB_AUTOBOOT) 'RB_AUTOBOOT)
+            ((eqv? howto RB_HALT_SYSTEM) 'RB_HALT_SYSTEM)
+            ((eqv? howto RB_POWER_OFF) 'RB_POWER_OFF)
+            (else howto)))
+
+    (lambda (howto)
+      (let-values (((ret err) (proc howto)))
+        (unless (zero? ret)
+          (throw 'system-error "reboot" "~A: ~S"
+                 (list (strerror err) (howto->symbol howto))
+                 (list err)))))))
+
+(define (disable-reboot-on-ctrl-alt-del)
+  "Disable hard reboot upon ctrl-alt-del.  Instead, the kernel Linux will send
+SIGINT to PID 1, which is responsible for cleaning things up gracefully.  See
+ctrlaltdel(8) and see kernel/reboot.c in Linux."
+  (when RB_DISABLE_CAD
+    (%libc-reboot RB_DISABLE_CAD)))
+
+(define (reboot)
+  "Perform a hard reset of the system now.  Return #f on failure."
+  (%libc-reboot RB_AUTOBOOT))
+
+(define (halt)
+  "Halt the system.  Return #f on failure."
+  (%libc-reboot RB_HALT_SYSTEM))
+
+(define (power-off)
+  "Stop system and switch power off if possible.  Return #f on failure."
+  (%libc-reboot RB_POWER_OFF))
+
+
+(define _SC_OPEN_MAX @_SC_OPEN_MAX@)
+
+(define sysconf
+  (let ((proc (syscall->procedure long "sysconf" (list int))))
+    (lambda (name)
+      "Return the system configuration for NAME."
+      (let-values (((result err) (proc name)))
+        (if (= -1 result)
+            (throw 'system-error "sysconf" "~A: ~S"
+                   (list (strerror err) name)
+                   (list err))
+            result)))))
+
+(define PR_SET_CHILD_SUBREAPER @PR_SET_CHILD_SUBREAPER@)
+
+(define prctl
+  (let ((proc (syscall->procedure long "prctl" (list int int))))
+    (lambda (process operation)
+      "Perform an operation on the given process"
+      (let-values (((result err) (proc process operation)))
+        (if (= -1 result)
+            (throw 'system-error "prctl" "~A"
+                   (list (strerror err))
+                   (list err))
+            result)))))
+
+(define (max-file-descriptors)
+  "Return the maximum number of open file descriptors allowed."
+  (sysconf _SC_OPEN_MAX))
+
+(define getpgid
+  ;; Guile 3.0.2 and 2.2.7 lack 'getpgid'.
+  (let ((proc (syscall->procedure int "getpgid" (list int))))
+    (lambda (pid)
+      "Return the process group ID for process PID."
+      (let-values (((result err) (proc pid)))
+        (if (= -1 result)
+            (throw 'system-error "getpgid" "~A"
+                   (list (strerror err))
+                   (list err))
+            result)))))
+
+(define (allocate-sigset)
+  (bytevector->pointer (make-bytevector @SIZEOF_SIGSET_T@)))
+
+(define sigemptyset
+  (syscall->procedure int "sigemptyset" '(*)))
+
+(define sigaddset
+  (syscall->procedure int "sigaddset" `(* ,int)))
+
+(define sigismember
+  (let ((proc (syscall->procedure int "sigismember" `(* ,int))))
+    (lambda (set signal)
+      (not (zero? (proc set signal))))))
+
+(define (sigset signals)
+  "Return a pointer to a fresh 'sigset_t' for SIGNALS."
+  (let ((set (allocate-sigset)))
+    (sigemptyset set)
+    (for-each (cut sigaddset set <>) signals)
+    set))
+
+(define sigset->list
+  (let ((all-signals
+         (filter integer?
+                 (module-map (lambda (symbol variable)
+                               (let ((str (symbol->string symbol)))
+                                 (and (string-prefix? "SIG" str)
+                                      (not (string-prefix? "SIG_" str))
+                                      (variable-ref variable))))
+                             (resolve-interface '(guile))))))
+    (lambda (set)
+      "Return the list of integers (signal numbers) corresponding to SET, a
+sigset pointer."
+      (filter (cut sigismember set <>) all-signals))))
+
+(define %sizeof-struct-signalfd-siginfo
+  ;; Size of 'struct signalfd_siginfo' or zero if it doesn't exist, as is the
+  ;; case on GNU/Hurd.
+  @SIZEOF_STRUCT_SIGNALFD_SIGINFO@)
+
+(define SFD_CLOEXEC @SFD_CLOEXEC@)
+
+(define signalfd
+  (let ((proc (syscall->procedure int "signalfd" `(,int * ,int))))
+    (lambda* (fd signals #:optional (flags SFD_CLOEXEC))
+      "Return an open input port over a signal file descriptor for SIGNALS, a
+list of signal constants; if FD is -1, a new file descriptor is allocated,
+otherwise FD is returned and its associated state is updated.  FLAGS must be a
+bitmask of SFD_CLOEXEC or SFD_NONBLOCK."
+      (fdopen (proc fd (sigset signals) flags) "r0"))))
+
+(define (consume-signalfd-siginfo port)
+  "Read a 'signalfd_siginfo' structure from PORT and discard it.  Return the
+number of the signal received."
+  (let ((bv (get-bytevector-n port %sizeof-struct-signalfd-siginfo)))
+    ;; The first 'uint32_t' field of 'struct signalfd_siginfo' is the signal
+    ;; number.
+    (bytevector-u32-native-ref bv 0)))
+
+(define SIG_BLOCK @SIG_BLOCK@)
+(define SIG_UNBLOCK @SIG_UNBLOCK@)
+(define SIG_SETMASK @SIG_SETMASK@)
+
+(define sigprocmask
+  (let ((proc (syscall->procedure int "pthread_sigmask" `(,int * *))))
+    (lambda (how signals)
+      "Add SIGNALS, a list of SIG* values, to the set of blocked signals if
+HOW is SIG_BLOCK, or unblock them if HOW is SIG_UNBLOCK.  Return the previous
+set of blocked signals as a list of SIG* values."
+      (define old
+        (allocate-sigset))
+
+      (let-values (((result err)
+                    (proc how (sigset signals) old)))
+        (if (= -1 result)
+            (throw 'system-error "sigprocmask" "~A"
+                   (list (strerror err)) (list err))
+            (sigset->list old))))))
+
+(define (block-signals signals)
+  "Block SIGNALS, a list of SIG* values, in the current thread."
+  (sigprocmask SIG_BLOCK signals))
+
+(define (unblock-signals signals)
+  "Unblock SIGNALS, a list of SIG* values, in the current thread."
+  (sigprocmask SIG_UNBLOCK signals))
+
+(define (set-blocked-signals signals)
+  "Block exactly the signals listed in SIGNALS, a list of SIG* values, in the
+current thread."
+  (sigprocmask SIG_SETMASK signals))
+
+(define (call-with-blocked-signals signals thunk)
+  (let ((previous-set #f))
+    (dynamic-wind
+      (lambda ()
+        (set! previous-set (block-signals signals)))
+      thunk
+      (lambda ()
+        (set-blocked-signals previous-set)))))
+
+(define-syntax-rule (with-blocked-signals signals exp ...)
+  "Evaluate EXP... in a context where SIGNALS are blocked."
+  (call-with-blocked-signals signals (lambda () exp ...)))
+
+
+;;;
+;;; Guile shenanigans.
+;;;
+
+(cond-expand
+  (guile-2.2
+   (define %set-automatic-finalization-enabled?!
+     ;; When using a statically-linked Guile, for instance in the initrd, we
+     ;; cannot resolve this symbol, but most of the time we don't need it
+     ;; anyway.  Thus, delay it.
+     (let ((proc (delay
+                   (pointer->procedure int
+                                       (dynamic-func
+                                        "scm_set_automatic_finalization_enabled"
+                                        (dynamic-link))
+                                       (list int)))))
+       (lambda (enabled?)
+         "Switch on or off automatic finalization in a separate thread.
+Turning finalization off shuts down the finalization thread as a side effect."
+         (->bool ((force proc) (if enabled? 1 0))))))
+
+   (define-syntax-rule (without-automatic-finalization exp ...)
+     "Turn off automatic finalization within the dynamic extent of EXP."
+     (let ((enabled? #t))
+       (dynamic-wind
+         (lambda ()
+           (set! enabled? (%set-automatic-finalization-enabled?! #f)))
+         (lambda ()
+           exp ...)
+         (lambda ()
+           (%set-automatic-finalization-enabled?! enabled?))))))
+
+  (else
+   (define-syntax-rule (without-automatic-finalization exp ...)
+     ;; Nothing to do here: Guile 2.0 does not have a separate finalization
+     ;; thread.
+     (begin exp ...))))
+
+(cond-expand
+  ((and guile-2 (not guile-2.2))
+   ;; On Guile 2.0, 'select' throws upon EINTR or EAGAIN.  The trick below
+   ;; enables the sane behavior found on 2.2/3.0.
+   (set! select
+     (let ((real-select select))
+       (lambda args
+         (catch 'system-error
+           (lambda ()
+             (apply real-select args))
+           (lambda args
+             (if (memv (system-error-errno args) (list EINTR EAGAIN))
+                 '(() () ())
+                 (apply throw args))))))))
+  (else #t))
+

@@ -1,0 +1,218 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class TCL_TK is
+   -- The interface to Tcl/Tk
+
+   readonly attr interpreter:EXT_OB;
+   readonly attr main_window:EXT_OB;
+
+   Ok: INT is  return C_TCL_TK::ConstTclOk;  end;
+   Error: INT is  return C_TCL_TK::ConstTclError;  end;
+   Volatile: EXT_OB is    return C_TCL_TK::ConstTclVolatile  end;
+
+   interp_to_int:INT is
+      return C_TCL_TK::to_int(interpreter);
+   end;
+   
+   create(basename, classname: STR): SAME is
+      t ::= new;
+      t.interpreter := C_TCL_TK::Tcl_CreateInterp;
+      C_TCL_TK::init_tcl_tk(t.interpreter);
+      main_window ::= C_TCL_TK::get_main_window(t.interpreter, basename, classname);
+      C_TCL_TK::init_raster(t.interpreter);
+      sather_home ::= UNIX::sather_home;
+      file_name ::= sather_home+"/System/Platforms/tcltk/startup.tcl";
+      f: FILE := FILE::open_for_read(file_name);
+      if void(f) or f.error then
+	 raise ("Can't source startup.tcl in:"+file_name+"\n");
+      end;
+      f.close;
+      discard ::= t.eval_file(file_name);
+      return t;
+   end;
+   
+   create_no_window(basename, classname: STR): SAME is
+      t ::= new;
+      t.interpreter := C_TCL_TK::Tcl_CreateInterp;
+      C_TCL_TK::init_tcl_tk(t.interpreter);
+      return t;
+   end;
+
+   eval(script: STR): STR is
+      ret ::= C_TCL_TK::Tcl_Eval(interpreter, script);
+      res ::= STR::create_from_c_string(C_TCL_TK::Tcl_GetResult(interpreter));
+      if ret /= Ok then
+	 raise "An error occurred in an eval. Error:"+res+"\n"+script;
+      else return res;   end;
+   end;
+
+   eval_file(file: STR): STR is
+      ret ::= C_TCL_TK::Tcl_EvalFile_wrapper(interpreter, file);
+      res ::= STR::create_from_c_string(C_TCL_TK::Tcl_GetResult(interpreter));
+      if ret /= Ok then
+	s ::="An error occurred in evaluating file:"+file.str
+	       +"\nResult="+res+"\n";
+	 #ERR+s;
+	 raise s;
+      else
+	 return res;
+      end;
+   end;
+
+   main_loop is
+      protect
+	 C_TCL_TK::Tk_MainLoop;	-- infinitely
+      when $STR then 
+	 #ERR+"An error occurred!:"+exception.str+"\n";
+	 raise exception.str
+      end;
+   end;
+   
+   to_array_str(cpp: EXT_OB): ARRAY{STR} is
+      -- make array of STR from char **
+      -- must be terminated with NULL
+      l ::= #FLIST{STR};
+      loop i ::= 0.up!;
+	 c_str ::= C_UTIL::str_ind(cpp, i); -- the i-th string
+	 until!(void(c_str));
+	 l := l.push(STR::create_from_c_string(c_str));
+      end;
+      return l.array;
+   end;
+   
+end; -- class TCL_TK
+-------------------------------------------------------------------
+class TCL_TK_COMMANDS is
+   -- Bound routines to be called by the callbacks
+   -- "sather"  calls the bound routine associated with
+   --         sather_command.   This bound routine is invoked
+   --         when the "sather" command is used within Tcl.
+   --        It receives as its argument an array of strings.
+   -- 
+   -- Specifying this routine using a bound routines provides some
+   -- isolation fom the Gui/Browser so that this module can remain
+   -- independant of them.
+   -- 
+   -- "tkkit_cb" calls the bound routine associated with 
+   -- tkkit_cb_command tkkit_cb is so named for historical reasons 
+   -- and should only be used by the browser. It may be renamed in 
+   -- a future release
+   -- 
+
+   
+   private shared private_sather_command_map:FMAP{INT,ROUT{ARRAY{STR}}};
+   -- A mapping from interpreters to a closure for that particular
+   -- interpreter's callback routine, associated with the command "sather". 
+   -- These handlers must be stored in a global so that they are available
+   -- when the callback is processed
+
+   private shared private_tkkit_cb:ROUT{ARRAY{STR}}:INT;
+   -- Handler for the alternative callback "tkkit_cb". Backward compatibility
+   -- with the tkkit/browser interface
+   
+   sather_command(interp:INT): ROUT{ARRAY{STR}} is
+      -- Return the bound routine associated with the callback Tcl
+      -- command "sather"
+      if void(private_sather_command_map) then 
+	 raise "TCL_TK_COMMANDS::sather_command bound routine not set";
+      end;
+      private_sather_command:ROUT{ARRAY{STR}} := 
+	    private_sather_command_map.get(interp);
+      return private_sather_command;  
+   end;
+   
+   sather_command(interp:INT,r:ROUT{ARRAY{STR}}) is 
+      -- Set the bound routine associated with the callback Tcl command
+      -- "sather"
+      private_sather_command_map := private_sather_command_map.insert(interp,r);
+   end;
+   
+   -- Historical 
+   tkkit_cb_command: ROUT{ARRAY{STR}}:INT is
+      -- Used by the browser only
+      if void(private_tkkit_cb) then 
+	 raise "TCL_TK_COMMANDS::sather_command bound routine not set";
+      end;
+      return private_tkkit_cb;  
+   end;
+   
+   tkkit_cb_command(r:ROUT{ARRAY{STR}}:INT) is  private_tkkit_cb := r;  end;
+   -- Used by the browser only
+
+end;
+-------------------------------------------------------------------
+external class C_TCL_TK is		
+   -- Interface to basic tcl and tk functions
+   -- Depends on the  tcl.a, tk.a
+
+   Tcl_CreateInterp: EXT_OB;	-- create a new tcl-interpreter
+   Tcl_Eval(interp: EXT_OB, cmd: STR): INT;
+   Tcl_EvalFile_wrapper(interp: EXT_OB, file: STR): INT;
+
+   ConstTclOk: INT;
+   ConstTclError: INT;
+   ConstTclVolatile: EXT_OB;
+   
+   Tcl_SetResult(interp: EXT_OB, str: STR, free_proc: EXT_OB);
+   Tcl_ResetResult(interp: EXT_OB);
+   Tcl_GetResult(interp: EXT_OB): EXT_OB;
+   
+   Tk_MapWindow(w: EXT_OB);
+   Tk_DoOneEvent(i: INT);
+   Tk_MainLoop;
+   
+   to_int(interp:EXT_OB):INT;
+   
+   init_tcl_tk(interp: EXT_OB);
+   -- Initialize the callbacks
+   
+   get_main_window(interp: EXT_OB, basename: STR, classname: STR):EXT_OB;
+
+   init_raster(interp: EXT_OB);
+   -- Initialize the raster widget
+    
+   sather_cb(interp:INT,args: EXT_OB): INT is
+      -- Callback into sather from tcl. 
+      sather_command:ROUT{ARRAY{STR}}:= TCL_TK_COMMANDS::sather_command(interp);
+      sather_command.call(TCL_TK::to_array_str(args));
+      -- GUI_APP_END::exec_callback(args);  
+      -- This currently always returns "ok". Needs to be fixed to return the
+      -- actual command status.
+      return C_TCL_TK::ConstTclOk;
+   end;
+    
+   tkkit_cb(args: EXT_OB): INT is
+      -- Same as "C_TCL_KIT::command". This command is for backward compatibility with
+      -- the browser code and should not be used by future code.
+      argv: ARRAY{STR} := TCL_TK::to_array_str(args);
+      assert argv.size > 1;	-- contains at least "tkkit_cb <callback_name>"
+      return TCL_TK_COMMANDS::tkkit_cb_command.call(argv);
+   end;
+
+end; 
+-------------------------------------------------------------------
+external class C_UTIL is
+   str_ind(cpp: EXT_OB, i: INT): EXT_OB; -- char *str_int(char **argv, int i)
+end;
+-------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+

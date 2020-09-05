@@ -1,0 +1,275 @@
+#
+# Part of the ht://Dig package   <http://www.htdig.org/>
+# Copyright (c) 2001 The ht://Dig Group
+# For copyright details, see the file COPYING in your distribution
+# or the GNU General Public License version 2 or later
+# <http://www.gnu.org/copyleft/gpl.html>
+#
+# $Id: t_search,v 1.9 2008/06/08 08:29:35 sebdiaz Exp $
+#
+
+. ../test/test_functions
+
+MIFLUZ_CONFIG=${srcdir}/mifluz-search.conf
+export MIFLUZ_CONFIG
+
+echo "MIFLUZ_CONFIG = $MIFLUZ_CONFIG"
+
+ [ "$VERBOSE" ] && echo "../htdb/mifluzload $VERBOSE test < $srcdir/search.txt" >&2
+../htdb/mifluzload $VERBOSE test < $srcdir/search.txt
+
+#
+# Test the query parser
+#
+
+#
+# Run $1 and expect $2 as a result
+#
+runparser() {
+  command="$1"
+  expected="$2"
+  [ "$VERBOSE" ] && echo "$command" >&2
+  out=`eval "$command"`
+  if [ "$expected" != "$out" ]
+  then
+    echo "running $command: expected 
+$expected
+but got
+$out"
+    exit 1
+  fi
+}
+
+#
+# Simple test
+#
+runparser "./mifluzsearch -B test -n -f '+the +world' $VERBOSE" \
+'( optional "" ( mandatory "" the  ) ( mandatory "" world  )  )'
+
+#
+# All boolean constructions
+#
+runparser "./mifluzsearch -B test -n -f '-the world +is coming -to an end'" \
+'( optional "" ( not "" the  ) world ( mandatory "" is  ) coming ( not "" to  ) an end  )'
+
+#
+# Single word
+#
+runparser "./mifluzsearch -B test -n -f 'the'" \
+'the'
+
+#
+# Single mandatory word
+#
+runparser "./mifluzsearch -B test -n -f '+the'" \
+'( mandatory "" the  )'
+
+#
+# Single forbiden word
+#
+runparser "./mifluzsearch -B test -n -f '-the'" \
+'( not "" the  )'
+
+rm -f Cmifluz_*
+#
+# Run queries with various operators on an index built from the content
+# of search.txt.
+#
+#
+# Run $1 and expect $2 as a result (all lines starting with match:)
+#
+runsearch() {
+  command="$1"
+  expected="$2"
+  [ "$VERBOSE" ] && echo "$command" >&2 
+  echo "cmd=$command"
+  out=`eval "$command"`
+  match=`echo "$out" | grep '^match:'`
+  count=`echo "$out" | sed -n -e 's/^count: *//p'`
+  base=`echo "$out" | sed -n -e 's/^base: *//p'`
+  echo "Exp = $expected"
+  echo "Match = $match"
+  if [ "$expected" != "$match" ]
+  then
+    echo "running $command: expected 
+$expected
+but got
+$match"
+    exit 1
+  fi
+}
+
+#
+# Single forbiden word is equivalent to searching nothing (discarded)
+#
+runsearch "./mifluzsearch -B test -f '-the' $VERBOSE" \
+'match: none'
+
+#
+# Single mandatory word is exactly the same as word alone,
+# the optimizer takes care of this.
+#
+runsearch "./mifluzsearch -B test -c 1 -f '+lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	1	11	<UNDEF>	'
+
+#
+# Test context restoration on WordTreeLiteral
+#
+runsearch "./mifluzsearch -B test -c 1 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	1	11	<UNDEF>	'
+
+runsearch "./mifluzsearch -B test -c 1 -d 1 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	1	21	<UNDEF>	'
+
+runsearch "./mifluzsearch -B test -c 1 -d 2 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	'
+
+#
+# Test retrieval based on cache (previous searches filled 3 slots in the cache)
+#
+runsearch "./mifluzsearch -B test -c 1 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	1	11	<UNDEF>	'
+
+#
+# Only read one more record
+#
+runsearch "./mifluzsearch -B test -c 2 -d 2 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	
+match: <UNDEF>	<UNDEF>	5	21	<UNDEF>	'
+
+#
+# Read all possible records. This implies to read the first 4 records
+# from the cache (SearchFromCache) and complete the set of match with 
+# the last 3 (SearchFromIndex) despite the fact that the desired start
+# of search is at document 200.
+#
+runsearch "./mifluzsearch -B test -c 100 -d 200 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	1	11	<UNDEF>	
+match: <UNDEF>	<UNDEF>	1	21	<UNDEF>	
+match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	
+match: <UNDEF>	<UNDEF>	5	21	<UNDEF>	
+match: <UNDEF>	<UNDEF>	5	53	<UNDEF>	
+match: <UNDEF>	<UNDEF>	5	56	<UNDEF>	
+match: <UNDEF>	<UNDEF>	6	1	<UNDEF>	'
+
+runsearch "./mifluzsearch -B test -c 3 -d 6 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	6	1	<UNDEF>	'
+
+runsearch "./mifluzsearch -B test -c 3 -d 9 -f 'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	6	1	<UNDEF>	'
+
+#
+# "the world" shows twice in the same document (0 5) with the
+# realm field set to 1 and 2. It must only show once in the result list.
+#
+runsearch "./mifluzsearch -M mifluz-search.conf -B test -f '+the +world' $VERBOSE" \
+'match: none'
+#'match: <UNDEF>	<UNDEF>	0	5	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	20	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	21	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	51	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	81	<UNDEF>	(world the proximity)'
+
+#
+# Include documents that only contain 'the' or 'world' in the results
+#
+runsearch "./mifluzsearch -M mifluz-search.conf -B test -f 'the world' $VERBOSE" \
+'match: none'
+#'match: <UNDEF>	<UNDEF>	0	5	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	20	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	21	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	51	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	81	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	71	<UNDEF>	(world )
+#match: <UNDEF>	<UNDEF>	0	11	<UNDEF>	(world )
+#match: <UNDEF>	<UNDEF>	0	3	<UNDEF>	(the )'
+
+#
+# Document 20 is excluded because it contains 'an'
+#
+#runsearch "./mifluzsearch -M mifluz-search.conf -B test -f '+the -an +world' $VERBOSE" \
+#'match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the proximity)
+#match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the proximity)
+#match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the )
+#match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the )
+#match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the )
+#match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the )
+#match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the )
+#match: <UNDEF>  <UNDEF> 0       0       <UNDEF> (world the )'
+
+#
+# Document 20 is excluded because it contains 'an'
+#
+#runsearch "./mifluzsearch -M mifluz-search.conf -B test -f  'the -an world' $VERBOSE" \
+#'match: none'
+#'match: <UNDEF>	<UNDEF>	0	5	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	21	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	51	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	81	<UNDEF>	(world the proximity)
+#match: <UNDEF>	<UNDEF>	0	71	<UNDEF>	(world )
+#match: <UNDEF>	<UNDEF>	0	11	<UNDEF>	(world )
+#match: <UNDEF>	<UNDEF>	0	3	<UNDEF>	(the )'
+
+#
+# Exercise realm reinitialization
+#
+runsearch "./mifluzsearch -M mifluz-search.conf -B test -f  'comes end' $VERBOSE" \
+'match: none'
+#'match: <UNDEF>	<UNDEF>	0	6	<UNDEF>	(comes )
+#match: <UNDEF>	<UNDEF>	0	20	<UNDEF>	(end )'
+
+#
+# One document per server, simple case
+#
+runsearch "./mifluzsearch -M mifluz-search.conf -S -B test -f  'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	1	11	<UNDEF>	
+match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	
+match: <UNDEF>	<UNDEF>	6	1	<UNDEF>	'
+
+#
+# One document per server, simple case
+#
+runsearch "./mifluzsearch -M mifluz-search.conf -S -B test -f  'lazy' $VERBOSE" \
+'match: <UNDEF>	<UNDEF>	1	11	<UNDEF>	
+match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	
+match: <UNDEF>	<UNDEF>	6	1	<UNDEF>	'
+
+#
+# One document per server, servers are mixed because of
+# various priorities.
+#
+runsearch "./mifluzsearch -M mifluz-search.conf -S -B test -f  'lazy red' $VERBOSE" \
+'match: none'
+#'match: <UNDEF>	<UNDEF>	1	21	<UNDEF>	(red lazy )
+#match: <UNDEF>	<UNDEF>	5	21	<UNDEF>	(red lazy )
+#match: <UNDEF>	<UNDEF>	6	1	<UNDEF>	(red lazy )'
+
+#
+# Test lower bound set
+#
+#runsearch "./mifluzsearch -M mifluz-search.conf -B test -l '<UNDEF> <UNDEF> 5 0 <UNDEF>' -f 'lazy' $VERBOSE" \
+#'match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	21	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	53	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	56	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	6	1	<UNDEF>	'
+
+#
+# Test higher bound set
+#
+#runsearch "./mifluzsearch -M mifluz-search.conf -B test -h '<UNDEF> <UNDEF> 5 56 <UNDEF>' -f 'lazy' $VERBOSE" \
+#'match: <UNDEF>	<UNDEF>	1	11	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	1	21	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	21	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	53	<UNDEF>	'
+
+#
+# Test higher and lower bound set by -R that restricts results to 
+# a single server
+#
+#runsearch "./mifluzsearch -M mifluz-search.conf -B test -R 5 -f 'lazy' $VERBOSE" \
+#'match: <UNDEF>	<UNDEF>	5	9	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	21	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	53	<UNDEF>	
+#match: <UNDEF>	<UNDEF>	5	56	<UNDEF>	'

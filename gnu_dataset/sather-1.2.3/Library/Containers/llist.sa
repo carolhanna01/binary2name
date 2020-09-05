@@ -1,0 +1,277 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Author: Holger Klawitter <holger@ICSI.Berkeley.EDU>
+--
+-- LLIST{T} a single connected list containing elements of type T.
+-- LL_NODE{T} helper class for LLIST{T}
+
+class LLIST{T} is
+   -- An implemenation of a linked list.  
+   -- The list has a build in "position" which can be advanced by calling
+   -- "advance" and reset to the first element by calling "rewind"
+   -- Elements can be inserted and deleted after the current position
+   -- using "insert_after", "insert_before"
+   -- Elements may also be inserted at the head of the list by calling 
+   -- "insert_head"
+   -- Elements may be deleted by calling "delete" which deletes the current
+   -- object and advances to the next item
+   -- This list can be read with elt!.
+   
+   -- Implementation:
+   -- The linked list uses a header object (LLIST) to avoid
+   -- hassles with empty lists.
+   -- Data is stored in links, which are LL_NODE{T}s which hold pointers
+   -- to the data and the next element. LL_NODEs are not given out by
+   -- this class.
+
+    ---------- ATTRIBUTES
+
+    readonly attr size: INT;
+        -- Returns the number of elements stored in the list.
+
+    private attr first,prev,cur,last: LL_NODE{T};
+
+    ---------- CONSTRUCTION
+
+    create: SAME is
+        -- Returns a new linked list.
+        return new;
+    end;
+
+    ---------- PREDICATES
+
+    is_empty: BOOL
+        -- Returns 'true' if empty.
+        pre ~void(self)
+    is
+        return size = 0
+    end;
+
+    at_last: BOOL
+        -- Returns true, if the current element is the last element.
+        pre ~void(self) and ~is_empty
+    is
+        return last = cur
+    end;
+
+    at_end: BOOL
+        -- Returns 'true' if the list is empty or the last
+        -- next reached the end of the list.
+        pre ~void(self)
+    is
+        return void(cur)
+    end;
+
+    ---------- TRAVERSING
+
+    rewind
+        -- Sets the current position to the first element;
+        pre ~void(self)
+    is
+        cur := first;
+        prev := void
+    end;
+
+    current: T
+        -- Returns the current element. Not allowed when
+        -- at_end is true or list is empty.
+        pre ~void(self) and ~is_empty and ~at_end
+    is
+        return cur.data
+    end;
+
+    advance
+        -- Advances the current position.
+        pre ~void(self) and ~is_empty and ~at_end
+    is
+        prev := cur;
+        cur := cur.next;
+    end;
+
+    elt!: T
+        -- Yields all elements stored in the list in order.
+        -- Is re-entrant.
+        pre ~void(self)
+    is
+        c ::= first;
+        loop
+            until!(void(c));
+            yield c.data;
+            c := c.next
+        end
+    end;
+
+    ---------- INSERTING
+
+    insert_after(t:T)
+        -- Inserts the item t after the current element.
+        -- Does not change current.
+        pre ~void(self) and ~is_empty and ~at_end
+    is
+        if void(cur.next) then
+            assert cur = last;
+            last := #LL_NODE{T}(t,void);
+            cur.next := last;
+        else 
+            cur.next := #LL_NODE{T}(t,cur.next);
+        end;
+        size := size + 1
+    end;
+
+    insert_before(t:T)
+        -- Inserts the item t before the current element.
+        -- Does not change current.
+        -- This is allowed even if at_end is 'true'.
+        pre ~void(self)
+    is
+        if is_empty then
+            first := #LL_NODE{T}(t,void);
+            last := first;
+            prev := first;
+            -- cur := void; -- is done!
+        elsif void(prev) then
+            assert first = cur;
+            first := #LL_NODE{T}(t,cur);
+            prev := first;
+        else
+            prev.next := #LL_NODE{T}(t,cur);
+            prev := prev.next;
+        end;
+        if void(cur) then
+            last := prev;
+        end;
+        size := size + 1;
+    end;
+
+    insert_front(t:T)
+        -- Insert an element at the beginning of the list.
+        pre ~void(self)
+    is
+        if void(first) then
+            assert void(last) and void(cur);
+            first := #LL_NODE{T}(t,void);
+            last := first;
+            cur := first
+        else
+            first := #LL_NODE{T}(t,first);
+            if void(prev) then
+                assert cur = first;
+                prev := first
+            end;
+        end;
+        size := size + 1
+    end;
+
+    insert_back(t:T)
+        -- Insert an element at the end of the list.
+        pre ~void(self)
+    is
+        if void(last) then
+            assert void(first);
+            last := #LL_NODE{T}(t,void);
+            first := last;
+            cur := last
+        else
+            last.next := #LL_NODE{T}(t,void);
+            last := last.next;
+        end;
+        size := size + 1;
+    end;
+
+    ---------- DELETING
+
+    delete
+        -- Deletes the current object. Advances to the next
+        -- item in the list.
+        -- Not allowed when no current object available.
+        pre ~void(self) and ~is_empty and ~at_end
+    is
+        at_last ::= cur = last;
+
+        if void(prev) then
+            assert first = cur;
+            first := cur.next;
+            cur := first;
+        else
+            cur := cur.next;
+            prev.next := cur;
+        end;
+        if at_last then
+            last := prev;
+        end;
+        size := size - 1;
+    end;
+
+    delete_all
+        -- Deletes all elements from the list.
+        pre ~void(self)
+        post is_empty and at_end
+    is
+        first := void;
+        cur := void;
+        last := void;
+        prev := void;
+        size := 0;
+    end;
+
+    ---------- DEBUGGING
+
+    dbg_state: STR
+    is
+        if void(self) then return "self=void" end;
+        count ::= 0;
+        loop dummy ::= elt!; count := count + 1 end;
+        if size /= count then return "size/=count" end;
+        
+        if ~void(prev) then
+            if prev.next /= cur then return "prev.next/=cur"
+            elsif void(last) then return "last=void"
+            elsif ~void(last.next) then return "last.next/=void"
+            elsif void(first) then return "first=void"
+            end
+        elsif ~void(first) then
+            if cur/=first then return "cur/=first"
+            elsif void(last) then return "last=void"
+            elsif ~void(last.next) then return "last.next/=void"
+            end
+        else
+            if ~void(cur) then return "cur/=void"
+            elsif ~void(last) then return "last/=void"
+            end
+        end;
+        return "ok"
+    end;
+ 
+end; -- LLIST{T}
+---------------------------------------------------------------------------
+class LL_NODE{T} is
+   -- Private to LLIST{T}
+   -- A node in a linked list which can hold data of type T.
+   -- Implementation:
+   -- Holds a pointer to the next element and a pointer to the data
+   
+    attr data: T;
+    attr next: SAME;
+
+    create(t:T,n:SAME): SAME is
+        res ::= new;
+        res.data := t;
+        res.next := n;
+        return res
+    end;
+
+    is_eq(l:SAME): BOOL is return SYS::ob_eq(self,l) end;
+
+end; -- LL_NODE{T}
+---------------------------------------------------------------------------

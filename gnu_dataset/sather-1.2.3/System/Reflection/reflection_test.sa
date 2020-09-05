@@ -1,0 +1,113 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- No, I won't tell you how you can use those classes
+-- because you should not use them anyway. They break encapsulation,
+-- and type safty, but you can make some wonderful things
+-- you could not otherwise....
+-- Version 1.0, by CMF (fleiner@icsi.berkeley.edu)
+
+class TEST_REFLECT_HELP is
+   include AREF{$STR};
+   attr a:INT;
+   attr s:STR;
+   attr o1:$STR;
+   attr o2:$STR;
+   create:SAME is return new(6); end;
+   str:STR is return "|"+a.str+"-"+s+"-"+o1.str+"-"+o2.str+"-"+[2]+"|"; end;
+end;
+
+immutable class TEST_REFLECT_HELP2 is
+   include AVAL{INT};
+   const asize:INT:=10;
+end;
+
+class TEST_REFLECT is
+   include TEST;
+   main is
+      class_name("REFLECT and META_OBJECT");
+      r::=#TEST_REFLECT_HELP;
+      r.a:=19;
+      r.s:="HALLO";
+      r.o1:=true;
+      r.o2:="hey";
+      r[2]:=false;
+      test("r",r.str,"|19-HALLO-true-hey-false|");
+
+      p::=#META_OBJECT(r);
+      test("p.attr",p.n_attribs,4);
+      test("p.array_size",p.array_size,6);
+
+      s::="";
+      loop s:=s+"-".separate!(p.attrib_name!); end;
+      test("p.attrib_name!",s,"a-o1-o2-s");
+
+      s:="|";
+      loop 
+         o:$OB;
+	 o:=p.attrib!;
+	 typecase o when $STR then
+	    s:=s+"-".separate!(o); 
+         else
+	    test("p.attr!",false,true);
+         end;
+      end;
+      test("p.attr!",s+"|","|19-true-hey-HALLO|");
+      al::=p.array_element(2);
+      typecase al when $STR then
+         test("p.array_element",al,"false");
+      else 
+	 test("p.array_element","failed","worked");
+      end;
+
+      p.set_attrib(0,100);
+      p.set_attrib(1,"miau");
+      p.set_attrib(2,200);
+      p.set_attrib(3,"huh");
+      p.set_array_element(2,"murks");
+      test("r",r.str,"|100-huh-miau-200-murks|");
+
+      oo::=REFLECT::create_object(SYS::tp(r),8);
+      typecase oo when TEST_REFLECT_HELP then
+	 r:=oo;
+      else
+	 test("test create_object",SYS::str_for_tp(SYS::tp(oo)),"TEST_REFLECT_HELP");
+      end;
+      r.a:=19;
+      r.s:="HALLO";
+      r.o1:=true;
+      r.o2:="hey";
+      r[2]:="999";
+      test("r",r.str,"|19-HALLO-true-hey-999|");
+      test("r.aszie",r.asize,8);
+
+
+      tp::=#TUP{INT,STR}(12,"-12-");
+      t::=REFLECT::attrib(tp,0);
+      typecase t when $STR then test("tp.t1",t,12);
+      else test("tp.t1","failed",12); end;
+      t:=REFLECT::attrib(tp,1);
+      typecase t when $STR then test("tp.t2",t,"-12-");
+      else test("tp.t2","failed",12); end;
+
+      av:TEST_REFLECT_HELP2;
+      av:=av.aset(1,99);
+      t:=REFLECT::array_element(av,1);
+      typecase t when $STR then test("aval",t,"99");
+      else test("aval","failed",12); end;
+
+      test("aval.asize",REFLECT::array_size(av),10);
+
+      finish
+   end;
+end;

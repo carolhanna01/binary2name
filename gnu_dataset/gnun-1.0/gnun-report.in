@@ -1,0 +1,412 @@
+#! @BASH@
+
+# Copyright (C) 2013, 2014, 2015, 2016 Free Software Foundation, Inc.
+
+# This file is part of GNUnited Nations.
+
+# GNUnited Nations is free software: you can redistribute it and/or
+# modify it under the terms of the GNU General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# GNUnited Nations is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with GNUnited Nations.  If not, see <http://www.gnu.org/licenses/>.
+
+function version () {
+cat <<EOF
+gnun-report (@PACKAGE_NAME@) @PACKAGE_VERSION@
+Copyright (C) 2016 Free Software Foundation, Inc.
+You may redistribute copies of @PACKAGE_NAME@
+under the terms of the GNU General Public License.
+For more information about these matters, see the file named COPYING.
+EOF
+}
+
+function usage () {
+cat <<EOF
+Usage: gnun-report OPTION...
+Generate HTML report about status of translations of a team.
+
+Options:
+  -t, --team=CODE            Specify the language code of the team
+      --root=DIRECTORY       Specify top directory for working copy
+  -l, --language=NAME        Specify the name of team's language
+  -v, --version              Display version info and exit
+  -h, --help                 Display this help and exit
+
+Report bugs to @PACKAGE_BUGREPORT@
+@PACKAGE_NAME@ home page: <@PACKAGE_URL@>
+General help using GNU software: <http://www.gnu.org/gethelp/>
+EOF
+}
+
+# Get a variable from the list of priorities.
+function get_var () {
+  @SED@ \
+"$1{ :egin; /[\]$/{s/[\]$//;N;s/\n//;begin;}; s/^[^=]*=[[:space:]]*//;p };
+d" server/gnun/priorities.mk
+}
+
+# Output HTML table raw with a report about single file.
+function report_file () {
+  html=$1.html
+  url='<a href="'"$root_url$html"'">'"$html"'</a>'
+  base=$(echo "$1" | @SED@ 's|\(.*\)/|\1/po/|; \|/po/|!s|^|po/|')
+  po=${base}.${team}.po
+  pot=$base.pot
+  test -f "$pot" || pot="$pot.opt"
+  tran=$1.${team}.html
+  pot_url="$root_url$pot"
+  po_url="$root_url$po"
+  tran_url="$root_url$tran"
+  size="n/a"
+  test -f ${html} && size=`cat ${html} | wc -c`
+  first_entries='<td>'"${url}"'</td><td>'"${size}"'</td>'
+  if test -f ${tran} && ! test -f ${html}; then
+    echo '<tr class="trans-orphan">'$first_entries
+    echo '<td><a href="'$tran_url'">No original HTML</a></td></tr>'
+    return
+  fi
+  if ! test -f ${pot}; then
+    echo '<tr class="trans-no-pot">'$first_entries'<td>No POT</td></tr>'
+    return
+  fi
+  if test -f ${po}; then
+    if ! @MSGFMT@ -c -o /dev/null ${po} > /dev/null 2>&1; then
+      echo '<tr class="trans-broken">'$first_entries
+      echo '<td><a href="'$po_url'"><strong>broken</strong></a></td></tr>'
+    fi
+    stat=`LC_ALL=C @MSGFMT@ --statistics -o /dev/null ${po} 2>&1`
+    if echo $stat | @GREP@ '\(fuzzy\|untranslated\)' > /dev/null; then
+      if echo $stat | @GREP@ -q "\<translated\>"; then
+        translated=${stat%% *}
+      fi
+      sum='<span class="trans-translated">'"$translated"'</span>'
+      if echo $stat | @GREP@ -q "\<fuzzy\>"; then
+        fuzzy=`echo $stat | @SED@ "s/.*, \([[:digit:]]*\) fuzzy.*/\1/"`
+        sum="$sum"'/<span class="trans-fuzzy"><em>'"$fuzzy"'</em></span>'
+      fi
+      if echo $stat | @GREP@ -q "\<untranslated\>"; then
+        untrans=`echo $stat | @SED@ "s/.*, \([[:digit:]]*\) untranslated.*/\1/"`
+        sum="$sum"'/<span class="trans-untranslated"><strong>'"$untrans"
+        sum="$sum"'</strong></span>'
+      fi
+      echo '<tr class="trans-incomplete">'$first_entries
+      echo '<td><a href="'$po_url'">incomplete</a> ('$sum')</td></tr>'
+    else 
+      echo '<tr class="trans-complete">'$first_entries
+      echo '<td><a href="'$po_url'">complete</a></td></tr>'
+    fi
+    return
+  fi
+  if test -f ${tran}; then
+    echo '<tr class="trans-html">'$first_entries
+    echo '<td><a href="'$tran_url'"><em>HTML</em></a>'
+    echo '(<a href="'$pot_url'">POT</a>)</td></tr>'
+    return
+  fi
+  echo '<tr class="trans-none">'$first_entries'<td>none'
+  echo '(<a href="'$pot_url'">POT</a>)</td></tr>'
+}
+
+# The filter to skip table raws containing complete or absent translations.
+function skip_complete () {
+  @SED@ 's|<tr |\n&|g; s|</tr>|&\n|g' \
+    | @SED@ '/^<tr class="trans-\(complete\|none\)">/{:egin;N;/<\/tr>/!begin;d}'
+}
+
+# The filter for table raws about absent translations.
+function pass_untranslated () {
+  @SED@ 's|<tr |\n&|g; s|</tr>|&\n|g' \
+    | @SED@ '/^<tr class="trans-none">/{:egin;N;/<\/tr>/!begin;p};d'
+}
+
+# The filter for table raws about complete translations.
+function pass_complete () {
+  @SED@ 's|<tr |\n&|g; s|</tr>|&\n|g' \
+    | @SED@ '/^<tr class="trans-complete">/{:egin;N;/<\/tr>/!begin;p};d'
+}
+
+# Output a filtered table with a report against a list of files.
+# $1 is the original list of table entries; $2 is the header;
+#   $3 is the filter command.
+#
+# When the resulting table is empty, nothing is output.
+function report_list () {
+  table=$(echo $1 | $3)
+  if test "x$table" != x; then
+    echo $2
+    echo
+    echo -n \
+      '<table border="1"><tr><th>file</th><th>size</th><th>status</th></tr>'
+    echo $table  | @SED@ \
+'s|<tr |\n&|g; s|<td>|\n&|g; s|</td></tr>|\n&|g; s|<em>HTML</em></a>|&\n   |g;
+ s|incomplete</a>|&\n   |g; s|>\([^<]*/[^<]*</a>\)|>\n       \1|g'
+    echo "</table>"
+    echo
+  fi
+}
+
+# Output a set of tables using filter $2 and prefix for header ids $1.
+function report_filtered () {
+  report_list "$priority_table" \
+    '<h4 id="'$1'-priority">Priority Articles</h4>' $2
+  report_list "$important_table" \
+    '<h4 id="'$1'-important">Important Articles</h4>' $2
+  report_list "$to_translate_table" \
+    '<h4 id="'$1'-to-translate">Files from Important Directories</h4>' $2
+  report_list "$other_table" \
+    '<h4 id="'$1'-other">Less Important Files</h4>' $2
+}
+
+# Parse the command line.
+team=${team:-ml}
+lang_name=""
+root_url=${root_url:-http://www.gnu.org/}
+ROOT=""
+
+function parse_option () {
+  skip_option=
+  trimmed_option=
+  case "$1" in
+      -h* | --help )
+	  usage
+	  exit 0
+	  ;;
+      -v* | --version )
+	  version
+	  exit 0
+	  ;;
+      --root )
+	  skip_option=yes
+	  ROOT="$2"
+	  ;;
+      --root=* )
+	  ROOT="${1#--root=}"
+	  ;;
+      -t | --team )
+	  skip_option=yes
+	  team="$2"
+	  ;;
+      --team=* )
+	  team="${1#--team=}"
+	  ;;
+      -t* )
+	  team="${1#-t}"
+	  ;;
+      -l | --language )
+	  skip_option=yes
+	  lang_name="$2"
+	  ;;
+      --language=* )
+	  lang_name="${1#--language=}"
+	  ;;
+      --language=* )
+	  lang_name="${1#--language=}"
+	  ;;
+      -* )
+          echo 1>&2 "$0": Invalid option -- \`$1\'.
+          exit 1
+          ;;
+      * )
+          echo 1>&2 "$0": Invalid argument -- \`$1\'.
+          exit 1
+	  ;;
+  esac
+}
+
+while [ $# -ge 1 ]; do
+  current_option="$1"
+  while test -n "$current_option";do
+    parse_option "$current_option" "$2"
+    if test -n "$skip_option"; then
+      shift
+    fi
+    if test -n "$trimmed_option"; then
+      current_option=-"$trimmed_option"
+    else
+      current_option=
+    fi
+  done
+  shift
+done
+
+if test "x$ROOT" != x; then
+  root="$ROOT"
+  case "$root" in
+    -* ) root="./$root" ;;
+    * ) ;;
+  esac
+  cd "$root" ||  { echo "$0": Can\'t cd \'"$root"\' >&2; exit 1; }
+fi
+
+if ! test -f server/gnun/priorities.mk; then
+  echo "$0:" No priorities.mk found in `pwd`/server/gnun/ >&2
+  exit 1
+fi
+
+# Figure out language name by its code.
+if test "x$lang_name" = x; then
+  case ${team} in
+    af ) lang_name=Afrikaans ;;
+    ar ) lang_name=Arabic ;;
+    az ) lang_name=Azerbaijani ;;
+    bg ) lang_name=Bulgarian ;;
+    bn ) lang_name=Bengali ;;
+    bs ) lang_name=Bosnian ;;
+    ca ) lang_name=Catalan ;;
+    cs ) lang_name=Czech ;;
+    cy ) lang_name=Welsh ;;
+    da ) lang_name=Danish ;;
+    de ) lang_name=German ;;
+    el ) lang_name=Greek ;;
+    en ) lang_name=English ;;
+    eo ) lang_name=Esperanto ;;
+    es ) lang_name=Spanish ;;
+    et ) lang_name=Estonian ;;
+    eu ) lang_name=Basque ;;
+    fa ) lang_name=Farsi ;;
+    fi ) lang_name=Finnish ;;
+    fr ) lang_name=French ;;
+    ga ) lang_name=Irish ;;
+    gl ) lang_name=Galician ;;
+    he ) lang_name=Hebrew ;;
+    hi ) lang_name=Hindi ;;
+    hr ) lang_name=Croatian ;;
+    hu ) lang_name=Hungarian ;;
+    hy ) lang_name=Armenian ;;
+    id ) lang_name=Indonesian ;;
+    it ) lang_name=Italian ;;
+    ja ) lang_name=Japanese ;;
+    ka ) lang_name=Georgian ;;
+    kn ) lang_name=Kannada ;;
+    ko ) lang_name=Korean ;;
+    lt ) lang_name=Lithuanian ;;
+    lv ) lang_name=Latvian ;;
+    mk ) lang_name=Macedonian ;;
+    ml ) lang_name=Malayalam ;;
+    mr ) lang_name=Marathi ;;
+    ms ) lang_name=Malay ;;
+    nb ) lang_name=Norwegian ;;
+    nl ) lang_name=Dutch ;;
+    nn ) lang_name=Norwegian ;;
+    pl ) lang_name=Polish ;;
+    pt ) lang_name=Portuguese ;;
+    pt-br ) lang_name="Brazilian Portuguese";;
+    ro ) lang_name=Romanian ;;
+    ru ) lang_name=Russian ;;
+    sh ) lang_name=Serbo-Croatian ;;
+    sk ) lang_name=Slovak ;;
+    sl ) lang_name=Slovenian ;;
+    sq ) lang_name=Albanian ;;
+    sr ) lang_name=Serbian ;;
+    sv ) lang_name=Swedish ;;
+    sw ) lang_name=Swahili ;;
+    ta ) lang_name=Tamil ;;
+    te ) lang_name=Telugu ;;
+    th ) lang_name=Thai ;;
+    tl ) lang_name=Tagalog ;;
+    tr ) lang_name=Turkish ;;
+    uk ) lang_name=Ukrainian ;;
+    ur ) lang_name=Urdu ;;
+    uz ) lang_name=Uzbek ;;
+    vi ) lang_name=Vietnamese ;;
+    zh-cn ) lang_name="Chinese (Simplified)" ;;
+    zh-tw ) lang_name="Chinese (Traditional)" ;;
+    zu ) lang_name=Zulu ;;
+    * ) lang_name="&ldquo;$team&rdquo;" ;;
+  esac
+fi
+
+# Build lists of files to report against.
+
+priority_files=`get_var /priority-articles/`
+important_files=`get_var /important-articles/`
+important_directories=`get_var /important-directories/`
+
+other_to_translate=$(
+{
+  for dir in $important_directories; do
+    find $dir -name \*.pot -path \*/po/\* | while read pot; do
+      base=${pot%.pot}; base=${base/\/po\//\/}
+      echo " "$important_files $priority_files" " \
+        | @GREP@ -q -F " $base " || echo $base
+    done
+  done
+} | @SORT@
+)
+
+other_files=$(
+{
+  find . -name \*.pot -path \*/po/\* | while read pot; do
+    pot=${pot#./}; base=${pot%.pot}; base=${base#po/}; base=${base/\/po\//\/}
+    echo " "$other_to_translate $important_files $priority_files" " \
+      | @GREP@ -q -F " $base " || echo $base
+  done
+  find . -name \*.pot.opt -path \*/po/\* | while read pot; do
+    pot=${pot#./}; base=${pot%.pot.opt};
+    test -f $base.$team.po || continue
+    base=${base#po/}; base=${base/\/po\//\/}
+    echo " "$important_files $priority_files" " \
+      | @GREP@ -q -F " $base " || echo $base
+  done;
+} | @SORT@
+)
+
+# Compile a table against every list.
+
+priority_table=$(for i in $priority_files; do report_file $i; done)
+important_table=$(for i in $important_files; do report_file $i; done)
+to_translate_table=$(for i in $other_to_translate; do report_file $i; done)
+other_table=$(for i in $other_files; do report_file $i; done)
+
+# Output the HTML
+
+cat <<EOF
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<!-- Automatically generated by gnun-report -->
+<title>$lang_name Translations (`date`)</title>
+<style type="text/css">
+  tr.trans-orphan { background-color: #f4f; color: #000 }
+  tr.trans-no-pot { background-color: #bbb; color: #000 }
+  tr.trans-broken { background-color: #f77; color: #000 }
+  tr.trans-complete { background-color: #afa; color: #000 }
+  tr.trans-incomplete { background-color: #ffa; color: #000 }
+  tr.trans-HTML { background-color: #faa; color: #000 }
+  span.trans-untranslated { background-color: #faa; color: #000 }
+  span.trans-fuzzy { background-color: #ffa; color: #000 }
+  span.trans-translated { background-color: #afa; color: #000 }
+  td { padding-left: 1em; padding-right: 1em }
+</style>
+</head>
+<body>
+<h2>$lang_name Translations</h2>
+<p><a href="#to-work">Existing</a> | <a href="#untranslated">Untranslated</a>
+  | <a href="#complete">Complete</a></p>
+EOF
+
+echo '<h3 id="to-work">Existing Translations to Work on</h3>'
+
+report_filtered to-work skip_complete
+
+echo '<h3 id="untranslated">Untranslated Files</h3>'
+
+report_filtered untranslated pass_untranslated
+
+echo '<h3 id="complete">Complete Translations</h3>'
+
+report_filtered 'complete' pass_complete
+
+cat <<EOF
+</body>
+</html>
+EOF

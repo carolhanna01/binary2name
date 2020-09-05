@@ -1,0 +1,85 @@
+#! /bin/sh
+#  -*- Mode: Shell-script -*-
+# pseudo.test --- test the select pseudo option
+#
+# Time-stamp:        "2007-01-27 06:03:10 bkorb"
+# Author:            Bruce Korb <bkorb@gnu.org>
+# Maintainer:        Bruce Korb <bkorb@gnu.org>
+# Last Modified:     $Date: 2007/01/27 15:07:56 $
+#            by: bkorb
+#
+# $Id: pseudo.test,v 4.4 2007/01/27 15:07:56 bkorb Exp $
+# ----------------------------------------------------------------------
+
+. ./defs
+
+# # # # # # # # # # TEMPLATE FILE # # # # # # # # #
+
+echo creating ${testname}.tpl
+cat > ${testname}.tpl <<'_EOF_'
+[= AutoGen5 Template
+
+(define f-name "")
+
+h=(begin
+    (set! f-name (string-append (getenv "incdir") "/%s-hdr.%s"))
+    (shellf
+    "d=`dirname %s`
+    test -d ${d} || mkdir -p $d || die cannot mkdir $d"
+    f-name)
+    f-name
+  )
+
+c=(begin
+    (set! f-name (string-append (getenv "srcdir") "/%s-body.%s"))
+    (shellf
+    "d=`dirname %s`
+    test -d ${d} || mkdir -p $d || die cannot mkdir $d"
+    f-name)
+    f-name
+  )
+
+# end of pseudo
+=]
+[=
+
+(sprintf "two file create %s: " (suffix)) =][=
+
+CASE (suffix) =][=
+
+== h =]HEADER FILE[=
+== c =]BODY 4 FILE[=
+*    =][= (error "woops") =][=
+
+ESAC =]
+_EOF_
+
+# # # # # # # # # # RUN TESTS # # # # # # #
+
+incdir=${testname}-inc
+srcdir=${testname}-src
+
+export incdir srcdir
+
+${AGexe} --no-def -T${testname}.tpl -b${testname} || \
+   failure ${AGexe} --no-def -T${testname}.tpl -b${testname}
+
+f=${incdir}/${testname}-hdr.h
+test -f ${f} || \
+   failure missing file: ${f}
+${FGREP} 'two file create h: HEADER FILE' ${f} || failure bad contents for $f
+
+f=${srcdir}/${testname}-body.c
+test -f ${f} || \
+   failure missing file: ${f}
+${FGREP} 'two file create c: BODY 4 FILE' ${f} || failure bad contents for $f
+
+cleanup
+
+## Local Variables:
+## Mode: shell-script
+## indent-tabs-mode: nil
+## sh-indentation: 2
+## End:
+
+# end of pseudo.test

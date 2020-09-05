@@ -1,0 +1,349 @@
+You can invoke @code{send-pr} from a shell prompt, or from within
+@sc{gnu} Emacs using @w{@samp{M-x send-pr}} (@pxref{Emacs
+submitting,,Submitting Problem Reports from Emacs}.)
+
+@menu
+* PR template::               The Problem Report template
+* send-pr in Emacs::          Using send-pr from within Emacs
+* send-pr from the shell::    Invoking send-pr from the shell
+* Submitting via e-mail::     Submitting a Problem Report via direct e-mail
+* Helpful hints::
+@end menu
+
+@node send-pr from the shell
+@section Invoking @code{send-pr} from the shell
+@cindex command line options
+@cindex invoking @code{send-pr} from the shell
+@cindex shell invocation
+
+@smallexample
+send-pr [ -b | --batch ]
+        [ -d @var{database} | --database @var{database} ]
+        [ -f @var{file} | --file @var{file} ]
+        [ -p | --print ] [ --request-id ]
+        [ -s @var{severity} | --severity @var{severity} ]
+        [ -V | --version ] [ -h | --help ]
+@end smallexample
+
+Invoking @code{send-pr} with no options assumes that you want to
+submit to the local @sc{gnats} database named @var{default} and calls
+the editor named in your environment variable @code{EDITOR} on a PR
+template for this database.
+
+@table @code
+@item -b
+@itemx --batch
+Suppresses printing of most of the messages @code{send-pr} usually
+prints while running.
+
+@item -d @var{database}, --database @var{database}
+Specifies the database to which the PR is to be submitted; if no
+database is specified, the local database named @code{default} is
+assumed.  This option overrides the database specified in the
+@code{GNATSDB} environment variable.  @var{database} can also be set
+to a remote database by using the format for @code{GNATSDB} described
+in @ref{Environment,,Environment variables and @sc{gnats} tools}.
+
+@item -f @var{problem-report}
+@itemx --file @var{problem-report}
+Specifies a file, @var{problem-report}, where a completed Problem
+Report or a PR template exists.  @code{send-pr} verifies that the
+contents of the file constitute a valid PR and asks you if you want to
+edit it or send it directly.  If the PR text is invalid you will be
+told what is wrong and be given the option to edit it. If
+@var{problem-report} is @samp{-}, @w{@code{send-pr}} reads from
+standard input.
+
+@item -p
+@itemx --print
+Displays the PR template for the specified database, or if the
+@code{-d} or @code{--database} options aren't specified, print the
+template for the local @var{default} database.  No PR is submitted.
+
+@item --request-id
+Sends a request for a @code{Submitter-Id} to the Support Site.
+
+@item -s @var{severity}
+@itemx --severity @var{severity}
+@cindex @code{send-pr} fields
+Sets the initial value of the @code{Severity} field to @var{severity}.
+
+@item -V
+@itemx --version
+Displays the @code{send-pr} version number and a usage summary.  No mail
+is sent.
+
+@item -h
+@itemx --help
+Displays a usage summary for @code{send-pr}.  No mail is sent.
+@end table
+
+@c ---------------------------------------------------------------
+@node send-pr in Emacs
+@section Using @code{send-pr} from within Emacs
+@cindex using @code{send-pr} from within Emacs
+@cindex @code{send-pr} within Emacs
+@cindex invoking @code{send-pr} from Emacs
+@cindex interactive interface
+
+You can use an interactive @code{send-pr} interface from within @sc{gnu}
+Emacs to fill out your Problem Report.  We recommend that you
+familiarize yourself with Emacs before using this feature
+(@pxref{Introduction,,Introduction,emacs,GNU Emacs}).
+
+Call @code{send-pr} with @w{@samp{M-x send-pr}}.@footnote{If typing
+@w{@samp{M-x send-pr}} doesn't work, see your system administrator for
+help loading @file{gnats.el} into Emacs.}  @code{send-pr} responds
+with a preconfigured Problem Report template.  The Emacs interface is
+described in more detail in a separate section, @xref{Emacs,,The Emacs
+interface to @sc{gnats}}.
+
+@node PR template
+@section The Problem Report template
+
+Invoking @code{send-pr} presents a PR @dfn{template} with a number of
+fields already filled in with default values for the database you are
+submitting to.  Complete the template as thoroughly as possible to
+make a useful bug report.  Submit only one bug with each PR.
+
+@cindex template
+A template consists of three sections:
+
+@itemize @bullet
+@item Comments
+@item Mail Header
+@item @sc{gnats} fields
+@end itemize
+
+The @strong{Comments section} at the top of the template contains basic
+instructions for completing the Problem Report, as well as a list of
+valid entries for the @code{Category} field.  One (and only one) of
+these values should be placed in the @code{Category} field further down
+in the Problem Report.
+
+@cindex template comment section
+@cindex comment section in the PR template
+@smallexample
+@group
+SEND-PR: -*- send-pr  -*-
+SEND-PR: Lines starting with `SEND-PR' will be removed
+SEND-PR: automatically as well as all comments (the text 
+SEND-PR: below enclosed in `<' and `>').
+SEND-PR: 
+SEND-PR: Please consult the document `Reporting Problems 
+SEND-PR: Using send-pr' if you are not sure how to fill out
+SEND-PR: a problem report.
+SEND-PR:
+SEND-PR: Choose from the following categories:
+@end group
+@end smallexample
+
+@ifset SENDPR
+A complete sample bug report, from template to completed PR, is shown in
+@ref{An Example}.  For a complete list of valid categories, type
+@w{@samp{send-pr -L}} at your prompt.  @xref{Valid Categories,,Valid
+Categories}, for a sample list of categories, .
+@end ifset
+
+The comments lines are all preceded by the string @samp{SEND-PR:} and
+are erased automatically when the PR is submitted.  The instructional
+comments within @samp{<} and @samp{>} are also removed.  (Only these
+comments are removed; lines you provide that happen to have those
+characters in them, such as examples of shell-level redirection, are not
+affected.)
+
+The @strong{Mail Header} section of the template contains a standard
+mail header constructed by @code{send-pr}.  @code{send-pr} can be set up
+to submit PRs by e-mail or by speaking directly to the @sc{gnats}
+server, but since this header is part of the standard format of Problem
+Reports, @code{send-pr} includes it even when it is set up to speak
+directly to the server.
+
+@cindex mail header section
+@smallexample
+@group
+To: @var{PR submission address}
+Subject: @emph{complete this field}
+From: @var{your-login}@@@var{your-site}
+Reply-To: @var{your-login}@@@var{your-site}
+X-send-pr-version: send-pr @value{VERSION}
+@end group
+@end smallexample
+
+@noindent
+@code{send-pr} automatically completes all the mail header fields except
+the @code{Subject} line with default values.  (@xref{Fields,,Problem
+Report format}.)
+
+The @strong{@sc{gnats} fields} below the mail header form the bulk of a
+@sc{gnats} Problem Report.
+
+Each field is either automatically completed with valid information
+(such as your @code{Submitter-Id}) or contains a one-line instruction
+specifying the information that field requires in order to be correct.
+For example, the @code{Confidential} field expects a value of @samp{yes}
+or @samp{no}, and the answer must fit on one line; similarly, the
+@code{Synopsis} field expects a short synopsis of the problem, which
+must also fit on one line.  Fill out the fields as completely as
+possible.  @xref{Helpful hints,,Helpful hints}, for suggestions as to
+what kinds of information to include.
+
+The mechanisms @code{send-pr} uses to fill in default values is as
+follows: Your preconfigured @code{Submitter-Id} is taken from the local
+@file{send-pr.conf} configuration file.  @code{send-pr} will set the
+@code{Originator} field to the value of the @code{NAME} environment
+variable if it has been set; similarly, @code{Organization} will be set
+to the value of @code{ORGANIZATION}.  If these variables aren't set in
+you environment, @code{send-pr} uses the values set in the local
+@file{send-pr.conf} configuration file, if that exists.  If not, these
+values are left blank in the template.  @code{send-pr} also attempts to
+find out some information about your system and architecture, and places
+this information in the @code{Environment} field if it finds any.
+
+In this example, words in @emph{italics} are filled in with
+pre-configured information:
+
+@cindex @code{send-pr} fields
+@smallexample
+>Submitter-Id: @emph{your submitter-id}
+>Originator:   @emph{your name here}
+>Organization:  
+    @emph{your organization}
+>Confidential:<[ yes | no ] (one line)>
+>Synopsis:    <synopsis of the problem (one line)>
+>Severity:    <[non-critical | serious | critical](one line)>
+>Priority:    <[ low | medium | high ] (one line)>
+>Category:    <name of the product (one line)>
+>Class:       <[sw-bug | doc-bug | change-request | support]>
+>Release:     <release number (one line)>
+>Environment:
+         <machine, os, target, libraries (multiple lines)>
+
+>Description:
+       <precise description of the problem (multiple lines)>
+>How-To-Repeat:
+       <code/input/activities to reproduce (multiple lines)>
+>Fix:
+       <how to correct or work around the problem, if known 
+        (multiple lines)>
+@end smallexample
+
+@cindex @code{Submitter-Id} field
+@cindex @code{>Submitter-Id}
+When you finish editing the Problem Report, @code{send-pr} validates the
+contents and if it looks OK either submits it directly to the
+@sc{gnats} server or submits it by mail to the address named in the
+@code{To} field in the mail header.
+
+@cindex bad Problem Reports
+@cindex errors
+@cindex invalid Problem Reports
+If your PR contains one or more invalid field values, @code{send-pr}
+places the PR in a temporary file named @file{/tmp/pbad@var{nnnn}} on
+your machine.  @var{nnnn} is the process identification number given
+to your current @code{send-pr} session.  If you are running
+@code{send-pr} from the shell, you are prompted as to whether or not
+you wish to try editing the same Problem Report again.  If you are
+running @code{send-pr} from Emacs, the Problem Report is placed in the
+buffer @w{@samp{*gnats-send*}}; you can edit this file and then submit
+it with @kbd{C-c C-c}.
+
+@c -------------------------------------------------------------------------
+@node Submitting via e-mail
+@section Submitting a Problem Report via direct e-mail
+@cindex Direct e-mail
+@cindex Submitting a PR via e-mail
+In addition to using @code{send-pr}, there is another way to submit a
+problem report.  You can simply send an e-mail message to the PR
+submission e-mail address of the support site (This address should be
+published by the support site.)
+
+When you send unformatted e-mail to this address, @sc{gnats} processes
+the message as a new problem report, filling in as many fields from
+defaults as it can:
+
+@table @code
+@item Synopsis
+The @code{Synopsis} field is filled in by the @code{Subject} header of
+the e-mail message.
+
+@item Submitter ID
+@sc{gnats} will try to derive the @code{Submitter} field from the address
+in the @code{From} header of the e-mail.
+
+@item Description
+All of the text in the body of the e-mail message is put into the 
+@code{Description} field.
+@end table
+
+Other fields, such as @code{Category}, @code{Version}, @code{Severity},
+etc. are set to default values as defined by the @sc{gnats} administrator.
+
+@c --------------------------------------------------------------------------
+@node Helpful hints
+@section Helpful hints
+@cindex helpful hints
+@cindex Using and Porting @sc{gnu} CC
+@cindex effective problem reporting
+@cindex kinds of helpful information
+@cindex information to submit
+@cindex Report all the facts!
+
+There is no orthodox standard for submitting effective bug reports,
+though you might do well to consult the section on submitting bugs for
+@sc{gnu} @code{gcc} in @ref{Bugs, , Reporting Bugs, gcc, Using and
+Porting GNU CC}, by Richard Stallman.  This section contains
+instructions on what kinds of information to include and what kinds of
+mistakes to avoid.
+
+In general, common sense (assuming such an animal exists) dictates the
+kind of information that would be most helpful in tracking down and
+resolving problems in software.  
+@itemize @bullet
+@item 
+Include anything @emph{you} would want to know if you were looking at
+the report from the other end.  There's no need to include every minute
+detail about your environment, although anything that might be different
+from someone else's environment should be included (your path, for
+instance).
+
+@item 
+Narratives are often useful, given a certain degree of restraint.  If a
+person responsible for a bug can see that A was executed, and then B and
+then C, knowing that sequence of events might trigger the realization of
+an intermediate step that was missing, or an extra step that might have
+changed the environment enough to cause a visible problem.  Again,
+restraint is always in order (``I set the build running, went to get a
+cup of coffee (Columbian, cream but no sugar), talked to Sheila on the
+phone, and then THIS happened@dots{}'') but be sure to include anything
+relevant.
+
+@item 
+Richard Stallman writes, ``The fundamental principle of reporting bugs
+usefully is this: @strong{report all the facts}.  If you are not sure
+whether to state a fact or leave it out, state it!''  This holds true
+across all problem reporting systems, for computer software or social
+injustice or motorcycle maintenance.  It is especially important in the
+software field due to the major differences seemingly insignificant
+changes can make (a changed variable, a missing semicolon, etc.).
+
+@item
+Submit only @emph{one} problem with each Problem Report.  If you have
+multiple problems, use multiple PRs.  This aids in tracking each problem
+and also in analyzing the problems associated with a given program.
+
+@item
+It never hurts to do a little research to find out if the bug you've
+found has already been reported.  Most software releases contain lists
+of known bugs in the Release Notes which come with the software; see
+your system administrator if you don't have a copy of these.
+
+@item
+The more closely a PR adheres to the standard format, the less
+interaction is required by a database administrator to route the
+information to the proper place.  Keep in mind that anything that
+requires human interaction also requires time that might be better spent
+in actually fixing the problem.  It is therefore in everyone's best
+interest that the information contained in a PR be as correct as
+possible (in both format and content) at the time of submission.
+@end itemize

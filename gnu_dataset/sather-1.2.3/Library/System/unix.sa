@@ -1,0 +1,75 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class UNIX is
+
+   system(s:STR):INT is
+      return C_UNIX::system(s);
+   end;
+
+   sather_home: STR is
+      r ::= get_env("SATHER_HOME");
+      if void(r) then 
+	 r := "/usr/lib/sather";
+      end;
+	 if r[r.size-1] = '/' then
+	    raise "Environment variable SATHER_HOME should not end with /";
+      end;
+      return r;
+   end;
+   
+   get_env(var:STR):STR is
+      r::=C_UNIX::getenv(var);
+      if void(r) then return void;
+      else return STR::create_from_c_string(r);
+      end;
+   end;
+
+   exit(code:INT) is
+      C_UNIX::exit(code);
+   end;
+
+   abort is
+      C_UNIX::abort;
+   end;
+
+   execve(prog:STR, argv:ARRAY{STR}, envp:ARRAY{STR}):INT is
+      -- Execute a file, by transforming the calling process into a
+      -- new process.  If `execve' returns to the calling process,
+      -- the returned value will be -1, ie an error has occurred.
+      -- `argv', `envp' should have a null pointer as the last pointer.
+      new_argv: EXT_OB;
+      if (argv.size /= 0) then
+	 argv_sz:INT := argv.asize;
+	 new_argv := RUNTIME::rt_create_astr(argv.size, STR::concat_all(argv));
+      end; -- if
+      new_envp: EXT_OB;
+      if (envp.size /= 0) then
+	 envp_sz:INT := envp.asize;
+	 new_envp := RUNTIME::rt_create_astr(envp.size, STR::concat_all(envp));
+      end; -- if
+      return C_UNIX::execve(prog, new_argv, new_envp);
+   end; -- execve
+
+end; -- UNIX
+----------------------------------------------------------------------------------
+external class C_UNIX is
+
+   system(s:STR):INT;
+   getenv(var:STR):EXT_OB;
+   exit(code:INT);
+   execve(prog:STR, argv:EXT_OB, envp: EXT_OB): INT;
+   abort;
+
+end;
+----------------------------------------------------------------------------------

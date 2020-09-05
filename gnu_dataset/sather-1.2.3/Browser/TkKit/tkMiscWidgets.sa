@@ -1,0 +1,75 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 199x by International Computer Science Institute            --
+-- This file is part of the GNU Sather package. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the  GNU General Public --
+-- License (GPL)  as  published  by the  Free  Software  Foundation;  either --
+-- version 3 of the license, or (at your option) any later version.          --
+-- This  program  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/GPL for more details.        --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- TkMiscWidgets.sa: the name says it all
+-- Author: Matthias Ernst <mernst@desy.de>
+
+class TK_LABEL < $TK_WIDGET is
+   include TK_WIDGET;
+   readonly shared typus: STR := "label";
+end; -- class TK_LABEL < $TK_WIDGET
+
+-------------------------------------------------------------------
+
+class TK_MESSAGE < $TK_WIDGET is
+   include TK_WIDGET;
+   readonly shared typus: STR := "message";
+end; -- class TK_MESSAGE < $TK_WIDGET IS
+
+-------------------------------------------------------------------
+class TK_ENTRY < $TK_WIDGET is
+   include TK_WIDGET;
+   readonly shared typus: STR := "entry";
+
+   get: STR is			-- returns the widgets entry
+      return app.tcl_tk.eval(pathname+" get");
+   end;
+      
+   clear is
+      app.tcl_tk.eval(pathname + " delete 0 end");
+   end;
+
+   set(s: STR) is
+      clear;
+      app.tcl_tk.eval(pathname + " insert 0 " + s.pretty);
+   end;
+end; -- class TK_ENTRY < $TK_WIDGET
+   
+-------------------------------------------------------------------
+   
+class TK_FRAME < $TK_WIDGET is
+   include TK_WIDGET;
+   readonly shared typus: STR := "frame";
+end; -- class TK_FRAME < $TK_WIDGET
+   
+-------------------------------------------------------------------
+class TK_BUTTON < $TK_WIDGET is
+   include TK_WIDGET;
+   readonly shared typus: STR := "button";
+
+   rout(r: ROUT) is
+      cb_name ::= pathname+"#command";
+      callback := #TKKIT_CB(cb_name, r);
+   end;
+
+   callback(cb: $TKKIT_CB) is
+      app.callback(cb);
+      configure("command", cb.call_str(void)); -- no args
+   end;
+
+   invoke is
+      app.tcl_tk.eval(pathname + " invoke");
+   end;
+end; -- class TK_BUTTON < $TK_WIDGET
+
+-------------------------------------------------------------------

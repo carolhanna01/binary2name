@@ -1,0 +1,1282 @@
+@q parabold.web @>
+
+@q * (0) Copyright and License.@>
+
+@q This file is part of GNU 3DLDF, a package for three-dimensional drawing. @>
+@q Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, @>
+@q 2011, 2012, 2013 The Free Software Foundation @>
+
+@q GNU 3DLDF is free software; you can redistribute it and/or modify @>
+@q it under the terms of the GNU General Public License as published by @>
+@q the Free Software Foundation; either version 3 of the License, or @>
+@q (at your option) any later version. @>
+
+@q GNU 3DLDF is distributed in the hope that it will be useful, @>
+@q but WITHOUT ANY WARRANTY; without even the implied warranty of @>
+@q MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the @>
+@q GNU General Public License for more details. @>
+
+@q You should have received a copy of the GNU General Public License @>
+@q along with GNU 3DLDF; if not, write to the Free Software @>
+@q Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA @>
+
+@q GNU 3DLDF is a GNU package.  @>
+@q It is part of the GNU Project of the  @>
+@q Free Software Foundation @>
+@q and is published under the GNU General Public License. @>
+@q See the website http://www.gnu.org @>
+@q for more information.   @>
+@q GNU 3DLDF is available for downloading from @>
+@q http://www.gnu.org/software/3dldf/LDF.html. @>
+
+@q (``@@'' stands for a single at-sign in the following paragraph.) @>
+
+@q Please send bug reports to Laurence.Finston@@gmx.de @>
+@q The mailing list help-3dldf@@gnu.org is available for people to @>
+@q ask other users for help.  @>
+@q The mailing list info-3dldf@@gnu.org is for sending @>
+@q announcements to users. To subscribe to these mailing lists, send an @>
+@q email with ``subscribe <email-address>'' as the subject.  @>
+
+@q The author can be contacted at: @>
+
+@q Laurence D. Finston                 @> 
+@q c/o Free Software Foundation, Inc.  @>
+@q 51 Franklin St, Fifth Floor         @> 
+@q Boston, MA  02110-1301              @>
+@q USA                                 @>
+
+@q Laurence.Finston@@gmx.de (@@ stands for a single ``at'' sign.)@>
+
+
+@q * (0) Paraboloids.@>
+@** Paraboloids\quad ({\tt parabold\PERIOD web}).\hfil
+
+\LOG
+\initials{LDF 2006.01.23.}
+Created this file.
+\ENDLOG 
+
+\immediate\write\functexifile{File:  parabold.web^^J}
+
+@q * (1) Include files.@>
+@ Include files.
+
+@<Include files@>=
+
+#include "loader.h++"
+#include "pspglb.h++"
+#include "io.h++"
+#include "creatnew.h++"
+#include "pntrvctr.h++"
+#include "primes.h++"
+#include "complex.h++"
+#include "matrices.h++"
+#include "colors.h++"
+#include "transfor.h++"
+#include "pens.h++"
+#include "dashptrn.h++"
+#include "shapes.h++"  
+#include "pictures.h++"  
+#include "points.h++"
+#include "lines.h++"
+#include "planes.h++"
+#include "nurbs.h++"
+#include "paths.h++"
+#include "curves.h++"
+#include "polygons.h++"
+#include "triangle.h++"
+#include "rectangs.h++"
+#include "conicsct.h++"
+#include "ellipses.h++"
+#include "circles.h++"
+#include "ellpsslc.h++"
+#include "crclslc.h++"
+#include "parabola.h++"
+#include "hyprbola.h++"
+#include "cncsctlt.h++"
+#include "arc.h++"
+#include "helices.h++"
+#include "origami.h++"
+#include "solids.h++"
+#include "solfaced.h++"
+#include "cuboid.h++"
+#include "polyhed.h++"
+#include "ddchdrn.h++"
+#include "rhtchdrn.h++"
+#include "plyhdslc.h++"
+#include "cones.h++"
+#include "cylinder.h++" 
+#include "ellpsoid.h++" 
+
+@q * (1) Paraboloid class definition.@>
+@* {\bf Paraboloid} class definition.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this |class| definition.
+
+\initials{LDF 2006.01.25.}
+Replaced |static const unsigned short NORMAL_TYPE| with 
+|ELLIPTICAL_TYPE| and |HYPERBOLIC_TYPE|.
+\ENDLOG
+
+@<Define |class Paraboloid|@>=
+
+class Paraboloid : public Solid
+{
+
+   protected:
+   
+/* START HERE!!  Get rid of |axis_x|, |axis_y|, and |axis_z|.  
+   LDF 2006.01.25.*/ 
+
+      real axis_x;
+      real axis_y;
+      real axis_z;
+
+      unsigned short type;
+
+      unsigned short divisions_x;
+      unsigned short divisions_y;
+      unsigned short divisions_z;
+  
+      unsigned int parabola_point_count;
+
+      vector<Parabola*> main_parabolae;
+
+   public:
+
+      static const real DEFAULT_AXIS;
+      static const unsigned short DEFAULT_DIVISIONS_X;
+      static const unsigned short DEFAULT_DIVISIONS_Y;
+      static const unsigned short DEFAULT_DIVISIONS_Z;
+      static const unsigned short PARABOLOID_NULL_TYPE;
+      static const unsigned short ELLIPTICAL_TYPE;
+      static const unsigned short HYPERBOLIC_TYPE;
+
+      static const unsigned int DEFAULT_PARABOLA_POINT_COUNT;
+
+  @<Declare |Paraboloid| functions@>@;
+};
+
+@q ** (2) Static member variable definitions.@>
+@*1 Static member variable definitions.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Now setting |ELLIPTICAL_TYPE| and |HYPERBOLIC_TYPE|.
+\ENDLOG 
+
+@q *** (3) Code.@> 
+
+@<Define |static| |class Paraboloid| data members@>=
+
+   const real           Paraboloid::DEFAULT_AXIS         =  1;  
+   const unsigned short Paraboloid::DEFAULT_DIVISIONS_X  =  8;
+   const unsigned short Paraboloid::DEFAULT_DIVISIONS_Y  =  8;
+   const unsigned short Paraboloid::DEFAULT_DIVISIONS_Z  =  2;
+
+   const unsigned short Paraboloid::PARABOLOID_NULL_TYPE   = 0;
+   const unsigned short Paraboloid::ELLIPTICAL_TYPE        = 1;
+   const unsigned short Paraboloid::HYPERBOLIC_TYPE        = 2;   
+
+   const unsigned int Paraboloid::DEFAULT_PARABOLA_POINT_COUNT = 64;
+
+@q * (1) Constructors and setting functions.@>
+@* Constructors and setting functions.@>
+\initials{LDF 2006.01.23.}
+
+@q ** (2) Default constructor.  No arguments.@>
+@*1 Default constructor. No arguments.
+@^\cfunc{Paraboloid}{Paraboloid}@>
+\cfunctexi{Paraboloid}{Paraboloid}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@>
+
+@<Declare |Paraboloid| functions@>=
+Paraboloid(void);
+
+@q *** (3) Definition.@>
+
+@
+@<Define |Paraboloid| functions@>= 
+Paraboloid::Paraboloid(void)
+{
+
+   shape_type = PARABOLOID_TYPE;
+   type = PARABOLOID_NULL_TYPE;
+   axis_x = axis_y = axis_z = 0;
+   divisions_x = divisions_y = divisions_z = 0;
+  
+   parabola_point_count = 0;
+
+   return;
+
+}
+
+@q ** (2) Setting function.@> 
+@*1 Setting function.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+
+\initials{LDF 2006.01.25.}
+Made this function virtual.
+\ENDLOG
+
+@q *** (3) Declaration.  @>
+
+@<Declare |Paraboloid| functions@>=
+virtual
+int
+set(Paraboloid_Set_Option_Struct* options = 0, Scanner_Node scanner_node = 0);
+
+@q *** (3) Definition.  @>
+
+@
+@<Define |Paraboloid| functions@>= 
+int
+Paraboloid::set(Paraboloid_Set_Option_Struct* options, Scanner_Node scanner_node)
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+ 
+   return 0;
+
+}  /* End of |Paraboloid::set()| definition.  */
+
+@q * (1) Destructor.@> 
+@* Destructor.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+virtual
+~Paraboloid(void);
+
+@q *** (3) Definition.  @>
+
+@
+@<Define |Paraboloid| functions@>= 
+Paraboloid::~Paraboloid(void)
+{
+   for (vector<Parabola*>::iterator iter = main_parabolae.begin();
+        iter != main_parabolae.end();  
+        ++iter)
+       {
+          delete *iter;
+          *iter = 0;
+       }
+
+   main_parabolae.clear();    
+
+   return;
+}
+
+@q * (1) Pseudo-constructor for dynamic allocation.@>
+@* Pseudo-constructor for dynamic allocation.
+
+@q ** (2) Pointer argument.@>
+@*1 Pointer argument.
+@^\cfunc{Paraboloid}{create\_new\_paraboloid}@>
+\cfunctexi{Paraboloid}{create\_new\_paraboloid}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Paraboloid|@>=
+Paraboloid* 
+create_new(const Paraboloid* c, Scanner_Node scanner_node);
+
+@q ** (2) Reference argument.@>
+@*1 Reference argument.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare non-member template functions for |Paraboloid|@>=
+Paraboloid* 
+create_new(const Paraboloid& c, Scanner_Node scanner_node);
+
+
+@q * (1) Assignment.@> 
+@* Assignment.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Assignment from a |Paraboloid|.@> 
+@*1 Assignment from a |Paraboloid|.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Paraboloid| functions@>=
+virtual
+Paraboloid&
+operator=(const Paraboloid& c);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Paraboloid| functions@>=
+
+Paraboloid&
+Paraboloid::operator=(const Paraboloid& e)
+{
+    if (this == &e) /* Make sure it's not self-assignment. */
+       return *this;
+
+     type = e.type;
+
+     axis_x = e.axis_x;
+     axis_y = e.axis_y;
+     axis_z = e.axis_z;
+
+     divisions_x = e.divisions_x;
+     divisions_y = e.divisions_y;
+     divisions_z = e.divisions_z;
+
+     parabola_point_count = e.parabola_point_count;
+
+     for (vector<Parabola*>::iterator iter = main_parabolae.begin();
+          iter != main_parabolae.end();  
+          ++iter)
+       {
+          delete *iter;
+          *iter = 0;
+       }
+
+      main_parabolae.clear();
+
+
+      for (vector<Parabola*>::const_iterator iter = e.main_parabolae.begin();
+           iter != e.main_parabolae.end();  
+           ++iter)
+        {
+           main_parabolae.push_back(create_new<Parabola>(*iter));                    
+        }
+
+     Solid::operator=(e);
+
+     return *this;
+
+}  /* End of |Paraboloid::operator=(const Paraboloid& h)| definition.  */
+
+@q * (1) Returning elements and information.@>
+@* Returning elements and information.
+
+@q ** (2) Get |Shape| type.@> 
+@*1 Get {\bf Shape} type.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Paraboloid| functions@>=
+virtual 
+inline
+unsigned short 
+get_shape_type(void) const
+{
+   return PARABOLOID_TYPE;
+}
+
+@q ** (2) Get type.@> 
+@*1 Get type.
+\initials{LDF 2006.01.25.}
+
+\LOG
+\initials{LDF 2006.01.25.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Paraboloid| functions@>=
+virtual 
+inline
+unsigned short 
+get_type(void) const
+{
+   return type;
+}
+
+@q ** (2) Size.@> 
+@*1 Size.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Paraboloid| functions@>=
+virtual 
+unsigned int
+size(void);
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Paraboloid| functions@>=
+unsigned int
+Paraboloid::size(void)
+{
+   return 0;
+}
+
+@q ** (2) Location.@> 
+@*1 Location.
+\initials{LDF 2006.01.23.}
+
+Return values:\hfil\break
+\item{0}: |Point| lies on the surface of the |Paraboloid|.
+%
+\item{1}: |Point| lies within the |Paraboloid|.
+%
+\item{-1}: |Point| lies outside the |Paraboloid|.
+%
+\item{-2}: |Paraboloid::standardize()| failed to put the |Paraboloid| 
+into standard position.\hfil\break 
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Paraboloid| functions@>=
+Signed_Byte
+location(Point p, Scanner_Node scanner_node = 0, bool no_transform = false) const;
+
+
+@q *** (3) Definition.@> 
+@
+@<Define |Paraboloid| functions@>=
+Signed_Byte
+Paraboloid::location(Point p, Scanner_Node scanner_node, bool no_transform) const
+{
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+   return -2;
+
+
+}  /* End of |Paraboloid::location()| definition.  */
+
+@q * (1) Predicates.@> 
+@* Predicates.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Is paraboloidal.@>
+@*1 Is paraboloidal.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+@q *** (3) |Solid| version.@> 
+@*2 {\bf Solid} version.
+@^\cfunc{Solid}{is\_paraboloidal}@>
+\cfunctexi{Solid}{is\_paraboloidal}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.  It is declared in \filename{solids.web}.
+It currently has a dummy definition and returns |false|.
+\ENDLOG
+
+@q **** (4) Definition.@> 
+  
+@
+@<Define |Solid| functions@>=
+bool
+Solid::is_paraboloidal(Scanner_Node scanner_node) const
+{
+
+@q ***** (5) Preliminaries.@> 
+
+  bool DEBUG = false; /* |true|  */
+
+  using namespace Scan_Parse;
+
+  stringstream cerr_strm;
+
+  bool error_stop_value   = true;
+  bool warning_stop_value = true;
+  string thread_name      = "";
+
+  if (scanner_node)
+     scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                   &error_stop_value,
+                                                   &warning_stop_value);
+
+@q ***** (5)@>  
+  
+   return false;
+
+} /* End of |Solid::is_paraboloidal()| definition.  */
+
+@q * (1) Transformations.@>
+@* Transformations. 
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) Multiplication by a |Transform| with assignment.@>
+@*2 Multiplication by a |Transform| with assignment.
+@^\cofunc{Paraboloid}{*=}@>
+\cofunctexi{Paraboloid}{*=}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG 
+
+@<Declare |Paraboloid| functions@>=
+virtual
+Transform
+operator*=(const Transform& t);
+
+@
+@<Define |Paraboloid| functions@>=
+Transform
+Paraboloid::operator*=(const Transform& t)
+{
+   for (vector<Parabola*>::iterator iter = main_parabolae.begin();
+        iter != main_parabolae.end();  
+        ++iter)
+      (**iter) *= t;
+ 
+   return Solid::operator*=(t);
+}
+
+
+@q ** (2) Rotatation around the main axes.@>
+@*1 Rotation  around the main axes. 
+@^\cfunc{Paraboloid}{rotate}@>
+\cfunctexi{Paraboloid}{rotate}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+virtual
+Transform 
+rotate(const real x, const real y = 0, const real z = 0);
+
+@
+@<Define |Paraboloid| functions@>=
+Transform 
+Paraboloid::rotate(const real x, const real y, const real z)
+{
+  Transform t;
+  t.rotate(x, y, z);
+  return operator*=(t);
+}
+
+@q ** (2) Scale. @>
+@*1 Scale. 
+@^\cfunc{Paraboloid}{scale}@>
+\cfunctexi{Paraboloid}{scale}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+virtual
+Transform 
+scale(real x, real y = 1, real z = 1);
+
+@
+@<Define |Paraboloid| functions@>=
+Transform 
+Paraboloid::scale(real x, real y, real z)
+{
+   Transform t;
+   t.scale(x, y, z);
+   return operator*=(t);
+}
+
+@q ** (2) Shear.@>
+@*1 Shear. 
+@^\cfunc{Paraboloid}{shear}@>
+\cfunctexi{Paraboloid}{shear}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+
+@<Declare |Paraboloid| functions@>=
+
+virtual
+Transform 
+shear(real xy, real xz = 0, real yx = 0, real yz = 0, 
+      real zx = 0, real zy = 0);
+
+@
+@<Define |Paraboloid| functions@>=
+Transform 
+Paraboloid::shear(real xy, real xz, real yx, real yz, 
+      real zx, real zy)
+{
+  Transform t;
+  t.shear(xy, xz, yx, yz, zx, zy);
+  return operator*=(t);
+
+}
+
+@q ** (2) Shift.@>
+@*1 Shift. 
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) |real| arguments.@>
+@*2 {\bf real} arguments. 
+@^\cfunc{Paraboloid}{shift}@>
+\cfunctexi{Paraboloid}{shift}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+virtual
+Transform 
+shift(real xx, real yy = 0, real zz = 0);
+
+@
+@<Define |Paraboloid| functions@>=
+Transform
+Paraboloid::shift(real xx, real yy, real zz)
+{
+  Transform t;
+  t.shift(xx, yy, zz);
+  return operator*=(t);
+}
+
+
+@q *** (3) Point argument.@>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Paraboloid}{shift}@>
+\cfunctexi{Paraboloid}{shift}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+virtual
+Transform 
+shift(const Point& p);
+
+@
+@<Define |Paraboloid| functions@>=
+Transform 
+Paraboloid::shift(const Point& p)
+{
+  return shift(p.get_x(), p.get_y(), p.get_z());
+}
+
+
+@q ** (2) Shift times. @>
+@*1 Shift times. 
+\initials{LDF 2006.01.23.}
+
+@q *** (3) real arguments. @>
+
+@*2 {\bf real} arguments. 
+@^\cfunc{Paraboloid}{shift\_times}@>
+\cfunctexi{Paraboloid}{shift\_times}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.  It's commented-out, because 
+|Solid::shift_times()| currently doesn't exist.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+
+#if 0 
+
+virtual
+void 
+shift_times(real x, real y = 1, real z = 1);
+
+#endif 
+
+@
+@<Define |Paraboloid| functions@>=
+
+#if 0 
+void 
+Paraboloid::shift_times(real x, real y, real z)
+{
+
+    Solid::shift_times(x, y, z);
+  
+    return;
+}
+#endif 
+
+@q *** (3) Point argument. @>
+
+@*2 {\bf Point} argument. 
+@^\cfunc{Paraboloid}{shift\_times}@>
+\cfunctexi{Paraboloid}{shift\_times}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+It's commented-out, because 
+|Solid::shift_times()| currently doesn't exist.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+#if 0 
+virtual
+void
+shift_times(const Point& p);
+#endif 
+
+@
+@<Define |Paraboloid| functions@>=
+#if 0 
+void
+Paraboloid::shift_times(const Point& p)
+{
+  return shift_times(p.get_x(), p.get_y(), p.get_z());
+}
+#endif 
+
+@q ** (2) Rotatation around an arbitrary axis.@>
+@*1 Rotatation around an arbitrary axis. 
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+@q *** (3) Point arguments.@>
+
+@*2 {\bf Point} arguments.
+@^\cfunc{Paraboloid}{rotate}@>
+\cfunctexi{Paraboloid}{rotate}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+
+virtual
+Transform 
+rotate(const Point& p0, const Point& p1, const real angle = 180);
+
+@
+@<Define |Paraboloid| functions@>=
+Transform 
+Paraboloid::rotate(const Point& p0, const Point& p1, const real angle)
+{
+  Transform t;
+  t.rotate(p0, p1, angle);
+  return operator*=(t);
+}
+
+@q *** (3) Path argument.@>
+
+@*2 {\bf Path} arguments.
+@^\cfunc{Paraboloid}{rotate}@>
+\cfunctexi{Paraboloid}{rotate}
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@<Declare |Paraboloid| functions@>=
+
+virtual
+Transform 
+rotate(const Path& p, const real angle = 180);
+
+@
+@<Define |Paraboloid| functions@>=
+
+Transform 
+Paraboloid::rotate(const Path& p, const real angle)
+{
+   if (!p.is_linear())
+     {
+        return INVALID_TRANSFORM;
+     }
+
+   return rotate(p.get_point(0),
+                 p.get_last_point(), angle);  
+}   
+
+@q ** (2) Standardize.@> 
+@*1 Standardize.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q *** (3) Declaration.@> 
+
+@<Declare |Paraboloid| functions@>=
+Transform* 
+standardize(Scanner_Node scanner_node = 0) const;
+
+@q *** (3) Definition.@> 
+
+@
+@<Define |Paraboloid| functions@>=
+Transform* 
+Paraboloid::standardize(Scanner_Node scanner_node) const
+{
+
+@q **** (4) Preliminaries.@>   
+
+#if DEBUG_COMPILE
+   bool DEBUG = false; /* |true| */ @; 
+#endif /* |DEBUG_COMPILE|  */@; 
+
+   stringstream cerr_strm;
+
+   bool error_stop_value   = true;
+   bool warning_stop_value = true;
+   string thread_name      = "";
+
+   if (scanner_node)
+      scanner_node->get_thread_name_and_stop_values(&thread_name,
+                                                    &error_stop_value,
+                                                    &warning_stop_value);
+
+   using namespace Scan_Parse;
+
+@q **** (4).@>
+
+
+    return 0;
+
+}  /* End of |Paraboloid::standardize()| definition.  */
+
+@q * (1) Intersections.@> 
+@* Intersections.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+@q * (1) Show.@> 
+@* Show.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+
+\initials{LDF 2006.01.25.}
+Added code for showing |type|.
+\ENDLOG
+
+@q ** (2) Declaration.@> 
+
+@<Declare |Paraboloid| functions@>=
+
+virtual 
+void 
+show(string text = "", 
+     char coords = 'w',
+     const bool do_persp = true, 
+     const bool do_apply = true,
+     Focus* f = 0, 
+     const unsigned short proj = 0,
+     const real factor = 1) const;
+
+
+@q ** (2) Definition.@> 
+
+@
+@<Define |Paraboloid| functions@>=
+void 
+Paraboloid::show(string text, char coords,
+            const bool do_persp, const bool do_apply,
+            Focus* f, const unsigned short proj,
+            const real factor) const
+
+{
+    if (text == "")
+       text = "Paraboloid";
+
+    cerr << text << endl;
+
+    if (type == PARABOLOID_NULL_TYPE)
+       cerr << "type == " << "PARABOLOID_NULL_TYPE";
+    else if (type == ELLIPTICAL_TYPE)
+       cerr << "type == " << "ELLIPTICAL_TYPE";
+    else if (type == HYPERBOLIC_TYPE)
+       cerr << "type == " << "HYPERBOLIC_TYPE";
+    else 
+       cerr << "ERROR!  In `Paraboloid::show()':"
+            << "`Paraboloid' has invalid type:  " 
+            << type;
+
+    cerr << endl;
+
+    cerr << "axis_x == " << axis_x
+         << endl
+         << "axis_y == " << axis_y
+         << endl
+         << "axis_z == " << axis_z
+         << endl
+         << "divisions_x == " << divisions_x
+         << endl
+         << "divisions_y == " << divisions_y
+         << endl
+         << "divisions_z == " << divisions_z
+         << endl
+         << "parabola_point_count == " << parabola_point_count
+         << endl;
+
+#if 0
+    for (vector<Parabola*>::const_iterator iter = parabolae.begin();
+         iter != parabolae.end();
+         ++iter)
+       {
+           (*iter)->show("Parabola", coords, do_persp, do_apply,
+                         f, proj, factor);
+       }
+#endif
+
+    return;
+
+} /* End of |Paraboloid::show()| definition.  */
+
+@q * (1) Paraboloid_Set_Option_Struct.@> 
+@* {\bf Paraboloid\_Set\_Option\_Struct}.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+@q ** (2) Struct definition.@> 
+@*1 Struct definition.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this |struct| definition.
+\ENDLOG
+
+@<Define |struct Paraboloid_Set_Option_Struct|@>=
+
+struct
+Paraboloid_Set_Option_Struct
+{
+   unsigned short type;
+
+   real max_extent;
+
+   unsigned short divisions_x;
+   unsigned short divisions_y;
+   unsigned short divisions_z;
+
+   unsigned int parabola_point_count;
+
+   @<Declare |Paraboloid_Set_Option_Struct| functions@>@;
+
+};
+
+@q ** (2) |Paraboloid_Set_Option_Struct| functions.@> 
+@*1 {\bf Paraboloid\_Set\_Option\_Struct} functions.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+
+@q *** (3) Constructors.  @>
+@*2 Constructors.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this section.
+\ENDLOG
+
+@q **** (4) Default constructor.@>   
+@*3 Default constructor.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+
+\initials{LDF 2006.01.25.}
+Now setting |type| to |Paraboloid::PARABOLOID_NULL_TYPE| rather than
+|Paraboloid::NORMAL_TYPE|.
+\ENDLOG
+
+@q ***** (5) Declaration.@>  
+
+@<Declare |Paraboloid_Set_Option_Struct| functions@>=
+
+Paraboloid_Set_Option_Struct(void);
+
+@q ***** (5) Definition.@>  
+
+@
+@<Define |Paraboloid_Set_Option_Struct| functions@>=
+
+Paraboloid_Set_Option_Struct::Paraboloid_Set_Option_Struct(void) 
+{
+    type                 = Paraboloid::PARABOLOID_NULL_TYPE;
+    max_extent           = 0;
+    divisions_x          = Paraboloid::DEFAULT_DIVISIONS_X;
+    divisions_y          = Paraboloid::DEFAULT_DIVISIONS_Y;
+    divisions_z          = Paraboloid::DEFAULT_DIVISIONS_Z;
+    parabola_point_count = Paraboloid::DEFAULT_PARABOLA_POINT_COUNT;
+}
+
+@q *** (3) Destructor.@> 
+@*2 Destructor.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Paraboloid_Set_Option_Struct| functions@>=
+
+~Paraboloid_Set_Option_Struct(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Paraboloid_Set_Option_Struct| functions@>=
+
+Paraboloid_Set_Option_Struct::~Paraboloid_Set_Option_Struct(void) 
+{
+
+    return;
+}
+
+@q *** (3) Clear.@> 
+@*2 Clear.
+\initials{LDF 2006.01.23.}
+
+\LOG
+\initials{LDF 2006.01.23.}
+Added this function.
+\ENDLOG
+
+@q **** (4) Declaration.@>  
+
+@<Declare |Paraboloid_Set_Option_Struct| functions@>=
+
+int 
+clear(void); 
+
+@q **** (4) Definition.@>  
+
+@
+@<Define |Paraboloid_Set_Option_Struct| functions@>=
+
+int
+Paraboloid_Set_Option_Struct::clear(void) 
+{
+
+    type = Paraboloid::PARABOLOID_NULL_TYPE;
+
+    max_extent = 0;
+    divisions_x = divisions_y = divisions_z = 0;
+
+    parabola_point_count = 0;
+
+    return 0;
+
+}  /* End of |Paraboloid_Set_Option_Struct::clear()| definition.  */
+
+
+@q * (1) Putting Paraboloid together. @>
+@* Putting {\bf Paraboloid} together.
+
+\immediate\write\functexifile{^^JEnd of file:  parabold.web^^J}
+
+@q ** (2) This is what's compiled.@> 
+
+This is what's compiled.
+
+@c
+@<Include files@>@;
+@<Define |class Paraboloid|@>@;
+@<Define |static| |class Paraboloid| data members@>@;
+@<Define |struct Paraboloid_Set_Option_Struct|@>@;
+@<Define |Paraboloid| functions@>@;
+@<Define |Paraboloid_Set_Option_Struct| functions@>@;
+@<Declare non-member template functions for |Paraboloid|@>@;
+@<Define |Solid| functions@>@;
+
+@q ** (2) This is what's written to "parabold.h".@> 
+
+@ This is what's written to \filename{parabold.h}.
+
+@(parabold.h@>=
+@<Define |class Paraboloid|@>@;
+@<Define |struct Paraboloid_Set_Option_Struct|@>@;
+@<Declare non-member template functions for |Paraboloid|@>@;
+
+
+@q * Emacs-Lisp code for use in indirect buffers when using the          @>
+@q   GNU Emacs editor.  The local variable list is not evaluated when an @>
+@q   indirect buffer is visited, so it's necessary to evaluate the       @>
+@q   following s-expression in order to use the facilities normally      @>
+@q   accessed via the local variables list.                              @>
+@q   \initials{LDF 2004.02.12}.                                          @>
+@q   (progn (cweb-mode) (outline-minor-mode t) (setq fill-column 80))    @>
+
+
+@q * Local variables for Emacs.@>
+@q Local Variables: @>
+@q mode:CWEB @>
+@q eval:(display-time) @>
+@q run-gxx-on-file:"main.c" @>
+@q run-cweb-on-file:"main.web" @>
+@q run-cweave-on-file:"3DLDF.web" @>
+@q run-mp-on-file:"persp.mp" @>
+@q makefile:"makefile" @>
+@q executable-name:"pp" @>
+@q use-g++:t @>
+@q eval:(read-abbrev-file) @>
+@q indent-tabs-mode:nil @>
+@q eval:(outline-minor-mode) @>
+@q End: @>

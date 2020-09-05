@@ -1,0 +1,417 @@
+;;; Excercise the XDR language parser.                -*- Scheme -*-
+;;;
+;;; GNU Guile-RPC --- A Scheme implementation of ONC RPC.
+;;; Copyright (C) 2008, 2010, 2012  Free Software Foundation, Inc.
+;;;
+;;; This file is part of GNU Guile-RPC.
+;;;
+;;; GNU Guile-RPC is free software; you can redistribute it and/or modify it
+;;; under the terms of the GNU Lesser General Public License as published by
+;;; the Free Software Foundation; either version 3 of the License, or (at
+;;; your option) any later version.
+;;;
+;;; GNU Guile-RPC is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU Lesser General Public License
+;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+(define-module (tests parser)
+  :use-module (rpc compiler parser)
+  :use-module (srfi srfi-13)
+  :use-module (srfi srfi-34)
+  :use-module (srfi srfi-39)
+  :use-module (srfi srfi-64))
+
+(define (xdr-text . body)
+  (open-input-string (string-join body (string #\newline))))
+
+(define (location sexp)
+  (let loop ((sexp sexp))
+    (if (pair? sexp)
+        (cons (vector (source-property sexp 'line)
+                      (source-property sexp 'column))
+              (map loop sexp))
+        sexp)))
+
+
+;;;
+;;; Parser.
+;;;
+
+(test-begin "xdr-parser")
+
+(test-equal "constants"
+            '((define-constant "oct"  8)
+              (define-constant "dec"  0)
+              (define-constant "dec" 10)
+              (define-constant "hex" 16))
+
+            (rpc-language->sexp
+             (xdr-text "const oct =  010;"
+                       "const dec =    0;"
+                       "const dec =   10;"
+                       "const hex = 0x10;")))
+
+(test-equal "simple definitions"
+            '((define-type "foo_t" "int")
+              (define-constant "magic" 42)
+              (define-type "blurps" (enum ("x" 2) ("z" "magic")))
+              (define-type "chbouib_t"
+                (fixed-length-array "int" 4)))
+
+            (rpc-language->sexp
+             (xdr-text "/* This is a comment.  */"
+                       "/* This is a" (string #\newline)
+                       "   multi-line comment.  */"
+                       "typedef int foo_t;"
+                       "const magic = 42;"
+                       "enum blurps { x = 2, z = magic };"
+                       "typedef int chbouib_t[4];")))
+
+(test-equal "struct definitions"
+            '((define-type "foo"
+                (struct ("i" "int")
+                        ("u" "unsigned int")
+                        ("f" "float")))
+              (define-type "bar"
+                (struct ("i" "int")
+                        ("e" (enum ("a" 2) ("b" 3)))
+                        ("s" (struct ("x" "int") ("y" "double"))))))
+
+            (rpc-language->sexp
+             (xdr-text "struct foo { int i; unsigned int u; float f; };"
+                       "struct bar { int i; enum { a = 2, b = 3 } e; "
+                       "             struct { int x; double y; } s; };")))
+
+(test-equal "union definitions"
+            '((define-type "no_default"
+                (union (case ("choice" "unsigned int")
+                         ((0 1) "void")
+                         ((2)   ("q" "quadruple")))))
+
+              (define-type "chbouib"
+                (union (case ("choose" "int")
+                         ((0)   "void")
+                         ((1 2) ("u" "unsigned int"))
+                         ((3)   ("e" (enum ("a" 10) ("b" 16) ("c" 8))))
+                         ((4)   ("s" (struct ("x" "int") ("y" "double"))))
+                         (else  ("h" "unsigned hyper"))))))
+
+            (rpc-language->sexp
+             (xdr-text "union no_default"
+                       "  switch (unsigned int choice) {"
+                       "    case 0: case 1:"
+                       "      void;"
+                       "    case 2:"
+                       "      quadruple q;"
+                       "  };"
+
+                       "union chbouib"
+                       "  switch (int choose) {"
+                       "    case 0:"
+                       "      void;"
+                       "    case 1:"
+                       "    case 2:"
+                       "      unsigned int u;"
+                       "    case 3:"
+                       "      enum { a = 10, b = 0x10, c = 010 } e;"
+                       "    case 4:"
+                       "      struct { int x; double y; } s;"
+                       "    default:"
+                       "      unsigned hyper h;"
+                       "  };")))
+
+(test-equal "unions with enum as discriminant"
+            '((define-constant "magic" 42)
+              (define-type "the_enum"
+                (enum ("a" 1) ("b" "magic")))
+              (define-type "foo"
+                (union (case ("d" "the_enum")
+                         (("a") "void")
+                         (("b") ("blurps" "int"))))))
+
+            (rpc-language->sexp
+             (xdr-text "const magic = 42;"
+                       "enum the_enum { a = 1, b = magic };"
+                       "union foo switch (the_enum d) {"
+                       "  case a: void;"
+                       "  case b: int blurps;"
+                       "};")))
+
+(test-equal "optional data unions"
+            '((define-type "optional_int"
+                (union (case ("opted" "bool")
+                         (("TRUE")  ("value" "foo_t"))
+                         (("FALSE") "void"))))
+
+              (define-type "s"
+                (struct ("x" "int")
+                        ("y" (union (case ("opted" "bool")
+                                      (("TRUE")  ("value" "int"))
+                                      (("FALSE") "void")))))))
+
+            (rpc-language->sexp
+             (xdr-text "typedef foo_t *optional_int;"
+                       "struct s { int x; int *y; };")))
+
+(test-equal "fixed-length arrays"
+            '((define-type "int_array"
+                (fixed-length-array "int" 3))
+              (define-type "struct_array"
+                (fixed-length-array (struct ("x" "int") ("y" "double"))
+                                    16)))
+
+            (rpc-language->sexp
+             (xdr-text "typedef int int_array[3];"
+                       "typedef struct { int x; double y; }"
+                       "        struct_array[16];")))
+
+(test-equal "variable-length arrays"
+            '((define-type "enum_array"
+                (variable-length-array (enum ("a" 1) ("b" 2))
+                                       8))
+              (define-type "union_array_nolimit"
+                (variable-length-array (union (case ("x" "int")
+                                                ((0)   ("foo"     "bool"))
+                                                ((1 2) ("bar"     "double"))
+                                                (else  ("chbouib" "hyper"))))
+                                       #f)))
+
+            (rpc-language->sexp
+             (xdr-text "typedef enum { a = 1, b = 2 } enum_array<010>;"
+                       "typedef union switch (int x) {"
+                       "          case 0: bool foo;"
+                       "          case 1: case 2: double bar;"
+                       "          default: hyper chbouib;"
+                       "        } union_array_nolimit<>;")))
+
+(test-equal "strings"
+            '((define-type "foo"
+                (string 256))
+              (define-type "bar"
+                (string #f))
+              (define-type "chbouib"
+                (struct ("x" "int")
+                        ("y" (string 10))
+                        ("z" (string #f)))))
+
+            (rpc-language->sexp
+             (xdr-text "typedef string foo<0x100>;"
+                       "typedef string bar<>;"
+                       "struct chbouib { int x; string y<10>; "
+                       "                 string z<>; };")))
+
+(test-equal "opaque arrays"
+            '((define-type "foo"
+                (fixed-length-array "opaque" 8))
+              (define-type "bar"
+                (variable-length-array "opaque" 10))
+              (define-type "chbouib"
+                (variable-length-array "opaque" #f))
+              (define-type "blurps"
+                (struct ("x" "int")
+                        ("y" (variable-length-array "opaque" 16)))))
+
+            (rpc-language->sexp
+             (xdr-text "typedef opaque foo[010];"
+                       "typedef opaque bar<10>;"
+                       "typedef opaque chbouib<>;"
+                       "struct blurps { int x; opaque y<0x10>; };")))
+
+(test-equal "program definition"
+            '((define-program "prog1" 10
+                (version "v1" 0
+                  (procedure "foo" 0
+                     "int"
+                     ("foo_t"))
+                  (procedure "bar" 1
+                     "double"
+                     ((enum ("a" 2) ("b" 3))
+                      "unsigned int"
+                      "bool")))))
+
+            (rpc-language->sexp
+             (xdr-text "program prog1 {"
+                       "  version v1 {"
+                       "    int    foo (foo_t) = 0;"
+                       "    double bar (enum { a = 2, b = 3 },"
+                       "                unsigned int, bool) = 1;"
+                       "  } = 0;"
+                       "} = 10;")))
+
+(test-equal "program definition with void"
+            '((define-program "prog2" 20
+                (version "v0" 0
+                  (procedure "foo" 0
+                     "void"
+                     ()))
+                (version "v1" 1
+                  (procedure "chbouib" 0
+                     "int"
+                     ()))))
+
+            (rpc-language->sexp
+             (xdr-text "program prog2 {"
+                       "  version v0 {"
+                       "    void foo (void) = 0;"
+                       "  } = 0;"
+                       "  version v1 {"
+                       "    int  chbouib (void) = 0;"
+                       "  } = 1;"
+                       "} = 20;")))
+
+(test-equal "Sun extension for `unsigned' type-specifier"
+            '((define-type "foo" "unsigned int")
+              (define-type "array"
+                (fixed-length-array "unsigned int" 10))
+              (define-program "p" 0
+                (version "v" 0
+                  (procedure "proc" 0
+                    "unsigned int"
+                    ("unsigned int" "int")))))
+
+            (parameterize ((*parser-options* '(allow-unsigned)))
+              (rpc-language->sexp
+               (xdr-text "typedef unsigned foo;"
+                         "typedef unsigned array[10];"
+                         "program p {"
+                         "  version v {"
+                         "    unsigned proc (unsigned, int) = 0;"
+                         "  } = 0;"
+                         "} = 0;"))))
+
+(test-equal "Sun extension for struct type-specifier"
+            '((define-type "foo"
+                (struct ("x" "int")
+                        ("y" "double")))
+              (define-type "bar" "foo"))
+
+            (parameterize ((*parser-options* '(allow-struct-type-specifier)))
+              (rpc-language->sexp
+               (xdr-text "struct foo { int x; double y; };"
+                         "typedef struct foo bar;"))))
+
+(test-equal "location information on type definitions"
+            '(#(#f #f)
+              (#(1 8) define-type "s"
+               (#(1 1) struct (#(1 16) "x" "int")
+                                (#(1 23) "y" "int")))
+              (#(2 8) define-type "e"
+               (#(2 1) enum   (#(2 12) "a" 0)
+                                (#(2 19) "b" 1)))
+              (#(3 8) define-type "u"
+               (#(3 1) union
+                (#(#f #f) case (#(3 20) "x" "e")
+                 (#(#f #f) (#(#f #f) "a") (#(4 16) "p" "bool"))
+                 (#(#f #f) (#(#f #f) "b") (#(5 16) "q"  "int")))))
+
+              (#(7 16) define-type "a"
+               (#(7 9) variable-length-array "opaque" 12))
+              (#(8 39) define-type "t1"
+               (#(8 9) struct (#(8 25) "z" "double")
+                              (#(8 34) "a" "float")))
+              (#(9 13) define-type "t2" "int"))
+
+            (location
+             (rpc-language->sexp
+              (xdr-text "struct s { int x; int y; };"
+                        "enum   e { a = 0, b = 1 };"
+                        "union  u switch (e x) {"
+                        "  case a: bool p;"
+                        "  case b: int  q;"
+                        "};"
+
+                        "typedef opaque a<12>;"
+                        "typedef struct { double z; float a; } t1;"
+                        "typedef int t2;"))))
+
+(test-equal "location information on program definitions"
+            '(#(#f #f)
+              (#(1 7) define-constant "MAX" 100)
+              (#(2 9) define-program "prog1" 10
+               (#(3 11) version "v1" 0
+                (#(4 12) procedure "foo" 0
+                 "int"
+                 (#(#f #f) "foo_t")))))
+
+            (location
+             (rpc-language->sexp
+              (xdr-text "const MAX = 100;"
+                        "program prog1 {"
+                        "  version v1 {"
+                        "    int    foo (foo_t) = 0;"
+                        "  } = 0;"
+                        "} = 10;"))))
+
+(test-equal "parse error"
+            '(1 14 semi-colon)
+            (guard (c ((parser-error? c)
+                       (let ((loc   (compiler-error:location c))
+                             (token (parser-error:token c)))
+                         (list (location-line loc) (location-column loc)
+                               token))))
+              (rpc-language->sexp
+               (xdr-text "const chbouib;"))
+              #f))
+
+(test-equal "`unsigned' type-specifier not recognized by default"
+            '(1 9 unsigned)
+
+            (guard (c ((parser-error? c)
+                       (let ((loc   (compiler-error:location c))
+                             (token (parser-error:token c)))
+                         (list (location-line loc) (location-column loc)
+                               token))))
+              (rpc-language->sexp
+               (xdr-text "typedef unsigned foo;"))))
+
+(test-equal "struct type-specifier not recognized by default"
+            '(1 9 struct)
+
+            (guard (c ((parser-error? c)
+                       (let ((loc   (compiler-error:location c))
+                             (token (parser-error:token c)))
+                         (list (location-line loc) (location-column loc)
+                               token))))
+              (rpc-language->sexp
+               (xdr-text "typedef struct foo *bar;"))))
+
+(test-equal "client RPC programs with unrecognized string parameter"
+            '(3 16 string)
+
+            (guard (c ((parser-error? c)
+                       (let ((loc   (compiler-error:location c))
+                             (token (parser-error:token c)))
+                         (list (location-line loc) (location-column loc)
+                               token))))
+              (rpc-language->sexp
+               (xdr-text "program prog {"
+                         "  version zero {"
+                         "    int hello (string) = 0;"
+                         "  } = 0;"
+                         "} = 77;"))))
+
+(test-equal "client RPC programs with string parameter"
+            '((define-program "prog" 77
+                (version "zero" 0
+                  (procedure "hello" 0
+                     "int"
+                     ("string")))))
+
+            (parameterize ((*parser-options*
+                            '(allow-string-param-type-specifier)))
+              (rpc-language->sexp
+               (xdr-text "program prog {"
+                         "  version zero {"
+                         "    int hello (string) = 0;"
+                         "  } = 0;"
+                         "} = 77;"))))
+
+(test-end "xdr-parser")
+
+
+(exit (= (test-runner-fail-count (test-runner-current)) 0))
+

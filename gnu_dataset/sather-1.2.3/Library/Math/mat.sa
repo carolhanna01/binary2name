@@ -1,0 +1,1381 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1994 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+class MAT{ET<$NFE{ET},VT<$VEC{ET,VT}} < $MAT{ET,VT,MAT{ET,VT}} is
+-- This is a purely Sather implementation of the generic dense
+-- concrete matrix class, with *COLUMN-MAJOR* (fortran-style) 
+-- layout.  First index changes most rapidly in stepping thru storage.
+
+-- This was written before iterator optimizations - a more natural
+-- style using the ind! and other iterators which are now built-in
+-- could be adopted. At the time it was written, the compiler
+-- did not dod these optimizations.
+-- Original note from Matt:n
+-- Because iters are not yet optimized or inlined in the compiler I
+-- will become a compromise for speed and write out operations with
+-- boring conventional loops.  Implementation will tend to use extra
+-- index variabless to avoid integer multiplication inside the loop.
+-- This may rely on assumed column major ordering.  Also I will
+-- attempt to use local variables and not attributes in loops. 
+
+
+   private include AREF{ET} aclear->aclear,aget->aget,aset->aset;
+
+   -- makes those named features public, others stay private.
+
+   readonly attr nr:INT;  -- number of rows
+   readonly attr nc:INT;  -- number of columns
+   -- built in feature inherited from AREF{*}, asize = nr*nc.
+
+   size: INT is return asize end;
+   size1:INT is return nr end; 
+   size2:INT is return nc end;
+   
+   element_zero:ET is return ET::zero; end;
+   element_one:ET is return ET::one; end; 
+   -- These may need be redefined for MATCPX et al.  This is a hack.  Zero
+   -- and one should really be features in in ET < $RING_ELT, where
+   -- $RING_ELT gives additive and multiplicative identity.
+
+   is_same_shape(arg:SAME):BOOL is
+      -- useful in preconditions.  Is arg dimensioned the same as self?
+      if void(arg) or void(self) then
+	 return false;
+      elsif arg.asize /= asize or arg.nr /= nr then
+	 return false;
+      else return true; end;
+   end;
+
+   is_same_shape_trans(arg:SAME):BOOL is
+      -- does arg^T conform to 'self'?
+      if void(arg) or void(self) then
+	 return false;
+      elsif arg.asize /= asize or arg.nr /= nc then
+	 return false;
+      else return true; end;
+   end;
+
+   fits(arg:SAME):BOOL is
+      -- will the contents of 'arg' fit into self, ignoring tranposition.
+      if void(arg) or void(self) or arg.asize /= asize then 
+	 return false; else return true end;
+   end;
+
+   is_eq(m: SAME): BOOL pre ~void(self) and ~void(m) and is_same_shape(m) is
+      loop if elt!/=m.elt! then return false end; end; return true end;
+   
+   reshape(r,c:INT) pre r*c = asize is
+      -- Reshape 'self' to have 'r' rows and 'c' columns but keeping
+      -- actual data, as laid out in one dimension, in the same place.
+      -- This only changes the bounds, the data will logically move 
+      -- rows and columns keeping column major layout.
+      -- Example:       [a d]
+      --             m1=[b e]
+      --                [c f].
+      -- m1.nr = 3, m1.nc = 2.   After m1.reshape(2,3):
+      --                [a c e]
+      --             m1=[b d f]
+      --                
+      -- This feature is NOT in the abstract supertype because it is
+      -- representation dependent.  
+      nc := c; nr := r;
+   end;
+   
+   create(r,c:INT):SAME pre (r>0) and (c>0) is
+      -- Create a matrix with r rows and c columns
+      res::=new(r*c);
+      res.nr := r; res.nc := c;
+      return(res);
+   end;
+
+   create(arg:SAME):SAME pre ~void(arg) is
+      -- Creates a new matrix with the same dimensions (but
+      -- not the same values) as arg
+      res::=new(arg.asize);
+      res.nr := arg.nr;  res.nc := arg.nc;
+      return(res);
+   end;
+
+   create(a: ARRAY{ARRAY{ET}}): SAME 
+   -- Create a new array with the same dimensions and values as
+   -- a, which is an array of arrays(rows). 
+   -- Assume that all the rows of "a" have the same number of elements
+      pre a.size > 0 and a[0].size > 0 is
+      sz1 ::= a.size;
+      sz2 ::= a[0].size;
+      res ::= #SAME(sz1,sz2);
+      loop r::=sz1.times!; 
+	 loop c::=sz2.times!; res[r,c] := a[r][c]; end end;
+      return(res);
+   end;
+   
+   str:STR is
+      -- The string form of self represented as a list of rows,
+      -- eg. "||1.00,2.33|,|4.5,2.8|,|9.7,3.2||".
+      sc::=#FSTR + "|";
+      loop r::=nr.times!; 
+	 if r/=0 then sc := sc+ "," end; 
+	 sc := sc + "|";
+	 loop c::=nc.times!; 
+	    if c/=0 then sc := sc+"," end; 
+	    sc := sc + [r,c].str; end;
+--	    #OUT+r+","+c+":"+sc+"\n"; end;
+	 sc := sc+ "|" end; 
+      sc := sc+"|"; 
+      return(sc.str) end;
+
+   dimension_str:STR is
+      -- useful for debugging, prints out "nr = self.nr, nc = self.nc"
+      return "nr = " + self.nr + ", nc = " + self.nc;
+   end;
+
+   copy:SAME is
+      -- make a value copy.
+      res ::= create(self);
+      res.inplace_contents(self);
+      return(res);
+   end;
+
+   contents(arg:SAME) is inplace_contents(arg) end;
+
+   inplace_contents(arg:SAME) pre is_same_shape(arg) is
+      -- copy the contents of arg into self.
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); self[i] := arg[i];
+	 i := i+1;
+      end;
+   end;
+
+   inplace_contents_from_function(function:ROUT{INT,INT}:ET) is
+      -- Set the contents of the matrix from the function "function"
+      loop
+	 i1 ::= col_ind!;
+	 loop
+	    i2 ::= row_ind!;
+	    [i1,i2] := function.call(i1,i2);
+	 end;
+      end;
+   end;
+   
+   inplace_portion_of_arg(a: SAME) is
+      -- Copy into self as much of arg as will fit and return it. Don't
+      -- alter other elements.
+      nrows: INT := nr.min(a.nr);
+      loop r::= nrows.times!;
+	 loop set_row!(r,a.row_elt!(r)) end 
+      end 
+   end;
+   
+   ident:SAME is
+      -- Create an identity matrix of the same shape as self
+      res ::= create(self);
+      -- here we can assume that entries are already set to 0 via create
+      d ::= nc.min(nr); 
+      i ::= 0; loop while!(i<d);
+	 res[i,i] := element_one; 
+	 i := i+1;
+      end;
+      return res;
+   end;
+
+   inplace_ident is
+      -- Should work for non rectangular matrices too, non
+      -- square portion will be set to zero.
+      sz ::= asize; i::=0; r::=0; c::=0; lnr ::= nr;
+      loop while!(i<sz);
+	 if (r = c) then [i] := element_one; else [i] := element_zero; end;
+	 r := r+1;
+	 if (r >= lnr) then r := 0; c := c+1; end;
+	 i := i+1;
+      end;
+   end;
+
+   trans:SAME is
+      -- Create a new matrix that is the transpose of self
+      lnc ::= nc;  res ::= #SAME(lnc,nr);
+      -- reverse columns and rows return new value.
+      sz ::= asize; j::=0; i::=0;
+      loop while!(i<sz);
+	 res[j] := self[i];
+	 j := j+lnc;
+	 diff ::= j-sz; if (diff>=0) then j:=diff+1; end;
+	 i := i+1;
+      end;
+      return res;
+   end;
+
+   inplace_trans is
+      -- make self = transpose of self.
+      if (nr = nc) then
+	 -- can do it in place!
+	 d ::= nr; sz ::= asize;
+	 i ::= 1; j::=d; c::=0;
+	 -- Count through lower diagonal indexes and corresponding
+	 -- upper diagonal indexes in this non-obvious but efficient
+	 -- manner
+	 k ::= 0;  -- diagonal index.
+	 loop
+	    while!(i < sz);
+	    tmp ::= [j]; [j] := [i]; [i] := tmp;
+	    -- flip i and i transpose 
+	    i := i+1; j:= j+d;
+	    if j>=sz then
+	       k := k+d+1;
+	       i := k+1; -- one down
+	       j := k+d; -- one to the right
+	    end;
+	 end;
+      else
+	 tmp ::= self.trans; -- create temporary.
+	 self.nc := tmp.nc;
+	 self.nr := tmp.nr;
+	 self.inplace_contents(tmp);
+      end;
+   end;
+
+   inplace_arg_trans(arg:SAME) pre fits(arg) is
+      -- self <- arg^T
+      lnc ::= arg.nc; 
+      nc := arg.nr;
+      nr := lnc;
+      -- reverse columns and rows return new value.
+      sz ::= asize; j::=0; i::=0;
+      loop while!(i<sz);
+	 self[j] := arg[i];
+	 j := j+lnc;
+	 diff ::= j-sz; if (diff>=0) then j:=diff+1; end;
+	 i := i+1;
+      end;
+   end;
+
+   times_elt(s:ET):SAME is
+      -- Return a new matrix that is self * scalar s
+      -- Self is unchanged
+      return(scaled_by(s)); 
+   end;
+
+   inplace(s:ET) is
+      -- Set all elements to have the value "s"
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); [i] := s; i := i+1; end;
+   end;
+   
+   inplace_zero is
+      -- Set all elements to zero
+      inplace(ET::zero);
+   end;
+   
+   scaled_by(s:ET):SAME is
+      res ::= #SAME(self);
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); res[i] := s*self[i]; i := i+1; end;
+      return res;
+   end;
+
+   inplace_scaled_by(s:ET) is
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); [i] := s*[i]; i := i+1; end;
+   end;
+
+   inplace_elements(s:ET) is
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); [i] := s; i := i+1; end;
+   end;
+
+   aget(i1,i2:INT):ET pre (i1 >=0) and (i1 <= nr) and (i2>=0) and (i2<=nc) is
+      -- The element with indices `[i1,i2]'.
+      return([i1+i2*nr]) end;
+
+   aset(i1,i2:INT,val:ET) pre (i1 >=0) and (i1 <= nr) and
+	    (i2>=0) and (i2<=nc) is
+      -- Set the element with indices `[i1,i2]' to val.
+      [i1+i2*nr]:=val end;      
+
+   plus(arg:SAME):SAME is return(plus_arg(arg)); end;
+
+   plus_arg(arg:SAME):SAME pre is_same_shape(arg) is
+      res ::= #SAME(self);
+      res.inplace_arg_plus_arg(self,arg);
+      return(res);
+   end;
+
+   minus(arg:SAME):SAME is return(minus_arg(arg)); end;
+
+   minus_arg(arg:SAME):SAME pre is_same_shape(arg) is
+      res ::= #SAME(self);
+      res.inplace_arg_minus_arg(self,arg);
+      return(res);
+   end;
+
+   inplace_plus_arg(arg:SAME) pre is_same_shape(arg) is
+      self.inplace_arg_plus_arg(self,arg);
+   end;
+
+   inplace_minus_arg(arg:SAME) pre is_same_shape(arg) is
+      self.inplace_arg_minus_arg(self,arg);
+   end;
+
+   plus_arg_trans(arg:SAME):SAME pre is_same_shape_trans(arg) is
+      res ::= #SAME(self);
+      res.inplace_arg_plus_arg_trans(self,arg);
+      return res;
+   end;
+
+   minus_arg_trans(arg:SAME):SAME pre is_same_shape_trans(arg) is
+      res ::= #SAME(self);
+      res.inplace_arg_minus_arg_trans(self,arg);
+      return res;
+   end;
+
+   inplace_plus_arg_trans(arg:SAME) pre is_same_shape_trans(arg) is
+      self.inplace_arg_plus_arg_trans(self,arg);
+   end;
+
+   inplace_minus_arg_trans(arg:SAME) pre is_same_shape_trans(arg) is
+      self.inplace_arg_minus_arg_trans(self,arg);
+   end;
+
+-- Three way operations: self <- arg1^{T} (+/-) arg2{^T}
+-- can write others in terms of these.
+
+   inplace_arg_plus_arg(arg1,arg2:SAME) pre is_same_shape(arg1) and 
+	    arg1.is_same_shape(arg2) is
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); self[i] := arg1[i] + arg2[i];
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_minus_arg(arg1,arg2:SAME) pre is_same_shape(arg1) and 
+	    arg1.is_same_shape(arg2) is
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); self[i] := arg1[i] - arg2[i];
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_plus_arg_trans(arg1,arg2:SAME) pre fits(arg1)
+	    and arg1.is_same_shape_trans(arg2) and ~SYS::ob_eq(self,arg2) is
+      lnc ::= arg1.nc;
+      nc := lnc;  nr := arg1.nr;
+      sz ::= asize; j::=0; i::=0;
+      loop while!(i<sz);
+	 self[i] := arg1[i] + arg2[j];
+	 j := j+lnc;
+	 diff ::= j-sz; if (diff>=0) then j:=diff+1; end;
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_minus_arg_trans(arg1,arg2:SAME) pre fits(arg1)
+	    and arg1.is_same_shape_trans(arg2) and ~SYS::ob_eq(self,arg2) is
+      lnc ::= arg1.nc;
+      nc := lnc;  nr := arg1.nr;
+      sz ::= asize; j::=0; i::=0;
+      loop while!(i<sz);
+	 self[i] := arg1[i] - arg2[j];
+	 j := j+lnc;
+	 diff ::= j-sz; if (diff>=0) then j:=diff+1; end;
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_trans_plus_arg_trans(arg1,arg2:SAME) pre fits(arg1) 
+	 and arg1.is_same_shape(arg2) and
+	    ~SYS::ob_eq(self,arg1) and ~SYS::ob_eq(self,arg2) is
+      lnc ::= arg1.nc;
+      nr := lnc;  nc := arg1.nr;
+      sz ::= asize; j::=0; i::=0;
+      loop while!(i<sz);
+	 self[j] := arg1[i] + arg2[i];
+	 j := j+lnc;
+	 diff ::= j-sz; if (diff>=0) then j:=diff+1; end;
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_trans_minus_arg_trans(arg1,arg2:SAME) pre fits(arg1)
+	 and arg1.is_same_shape(arg2) and
+	    ~SYS::ob_eq(self,arg1) and ~SYS::ob_eq(self,arg2) is
+      lnc ::= arg1.nc;
+      nr := lnc;  nc := arg1.nr;
+      sz ::= asize; j::=0; i::=0;
+      loop while!(i<sz);
+	 self[j] := arg1[i] - arg2[i];
+	 j := j+lnc;
+	 diff ::= j-sz; if (diff>=0) then j:=diff+1; end;
+	 i := i+1;
+      end;
+   end;
+
+-- with scaling, euphemisms for elementary 3 way operations.
+   plus_scaled_arg(s:ET,arg:SAME):SAME is
+      res ::= #SAME(self);
+      res.inplace_arg_plus_scaled_arg(self,s,arg);
+      return res;
+   end;
+
+   inplace_plus_scaled_arg(s:ET,arg:SAME) is
+      self.inplace_arg_plus_scaled_arg(self,s,arg);
+   end;
+
+   plus_scaled_arg_trans(s:ET,arg:SAME):SAME is
+      res ::= #SAME(self);
+      res.inplace_arg_plus_scaled_arg_trans(self,s,arg);
+      return(res);
+   end;
+
+   inplace_plus_scaled_arg_trans(s:ET,arg:SAME) is
+      self.inplace_arg_plus_scaled_arg_trans(self,s,arg);
+   end;
+
+-- with scaling, 3 way operations.
+   inplace_arg_plus_scaled_arg(arg1:SAME,s:ET,arg2:SAME) pre
+	    is_same_shape(arg1) and arg1.is_same_shape(arg2) is
+      sz ::= asize; i::=0; 
+      loop while!(i<sz); self[i] := arg1[i] + s*arg2[i];
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_plus_scaled_arg_trans(arg1:SAME,s:ET,arg2:SAME) pre fits(arg1)
+	    and arg1.is_same_shape_trans(arg2) and ~SYS::ob_eq(self,arg2) is
+      lnc ::= arg1.nc;
+      nc := lnc;  nr := arg1.nr;
+      sz ::= asize; j::=0; i::=0;
+      loop while!(i<sz);
+	 self[i] := arg1[i] + s*arg2[j];
+	 j := j+lnc;
+	 diff ::= j-sz; if (diff>=0) then j:=diff+1; end;
+	 i := i+1;
+      end;
+   end;
+   
+--
+-- Matrix Multiplication.
+--
+   times(arg:SAME):SAME pre nc = arg.nr is
+      res ::= #SAME(nr,arg.nc);
+      res.inplace_arg_times_arg(self,arg);
+      return res;
+   end;
+
+   trans_times_arg(arg:SAME):SAME pre nr = arg.nr is
+      res ::= #SAME(nc,arg.nc);
+      res.inplace_arg_trans_times_arg(self,arg);
+      return res;
+   end;
+
+   times_arg_trans(arg:SAME):SAME pre nc = arg.nc is
+      res ::= #SAME(nr,arg.nr);
+      res.inplace_arg_times_arg_trans(self,arg);
+      return res;
+   end;
+
+   trans_times_arg_trans(arg:SAME):SAME pre nr = arg.nc is
+      res ::= #SAME(nc,arg.nr);
+      res.inplace_arg_trans_times_arg_trans(self,arg);
+      return res;
+   end;
+
+-- in place versions:
+
+   inplace_arg_times_arg(arg1,arg2:SAME) pre nr = arg1.nr and
+	    nc = arg2.nc and arg1.nc = arg2.nr is
+      -- self := arg1 * arg2.
+      -- For all i,j, self[i,j] = sum(k) arg1[i,k] * arg2[k,j]
+
+      selfnr ::= nr; selfnc ::= nc;
+      a1nr ::= arg1.nr; a1nc ::= arg1.nc;
+      a2nr ::= arg2.nr; a2nc ::= arg2.nc;
+      -- This is what you need to do to get reasonable performance on
+      -- matrix codes: take out of the loop the array index multiplication,
+      -- i.e. the definition of [i,j] ->  [i+j*nr]
+      -- Eventually the compiler will figure this out.  Note that
+      -- this is not as trivial as you might disdainfully think, as in
+      -- Sather, and unlike Fortran, the size of the array could conceivably
+      -- change during a loop through any call that might modify nr or nc.
+      -- The array reference itself might change as well.   Sather 1.0.8 and
+      -- above ought to have dataflow optimizations that can do this in
+      -- most cases, but I'd rather be safe than sorry here.
+      -- 
+      -- The following routine seems to generate assembly code identical
+      -- to a naive C language implementation for its inner loops with GNU
+      -- CC for ET=FLT. 
+
+      i::=0;
+      loop while!(i<selfnr);
+	 j::=0;
+	 loop while!(j<selfnc);
+	    sum ::= element_zero;
+	    k::=0;
+	    loop while!(k < a1nc); 
+	       sum := sum+arg1[i+k*a1nr]*arg2[k+j*a2nr]; k := k+1;
+	    end;
+	    [i+j*selfnr] := sum;
+	    j := j+1;
+	 end;
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_times_arg_fast(arg1,arg2:SAME) 
+   -- self := arg1 * arg2.
+   -- Basic algorithm:
+   -- For all i,j, self(i,j) = sum(k) arg1[i,k] * arg2[k,j]
+   -- t1 = i+j*nr, index through "self".  0 .. asize-1
+   -- t2 = i+arg1.nr*k                    0 .. arg1.asize-1
+   -- t3 = k+j*arg2.nr
+      pre nr = arg1.nr and  nc = arg2.nc and arg1.nc = arg2.nr is
+      lnr ::= nr; lnc ::= nc;
+      sz ::= asize;  szarg1 ::= arg1.asize;
+      lk ::= arg1.nc;  -- lk is the bounds of the innermost loop.
+
+      j::=0;
+      idx0 ::= 0;
+      idx2init ::= 0;
+      loop while!(j<lnc);
+	 i::=0;
+	 loop while!(i<lnr);
+	    sum ::= element_zero;
+
+	    idx1 ::= i;
+	    idx2 ::= idx2init; -- was "j*lk"
+	    assert(idx2init = j*lk);
+	    k::=lk-1; -- do innermost loop lk times.
+	    loop while!(k >= 0);
+	       sum := sum+arg1[idx1]*arg2[idx2];
+	       idx1 := idx1+lnr; -- lnr is = arg1.nr
+	       idx2 := idx2+1;
+	       k := k-1;
+	    end;
+--	    [i+j*nr] := sum;
+	    [idx0] := sum;
+	    assert (i+j*lnr = idx0);
+	    idx0 := idx0+1;
+	    i := i+1;
+	 end;
+	 j := j+1;
+	 idx2init := idx2init + lk;
+      end;
+   end;
+
+   inplace_arg_trans_times_arg(arg1,arg2:SAME) 
+   -- self := arg1^T * arg2.
+   -- For all i,j, self[i,j] = sum(k) arg1[k,i] * arg2[k,j]
+   -- Likely faster than arg * arg, as inner loop is unit stride
+   -- for both arrays.
+      pre nr = arg1.nc and nc = arg2.nc and arg1.nr = arg2.nr 
+   is
+      selfnr ::= nr; selfnc ::= nc;
+      a1nr ::= arg1.nr; a1nc ::= arg1.nc;
+      a2nr ::= arg2.nr; a2nc ::= arg2.nc;
+
+      i::=0;
+      loop while!(i<selfnr);
+	 j::=0;
+	 loop while!(j<selfnc);
+	    sum ::= element_zero;
+	    k::=0;
+	    loop while!(k < a1nr); 
+	       sum := sum+arg1[k+i*a1nr]*arg2[k+j*a2nr]; k := k+1;
+	    end;
+	    [i+j*selfnr] := sum;
+	    j := j+1;
+	 end;
+	 i := i+1;
+      end;
+   end;
+   
+   inplace_arg_times_arg_trans(arg1,arg2:SAME) 
+   -- self := arg1 * arg2^T.
+   -- For all i,j, self[i,j] = sum(k) arg1[i,k] * arg2[j,k]
+      pre nr = arg1.nr and nc = arg2.nr and arg1.nc = arg2.nc 
+   is
+      selfnr ::= nr; selfnc ::= nc;
+      a1nr ::= arg1.nr; a1nc ::= arg1.nc;
+      a2nr ::= arg2.nr; a2nc ::= arg2.nc;
+
+      i::=0;
+      loop while!(i<selfnr);
+	 j::=0;
+	 loop while!(j<selfnc);
+	    sum ::= element_zero;
+	    k::=0;
+	    loop while!(k < a1nc);  -- would be better to rearrange loop
+	       sum := sum+arg1[i+k*a1nr]*arg2[j+k*a2nr]; k := k+1;
+	    end;
+	    [i+j*selfnr] := sum;
+	    j := j+1;
+	 end;
+	 i := i+1;
+      end;
+   end;
+
+   inplace_arg_trans_times_arg_trans(arg1,arg2:SAME) 
+   -- self := arg1^T * arg2^T.
+   -- For all i,j, self[i,j] = sum(k) arg1[k,i] * arg2[j,k]
+      pre nr = arg1.nc and nc = arg2.nr and arg1.nr = arg2.nc 
+   is
+      selfnr ::= nr; selfnc ::= nc;
+      a1nr ::= arg1.nr; a1nc ::= arg1.nc;
+      a2nr ::= arg2.nr; a2nc ::= arg2.nc;
+
+      i::=0;
+      loop while!(i<selfnr);
+	 j::=0;
+	 loop while!(j<selfnc);
+	    sum ::= element_zero;
+	    k::=0;
+	    loop while!(k < a1nr); 
+	       sum := sum+arg1[k+i*a1nr]*arg2[j+k*a2nr]; k := k+1;
+	    end;
+	    [i+j*selfnr] := sum;
+	    j := j+1;
+	 end;
+	 i := i+1;
+      end;
+   end;
+   
+   inplace_times_diagonal(v1:VT) is
+      -- Set self to be the product of itself with a diagonal matrix whose
+      -- diagonal entries are the components of v1 truncated or extended
+      -- with zeroes to be the correct size.
+      -- Scale the columns of self with the elements of v1
+      -- Self <- Self*v1 (as diagonal of a matrix)
+      loop c::=nc.min(v1.dim).times!;
+	 loop set_col!(c,v1[c]*col_elt!(c)) end 
+      end;
+      loop c::=v1.dim.upto!(nc-1); 
+	 loop set_col!(c,ET::zero)  end; 
+      end;
+   end;
+--
+-- MATRIX/VECTOR operations
+--
+-- create a new argument
+
+   times_vec(arg:VT):VT pre arg.dim = self.nc is
+      -- This is a syntactical sugar expressions (m*v) so it
+      -- doesn't follow the naming convention.
+      res:VT := #VT(nr);
+      times_vec_into_vec(arg,res);
+      return res;
+   end;
+   
+   trans_times_vec(arg:VT):VT pre arg.dim = self.nr is
+      res:VT := #VT(nc);
+      trans_times_vec_into_vec(arg,res);
+      return res;
+   end;
+   
+-- in place
+
+   times_vec_into_vec(arg,dest:VT) 
+      pre arg.dim = self.nc and dest.dim = self.nr 
+   is
+      selfnr ::= nr; selfnc ::= nc;
+      i ::= 0;
+      loop while!(i<selfnr);
+	 sum ::= element_zero;
+	 j::= 0;
+	 loop while!(j<selfnc);
+	    sum := sum + self[i,j]*arg[j];
+	    j := j+1;
+	 end;
+	 dest[i] := sum;
+	 i:=i+1;
+      end;
+   end;
+
+   trans_times_vec_into_vec(arg,dest:VT) 
+      pre arg.dim = self.nr and dest.dim = self.nc 
+   is
+      selfnr ::= nr; selfnc ::= nc;
+      i ::= 0;
+      loop while!(i<selfnc);
+	 sum ::= element_zero;
+	 j::= 0;
+	 loop while!(j<selfnr);
+	    sum := sum + self[j,i]*arg[j];
+	    j := j+1;
+	 end;
+	 dest[i] := sum;
+	 i:=i+1;
+      end;
+   end;
+
+   times_scaled_vec_into_vec(s:ET,arg,dest:VT) 
+      pre arg.dim = self.nc and dest.dim = self.nr 
+   is
+      selfnr ::= nr; selfnc ::= nc;
+      i ::= 0;
+      loop while!(i<selfnr);
+	 sum ::= element_zero;
+	 j::= 0;
+	 loop while!(j<selfnc);
+	    sum := sum + self[i,j]*arg[j];
+	    j := j+1;
+	 end;
+	 dest[i] := s*sum;
+	 i:=i+1;
+      end;
+   end;
+
+   trans_times_scaled_vec_into_vec(s:ET,arg,dest:VT) 
+      pre arg.dim = self.nr and dest.dim = self.nc 
+   is
+      selfnr ::= nr; selfnc ::= nc;
+      i ::= 0;
+      loop while!(i<selfnc);
+	 sum ::= element_zero;
+	 j::= 0;
+	 loop while!(j<selfnr);
+	    sum := sum + self[j,i]*arg[j];
+	    j := j+1;
+	 end;
+	 dest[i] := s*sum;
+	 i:=i+1;
+      end;
+   end;
+
+   inplace_plus_scaled_vec_times_vec(s:ET,v1,v2:VT) 
+      -- self := self + s*v1*v2^T
+      -- (Add scaled outer product of v1 and v2 to self.  A BLAS operation)
+      --
+      pre v1.dim = nr and v2.dim = nc 
+   is
+         selfnr ::= nr; selfnc ::= nc;
+      i ::= 0;
+      loop while!(i<selfnc);
+	 j::= 0;
+	 loop while!(j<selfnr);
+	    [j,i] := [j,i] +s*v1[j]*v2[i];
+	    j := j+1;
+	 end;
+	 i:=i+1;
+      end;
+   end;
+   
+--
+-- MATRIX/VECTOR MANIPULATION
+--
+   create_col_matrix(arg:VT):SAME is
+      d ::= arg.dim;
+      res ::= create(d,1);
+      i ::= 0; loop while!(i<d); res[i] := arg[i]; i:=i+1; end; 
+      return res;
+   end;
+
+   create_row_matrix(arg:VT):SAME is
+      d ::= arg.dim;
+      res ::= create(1,d);
+      i ::= 0; loop while!(i<d); res[i] := arg[i]; i := i+1; end; 
+      return res;
+   end;
+
+   col(i:INT):VT is
+      selfnr ::= nr;
+      res:VT := #VT(selfnr);
+      j::=0; loop while!(j<selfnr); res[j] := [j,i]; j := j+1; end;
+      return res;
+   end;
+
+   row(i:INT):VT is
+      selfnc ::= nc;
+      res:VT := #VT(selfnc);
+      j::=0; loop while!(j<selfnc); res[j] := [i,j]; j := j+1; end;
+      return res;
+   end;
+
+   col(i:INT,v:VT) pre v.dim = nr is
+      d ::= v.dim;
+      j ::= 0;
+      loop while!(j < d);  [j,i] := v[j]; j:= j+1; end;
+   end;
+
+   row(i:INT,v:VT) pre v.dim = nc is
+      d ::= v.dim;
+      j ::= 0;
+      loop while!(j < d);  [i,j] := v[j]; j:= j+1; end;
+   end;
+
+   inplace_scaled_col(s:ET,i:INT) pre i.is_bet(0,nc-1) is 
+      d ::= nr; j ::= 0;
+      loop while!(j < d);  [j,i] := [j,i]*s; j:= j+1; end;
+   end;
+   
+   inplace_scaled_row(s:ET,i:INT) pre i.is_bet(0,nr-1) is
+      d ::= nc; j ::= 0;
+      loop while!(j < d);  [i,j] := [i,j]*s; j:= j+1; end;
+   end;
+   
+   inplace_col_plus_scaled_vec(i:INT,s:ET,v:VT) 
+      pre i.is_bet(0,nc-1) and v.dim = nr 
+   is
+      d ::= nr; j ::= 0;
+      loop while!(j < d);  [j,i] := [j,i] + s*v[j]; j:= j+1; end;
+   end;
+
+   inplace_row(i: INT,v: VT) pre i.is_bet(0,nr-1) and v.dim = nc 
+   is
+      d ::= nc; j ::= 0;
+      loop while!(j < d);  [i,j] := v[j]; j:= j+1; end;
+   end;
+   
+   inplace_row_plus_scaled_vec(i:INT,s:ET,v:VT) 
+      pre i.is_bet(0,nr-1) and v.dim = nc is
+      d ::= nc; j ::= 0;
+      loop while!(j < d);  [i,j] := [i,j] + s*v[j]; j:= j+1; end;
+   end;
+   
+   inplace_swapped_col(i:INT,v:VT) pre i.is_bet(0,nc-1) and v.dim = nr is
+      d ::= nr; j ::= 0;
+      loop while!(j < d);  t ::= [j,i]; [j,i] := v[j]; v[j] := t; j:= j+1; end;
+   end;
+   
+   inplace_swapped_row(i:INT,v:VT) pre i.is_bet(0,nr-1) and v.dim = nc is
+      d ::= nc; j ::= 0;
+      loop while!(j < d);  t ::= [i,j]; [i,j] := v[j]; v[j] := t; j:= j+1; end;
+   end;
+   
+   submatrix(lr,ur:INT, lc,uc:INT):SAME pre 0 <= lr and lr <= ur and
+	    ur < nr and 0 <= lc and lc <= uc and uc < nr is
+      -- return a submatrix
+      rnr ::= ur-lr+1; rnc ::= uc-lc+1;
+      res ::= #SAME(rnr,rnc);
+      j::=0;
+      loop
+	 while!(j<rnc);
+	 i ::= 0;
+	 loop
+	    while!(i<rnr); res[i,j] := [i+lr,j+lc]; 
+	    i := i+1;
+	 end;
+	 j := j+1;
+      end;
+      return res;
+   end; 
+	 
+   inplace_submatrix_to_arg(lr,ur:INT, lc,uc:INT,arg:SAME) 
+   -- Set the submatrix of self given by [lr..ur,lc..uc] to be arg.
+   -- with proposed syntax extension:
+   --   m.submatrix(1,3,2,4) := m2;
+      pre 0 <= lr and lr <= ur and ur < nr and 0 <= lc 
+	 and lc <= uc and uc < nr and arg.nr = ur-nr+1 and arg.nc = uc-lc+1 
+   is
+      anr ::= arg.nr; anc ::= arg.nc;
+      j::=0;
+      loop
+	 while!(j<anc);
+	 i ::= 0;
+	 loop
+	    while!(i<anr); [i+lr,j+lc] := arg[i,j];
+	    i := i+1;
+	 end;
+	 j := j+1;
+      end;
+   end;	 
+
+   inplace_swapped(arg:SAME) pre is_same_shape(arg) is 
+      -- Swap the elements of "arg" with self
+      sz ::= asize;
+      i ::= 0;loop while!(i<sz); t ::= arg[i]; arg[i] := [i]; [i] := t; i:=i+1; end;
+   end; 
+
+   ind1!: INT is
+      -- Yield each value of the first index in order. The rows
+      loop yield(size1.times!); end 
+   end;
+   
+   ind2!:INT is
+      -- Yield each value of the second index in order. The columns
+      loop yield(size2.times!); end 
+   end;
+
+   row_ind!: INT is
+      -- Yield each value of the first index in order. The rows
+      loop yield(size1.times!); end 
+   end;
+   
+   col_ind!:INT is
+      -- Yield each value of the second index in order. The columns
+      loop yield(size2.times!); end 
+   end;
+   
+   inds!:TUP{INT,INT} is
+      -- Yield tuples of the indices of self in lexicographical order.
+      loop row ::=size1.times!;
+	 loop yield(#TUP{INT,INT}(row,size2.times!)); end 
+      end 
+   end;
+
+   elt!: ET pre ~void(self) is
+      -- Yield all elements in row major order
+      loop yield(aelt!) end; 
+   end;
+   
+   inplace_elt!(val:ET) is
+      -- Set all elements in row major order
+      loop aset!(val); yield; end 
+   end;
+
+
+   row_elt!(once row:INT):ET pre ~void(self) is
+      -- Yield elements by varying index 2 and holding index 1 at `row'.
+      -- The elements of a row "row"
+      loop yield(aelt!(row,size2,size1)); end 
+   end;
+
+   col_elt!(once col:INT):ET pre ~void(self) is
+      -- Yield elements by varying index 1 and holding index 2 at `col'.
+      -- The elements of a "column" col
+      loop yield(aelt!(col*size1,size1,1)); end 
+   end;
+
+   set_row!(once i1:INT, val:ET) pre ~void(self) is
+      -- Set to val elements with varying index 2 and index 1 fixed at `i1'.
+      -- i.e. setting the row i1
+      loop aset!(i1,size2,size1,val); yield end 
+   end;
+
+   set_col!(once i2:INT, val:ET) pre ~void(self) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `i2'.
+      -- i.e. setting the column i2 
+      loop aset!(i2*size1,size1,val); yield end 
+   end;
+
+   inplace_row!(once row:INT, val:ET) pre ~void(self) is
+      -- Set to val elements with varying index 2 and index 1 fixed at `row'.
+      -- i.e. setting a row "row"
+      loop aset!(row,size2,size1,val); yield end end;
+
+   inplace_col!(once col:INT, val:ET) pre ~void(self) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `col'.
+      -- i.e. setting the column col 
+      loop aset!(col*size1,size1,val); yield end 
+   end;
+   
+   diag_elt!: ET pre ~void(self) is
+      -- Yield values along the diagonal (square in smaller dimension)
+      loop ind ::= (size1.min(size2)).times!; yield([ind,ind]) end; 
+   end;
+
+   inplace_diag_elt!(val:ET) pre ~void(self) is
+      -- Set values along the diagonal (square in smaller dimension)
+      loop id ::= (size1.min(size2)).times!; [id,id] := val; yield;  end; 
+   end;
+
+   elt1!(once i1:INT):ET pre ~void(self) is
+      -- Yield elements by varying index 2 and holding index 1 at `i1'.
+      -- The elements of a row "i1"
+      -- this is the same as row_elt!
+      loop yield(aelt!(i1,size2,size1)); end 
+   end;
+
+   elt2!(once i2:INT):ET pre ~void(self) is
+      -- Yield elements by varying index 1 and holding index 2 at `i2'.
+      -- The elements of a "column" i2
+      -- this is the same as col_elt!
+      loop yield(aelt!(i2*size1,size1,1)); end 
+   end;
+   
+   set1!(once i1:INT, val:ET) pre ~void(self) is
+      -- Set to val elements with varying index 2 and index 1 fixed at `i1'.
+      -- i.e. setting the row i1
+      -- this is the same as set_row!
+      loop aset!(i1,size2,size1,val); yield end 
+   end;
+
+   set2!(once i2:INT, val:ET) pre ~void(self) is
+      -- Set to val elements with varying index 1 and index 2 fixed at `i2'.
+      -- i.e. setting the column i2 
+      -- this is the same as set_col!
+      loop aset!(i2*size1,size1,val); yield end 
+   end;
+
+   
+end; 
+-----------------------------------------------------------------------
+class NUMERIC_MAT{ET<$NUMBER{ET},VT<$VEC{ET,VT}} < $MAT{ET,VT,NUMERIC_MAT{ET,VT}} is
+   -- Functions that don't work on complex numbers but do work on 
+   -- reals
+   include MAT{ET,VT};
+
+(* Old version, supposed to be buggy:   
+   destructive_invert: SAME pre nr=nc is
+      -- Destructive invert self, return a new matrix.  Similar to the
+      -- Gaussian algorithm.  Raise "Division by Zero" for singular
+      -- matrices.  The Gaussian algorithm is from Sedgewick:
+      -- "Algorithms", pp 57-65.
+
+      -- eliminate
+      A::=create(nr,nr);
+      A.inplace_ident;
+      loop i::=0.upto!(nr-1);
+         max::=i;
+         loop j::=(i+1).upto!(nr-1);
+            if [j,i].abs > [max,i].abs then max:=j end;
+         end; -- loop
+         loop k::=i.upto!(nr-1);
+            t::=[i,k]; [i,k]:=[max,k]; [max,k]:=t;
+         end; -- loop
+	 loop
+	    t::=A.row_elt!(i);
+	    A.set_row!(i,A.row_elt!(max));
+	    A.set_row!(max,t);
+	 end; -- loop
+         loop j::=(i+1).upto!(nr-1);
+	    loop
+	       A.set_row!(j, A.row_elt!(j) - A.row_elt!(i)*[j,i]/[i,i]);
+	    end; -- loop
+	    loop k::=(nr-1).downto!(i);
+	       [j,k] := [j,k] - [i,k]*[j,i]/[i,i];
+	    end; -- loop
+         end; -- loop
+      end; -- loop
+      -- substitute
+      loop j::=(nr-1).downto!(0);
+	 loop col::=A.col_ind!;
+	    t::=ET::zero;
+	    loop k::=(j+1).upto!(nr-1);
+	       t := t + [j,k]*A[col,k];
+	    end; -- loop
+	    A[j,col] := (A[j,col]-t)/[j,j];
+	 end; -- loop
+      end; -- loop
+      return A
+   end; -- ninv
+*)
+
+   destructive_invert:SAME pre nr=nc is      
+      -- Author: Darren Wilkinson <d.j.wilkinson@freeuk.com>
+      -- <URL:http://home.freeuk.com/d.j.wilkinson/>
+      -- Destructive inverse of self - returns a new matrix.
+      -- Uses a straightforward Gaussian elimination algorithm
+      -- with "maximal column pivoting" (partial pivoting).
+      -- Probably not very efficient, but should work...
+      A::=create(nr,nr);
+      A.inplace_ident;
+      -- run through the columns
+      loop j::=A.col_ind!;
+         -- first search for "best" pivot
+         max::=j;
+         loop k::=(j+1).upto!(nr-1);
+            if self[k,j].abs > self[max,j].abs then max:=k; end;
+         end;
+         if ~(max=j) then
+            -- swap rows
+            temp::=self.row(j);
+            self.inplace_row(j,self.row(max));
+            self.inplace_row(max,temp);
+            temp:=A.row(j);
+            A.inplace_row(j,A.row(max));
+            A.inplace_row(max,temp);
+         end; -- if
+         -- now perform pivot
+         A.inplace_row(j,A.row(j).times(element_one/self[j,j]));
+         self.inplace_row(j,self.row(j).times(element_one/self[j,j]));
+         loop i::=A.row_ind!;
+            if ~(i=j) then
+               A.inplace_row(i,A.row(i)-A.row(j).times(self[i,j]));
+               self.inplace_row(i,self.row(i)-self.row(j).times(self[i,j]));
+            end; -- if
+         end; -- loop i
+      end; -- loop j
+      return A;
+   end; -- destructive_invert
+      
+   invert: SAME pre nr=nc is return copy.destructive_invert end;
+   -- Non-destructive inversion
+   
+   destructive_det: ET pre nr=nc is
+      -- Destructive determinant of self.  Similar to the Gaussian algorithm.
+      -- The Gaussian algorithm is from Sedgewick: "Algorithms", pp 57-65.
+      
+      -- eliminate
+      loop i::=0.upto!(nr-1);
+         max::=i;
+         loop j::=(i+1).upto!(nr-1);
+            if [j,i].abs > [max,i].abs then max:=j end;
+         end; -- loop
+         loop k::=i.upto!(nr-1);
+            t::=[i,k]; [i,k]:=[max,k]; [max,k]:=t;
+         end; -- loop
+         loop j::=(i+1).upto!(nr-1);
+	    loop k::=(nr-1).downto!(i);
+	       [j,k] := [j,k] - [i,k]*[j,i]/[i,i];
+	    end; -- loop
+         end; -- loop
+      end; -- loop
+      res::=ET::one; loop res:=res*diag_elt!; end;
+      return res
+   end; -- destructive_det
+   
+   det: ET pre nr=nc is return copy.destructive_det end;
+   -- Non destructive determinant routine
+   
+   destructive_gauss(x:VT) pre nc=nr and x.dim=nc is
+      -- Solve linear equations.  Result in x.  self is changed.
+      -- Raise "Division by Zero" for singular matrices.
+      -- This algorithm is from Sedgewick: "Algorithms", pp 57-65.
+      
+      -- eliminate
+      loop i::=0.upto!(nc-1);
+         max::=i;
+         loop j::=(i+1).upto!(nc-1);
+            if [j,i].abs > [max,i].abs then max:=j end;
+         end; -- loop
+         loop k::=i.upto!(nc-1);
+            t::=[i,k]; [i,k]:=[max,k]; [max,k]:=t;
+         end; -- loop
+         t::=x[i]; x[i]:=x[max]; x[max]:=t;
+         loop j::=(i+1).upto!(nc-1);
+            x[j] := x[j] - x[i]*[j,i]/[i,i];
+            loop k::=(nc-1).downto!(i);
+               [j,k] := [j,k] - [i,k]*[j,i]/[i,i];
+            end; -- loop
+         end; -- loop
+      end; -- loop
+      -- substitute
+      loop j::=(nc-1).downto!(0);
+	 t::=ET::zero;
+         loop k::=(j+1).upto!(nc-1);
+            t := t + [j,k]*x[k];
+         end; -- loop
+         x[j] := (x[j]-t)/[j,j];
+      end; -- loop
+   end; -- destructive_gauss
+   
+   gauss(x:VT):VT pre nc=nr and x.dim=nc is
+      -- Non destructive gaussian routine
+      y::=x.copy; copy.destructive_gauss(y); return y 
+   end;
+
+   norm_squared:ET is
+      -- Author: Darren Wilkinson <d.j.wilkinson@freeuk.com>
+      -- <URL:http://home.freeuk.com/d.j.wilkinson/>
+      -- square of the Frobenious norm of a matrix
+      n::=element_zero;
+      loop
+         e::=elt!;
+         n:=n+(e*e); 
+      end;
+      return n;
+   end;
+
+   norm:ET is return norm_squared.sqrt; end;
+   -- Frobenious norm of a matrix
+
+   destructive_chol:SAME pre nr=nc is
+      -- Author: Darren Wilkinson <d.j.wilkinson@freeuk.com>
+      -- <URL:http://home.freeuk.com/d.j.wilkinson/>
+      -- Returns lower Cholesky triangle of a real symmetric PSD matrix
+      -- derived this algorithm myself - no idea if it's any good
+      -- should check symmetry, but currently doesn't.
+      i,j,k:INT;
+      loop j:=self.col_ind!;
+         loop i:=self.row_ind!;
+            if i<j then self[i,j]:=element_zero;
+            elsif i=j then
+               loop k:=0.upto!(j-1);
+                  self[i,j]:=self[i,j]-self[i,k]*self[i,k];
+               end;
+               self[i,j]:=self[i,j].sqrt;
+            else
+               loop k:=0.upto!(j-1);
+                  self[i,j]:=self[i,j]-self[i,k]*self[j,k];
+               end;
+               self[i,j]:=self[i,j]/self[j,j];
+            end;
+         end;
+      end;
+      return self;
+   end; -- destructive_chol
+
+   chol:SAME pre nr=nc is return copy.destructive_chol; end;
+   -- non-destructive Cholesky factorisation
+
+end;
+----------------------------------------------------------------------------
+class MAT < $MAT{FLT,VEC,MAT} is
+   -- Includes some functions that only work with FLTs
+   -- Generalizing these functions is possible, but would require definitions
+   -- of machine epsilon in the numeric classes
+   include NUMERIC_MAT{FLT,VEC};
+   
+   inplace_uniform_random is 
+      -- Become self's entries uniform in `[0.,1.)' 
+      loop r::=row_ind!; loop [r,col_ind!] := RND::uniform.flt; end; end;
+   end; -- inplace_uniform_random
+
+   svd_in(a:MAT, w:VEC, v:MAT)
+   -- Computes the singular value decomposition of `self = a w v^T'.
+   -- `a' must be `max(nr,nc)' by `nc', `w' length `nc', `v' is `nc' by
+   -- `nc'. `Self' is unchanged, `a', `w', `v' are altered.
+      pre a.nr=nr.max(nc) and a.nc=nc and 
+	 w.dim=nc and v.nr=nc and v.nc=nc  is
+      -- fill in a with self and extra zero rows if necessary
+      a.inplace_zero; a.inplace_portion_of_arg(self); 
+      NR_SVD::svd(a,w,v);	-- Start with Numerical Recipes version.
+	 -- Eventually use a better algorithm.
+   end; -- svd_in
+   
+   svd_back_sub(u:MAT, w:VEC, v:MAT, b,x:VEC)
+   -- Solves `a.x=b' for `x' when `a=u.d.v^T' is the svd of `a'.
+      pre u.nc=w.dim and v.nr=u.nc and v.nc=u.nc and
+	 b.dim=u.nr and x.dim=u.nc is 
+
+      tmp::=#VEC(u.nc);
+      j:INT; loop until!(j=u.nc); -- calculate u^T.b in tmp
+	 s:FLT:=0.0;
+	 if w[j].abs>=0.000001 then	-- nonzero only if w_j is nonzero
+	    i:INT:=0; loop until!(i=u.nr); 
+	       s:=s+u[i,j]*b[i]; i:=i+1;
+	    end; -- loop
+	    s:=s/w[j];
+	 end; -- if
+	 tmp[j]:=s;
+	 j:=j+1;
+      end; -- loop
+      j:=0; loop until!(j=u.nc);
+	 s:FLT:=0.0;
+	 jj:INT:=0; loop until!(jj=u.nc);
+	    s:=s+v[j,jj]*tmp[jj]; jj:=jj+1
+	 end; -- loop
+	 x[j]:=s;
+	 j:=j+1;
+      end; -- loop
+   end; -- svd_back_sub
+
+   inplace_linear_fit_of(vin,vout:ARRAY{VEC}):MAT
+   -- Fill vin `self' to be the least squares best linear approximation
+   -- relating `vin' to `vout' by: `out[i]=self.act_on(in[i])'.
+   -- Return `self'.
+      pre nr=vout[0].dim and nc=vin[0].dim and vout.size=vin.size is
+   
+      it:MAT:=create(vin.size,vin[0].dim);
+      i:INT; loop until!(i=vin.size); it.inplace_row(i,vin[i]); i:=i+1; end;
+      u:MAT:=create(it.nr.max(it.nc),it.nc);      
+      v:MAT:=create(it.nc,it.nc); w:VEC:=w.create(it.nc);
+      it.svd_in(u,w,v);
+      wmax:FLT:=w.max_value; wmin:FLT:=wmax*(0.000001);
+      i:=0; loop until!(i=it.nc); 
+	 if w[i]<=wmin then w[i]:=0.0 end; 
+	 i:=i+1; 
+      end; -- loop
+      x:VEC:=x.create(nc); b:VEC:=b.create(vout.size);
+      i:=0; loop until!(i=vout[0].dim); -- get each row of self
+	 j:INT:=0; loop until!(j=vout.size); b[j]:=vout[j][i]; j:=j+1 end;
+	 it.svd_back_sub(u,w,v,b,x);
+	 inplace_row(i,x);
+	 i:=i+1;
+      end; -- loop
+      return self;
+   end; -- inplace_linear_fit_of
+
+   inplace_affine_fit_of(vin,vout:ARRAY{VEC})
+   -- Fill vin `self' to be the best least squares affine map relating 
+   -- `in' to `out' by: `out[i]=self.affine_act_on(vin[i])'.
+      pre nr=vout[0].dim and nc=vin[0].dim+1 and vout.size=vin.size is
+      it:MAT:=create(vin.size,vin[0].dim+1);
+      i:INT; loop until!(i=vin.size); 
+	 it.inplace_row(i,vin[i]); it[i,vin[0].dim]:=1.0; -- put in affine piece
+	 i:=i+1; 
+      end;
+      u:MAT:=create(it.nr.max(it.nc),it.nc);      
+      v:MAT:=create(it.nc,it.nc); w:VEC:=w.create(it.nc);
+      it.svd_in(u,w,v);
+      wmax:FLT:=w.max_value; wmin:FLT:=wmax*(0.000001);
+      i:=0; loop until!(i=it.nc); 
+	 if w[i]<=wmin then w[i]:=0.0 end; 
+	 i:=i+1;
+      end; -- loop
+      x:VEC:=x.create(nc); b:VEC:=b.create(vout.size);
+      i:=0; loop until!(i=vout[0].dim); -- get each row of self
+	 j:INT:=0; loop until!(j=vout.size); b[j]:=vout[j][i]; j:=j+1 end;
+	 it.svd_back_sub(u,w,v,b,x);
+	 inplace_row(i,x);
+	 i:=i+1;
+      end; -- loop
+   end; -- inplace_linear_fit_of
+   
+   inplace_weighted_linear_fit_of(vin,vout:ARRAY{VEC}, wt:ARRAY{FLT})
+   -- Fill in `self' to be the least squares best linear approximation
+   -- relating `vin' to `vout' by: `vout[i]=self.act_on(vin[i])'. `wt[i]'
+   -- gives the weight which should be given to the ith example.
+   -- (typically in `[0.,1.]' (`0.' means ignore, `1.' means full weight).
+      pre
+   	 nr=vout[0].dim and nc=vin[0].dim and vout.size=vin.size 
+	 and wt.size=vin.size
+   is
+      it:MAT:=create(vin.size,vin[0].dim);
+      i:INT; loop until!(i=it.nr); it.inplace_row(i,vin[i]); i:=i+1; end;
+      i:=0; loop until!(i=it.nr);	-- scale by wt
+	 j:INT:=0; loop until!(j=it.nc); it[i,j]:=it[i,j]*wt[i]; j:=j+1 end;
+	 i:=i+1;
+      end; -- loop
+      u:MAT:=create(it.nr.max(it.nc),it.nc);      
+      v:MAT:=create(it.nc,it.nc); w:VEC:=w.create(it.nc);
+      it.svd_in(u,w,v);
+      wmax:FLT:=w.max_value; wmin:FLT:=wmax*(0.000001);
+      i:=0; loop until!(i=it.nc); 
+	 if w[i]<=wmin then w[i]:=0.0 end; 
+	 i:=i+1;
+      end; -- loop
+      x:VEC:=x.create(nc); b:VEC:=b.create(vout.size);
+      i:=0; loop until!(i=vout[0].dim); -- get each row of self
+	 j:INT:=0; loop until!(j=vout.size); b[j]:=vout[j][i]*wt[j]; j:=j+1 end;
+	 it.svd_back_sub(u,w,v,b,x);
+	 inplace_row(i,x);
+	 i:=i+1;
+      end; -- loop
+   end; -- inplace_weighted_linear_fit_of
+
+   inplace_weighted_affine_fit_of(vin,vout:ARRAY{VEC}, wt:ARRAY{FLT})
+   pre
+   	 nr=vout[0].dim and nc=vin[0].dim+1 and vout.size=vin.size 
+	 and wt.size=vin.size
+   is
+      -- Fill in `self' to be the least squares best affine approximation
+      -- relating `in' to `vout' by: `vout[i]=self.affine_act_on(in[i])'. 
+      -- `wt[i]' gives the weight which should be given to the `i'th example. 
+      -- (typically in `[0.,1.]' (`0.' means ignore, `1.' means full weight).
+      it:MAT:=create(vin.size,vin[0].dim+1);
+      i:INT; loop until!(i=it.nr); 
+	 it.inplace_row(i,vin[i]); it[i,vin[0].dim]:=wt[i];
+	 i:=i+1; 
+      end; -- loop
+      i:=0; loop until!(i=it.nr);	-- scale by wt
+	 j:INT:=0; loop until!(j=it.nc-1); it[i,j]:=it[i,j]*wt[i]; j:=j+1 end;
+	 i:=i+1;
+      end; -- loop
+      u:MAT:=create(it.nr.max(it.nc),it.nc);      
+      v:MAT:=create(it.nc,it.nc); w:VEC:=w.create(it.nc);
+      it.svd_in(u,w,v);
+      wmax:FLT:=w.max_value; wmin:FLT:=wmax*(0.000001);
+      i:=0; loop until!(i=it.nc); 
+	 if w[i]<=wmin then w[i]:=0.0 end; 
+	 i:=i+1; 
+      end; -- loop
+      x:VEC:=x.create(nc); b:VEC:=b.create(vout.size);
+      i:=0; loop until!(i=vout[0].dim); -- get each row of self
+	 j:INT:=0; loop until!(j=vout.size); b[j]:=vout[j][i]*wt[j]; j:=j+1 end;
+	 it.svd_back_sub(u,w,v,b,x);
+	 inplace_row(i,x);
+	 i:=i+1;
+      end; -- loop
+   end; -- inplace_weighted_affine_fit_of
+   
+end;
+-----------------------------------------------------------------------

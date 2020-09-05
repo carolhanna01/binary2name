@@ -1,0 +1,30 @@
+#
+# Part of the ht://Dig package   <http://www.htdig.org/>
+# Copyright (c) 1999, 2000, 2001 The ht://Dig Group
+# For copyright details, see the file COPYING in your distribution
+# or the GNU General Public License version 2 or later
+# <http://www.gnu.org/copyleft/gpl.html>
+#
+# $Id: t_env,v 1.11 2001/06/29 14:14:08 loic Exp $
+#
+
+. ./test_functions
+if [ "$LONG" ]
+then
+
+	rm -f test __db*
+	./word -e 1 $VERBOSE < /dev/null &
+	./word -e 2 $VERBOSE || exit 1
+	wait
+	../htdb/htdb_stat -s index -d test | grep '9999	Number of unique keys in the tree' > /dev/null || exit 1
+
+	rm -f test __db*
+	./word -z -e 1 $VERBOSE < /dev/null &
+	./word -z -e 2 $VERBOSE || exit 1
+	wait
+	../htdb/htdb_stat -Wz -s index -d test | grep '9999	Number of unique keys in the tree' > /dev/null || exit 1
+
+else
+	echo "SKIP: t_env (run with make LONG=yes TESTS=t_env check)"
+	exit 77
+fi

@@ -1,0 +1,59 @@
+------------------------->  GNU Sather - sourcefile  <-------------------------
+-- Copyright (C) 1995 by International Computer Science Institute            --
+-- This file is part of the GNU Sather library. It is free software; you may --
+-- redistribute  and/or modify it under the terms of the GNU Library General --
+-- Public  License (LGPL)  as published  by the  Free  Software  Foundation; --
+-- either version 3 of the license, or (at your option) any later version.   --
+-- This  library  is distributed  in the  hope that it will  be  useful, but --
+-- WITHOUT ANY WARRANTY without even the implied warranty of MERCHANTABILITY --
+-- or FITNESS FOR A PARTICULAR PURPOSE. See Doc/LGPL for more details.       --
+-- The license text is also available from:  Free Software Foundation, Inc., --
+-- 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA                     --
+-------------->  Please email comments to <bug-sather@gnu.org>  <--------------
+
+-- Successor stream
+-- Author: Benedict A. Gomes <gomes@samosa.ICSI.Berkeley.EDU>
+
+abstract class $SUCC_STREAM{NTP} is
+   -- An abstraction that specifies a generator of successive 
+   -- unique values of type NTP
+   
+   next: NTP;
+   -- Return the next unique value
+   
+end;
+-------------------------------------------------------------------
+class INT_STREAM < $SUCC_STREAM{INT} is
+   -- Yield a stream of successive integers
+
+   private attr val: INT;
+   
+   create(start_val: INT): SAME is
+      -- Return a new integer stream whose next yielded
+      -- value will be "start_val"
+      res ::= new;
+      res.val := start_val;
+      return res;
+   end;
+   
+   next: INT is
+      -- Yield the next integer in this stream
+      -- Wrap around is not permitted in this kind of integer stream
+      res ::= val;
+      assert val /= INT::maxint;
+      val := val+1;
+      return res;
+   end;
+   
+   
+   next!: INT is
+      -- Keep yielding successive integers. 
+      -- Will quit at maxint - 1
+      if val = INT::maxint then quit end;
+      yield next;
+   end;
+   
+end;
+-------------------------------------------------------------------
+
+

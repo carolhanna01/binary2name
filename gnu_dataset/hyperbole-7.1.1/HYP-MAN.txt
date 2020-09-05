@@ -1,0 +1,86 @@
+** Integrate named implicit buttons into Emacs storage techniques
+*** Bind to a key
+*** Bookmarks
+*** Saving to Registers
+
+Hyperbole's subsystems build on a few primitives included with Hyperbole plus its button infrastructure but otherwise are self contained and easily updated individually. Having them as one package saves a lot of effort in separate documentation, packaging and installation requirements.
+
+Hyperbole is built so you can extend much of its behavior without understanding much about the underlying mechanics. For example, to add a new implicit button type, you write two new functions essentially: One that recognizes whether point is within whatever context represents a button of the type, i.e. whatever textual pattern you like. And then another function that applies an action to the text of the button, e.g. jumps to the definition of an identifier within some code.
+
+You do similar things to extend each subsystem. The only case where you really have to understand a lot of internals is when trying to extend the core hypertext system. For the major subsystems: the outliner, contact manager and display manager, you can extend these without really understanding anything about any other part.
+
+For instance, how is Window management and web search hub related?
+
+It's too hard to rapidly create and replicate display spaces for working with your hypertexts and code, so HyControl was born to simplify this process. Specialized web search is also too hard to do manually, so people end up just doing generalized searches. Hyperbole's Find and Web Search features are meant to more easily connect you to the information you desire. Isn't that why we build hypertexts in the first place?
+
+I understand the tool chest argument, but even then we should have multiple packages corresponding to each coherent component and a tool chest package that combines all of them.
+
+Emacs does not yet have a notion of subpackages within packages. In Hyperbole, we have one Emacs package, a number of subsystems and modules within the subsystems. Seems pretty well modularized to me. Subsystems pretty much load when you use them.
+
+3 months ago
+I've recently started trying out ledger, which is a text file which records transactions (money went from here to there) and a program which reads that text file and makes sure everything balances out.
+
+Anyway, in the comments I've started to record the PayPal transaction ID with text like 'paypal:<transaction id>'. After defining a new implicit button, I can press M-RET over that text and Hyperbole will open a web browser to that transaction. I've also made one for games I've bought on GOG: Hyperbole will open the receipt ID in a web browser.
+
+Is that useful? I don't know. I could have just stored the URL directly, but I think that's a bit uglier and it's cool to be able to turn arbitrary text in to hyperlinks in arbitrary modes, and have one keypress that does what I want on all of them.
+
+Reply
+Give Award
+Share
+Report
+Save
+
+
+level 3
+ftrx
+4 points
+·
+3 months ago
+You can do the very same with org-mode (org-add-link-type) simply defining a relevant function eg.
+
+(org-add-link-type "xdg" 'org-xdg-open)
+create a link kind of [xdg:whatever] and the relevant function to call with the whatever argument, like
+
+(defun org-xdg-open (whatever)
+ (start-process "xdg-open" nil "/usr/bin/xdg-open" whatever))
+it's super simple and often already supported by other pkgs, for instance notmuch offer both notmuch: and notmuch-search: link type that let you link mails (via message id) or searches anywhere. I use it personally to record formal communications in documents, in a click I have the mail with the relevant mode on (so I can forward, replay etc) open.
+
+The same can be done to attachments (org support attach files to a heading's drawer, copying/linking them in a "data" directory by default at the same position of the org file), I normally use it to log things like invoices or news with original article attached, the "quick" definition is a simple
+
+(require 'org-attach)
+(setq org-link-abbrev-alist '(("att" . org-attach-expand-link)))
+and anywhere I can link [[att:attachment name][optional att descr]], pdf-tools offer link to specific pages in pdf, org-ref and ebib offer convenient link to personal bibliographies (plus all we need to build and keep them up to date) etc.
+
+I test hyperbole for only few days few years ago so I do not recall how hyperbole work for "buttons" but it seems essentially the same... The sole point perhaps is the "menu" systems opposed to thing like ivy or helm but... For me it seems more efficient the "search all" approach, it's the same for instance for org-brain or org-wiki: I can't get used to it. Actually my "interface" for pretty anything is linkmarks, an org file with links accessible via helm, I call linkmarks-select with a single key and start typing having contacts (org-contacts), files, headings in org files etc searchable in a snap... Super easy to maintain, change, refactor and use...
+----
+https://www.reddit.com/r/emacs/comments/cw4on7/snails_is_a_modern_fuzzy_search_framework_that/
+
+From Snails intro:
+
+
+You can use prefix to search like VScode
+
+What does that mean?
+
+Reply
+Give Award
+Share
+Report
+Save
+
+
+level 2
+clemera
+(with-emacs.com
+10 points
+·
+12 days ago
+Oh it's in the readme:
+
+Search command if prefix start with >
+
+Search variable or function define if prefix start with @
+
+Search current buffer content if prefix start with #
+
+Search project file content if prefix start with ! Search file if prefix start with ?
