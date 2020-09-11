@@ -12,6 +12,6 @@ for i in {0..100} ; do
     fi;
 done;
 
+wait
 python3 generate_output.py --output_dir=$1
 
-wait
