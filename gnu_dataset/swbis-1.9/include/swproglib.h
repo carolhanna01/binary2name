@@ -1,1 +1,0 @@
-../swprogs/swproglib.h

@@ -1,2 +1,0 @@
-;;;MoveViewportRight
-(d-ScrollRight)

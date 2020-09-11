@@ -1,1 +1,0 @@
-../swsupplib/misc/swicat_s.h

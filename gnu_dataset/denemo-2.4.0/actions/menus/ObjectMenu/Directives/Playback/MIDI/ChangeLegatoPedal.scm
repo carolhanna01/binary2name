@@ -1,1 +1,0 @@
-(ChangeLegatoPedal::Set)

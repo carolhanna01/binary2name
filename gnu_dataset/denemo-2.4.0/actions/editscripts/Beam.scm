@@ -1,6 +1,0 @@
-(let ((type (d-DirectiveGet-chord-postfix "Beam")))
-    (if (equal? type "[")
-        (d-StartBeam "edit")
-        (if (equal? type "]")
-            (d-EndBeam "edit")
-            (d-InfoDialog (_ "Customized Beaming Command - use Advanced Edit")))))

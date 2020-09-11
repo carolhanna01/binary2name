@@ -1,1 +1,0 @@
-(RepeatUntilFail (lambda () (and (not (None?)) (d-MoveToMeasureLeft))))

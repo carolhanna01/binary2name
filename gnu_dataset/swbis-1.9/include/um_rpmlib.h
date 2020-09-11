@@ -1,1 +1,0 @@
-../swsupplib/um_rpm/um_rpmlib.h

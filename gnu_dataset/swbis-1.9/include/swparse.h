@@ -1,1 +1,0 @@
-../swsupplib/sw_parse/swparse.h

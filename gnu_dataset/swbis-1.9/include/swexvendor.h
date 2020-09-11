@@ -1,1 +1,0 @@
-../swstructlib/src/swexport/swexvendor.h

@@ -1,1 +1,0 @@
-../swsupplib/um_rpm/rpm-3.0.5/config.h

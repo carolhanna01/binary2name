@@ -1,6 +1,0 @@
-(newline)
-(newline)
-(newline)
-(insert "a")
-(save-buffer)
-(save-buffers-kill-emacs)

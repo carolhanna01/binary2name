@@ -1,1 +1,0 @@
-(ChangeSustenutoPedal::Set)

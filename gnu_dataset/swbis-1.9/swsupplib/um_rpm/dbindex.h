@@ -1,1 +1,0 @@
-rpm-3.0.5/lib/dbindex.h

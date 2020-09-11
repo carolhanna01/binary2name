@@ -1,1 +1,0 @@
-(StandAloneDirectiveProto (cons "StopStaff" "\\stopStaff" ))

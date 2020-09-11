@@ -1,1 +1,0 @@
-../swstructlib/src/swstruct/swstruct.h

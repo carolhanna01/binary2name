@@ -1,2 +1,0 @@
- (d-MoveToStaffUp)
-(GoToMeasureEnd)

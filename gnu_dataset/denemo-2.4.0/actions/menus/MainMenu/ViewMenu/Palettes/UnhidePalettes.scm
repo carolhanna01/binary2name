@@ -1,2 +1,0 @@
-;;UnhidePalettes
-(d-ShowPalettes #f)

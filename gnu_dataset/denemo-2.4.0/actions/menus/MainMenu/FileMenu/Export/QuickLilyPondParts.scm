@@ -1,2 +1,0 @@
-;;;QuickLilyPondParts
-(ForAllStaffs "(d-QuickLilyPondPart)")

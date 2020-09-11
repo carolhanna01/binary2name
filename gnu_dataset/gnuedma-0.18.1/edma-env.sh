@@ -1,4 +1,0 @@
-export EDMADIR=/usr/local
-export EDMA_SYSTEM_PATH=${EDMADIR}
-export PATH=${PATH}:${EDMADIR}/bin
-export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${EDMADIR}/lib

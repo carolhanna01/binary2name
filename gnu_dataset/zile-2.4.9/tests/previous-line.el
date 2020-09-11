@@ -1,7 +1,0 @@
-(end-of-buffer)
-(forward-line -1)
-(forward-line -1)
-(forward-line -1)
-(insert "a")
-(save-buffer)
-(save-buffers-kill-emacs)

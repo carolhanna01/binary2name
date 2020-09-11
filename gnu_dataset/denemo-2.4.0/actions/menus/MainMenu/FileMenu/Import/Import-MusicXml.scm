@@ -1,2 +1,0 @@
-(d-NewWindow)
-(d-ImportMusicXml)

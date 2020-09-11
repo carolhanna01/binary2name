@@ -1,1 +1,0 @@
-(EditStaffDirective "ContextPianoStaff")

@@ -1,5 +1,0 @@
-if exists "X"
-  {
-    keep;
-  }
-

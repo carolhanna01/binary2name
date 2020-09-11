@@ -1,5 +1,0 @@
-(forward-line)
-(forward-line)
-(delete-blank-lines)
-(save-buffer)
-(save-buffers-kill-emacs)

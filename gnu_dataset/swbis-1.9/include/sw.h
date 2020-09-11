@@ -1,1 +1,0 @@
-../swsupplib/misc/sw.h

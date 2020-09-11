@@ -1,1 +1,0 @@
-../swprogs/i18n.h

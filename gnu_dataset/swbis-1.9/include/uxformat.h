@@ -1,1 +1,0 @@
-../swstructlib/src/archive/uxformat.h

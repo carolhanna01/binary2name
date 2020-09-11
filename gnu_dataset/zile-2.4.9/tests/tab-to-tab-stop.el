@@ -1,7 +1,0 @@
-(forward-line)
-(forward-line)
-(tab-to-tab-stop)
-(tab-to-tab-stop)
-(insert "tab")
-(save-buffer)
-(save-buffers-kill-emacs)

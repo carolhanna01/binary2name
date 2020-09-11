@@ -1,4 +1,0 @@
-/**
- * Externs for ease.js
- */
-

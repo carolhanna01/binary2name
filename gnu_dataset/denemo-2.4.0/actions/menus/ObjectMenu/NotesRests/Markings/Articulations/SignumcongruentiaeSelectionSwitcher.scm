@@ -1,2 +1,0 @@
-(SingleAndSelectionSwitcher d-ToggleSignumcongruentiae)
-		

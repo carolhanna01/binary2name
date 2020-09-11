@@ -1,2 +1,0 @@
-
-#define HAVE_PTS_STREAM_MODULES 0

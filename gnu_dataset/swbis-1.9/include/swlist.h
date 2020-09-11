@@ -1,1 +1,0 @@
-../swprogs/swlist.h

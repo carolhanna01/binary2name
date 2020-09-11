@@ -1,2 +1,0 @@
-;;;OpenSourceDialog
-(d-OpenSourceFile)

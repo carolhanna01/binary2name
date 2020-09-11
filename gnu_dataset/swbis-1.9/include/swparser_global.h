@@ -1,1 +1,0 @@
-../swsupplib/sw_parse/swparser_global.h

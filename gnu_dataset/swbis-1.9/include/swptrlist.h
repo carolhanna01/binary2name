@@ -1,1 +1,0 @@
-../swstructlib/src/misc/swptrlist.h

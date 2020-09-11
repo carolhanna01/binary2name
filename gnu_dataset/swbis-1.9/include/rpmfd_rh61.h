@@ -1,1 +1,0 @@
-../swsupplib/misc/rpmfd_rh61.h

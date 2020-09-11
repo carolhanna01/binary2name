@@ -1,2 +1,0 @@
-;ActivateObjectAtCursor
-(d-ActivateObject)

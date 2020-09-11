@@ -1,1 +1,0 @@
-../swsupplib/getopt/usgetopt.h

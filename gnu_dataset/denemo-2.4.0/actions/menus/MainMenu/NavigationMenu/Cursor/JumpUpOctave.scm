@@ -1,1 +1,0 @@
-(Navigation::CursorUpN 7)

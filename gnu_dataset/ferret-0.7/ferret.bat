@@ -1,1 +1,0 @@
-wishrun.exe gerwin.tcl

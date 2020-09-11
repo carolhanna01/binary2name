@@ -1,1 +1,0 @@
-../swprogs/swremove_lib.h

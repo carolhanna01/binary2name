@@ -1,1 +1,0 @@
-../swprogs/swconfig_lib.h

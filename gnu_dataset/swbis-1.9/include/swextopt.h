@@ -1,1 +1,0 @@
-../swsupplib/misc/swextopt.h

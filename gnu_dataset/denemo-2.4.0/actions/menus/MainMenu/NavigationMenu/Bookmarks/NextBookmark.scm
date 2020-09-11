@@ -1,1 +1,0 @@
-(FindNextObjectAllColumns (lambda () (d-DirectiveGet-standalone-display "RehearsalMark")))

@@ -1,1 +1,0 @@
-(ChangePrintDuration 0 0)

@@ -1,1 +1,0 @@
-../swsupplib/swi/swi_afile.h

@@ -1,2 +1,0 @@
-;;ToggleCursorHighlight
-(d-HighlightCursor)

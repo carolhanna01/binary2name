@@ -1,2 +1,0 @@
-;;;TogglePlayAlongPlayback
-(d-TogglePlayAlong)

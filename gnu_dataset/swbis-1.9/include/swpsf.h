@@ -1,1 +1,0 @@
-../swstructlib/src/swmetadata/swpsf.h

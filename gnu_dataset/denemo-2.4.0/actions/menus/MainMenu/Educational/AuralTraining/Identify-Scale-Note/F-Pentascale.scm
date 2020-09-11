@@ -1,1 +1,0 @@
-(IdentifyScaleNote::IdentifyScaleNotes (cons "F G A Bb C" "f' g' a' b' c''"))

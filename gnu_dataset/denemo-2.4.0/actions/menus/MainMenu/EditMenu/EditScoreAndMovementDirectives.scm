@@ -1,2 +1,0 @@
-;;;EditScoreAndMovementDirectives
-(d-EditSystemDirective)

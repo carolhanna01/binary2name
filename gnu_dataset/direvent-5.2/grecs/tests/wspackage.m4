@@ -1,5 +1,0 @@
-m4_define([AT_PACKAGE_NAME],      [wordsplit])
-m4_define([AT_PACKAGE_TARNAME],   [wordsplit])
-m4_define([AT_PACKAGE_VERSION],   [v1.0-6-gd36275f])
-m4_define([AT_PACKAGE_STRING],    [AT_PACKAGE_TARNAME AT_PACKAGE_VERSION])
-m4_define([AT_PACKAGE_BUGREPORT], [bug-direvent@gnu.org.ua])
