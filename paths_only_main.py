@@ -239,7 +239,7 @@ def sm_to_output(sm: angr.sim_manager.SimulationManager, output_file, func_name)
             for constant, replacement in sorted(constants_mapper.items(), key=lambda x: len(x[0]), reverse=True):
                 line = line.replace(constant, replacement)          
             line = remove_consecutive_pipes(line)
-            line = re.sub(r"\|[0-9]+", "const", line)
+            line = re.sub(r"\|[0-9]+\|", "|const|", line)
             if len(line) <= 3000:
                 print("********************{0}".format(line))
                 output_file.write(line)
