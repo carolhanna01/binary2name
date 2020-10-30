@@ -1,13 +1,13 @@
 # Binary2Name
-## Automatic detection for binary code unctionality
+## Automatic detection for binary code Functionality
 
-This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin). during [Project in Computer Security](https://webcourse.cs.technion.ac.il/236349/Spring2020/) course - Technion, advisor: Dr. Gabi Nakibly. 
+This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin). as a part of the [Project in Computer Security](https://webcourse.cs.technion.ac.il/236349/Spring2020/) course at Technion. Advisor: Dr. Gabi Nakibly. 
 
 ## Introduction:
-The main motivation for this project is to be a helpful tool for researchers of binary code. While analyzing a large binary.
-We get binary datasets as input and using angr, a symbolic analysis tool to get intermediate representation of the code. From there, came the most extensive step in the project which was to preprocess the intermediate code in preparation to be used as input to a neural network. We used a deep neural network adopted from [code2seq](https://github.com/tech-srl/code2seq), which is intended for the same goal but on source code as input instead of binaries.
+The main motivation for this project is to be a helpful tool for researchers of binary code.
+We started with binary datasets as input and used Angr, a symbolic analysis tool to get intermediate representation of the code. From there, came the most extensive step in the project which was to preprocess the intermediate code in preparation to be used as input to a neural network. We used a deep neural network adopted from [code2seq](https://github.com/tech-srl/code2seq), which is intended for the same goal but on source code as input instead of binaries.
 
-we suggest you to read our report about this project before dealing with the code.
+We suggest you to read our report about this project [here](https://docs.google.com/document/d/1Yae9Kd-zepH7cntqpsoU0b96FTeFHn8D8DEe5Tto_A8/edit?usp=sharing) before dealing with the code.
 
 Getting started:
 =====================
