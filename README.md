@@ -15,10 +15,8 @@ Getting started:
     -   TensorFlow, version 1.13 (pip install rouge==0.3.2)
     
 ### get best results Quickly:
-'''
-cd code2seq
-continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
-'''
+> cd code2seq
+> continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
 ### Our Datasets:
     <TODO>
 ### Preprocessing:
