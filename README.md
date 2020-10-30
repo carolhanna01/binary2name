@@ -1,5 +1,5 @@
 # Binary2Name
-## Automatic detection for binary code Functionality
+## Automatic detection for binary code functionality
 
 This project was devoloped by [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin) as a part of the [Project in Computer Security](https://webcourse.cs.technion.ac.il/236349/Spring2020/) course at Technion. 
 Project Advisor: Dr. Gabi Nakibly. 
