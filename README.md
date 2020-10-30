@@ -1,7 +1,7 @@
 # Binary2Name
 ## Automatic detection for binary code unctionality
 
-This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin), advoised by Dr. Gabi Nakibly during Project in Computer Security course - Technion . 
+This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin), advoised by Dr. Gabi Nakibly during [Project in Computer Security course](https://webcourse.cs.technion.ac.il/236349/Spring2020/) - Technion . 
 
 ## Introduction:
 The main motivation for this project is to be a helpful tool for researchers of binary code. While analyzing a large binary.
@@ -15,12 +15,6 @@ Getting started:
     -   python3
     -   rouge package, version 0.3.2
     -   TensorFlow, version 1.13 (pip install rouge==0.3.2)
-    
-### get best results Quickly:
-we have uploaded our best models, with the preprocessed data. to run it automatically follow:
->   cd code2seq
-
->   continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
 
 ### Full preprocessing and training:
 #### Extarct our Datasets: 
@@ -36,3 +30,9 @@ we have more than one model to preprocess the data (<model_name>_main.py files).
 >   cd code2seq
 
 >   ./train.sh <pre-processed data name>
+    
+### get best results Quickly:
+we have uploaded our best models, with the preprocessed data. to run it automatically follow:
+>   cd code2seq
+
+>   continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
