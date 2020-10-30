@@ -15,12 +15,15 @@ Getting started:
     -   TensorFlow, version 1.13 (pip install rouge==0.3.2)
     
 ### get best results Quickly:
-> cd code2seq
+we have uploaded our best models, with the preprocessed data. to run it automatically follow:
+>   cd code2seq
+    continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
 
->continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
-### Our Datasets:
-    <TODO>
+### Extarct our Datasets: 
+>   cd our_dataset/<desired dataset>
+    tar -xzf <dataset_name>.tar.gz
+    
 ### Preprocessing:
-    <TODO>
+    
 ### code2seq training:
     <TODO>
