@@ -1,7 +1,7 @@
 # Binary2Name
 ## Automatic detection for binary code unctionality
 
-This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin),advoised by Dr. Gabi Nakibly during Project in Computer Security course - Technion . 
+This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin), advoised by Dr. Gabi Nakibly during Project in Computer Security course - Technion . 
 
 ## Introduction:
 The main motivation for this project is to be a helpful tool for researchers of binary code. While analyzing a large binary.
@@ -22,6 +22,7 @@ we have uploaded our best models, with the preprocessed data. to run it automati
 ### Full preprocessing and training:
 #### Extarct our Datasets: 
 >   cd our_dataset/<desired dataset>
+    
 >   tar -xzf <dataset_name>.tar.gz
     
 #### Preprocessing:
@@ -30,4 +31,5 @@ first, change the run_exps.sh file to run desired model (default it path with co
 
 #### code2seq training:
 >   cd code2seq
+
 >   ./train.sh <pre-processed data name>
