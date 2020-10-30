@@ -29,7 +29,7 @@ we have uploaded our best models, with the preprocessed data. to run it automati
 >   tar -xzf <dataset_name>.tar.gz
     
 #### Preprocessing:
-we have more than one model to preprocess the data (<model_name>_main.py files). first, change the run_exps.sh file to run desired model (default it path with constraints).
+we have more than one model to preprocess the data (<model_name>_main.py files). first, change the run_exps.sh file to run desired model (default is path with constraints).
 >   run_exps.sh <pre-processed data name> <dataset name: coreutils_ds|dpdk_linux_ds|gnu_dataset>
 
 #### code2seq training:
