@@ -16,7 +16,8 @@ Getting started:
     
 ### get best results Quickly:
 > cd code2seq
-> continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
+
+>continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
 ### Our Datasets:
     <TODO>
 ### Preprocessing:
