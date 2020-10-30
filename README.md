@@ -17,13 +17,17 @@ Getting started:
 ### get best results Quickly:
 we have uploaded our best models, with the preprocessed data. to run it automatically follow:
 >   cd code2seq
-    continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
+>   continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
 
-### Extarct our Datasets: 
+### Full preprocessing and training:
+#### Extarct our Datasets: 
 >   cd our_dataset/<desired dataset>
-    tar -xzf <dataset_name>.tar.gz
+>   tar -xzf <dataset_name>.tar.gz
     
-### Preprocessing:
-    
-### code2seq training:
-    <TODO>
+#### Preprocessing:
+first, change the run_exps.sh file to run desired model (default it path with constraints).
+>   run_exps.sh <pre-processed data name> <dataset name: coreutils_ds|dpdk_linux_ds|gnu_dataset>
+
+#### code2seq training:
+>   cd code2seq
+>   ./train.sh <pre-processed data name>
