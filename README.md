@@ -18,13 +18,13 @@ Getting started:
     -   TensorFlow, version 1.13 (pip install rouge==0.3.2)
 
 ### Full preprocessing and training:
-#### Extarct our Datasets: 
+#### Extarct our datasets: 
 >   cd our_dataset/<desired dataset>
     
 >   tar -xzf <dataset_name>.tar.gz
     
 #### Preprocessing:
-we have more than one model to preprocess the data (<model_name>_main.py files). first, change the run_exps.sh file to run desired model (default is path with constraints).
+We have more than one model to preprocess the data (<model_name>_main.py files). First, change the run_exps.sh file to run the desired model (default is path with constraints).
 >   run_exps.sh <pre-processed data name> <dataset name: coreutils_ds|dpdk_linux_ds|gnu_dataset>
 
 #### code2seq training:
@@ -32,8 +32,8 @@ we have more than one model to preprocess the data (<model_name>_main.py files).
 
 >   ./train.sh <pre-processed data name>
     
-### get best results Quickly:
-we have uploaded our best models, with the preprocessed data. to run it automatically follow:
+### Get the best results quickly:
+We have uploaded our best models, with the preprocessed data. To run it automatically follow:
 >   cd code2seq
 
 >   continue_best_model.sh --dataset=<coreutils|coreutils_dpdk>
