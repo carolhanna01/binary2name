@@ -7,7 +7,7 @@ This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) an
 The main motivation for this project is to be a helpful tool for researchers of binary code. While analyzing a large binary.
 We get binary datasets as input and using angr, a symbolic analysis tool to get intermediate representation of the code. From there, came the most extensive step in the project which was to preprocess the intermediate code in preparation to be used as input to a neural network. We used a deep neural network adopted from [code2seq](https://github.com/tech-srl/code2seq), which is intended for the same goal but on source code as input instead of binaries.
 
-we suggest you to read our report about this project. you can get from Dr. Gabi Nakibly.
+we suggest you to read our report about this project before dealing with the code.
 
 Getting started:
 =====================
@@ -29,7 +29,7 @@ we have uploaded our best models, with the preprocessed data. to run it automati
 >   tar -xzf <dataset_name>.tar.gz
     
 #### Preprocessing:
-first, change the run_exps.sh file to run desired model (default it path with constraints).
+we have more than one model to preprocess the data (<model_name>_main.py files). first, change the run_exps.sh file to run desired model (default it path with constraints).
 >   run_exps.sh <pre-processed data name> <dataset name: coreutils_ds|dpdk_linux_ds|gnu_dataset>
 
 #### code2seq training:
