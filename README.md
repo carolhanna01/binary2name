@@ -1,7 +1,7 @@
 # Binary2Name
 ## Automatic detection for binary code unctionality
 
-This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin). during [Project in Computer Security course - Technion](https://webcourse.cs.technion.ac.il/236349/Spring2020/), advisor: Dr. Gabi Nakibly. 
+This project was devoloped by: [Carol Hanna](https://github.com/carolhanna01) and [Abdallah Yassin](https://github.com/AbdallahYassin). during [Project in Computer Security](https://webcourse.cs.technion.ac.il/236349/Spring2020/) course - Technion, advisor: Dr. Gabi Nakibly. 
 
 ## Introduction:
 The main motivation for this project is to be a helpful tool for researchers of binary code. While analyzing a large binary.
