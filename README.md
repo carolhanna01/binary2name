@@ -32,7 +32,7 @@ We have more than one model to preprocess the data (<model_name>_main.py files).
 
 >   ./train.sh <pre-processed data name>
     
-### Get the best results quickly <TBD>:
+### Get the best results quickly - TBD:
 We have uploaded our best models, with the preprocessed data. To run it automatically follow:
 >   cd code2seq
 
