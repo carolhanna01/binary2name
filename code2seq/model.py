@@ -110,8 +110,11 @@ class Model:
                     print('Accuracy after %d epochs: %.5f' % (self.epochs_trained, results))
                 else:
                     print('Accuracy after {} epochs: {}'.format(self.epochs_trained, results))
+                res_str = 'After %d epochs: Precision: %.5f, recall: %.5f, F1: %.5f' % (
+                    self.epochs_trained, precision, recall, f1)
                 print('After %d epochs: Precision: %.5f, recall: %.5f, F1: %.5f' % (
                     self.epochs_trained, precision, recall, f1))
+                os.popen("mail -s \"epoch {} is done\" abdallahy@campus.technion.ac.il carolhanna@campus.technion.ac.il <<< \"{}\"".format(self.epochs_trained, res_str))
                 print('Rouge: ', rouge)
                 if f1 > best_f1:
                     best_f1 = f1
@@ -123,9 +126,11 @@ class Model:
                 else:
                     epochs_no_improve += self.config.SAVE_EVERY_EPOCHS
                     if epochs_no_improve >= self.config.PATIENCE:
+                        best_str = 'Best scores - epoch %d: . Precision: %.5f, recall: %.5f, F1: %.5f' % (best_epoch,best_f1_precision, best_f1_recall, best_f1)
                         print('Not improved for %d epochs, stopping training' % self.config.PATIENCE)
                         print('Best scores - epoch %d: ' % best_epoch)
                         print('Precision: %.5f, recall: %.5f, F1: %.5f' % (best_f1_precision, best_f1_recall, best_f1))
+                        os.popen("mail -s \"train results\" abdallahy@campus.technion.ac.il carolhanna@campus.technion.ac.il <<< \"{}\"".format(best_str))
                         return
 
         if self.config.SAVE_PATH:
@@ -383,7 +388,7 @@ class Model:
             loss = tf.reduce_sum(crossent * target_words_nonzero) / tf.to_float(batch_size)
 
             if self.config.USE_MOMENTUM:
-                learning_rate = tf.train.exponential_decay(0.01, step * self.config.BATCH_SIZE,
+                learning_rate = tf.train.exponential_decay(0.005, step * self.config.BATCH_SIZE,
                                                            self.num_training_examples,
                                                            0.95, staircase=True)
                 optimizer = tf.train.MomentumOptimizer(learning_rate, 0.95, use_nesterov=True)
